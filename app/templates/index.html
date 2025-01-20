@@ -1,0 +1,145 @@
+<!-- app/templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Educational Story Adventure</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">Educational Story Adventure</h1>
+        
+        <!-- Selection Form -->
+        <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6">
+            <form id="storyForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">
+                        Choose a Story Category
+                    </label>
+                    <select id="storyCategory" name="storyCategory" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="">Select a category...</option>
+                        {% for category in story_categories %}
+                        <option value="{{ category }}">{{ category | replace('_', ' ') | title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">
+                        Choose a Lesson Topic
+                    </label>
+                    <select id="lessonTopic" name="lessonTopic" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="">Select a topic...</option>
+                        {% for topic in lesson_topics %}
+                        <option value="{{ topic }}">{{ topic }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="submit"
+                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Start Adventure
+                </button>
+            </form>
+        </div>
+
+        <!-- Story Container (Initially Hidden) -->
+        <div id="storyContainer" class="mt-8 max-w-2xl mx-auto hidden">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div id="storyContent" class="prose max-w-none mb-6">
+                    <!-- Story text will be inserted here -->
+                </div>
+                
+                <div id="choicesContainer" class="space-y-3">
+                    <!-- Choices will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let storyWebSocket;
+        
+        document.getElementById('storyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const storyCategory = document.getElementById('storyCategory').value;
+            const lessonTopic = document.getElementById('lessonTopic').value;
+            
+            // Hide the form and show the story container
+            this.classList.add('hidden');
+            document.getElementById('storyContainer').classList.remove('hidden');
+            
+            // Initialize WebSocket connection
+            const wsUrl = `ws://${window.location.host}/ws/story/${storyCategory}/${lessonTopic}`;
+            storyWebSocket = new WebSocket(wsUrl);
+            
+            // Handle incoming messages
+            storyWebSocket.onmessage = function(event) {
+                try {
+                    // Try to parse as JSON (for choices)
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'choices') {
+                        displayChoices(data.choices);
+                    }
+                } catch (e) {
+                    // If not JSON, it's a story text chunk
+                    appendStoryText(event.data);
+                }
+            };
+            
+            // Start the story
+            storyWebSocket.onopen = function() {
+                // Send initial message to start the story
+                storyWebSocket.send(JSON.stringify({
+                    choice: 'start'
+                }));
+            };
+        });
+
+        function appendStoryText(text) {
+            const storyContent = document.getElementById('storyContent');
+            storyContent.innerHTML += text;
+            // Auto-scroll to keep up with the story
+            storyContent.scrollTop = storyContent.scrollHeight;
+        }
+
+        function displayChoices(choices) {
+            const choicesContainer = document.getElementById('choicesContainer');
+            choicesContainer.innerHTML = ''; // Clear existing choices
+            
+            choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.className = 'w-full p-4 text-left border rounded-lg hover:bg-gray-50 transition-colors';
+                button.textContent = choice.text;
+                button.onclick = () => makeChoice(choice.id);
+                choicesContainer.appendChild(button);
+            });
+        }
+
+        function makeChoice(choiceId) {
+            if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
+                // Disable all choice buttons while processing
+                const buttons = document.querySelectorAll('#choicesContainer button');
+                buttons.forEach(button => button.disabled = true);
+                
+                // Send the choice to the server
+                storyWebSocket.send(JSON.stringify({
+                    choice: choiceId
+                }));
+            }
+        }
+
+        // Clean up WebSocket when leaving the page
+        window.onbeforeunload = function() {
+            if (storyWebSocket) {
+                storyWebSocket.close();
+            }
+        };
+    </script>
+</body>
+</html>
