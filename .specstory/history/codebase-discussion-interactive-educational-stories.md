@@ -208,6 +208,12 @@ Your local repository is now synchronized with the remote repository. You can ve
 
 ---
 
+_**User**_
+
+My remote repo has .venv synced. Can I undo that?
+
+---
+
 
 
 ---
