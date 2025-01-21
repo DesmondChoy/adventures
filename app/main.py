@@ -91,10 +91,20 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                 story_category, lesson_topic, state
             )
 
-            # Stream the content word by word
-            for word in story_node.content.split():
-                await websocket.send_text(word + " ")
-                await asyncio.sleep(0.1)
+            # Split into paragraphs and stream each paragraph
+            paragraphs = [
+                p.strip() for p in story_node.content.split("\n\n") if p.strip()
+            ]
+
+            # Send the first paragraph without a leading newline
+            if paragraphs:
+                await websocket.send_text(paragraphs[0])
+                await asyncio.sleep(0.5)
+
+            # Send remaining paragraphs with consistent double newlines
+            for paragraph in paragraphs[1:]:
+                await websocket.send_text("\n\n" + paragraph)
+                await asyncio.sleep(0.5)  # Pause between paragraphs for dramatic effect
 
             # Send choices as a separate message
             await websocket.send_json(

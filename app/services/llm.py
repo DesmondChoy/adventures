@@ -78,8 +78,8 @@ class LLMService:
         2. Create meaningful consequences for user decisions
         3. Seamlessly integrate educational elements when provided
         4. End each segment with clear choice points that advance the story
-
-        Each story segment should be 2-3 paragraphs long and end with natural decision points.
+        5. Use multiple paragraphs separated by blank lines to ensure readability.
+           The question and its choices, if any, should appear in a separate paragraph from the main narrative.
         """
 
     def _build_user_prompt(

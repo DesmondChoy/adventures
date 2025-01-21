@@ -50,9 +50,7 @@
         <!-- Story Container (Initially Hidden) -->
         <div id="storyContainer" class="mt-8 max-w-2xl mx-auto hidden">
             <div class="bg-white rounded-xl shadow-md p-6">
-                <div id="storyContent" class="prose max-w-none mb-6">
-                    <!-- Story text will be inserted here -->
-                </div>
+                <div id="storyContent" class="prose max-w-none mb-6 whitespace-pre-wrap"></div>
                 
                 <div id="choicesContainer" class="space-y-3">
                     <!-- Choices will be inserted here -->
@@ -103,6 +101,7 @@
 
         function appendStoryText(text) {
             const storyContent = document.getElementById('storyContent');
+            // Append text while preserving newlines
             storyContent.innerHTML += text;
             // Auto-scroll to keep up with the story
             storyContent.scrollTop = storyContent.scrollHeight;
