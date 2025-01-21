@@ -290,6 +290,85 @@ _**Assistant**_
 
 
 
+The changes I made:
+
+1. In `main.py`:
+   - Clean up paragraphs by stripping whitespace from each one while preserving paragraph structure
+   - Send the first paragraph without any leading newlines
+   - Send subsequent paragraphs with consistent double newlines before them
+   
+2. In `index.html`:
+   - Simplified the `appendStoryText` function to just append the text as-is
+   - Rely on the server-side formatting to ensure proper paragraph spacing
+   - Keep the `whitespace-pre-wrap` class to preserve the formatting
+
+This should now:
+1. Show no extra whitespace at the start of the story
+2. Maintain proper paragraph spacing between paragraphs
+3. Keep the text formatting consistent throughout the story
+
+Try running the application again - you should see clean formatting with proper paragraph breaks.
+
+---
+
+_**User**_
+
+The paragraphs and formatting are now showing up. However, it seems like the app is streaming each paragraph, instead of streaming each word. The whole paragraph shows up as a chunk together. I want each word to be streamed.
+
+---
+
+_**Assistant**_
+
+Ah, I see. We need to modify the streaming to happen at the word level while still maintaining paragraph formatting. Let's update the WebSocket handler:
+
+---
+
+_**Assistant**_
+
+```
+            # Generate the complete story node
+            story_node = await generate_story_segment(
+                story_category, lesson_topic, state
+            )
+
+            # Split into paragraphs and stream each word while maintaining paragraph structure
+            paragraphs = [p.strip() for p in story_node.content.split("\n\n") if p.strip()]
+            
+            # Process first paragraph
+            if paragraphs:
+                words = paragraphs[0].split()
+                for word in words:
+                    await websocket.send_text(word + " ")
+                    await asyncio.sleep(0.05)  # Small delay between words
+            
+            # Process remaining paragraphs
+            for paragraph in paragraphs[1:]:
+                # Send paragraph break
+                await websocket.send_text("\n\n")
+                await asyncio.sleep(0.2)  # Slightly longer pause between paragraphs
+                
+                # Stream words in the paragraph
+                words = paragraph.split()
+                for word in words:
+                    await websocket.send_text(word + " ")
+                    await asyncio.sleep(0.05)  # Small delay between words
+
+            # Send choices as a separate message
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+The changes I made:
+1. Split each paragraph into words
+2. Stream each word individually with a small 0.05s delay between words
+3. Maintain paragraph breaks by sending `\n\n` between paragraphs with a slightly longer 0.2s pause
+4.
+
 ---
 
 
