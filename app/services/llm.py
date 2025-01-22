@@ -1,6 +1,5 @@
 # app/services/llm.py
 from typing import Dict, Any, List, Optional
-import openai
 from openai import AsyncOpenAI
 import os
 from app.models.story import StoryState
@@ -95,7 +94,7 @@ class LLMService:
 
 """
 
-        if state.depth == 0:
+        if state.depth == 1 and not state.history:  # Opening scene at depth 1
             prompt += "Generate the opening scene of the story, introducing the setting and main character."
         elif question:
             # Integrate educational question naturally into the story

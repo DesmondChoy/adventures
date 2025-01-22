@@ -90,7 +90,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
 
     # Initialize with default state
     state = StoryState(
-        current_node="start", depth=0, history=[], correct_answers=0, total_questions=0
+        current_node="start", depth=1, history=[], correct_answers=0, total_questions=0
     )
 
     try:
@@ -102,7 +102,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
             if "state" in data:
                 state = StoryState(
                     current_node=data["state"].get("current_node", "start"),
-                    depth=data["state"].get("depth", 0),
+                    depth=data["state"].get("depth", 1),  # Default to 1 instead of 0
                     history=data["state"].get("history", []),
                     correct_answers=data["state"].get("correct_answers", 0),
                     total_questions=data["state"].get("total_questions", 0),
@@ -119,7 +119,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
 
             try:
                 # Generate the complete story node
-                story_node = await generate_story_segment(
+                story_node = await generate_story_node(
                     story_category, lesson_topic, state
                 )
 
@@ -176,7 +176,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
         print(f"WebSocket connection closed")
 
 
-async def generate_story_segment(
+async def generate_story_node(
     story_category: str, lesson_topic: str, state: StoryState
 ) -> StoryNode:
     """Generate the next story segment based on the current state."""
@@ -186,7 +186,7 @@ async def generate_story_segment(
 
     # Load lesson data if we're at the question depth
     question = None
-    if state.depth == 1:  # Next node will be depth 2
+    if state.depth == 1:  # Question appears on first page
         lesson_data = load_lesson_data()
         relevant_lessons = lesson_data[lesson_data["topic"] == lesson_topic]
         question = relevant_lessons.iloc[state.total_questions].to_dict()
@@ -198,7 +198,6 @@ async def generate_story_segment(
 
     # Process the streaming response
     story_content = ""
-    story_choices = []
 
     try:
         async for chunk in story_stream:
@@ -208,8 +207,12 @@ async def generate_story_segment(
         print(f"Error during story generation: {e}")
         story_content = "I apologize, but I encountered an error generating the story. Please try again."
 
-    # Extract choices based on whether this is a question node or not
-    if question:
+    # Set up choices based on story depth
+    if state.depth == 1:
+        if not question:
+            raise ValueError("Question not found for depth 1")
+        # Ensure the question is appended to the story content
+        story_content += f"\n\n{question['question']}"
         story_choices = [
             StoryChoice(text=question["correct_answer"], next_node="correct"),
             StoryChoice(text=question["wrong_answer1"], next_node="wrong1"),
