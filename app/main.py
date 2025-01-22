@@ -10,6 +10,7 @@ import asyncio
 from pydantic import BaseModel
 from app.services.llm import LLMService
 from fastapi.responses import StreamingResponse
+import uvicorn
 
 # Initialize FastAPI app and services
 app = FastAPI(title="Educational Story App")
@@ -66,11 +67,28 @@ async def root(request: Request):
     )
 
 
+@app.get("/story/{depth}")
+async def story_page(request: Request, depth: int):
+    """Render the story page for the given depth."""
+    if depth < 1 or depth > 3:
+        return {"error": "Invalid story depth"}
+
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "story_categories": [],  # Empty as we'll use stored state
+            "lesson_topics": [],  # Empty as we'll use stored state
+        },
+    )
+
+
 @app.websocket("/ws/story/{story_category}/{lesson_topic}")
 async def story_websocket(websocket: WebSocket, story_category: str, lesson_topic: str):
     """Handle WebSocket connection for story streaming."""
     await websocket.accept()
 
+    # Initialize with default state
     state = StoryState(
         current_node="start", depth=0, history=[], correct_answers=0, total_questions=0
     )
@@ -80,54 +98,82 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
             data = await websocket.receive_json()
             choice = data.get("choice")
 
+            # If we receive a state update, use it to initialize our state
+            if "state" in data:
+                state = StoryState(
+                    current_node=data["state"].get("current_node", "start"),
+                    depth=data["state"].get("depth", 0),
+                    history=data["state"].get("history", []),
+                    correct_answers=data["state"].get("correct_answers", 0),
+                    total_questions=data["state"].get("total_questions", 0),
+                )
+                continue  # Skip to next iteration to wait for choice
+
             if choice is None:
                 continue
 
-            state.history.append(choice)
-            state.depth += 1
+            # Only append choice and increment depth for non-state messages
+            if choice != "start":  # Don't append "start" to history
+                state.history.append(choice)
+                state.depth += 1
 
-            # Generate the complete story node
-            story_node = await generate_story_segment(
-                story_category, lesson_topic, state
-            )
+            try:
+                # Generate the complete story node
+                story_node = await generate_story_segment(
+                    story_category, lesson_topic, state
+                )
 
-            # Split into paragraphs and stream each word while maintaining paragraph structure
-            paragraphs = [
-                p.strip() for p in story_node.content.split("\n\n") if p.strip()
-            ]
+                # Split into paragraphs and stream each word while maintaining paragraph structure
+                paragraphs = [
+                    p.strip() for p in story_node.content.split("\n\n") if p.strip()
+                ]
 
-            # Process first paragraph
-            if paragraphs:
-                words = paragraphs[0].split()
-                for word in words:
-                    await websocket.send_text(word + " ")
-                    await asyncio.sleep(0.05)  # Small delay between words
+                # Process first paragraph
+                if paragraphs:
+                    words = paragraphs[0].split()
+                    for word in words:
+                        await websocket.send_text(word + " ")
+                        await asyncio.sleep(0.05)  # Small delay between words
 
-            # Process remaining paragraphs
-            for paragraph in paragraphs[1:]:
-                # Send paragraph break
-                await websocket.send_text("\n\n")
-                await asyncio.sleep(0.2)  # Slightly longer pause between paragraphs
+                # Process remaining paragraphs
+                for paragraph in paragraphs[1:]:
+                    # Send paragraph break
+                    await websocket.send_text("\n\n")
+                    await asyncio.sleep(0.2)  # Slightly longer pause between paragraphs
 
-                # Stream words in the paragraph
-                words = paragraph.split()
-                for word in words:
-                    await websocket.send_text(word + " ")
-                    await asyncio.sleep(0.05)  # Small delay between words
+                    # Stream words in the paragraph
+                    words = paragraph.split()
+                    for word in words:
+                        await websocket.send_text(word + " ")
+                        await asyncio.sleep(0.05)  # Small delay between words
 
-            # Send choices as a separate message
-            await websocket.send_json(
-                {
-                    "type": "choices",
-                    "choices": [
-                        {"text": choice.text, "id": choice.next_node}
-                        for choice in story_node.choices
-                    ],
-                }
-            )
+                # Send choices as a separate message
+                await websocket.send_json(
+                    {
+                        "type": "choices",
+                        "choices": [
+                            {"text": choice.text, "id": choice.next_node}
+                            for choice in story_node.choices
+                        ],
+                    }
+                )
+            except WebSocketDisconnect:
+                print(f"Client disconnected during story generation")
+                break
+            except Exception as e:
+                print(f"Error during story generation: {e}")
+                await websocket.send_text(
+                    "An error occurred while generating the story."
+                )
+                break
 
     except WebSocketDisconnect:
         print(f"Client disconnected")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+    finally:
+        # Ensure we handle any cleanup needed
+        print(f"WebSocket connection closed")
 
 
 async def generate_story_segment(
@@ -179,6 +225,4 @@ async def generate_story_segment(
 
 
 if __name__ == "__main__":
-    import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)

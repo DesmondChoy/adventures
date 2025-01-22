@@ -12,7 +12,7 @@
         <h1 class="text-4xl font-bold text-center mb-8">Educational Story Adventure</h1>
         
         <!-- Selection Form -->
-        <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6">
+        <div id="formContainer" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6">
             <form id="storyForm" class="space-y-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">
@@ -68,8 +68,8 @@
             const storyCategory = document.getElementById('storyCategory').value;
             const lessonTopic = document.getElementById('lessonTopic').value;
             
-            // Hide the form and show the story container
-            this.classList.add('hidden');
+            // Hide the form container and show the story container
+            document.getElementById('formContainer').classList.add('hidden');
             document.getElementById('storyContainer').classList.remove('hidden');
             
             // Initialize WebSocket connection
@@ -92,9 +92,23 @@
             
             // Start the story
             storyWebSocket.onopen = function() {
-                // Send initial message to start the story
+                // First send the stored state if it exists
+                const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
+                if (Object.keys(storyState).length > 0) {
+                    storyWebSocket.send(JSON.stringify({
+                        state: {
+                            current_node: storyState.choice,
+                            depth: parseInt(sessionStorage.getItem('storyDepth') || '0'),
+                            history: storyState.history || [],
+                            correct_answers: storyState.correct_answers || 0,
+                            total_questions: storyState.total_questions || 0
+                        }
+                    }));
+                }
+                
+                // Then send the choice to continue the story
                 storyWebSocket.send(JSON.stringify({
-                    choice: 'start'
+                    choice: storyState.choice || 'start'
                 }));
             };
         });
@@ -113,25 +127,113 @@
             
             choices.forEach(choice => {
                 const button = document.createElement('button');
-                button.className = 'w-full p-4 text-left border rounded-lg hover:bg-gray-50 transition-colors';
+                button.className = 'w-full p-4 text-left border rounded-lg hover:bg-gray-50 transition-colors focus:outline-none';
                 button.textContent = choice.text;
-                button.onclick = () => makeChoice(choice.id);
+                button.onclick = (e) => {
+                    // Disable all buttons and highlight selected one
+                    const allButtons = choicesContainer.querySelectorAll('button');
+                    allButtons.forEach(btn => {
+                        btn.disabled = true;
+                        btn.classList.remove('bg-indigo-600', 'text-white', 'hover:bg-indigo-700');
+                        btn.classList.add('opacity-50');
+                    });
+                    
+                    // Highlight selected button
+                    e.target.classList.remove('opacity-50');
+                    e.target.classList.add('bg-indigo-600', 'text-white');
+                    
+                    // Make the choice after a short delay to show the selection
+                    setTimeout(() => makeChoice(choice.id), 2000);
+                };
                 choicesContainer.appendChild(button);
             });
         }
 
         function makeChoice(choiceId) {
             if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
-                // Disable all choice buttons while processing
-                const buttons = document.querySelectorAll('#choicesContainer button');
-                buttons.forEach(button => button.disabled = true);
+                // Get existing state or initialize new one
+                const existingState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
+                const currentDepth = parseInt(sessionStorage.getItem('storyDepth') || '0');
                 
-                // Send the choice to the server
-                storyWebSocket.send(JSON.stringify({
-                    choice: choiceId
-                }));
+                // Store the current state in sessionStorage
+                const currentState = {
+                    storyCategory: document.getElementById('storyCategory').value,
+                    lessonTopic: document.getElementById('lessonTopic').value,
+                    choice: choiceId,
+                    depth: currentDepth + 1,
+                    history: [...(existingState.history || []), choiceId],
+                    correct_answers: existingState.correct_answers || 0,
+                    total_questions: existingState.total_questions || 0
+                };
+                
+                sessionStorage.setItem('storyState', JSON.stringify(currentState));
+                sessionStorage.setItem('storyDepth', currentState.depth.toString());
+                
+                // Close WebSocket before navigation
+                storyWebSocket.close();
+                
+                // Navigate to the next page
+                window.location.href = `/story/${currentState.depth}`;
             }
         }
+
+        // On page load, check if we're continuing a story
+        window.onload = function() {
+            const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
+            const depth = parseInt(sessionStorage.getItem('storyDepth') || '0');
+            
+            if (depth > 0 && storyState) {
+                // Hide the form and show story container
+                document.getElementById('formContainer').classList.add('hidden');
+                document.getElementById('storyContainer').classList.remove('hidden');
+                
+                // Connect to WebSocket with stored state
+                const wsUrl = `ws://${window.location.host}/ws/story/${storyState.storyCategory}/${storyState.lessonTopic}`;
+                storyWebSocket = new WebSocket(wsUrl);
+                
+                // Set up message handling
+                storyWebSocket.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'choices') {
+                            displayChoices(data.choices);
+                        }
+                    } catch (e) {
+                        appendStoryText(event.data);
+                    }
+                };
+
+                storyWebSocket.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                };
+
+                storyWebSocket.onclose = function(event) {
+                    console.log('WebSocket closed:', event.code, event.reason);
+                };
+                
+                // When connection opens, send the stored choice
+                storyWebSocket.onopen = function() {
+                    // First send the stored state if it exists
+                    const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
+                    if (Object.keys(storyState).length > 0) {
+                        storyWebSocket.send(JSON.stringify({
+                            state: {
+                                current_node: storyState.choice,
+                                depth: parseInt(sessionStorage.getItem('storyDepth') || '0'),
+                                history: storyState.history || [],
+                                correct_answers: storyState.correct_answers || 0,
+                                total_questions: storyState.total_questions || 0
+                            }
+                        }));
+                    }
+                    
+                    // Then send the choice to continue the story
+                    storyWebSocket.send(JSON.stringify({
+                        choice: storyState.choice || 'start'
+                    }));
+                };
+            }
+        };
 
         // Clean up WebSocket when leaving the page
         window.onbeforeunload = function() {
