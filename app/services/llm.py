@@ -94,25 +94,72 @@ class LLMService:
 
 """
 
-        if state.depth == 1 and not state.history:  # Opening scene at depth 1
-            prompt += "Generate the opening scene of the story, introducing the setting and main character."
-        elif question:
-            # Integrate educational question naturally into the story
-            prompt += f"""Continue the story, naturally leading to a situation where the following question 
-            can be asked: {question["question"]}
+        # Opening scene at depth 1
+        if state.depth == 1 and not state.history:
+            if question:
+                prompt += f"""Generate the opening scene of the story, introducing the setting and main character. 
+                The scene should establish the world and protagonist while naturally leading to this educational question:
+                {question["question"]}
 
-The choices should be:
-1. {question["correct_answer"]}
-2. {question["wrong_answer1"]}
-3. {question["wrong_answer2"]}
+                CRITICAL INSTRUCTIONS:
+                1. Create an immersive fantasy world that will subtly connect to {question["question"].split()[0]}'s history
+                2. The question should emerge naturally from the story events or character interactions
+                3. DO NOT include any story-based choices or decisions
+                4. DO NOT use bullet points, numbered lists, or dashes
+                5. DO NOT end with "What should X do?" or similar prompts
+                6. The question should feel like a natural part of the character's discovery
 
-The question should feel like a natural part of the story's progression."""
+                The educational answers that will be presented separately are:
+                - {question["correct_answer"]}
+                - {question["wrong_answer1"]}
+                - {question["wrong_answer2"]}
+
+                Example integration:
+                "As [Character] explored the ancient library, they discovered a fascinating chronicle that posed an intriguing question: '{question["question"]}'"
+                or
+                "The wise mentor turned to [Character] and asked about a pivotal moment in history: '{question["question"]}'"
+                """
+            else:
+                prompt += """Generate the opening scene of the story, introducing the setting and main character. 
+                The scene should establish the world and protagonist while building towards a natural educational moment.
+                
+                IMPORTANT: Do not include any story choices or decision points in this scene."""
+
+        # Educational questions at odd depths (3 and above)
+        elif question and state.depth % 2 == 1:
+            prompt += f"""Continue the story, leading to a situation where the following educational question naturally arises: 
+            {question["question"]}
+
+            CRITICAL INSTRUCTIONS:
+            1. The story should flow naturally towards the educational question
+            2. The question should be asked by a character or emerge from the situation
+            3. DO NOT include any story-based choices or decisions
+            4. DO NOT use bullet points, numbered lists, or dashes
+            5. DO NOT end with "What should X do?" or similar prompts
+            6. Focus ONLY on building up to the educational question
+
+            The educational answers that will be presented separately are:
+            - {question["correct_answer"]}
+            - {question["wrong_answer1"]}
+            - {question["wrong_answer2"]}
+
+            Example integration:
+            "Professor [Name] paused thoughtfully before asking the class, '{question["question"]}'"
+            or
+            "[Character] discovered an ancient scroll. Its weathered text posed an intriguing question: '{question["question"]}'"
+            """
+
+        # Story-driven choices at even depths
         else:
-            # Regular story continuation
-            prompt += """Continue the story based on the previous choices, 
-            creating meaningful consequences for the character's decisions.
+            prompt += """Continue the story based on the previous choices, creating meaningful 
+            consequences for the character's decisions. Focus on character development and 
+            plot progression.
             
-End this segment with two clear choices that would lead the story in different directions."""
+            IMPORTANT:
+            1. DO NOT include any educational questions or historical facts
+            2. Build towards a natural story decision point
+            3. The story choices will be provided separately - do not list them in the narrative
+            4. End the scene at a moment of decision, but DO NOT explicitly list the choices"""
 
         return prompt
 
