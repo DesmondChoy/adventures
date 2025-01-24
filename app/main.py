@@ -48,6 +48,7 @@ class StoryState(BaseModel):
     history: List[str]
     correct_answers: int
     total_questions: int
+    previous_content: str | None = None
 
 
 # Routes
@@ -90,23 +91,34 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
 
     # Initialize with default state
     state = StoryState(
-        current_node="start", depth=1, history=[], correct_answers=0, total_questions=0
+        current_node="start",
+        depth=1,
+        history=[],
+        correct_answers=0,
+        total_questions=0,
+        previous_content=None,
     )
 
     try:
         while True:
             data = await websocket.receive_json()
+            print(f"\nDEBUG: Received WebSocket data: {data}")
+
             choice = data.get("choice")
 
             # If we receive a state update, use it to initialize our state
             if "state" in data:
                 state = StoryState(
                     current_node=data["state"].get("current_node", "start"),
-                    depth=data["state"].get("depth", 1),  # Default to 1 instead of 0
+                    depth=data["state"].get(
+                        "depth", 1
+                    ),  # Default to 1 for first story page
                     history=data["state"].get("history", []),
                     correct_answers=data["state"].get("correct_answers", 0),
                     total_questions=data["state"].get("total_questions", 0),
+                    previous_content=data["state"].get("previous_content", None),
                 )
+                print(f"\nDEBUG: Updated state from client: {state}")
                 continue  # Skip to next iteration to wait for choice
 
             if choice is None:
@@ -116,6 +128,13 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
             if choice != "start":  # Don't append "start" to history
                 state.history.append(choice)
                 state.depth += 1
+                if choice == "correct":
+                    state.correct_answers += 1
+                if state.depth % 2 == 0:  # After answering a question
+                    state.total_questions += 1
+                print(
+                    f"\nDEBUG: Updated state after choice: depth={state.depth}, history={state.history}"
+                )
 
             try:
                 # Generate the complete story node
@@ -191,11 +210,22 @@ async def generate_story_node(
     question = None
     if is_question_depth:
         lesson_data = load_lesson_data()
+        print(f"\nDEBUG: Loading question at depth {state.depth}")
+        print(
+            f"DEBUG: Looking for topic '{lesson_topic}' in available topics: {lesson_data['topic'].unique()}"
+        )
+
         relevant_lessons = lesson_data[lesson_data["topic"] == lesson_topic]
+        print(f"DEBUG: Found {len(relevant_lessons)} lessons for topic {lesson_topic}")
+
         if not relevant_lessons.empty:
             question = relevant_lessons.iloc[
                 state.total_questions % len(relevant_lessons)
             ].to_dict()
+            print(f"DEBUG: Selected question: {question['question']}")
+            print(
+                f"DEBUG: Choices: {question['correct_answer']}, {question['wrong_answer1']}, {question['wrong_answer2']}"
+            )
 
     # Generate story content using LLM
     story_content = ""
@@ -203,7 +233,7 @@ async def generate_story_node(
         async for chunk in llm_service.generate_story_stream(
             story_config,
             state,
-            question,  # Always pass question for odd depths
+            question,  # Pass question for odd depths
         ):
             story_content += chunk
     except Exception as e:
@@ -228,6 +258,9 @@ async def generate_story_node(
     for i, choice in enumerate(story_choices, 1):
         print(f"Choice {i}: {choice.text} (next_node: {choice.next_node})")
     print("========================\n")
+
+    # Store the current content for the next segment
+    state.previous_content = story_content
 
     return StoryNode(content=story_content, choices=story_choices)
 

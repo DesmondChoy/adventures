@@ -152,6 +152,13 @@ class LLMService:
 
 """
 
+        # Add previous content if it exists
+        if state.previous_content:
+            prompt += f"""Previous story segment:
+{state.previous_content}
+
+"""
+
         # Opening scene at depth 1
         if state.depth == 1 and not state.history:
             if question:

@@ -163,7 +163,8 @@
                     depth: currentDepth + 1,
                     history: [...(existingState.history || []), choiceId],
                     correct_answers: existingState.correct_answers || 0,
-                    total_questions: existingState.total_questions || 0
+                    total_questions: existingState.total_questions || 0,
+                    previous_content: document.getElementById('storyContent').innerHTML  // Store current content
                 };
                 
                 sessionStorage.setItem('storyState', JSON.stringify(currentState));
@@ -197,35 +198,27 @@
                         const data = JSON.parse(event.data);
                         if (data.type === 'choices') {
                             displayChoices(data.choices);
+                        } else {
+                            appendStoryText(event.data);
                         }
                     } catch (e) {
                         appendStoryText(event.data);
                     }
                 };
-
-                storyWebSocket.onerror = function(error) {
-                    console.error('WebSocket error:', error);
-                };
-
-                storyWebSocket.onclose = function(event) {
-                    console.log('WebSocket closed:', event.code, event.reason);
-                };
                 
-                // When connection opens, send the stored choice
+                // When connection opens, send the stored state
                 storyWebSocket.onopen = function() {
-                    // First send the stored state if it exists
-                    const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
-                    if (Object.keys(storyState).length > 0) {
-                        storyWebSocket.send(JSON.stringify({
-                            state: {
-                                current_node: storyState.choice,
-                                depth: parseInt(sessionStorage.getItem('storyDepth') || '0'),
-                                history: storyState.history || [],
-                                correct_answers: storyState.correct_answers || 0,
-                                total_questions: storyState.total_questions || 0
-                            }
-                        }));
-                    }
+                    // First send the stored state
+                    storyWebSocket.send(JSON.stringify({
+                        state: {
+                            current_node: storyState.choice,
+                            depth: depth,
+                            history: storyState.history || [],
+                            correct_answers: storyState.correct_answers || 0,
+                            total_questions: storyState.total_questions || 0,
+                            previous_content: storyState.previous_content  // Pass previous content
+                        }
+                    }));
                     
                     // Then send the choice to continue the story
                     storyWebSocket.send(JSON.stringify({
