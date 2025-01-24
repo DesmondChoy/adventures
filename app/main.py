@@ -198,70 +198,36 @@ async def generate_story_node(
             ].to_dict()
 
     # Generate story content using LLM
-    story_stream = await llm_service.generate_story_segment(
-        story_config,
-        state,
-        question,  # Always pass question for odd depths
-    )
-
-    # Process the streaming response
     story_content = ""
     try:
-        async for chunk in story_stream:
-            if chunk.choices[0].delta.content:
-                story_content += chunk.choices[0].delta.content
+        async for chunk in llm_service.generate_story_stream(
+            story_config,
+            state,
+            question,  # Always pass question for odd depths
+        ):
+            story_content += chunk
     except Exception as e:
         print(f"Error during story generation: {e}")
         story_content = "I apologize, but I encountered an error generating the story. Please try again."
 
-    # Remove any story choices if this is a question depth
-    if is_question_depth:
-        # Remove any lines containing "What should" or similar choice prompts
-        lines = story_content.split("\n")
-        story_content = "\n".join(
-            line
-            for line in lines
-            if not any(
-                prompt in line.lower()
-                for prompt in [
-                    "what should",
-                    "should he",
-                    "would you",
-                    "- ",
-                    "1.",
-                    "2.",
-                    "3.",
-                ]
-            )
-        )
-
-    # Set up choices based on depth
+    # Extract choices based on depth
     if is_question_depth and question:
-        # Educational question choices at odd depths
         story_choices = [
             StoryChoice(text=question["correct_answer"], next_node="correct"),
             StoryChoice(text=question["wrong_answer1"], next_node="wrong1"),
             StoryChoice(text=question["wrong_answer2"], next_node="wrong2"),
         ]
-
-        # Only append the question if it's not already in the story
-        if question["question"] not in story_content:
-            story_content += f"\n\n{question['question']}"
     else:
-        # Story-driven choices at even depths
         story_choices = [
-            StoryChoice(text=choice["text"], next_node=f"node_{state.depth}_{i}")
-            for i, choice in enumerate(
-                [
-                    {
-                        "text": "Trust his instincts and search for the Silverleaf Fern on his own"
-                    },
-                    {
-                        "text": "Ask the wise old owl for guidance and learn more about the garden"
-                    },
-                ]
-            )
+            StoryChoice(text=f"Choice {i + 1}", next_node=f"node_{state.depth}_{i}")
+            for i in range(2)
         ]
+
+    # Debug output for choices
+    print("\n=== DEBUG: Story Choices ===")
+    for i, choice in enumerate(story_choices, 1):
+        print(f"Choice {i}: {choice.text} (next_node: {choice.next_node})")
+    print("========================\n")
 
     return StoryNode(content=story_content, choices=story_choices)
 

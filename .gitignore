@@ -47,3 +47,5 @@ logs/
 # Local development
 *.db
 *.sqlite3 
+
+.cursorignore
