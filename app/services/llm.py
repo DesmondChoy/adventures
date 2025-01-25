@@ -143,7 +143,7 @@ class LLMService:
         self,
         story_config: Dict[str, Any],
         state: StoryState,
-        question: Optional[Dict[str, Any]],
+        question: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Create a user prompt that includes story state and current requirements."""
         prompt = f"""Current story state:
@@ -159,8 +159,48 @@ class LLMService:
 
 """
 
+        # Check if we're following up on a previous question (any depth)
+        if state.history and state.history[-1] in ["correct", "wrong1", "wrong2"]:
+            # Get the last choice and determine if it was correct
+            last_choice = state.history[-1]
+            was_correct = last_choice == "correct"
+
+            # Add consequences guidance to the prompt
+            consequences_guidance = self._process_consequences(state, was_correct)
+
+            # If we have a new question, combine consequences with question setup
+            if question:
+                prompt += f"""Continue the story, acknowledging the previous answer while leading to a new question.
+
+{consequences_guidance}
+
+The story should naturally build towards this question:
+{question["question"]}
+
+CRITICAL INSTRUCTIONS:
+1. First address the consequences of the previous answer
+2. Then naturally transition to a situation where the new question arises
+3. The question should emerge from the story events or character interactions
+4. DO NOT include any story-based choices or decisions
+5. The question should feel like a natural part of the character's journey
+
+The educational answers that will be presented separately are:
+- {question["correct_answer"]}
+- {question["wrong_answer1"]}
+- {question["wrong_answer2"]}"""
+            else:
+                prompt += f"""Continue the story based on the character's previous answer.
+
+{consequences_guidance}
+
+IMPORTANT:
+1. The story should clearly but naturally acknowledge the impact of their previous answer
+2. Build towards a natural story decision point
+3. The story choices will be provided separately - do not list them in the narrative
+4. End the scene at a moment of decision - explicitly list the choices"""
+
         # Opening scene at depth 1
-        if state.depth == 1 and not state.history:
+        elif state.depth == 1 and not state.history:
             if question:
                 prompt += f"""Generate the opening scene of the story, introducing the setting and main character. 
                 The scene should establish the world and protagonist while naturally leading to this educational question:
@@ -177,21 +217,14 @@ class LLMService:
                 The educational answers that will be presented separately are:
                 - {question["correct_answer"]}
                 - {question["wrong_answer1"]}
-                - {question["wrong_answer2"]}
-
-                Example integration:
-                "As [Character] explored the ancient library, they discovered a fascinating chronicle that posed an intriguing question: '{question["question"]}'"
-                or
-                "The wise mentor turned to [Character] and asked about a pivotal moment in history: '{question["question"]}'"
-                """
+                - {question["wrong_answer2"]}"""
             else:
                 prompt += """Generate the opening scene of the story, introducing the setting and main character. 
                 The scene should establish the world and protagonist while building towards a natural educational moment.
                 
                 IMPORTANT: Do not include any story choices or decision points in this scene."""
-
-        # Educational questions at odd depths (3 and above)
-        elif question and state.depth % 2 == 1:
+        # New question without previous answer to address
+        elif question:
             prompt += f"""Continue the story, leading to a situation where the following educational question naturally arises: 
             {question["question"]}
 
@@ -206,15 +239,8 @@ class LLMService:
             The educational answers that will be presented separately are:
             - {question["correct_answer"]}
             - {question["wrong_answer1"]}
-            - {question["wrong_answer2"]}
-
-            Example integration:
-            "Professor [Name] paused thoughtfully before asking the class, '{question["question"]}'"
-            or
-            "[Character] discovered an ancient scroll. Its weathered text posed an intriguing question: '{question["question"]}'"
-            """
-
-        # Story-driven choices at even depths
+            - {question["wrong_answer2"]}"""
+        # Regular story continuation
         else:
             prompt += """Continue the story based on the previous choices, creating meaningful 
             consequences for the character's decisions. Focus on character development and 
@@ -224,7 +250,7 @@ class LLMService:
             1. DO NOT include any educational questions or historical facts
             2. Build towards a natural story decision point
             3. The story choices will be provided separately - do not list them in the narrative
-            4. End the scene at a moment of decision, but DO NOT explicitly list the choices"""
+            4. End the scene at a moment of decision - explicitly list the choices"""
 
         return prompt
 
@@ -235,8 +261,15 @@ class LLMService:
         if was_correct is None:
             return ""
 
-        return """Based on the character's choice, continue the story while:
-        - Acknowledging whether the choice was correct or incorrect
-        - Providing a natural explanation for why this was the right/wrong choice
-        - Maintaining story flow without breaking immersion
-        - Using the outcome to drive the story forward"""
+        if was_correct:
+            return """The story should:
+            - Acknowledge the character's correct understanding of the question
+            - Show how this understanding connects to their current situation
+            - Use this success to build confidence for future challenges"""
+        else:
+            return """The story should:
+            - Acknowledge the incorrect answer while maintaining the character's dignity
+            - Explain the correct answer in a way that is easy to understand
+            - Show how this misunderstanding leads to a valuable learning moment
+            - Use this as an opportunity for growth and deeper understanding
+            - Connect the correction to their current situation and future challenges"""
