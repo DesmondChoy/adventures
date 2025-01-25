@@ -1,5 +1,5 @@
 # app/services/llm.py
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, Optional
 from openai import AsyncOpenAI
 import os
 from app.models.story import StoryState

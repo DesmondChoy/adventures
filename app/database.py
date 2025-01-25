@@ -1,12 +1,8 @@
 # app/database.py
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Text, Float
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 import os
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
 
 # Create database engine
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./story_app.db")
