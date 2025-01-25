@@ -161,7 +161,7 @@
                     lessonTopic: document.getElementById('lessonTopic').value,
                     choice: choiceId,
                     depth: currentDepth + 1,
-                    history: [...(existingState.history || []), choiceId],
+                    history: existingState.history || [],  // Don't append here, server handles it
                     correct_answers: existingState.correct_answers || 0,
                     total_questions: existingState.total_questions || 0,
                     previous_content: document.getElementById('storyContent').innerHTML  // Store current content
