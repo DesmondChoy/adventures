@@ -40,6 +40,12 @@ class StoryNode(BaseModel):
     choices: List[StoryChoice]
 
 
+class QuestionHistory(BaseModel):
+    question: Dict[str, Any]
+    chosen_answer: str
+    was_correct: bool
+
+
 class StoryState(BaseModel):
     current_node: str
     depth: int
@@ -47,6 +53,7 @@ class StoryState(BaseModel):
     correct_answers: int
     total_questions: int
     previous_content: str | None = None
+    question_history: List[QuestionHistory] = []  # Track all Q&A history
 
 
 # Routes
@@ -95,6 +102,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
         correct_answers=0,
         total_questions=0,
         previous_content=None,
+        question_history=[],
     )
 
     try:
@@ -115,6 +123,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                     correct_answers=data["state"].get("correct_answers", 0),
                     total_questions=data["state"].get("total_questions", 0),
                     previous_content=data["state"].get("previous_content", None),
+                    question_history=data["state"].get("question_history", []),
                 )
                 print(f"\nDEBUG: Updated state from client: {state}")
                 continue  # Skip to next iteration to wait for choice
@@ -126,10 +135,31 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
             if choice != "start":  # Don't append "start" to history
                 state.history.append(choice)
                 state.depth += 1
-                if choice == "correct":
-                    state.correct_answers += 1
-                if state.depth % 2 == 0:  # After answering a question
-                    state.total_questions += 1
+
+                # After answering a question at odd depths
+                if state.depth % 2 == 0:
+                    # Load the question that was just answered
+                    lesson_data = load_lesson_data()
+                    relevant_lessons = lesson_data[lesson_data["topic"] == lesson_topic]
+                    if not relevant_lessons.empty:
+                        answered_question = relevant_lessons.iloc[
+                            state.total_questions % len(relevant_lessons)
+                        ].to_dict()
+
+                        # Record this Q&A in history
+                        was_correct = choice == "correct"
+                        state.question_history.append(
+                            QuestionHistory(
+                                question=answered_question,
+                                chosen_answer=choice,
+                                was_correct=was_correct,
+                            )
+                        )
+
+                        if was_correct:
+                            state.correct_answers += 1
+                        state.total_questions += 1
+
                 print(
                     f"\nDEBUG: Updated state after choice: depth={state.depth}, history={state.history}"
                 )
@@ -206,6 +236,24 @@ async def generate_story_node(
 
     # Load question for odd depths (including depth 1)
     question = None
+    previous_questions = []
+
+    # Get previous questions if we have history
+    if state.question_history:
+        previous_questions = [
+            {
+                "question": qh.question,
+                "chosen_answer": qh.chosen_answer,
+                "was_correct": qh.was_correct,
+            }
+            for qh in state.question_history
+        ]
+        print("\nDEBUG: Previous questions history:")
+        for i, pq in enumerate(previous_questions, 1):
+            print(f"Q{i}: {pq['question']['question']}")
+            print(f"Chosen: {pq['chosen_answer']} (Correct: {pq['was_correct']})")
+
+    # Load new question if at question depth
     if is_question_depth:
         lesson_data = load_lesson_data()
         print(f"\nDEBUG: Loading question at depth {state.depth}")
@@ -232,6 +280,7 @@ async def generate_story_node(
             story_config,
             state,
             question,  # Pass question for odd depths
+            previous_questions,  # Pass all previous Q&A history
         ):
             story_content += chunk
     except Exception as e:

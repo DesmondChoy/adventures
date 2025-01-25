@@ -1,5 +1,5 @@
 # app/services/llm.py
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 from openai import AsyncOpenAI
 import os
 from app.models.story import StoryState
@@ -11,62 +11,12 @@ class LLMService:
         if not os.getenv("OPENAI_API_KEY"):
             print("WARNING: OPENAI_API_KEY is not set in environment variables!")
 
-    async def generate_story_segment(
-        self,
-        story_config: Dict[str, Any],
-        state: StoryState,
-        question: Optional[Dict[str, Any]] = None,
-    ) -> str:
-        """
-        Generate the complete story segment (non-streaming).
-        """
-        # Build the system prompt that establishes the storytelling framework
-        system_prompt = self._build_system_prompt(story_config)
-
-        # Build the user prompt that includes story state and requirements
-        user_prompt = self._build_user_prompt(story_config, state, question)
-
-        # Debug output
-        print("\n=== DEBUG: LLM Request ===")
-        print("System Prompt:")
-        print(system_prompt)
-        print("\nUser Prompt:")
-        print(user_prompt)
-        print("========================\n")
-
-        try:
-            # Call the LLM with our prompts
-            response = await self.client.chat.completions.create(
-                model="gpt-4o-2024-08-06",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.7,  # Balanced between creativity and consistency
-                stream=False,  # Get complete response for non-streaming version
-            )
-
-            content = response.choices[0].message.content
-
-            # Log the complete response
-            print("\n=== DEBUG: LLM Response ===")
-            print(content)
-            print("========================\n")
-
-            return content
-
-        except Exception as e:
-            print(f"\n=== ERROR: LLM Request Failed ===")
-            print(f"Error type: {type(e).__name__}")
-            print(f"Error message: {str(e)}")
-            print("===============================\n")
-            raise  # Re-raise the exception after logging
-
     async def generate_story_stream(
         self,
         story_config: Dict[str, Any],
         state: StoryState,
         question: Optional[Dict[str, Any]] = None,
+        previous_questions: Optional[List[Dict[str, Any]]] = None,
     ):
         """
         Generate the story segment as a stream of chunks.
@@ -75,7 +25,9 @@ class LLMService:
         system_prompt = self._build_system_prompt(story_config)
 
         # Build the user prompt that includes story state and requirements
-        user_prompt = self._build_user_prompt(story_config, state, question)
+        user_prompt = self._build_user_prompt(
+            story_config, state, question, previous_questions
+        )
 
         # Debug output
         print("\n=== DEBUG: LLM Request ===")
@@ -144,6 +96,7 @@ class LLMService:
         story_config: Dict[str, Any],
         state: StoryState,
         question: Optional[Dict[str, Any]] = None,
+        previous_questions: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         """Create a user prompt that includes story state and current requirements."""
         prompt = f"""Current story state:
@@ -159,20 +112,22 @@ class LLMService:
 
 """
 
-        # Check if we're following up on a previous question (any depth)
-        if state.history and state.history[-1] in ["correct", "wrong1", "wrong2"]:
-            # Get the last choice and determine if it was correct
-            last_choice = state.history[-1]
-            was_correct = last_choice == "correct"
-
-            # Add consequences guidance to the prompt
-            consequences_guidance = self._process_consequences(state, was_correct)
+        # Check if we're following up on previous questions
+        if previous_questions:
+            # Get the most recent question's consequences
+            last_qa = previous_questions[-1]
+            consequences_guidance = self._process_consequences(
+                state, last_qa["was_correct"], last_qa["question"]
+            )
 
             # If we have a new question, combine consequences with question setup
             if question:
-                prompt += f"""Continue the story, acknowledging the previous answer while leading to a new question.
+                prompt += f"""Continue the story, acknowledging the previous answer{" and earlier responses" if len(previous_questions) > 1 else ""} while leading to a new question.
 
 {consequences_guidance}
+
+Previous Question History:
+{self._format_question_history(previous_questions)}
 
 The story should naturally build towards this question:
 {question["question"]}
@@ -189,9 +144,12 @@ The educational answers that will be presented separately are:
 - {question["wrong_answer1"]}
 - {question["wrong_answer2"]}"""
             else:
-                prompt += f"""Continue the story based on the character's previous answer.
+                prompt += f"""Continue the story based on the character's previous answer{" and earlier responses" if len(previous_questions) > 1 else ""}.
 
 {consequences_guidance}
+
+Previous Question History:
+{self._format_question_history(previous_questions)}
 
 IMPORTANT:
 1. The story should clearly but naturally acknowledge the impact of their previous answer
@@ -254,22 +212,46 @@ IMPORTANT:
 
         return prompt
 
+    def _format_question_history(self, previous_questions: List[Dict[str, Any]]) -> str:
+        """Format the question history for inclusion in the prompt."""
+        history = []
+        for i, qa in enumerate(previous_questions, 1):
+            history.append(f"Q{i}: {qa['question']['question']}")
+            history.append(
+                f"Chosen: {qa['chosen_answer']} ({'Correct' if qa['was_correct'] else 'Incorrect'})"
+            )
+            if not qa["was_correct"]:
+                history.append(f"Correct Answer: {qa['question']['correct_answer']}")
+            history.append("")  # Add blank line between QAs
+        return "\n".join(history)
+
     def _process_consequences(
-        self, state: StoryState, was_correct: Optional[bool] = None
+        self,
+        state: StoryState,
+        was_correct: Optional[bool] = None,
+        previous_question: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Generate appropriate story consequences based on question response."""
-        if was_correct is None:
+        if was_correct is None or previous_question is None:
             return ""
 
         if was_correct:
-            return """The story should:
-            - Acknowledge the character's correct understanding of the question
-            - Show how this understanding connects to their current situation
+            return f"""The story should:
+            - Acknowledge that the character correctly identified {previous_question["correct_answer"]} as the answer
+            - Show how this understanding of {previous_question["question"]} connects to their current situation
             - Use this success to build confidence for future challenges"""
         else:
-            return """The story should:
-            - Acknowledge the incorrect answer while maintaining the character's dignity
-            - Explain the correct answer in a way that is easy to understand
-            - Show how this misunderstanding leads to a valuable learning moment
+            # Get the chosen wrong answer based on the last choice
+            last_choice = state.history[-1]
+            chosen_answer = (
+                previous_question["wrong_answer1"]
+                if last_choice == "wrong1"
+                else previous_question["wrong_answer2"]
+            )
+
+            return f"""The story should:
+            - Acknowledge that the character answered {chosen_answer}
+            - Explain that {previous_question["correct_answer"]} was the correct answer
+            - Show how this misunderstanding of {previous_question["question"]} leads to a valuable learning moment
             - Use this as an opportunity for growth and deeper understanding
             - Connect the correction to their current situation and future challenges"""
