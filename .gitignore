@@ -49,3 +49,4 @@ logs/
 *.sqlite3 
 
 .cursorignore
+.cursorrules
