@@ -22,7 +22,26 @@ def load_lesson_data():
 async def generate_story_node(
     story_category: str, lesson_topic: str, state: StoryState
 ) -> StoryNode:
-    """Generate the next story segment based on the current state."""
+    """Generate a complete story node with content and choices.
+
+    This function orchestrates the story generation process by:
+    1. Loading the appropriate story configuration and lesson data
+    2. Using the LLM service to generate the story content as a stream
+    3. Processing the streamed content into a complete story node
+    4. Adding appropriate choices based on the story state
+
+    This is different from the LLM service's generate_story_stream which only
+    handles the raw story content generation. This function provides the complete
+    story node that includes both content and available choices.
+
+    Args:
+        story_category: The category of story being generated
+        lesson_topic: The educational topic being covered
+        state: The current state of the story session
+
+    Returns:
+        StoryNode: A complete story node with content and choices
+    """
     # Load story configuration
     story_data = load_story_data()
     story_config = story_data["story_categories"][story_category]
