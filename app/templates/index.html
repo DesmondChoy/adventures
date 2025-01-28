@@ -155,16 +155,16 @@
                 const existingState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
                 const currentDepth = parseInt(sessionStorage.getItem('storyDepth') || '0');
                 
-                // Store the current state in sessionStorage
+                // Store the current state in sessionStorage with ALL necessary fields
                 const currentState = {
-                    storyCategory: document.getElementById('storyCategory').value,
-                    lessonTopic: document.getElementById('lessonTopic').value,
+                    storyCategory: existingState.storyCategory || document.getElementById('storyCategory').value,
+                    lessonTopic: existingState.lessonTopic || document.getElementById('lessonTopic').value,
                     choice: choiceId,
                     depth: currentDepth + 1,
-                    history: existingState.history || [],  // Don't append here, server handles it
+                    history: existingState.history || [],
                     correct_answers: existingState.correct_answers || 0,
                     total_questions: existingState.total_questions || 0,
-                    previous_content: document.getElementById('storyContent').innerHTML  // Store current content
+                    previous_content: document.getElementById('storyContent').innerHTML
                 };
                 
                 sessionStorage.setItem('storyState', JSON.stringify(currentState));
@@ -183,7 +183,7 @@
             const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
             const depth = parseInt(sessionStorage.getItem('storyDepth') || '0');
             
-            if (depth > 0 && storyState) {
+            if (depth > 0 && storyState && storyState.storyCategory && storyState.lessonTopic) {
                 // Hide the form and show story container
                 document.getElementById('formContainer').classList.add('hidden');
                 document.getElementById('storyContainer').classList.remove('hidden');
@@ -205,6 +205,19 @@
                         appendStoryText(event.data);
                     }
                 };
+
+                // Add error handling
+                storyWebSocket.onerror = function(error) {
+                    console.error('WebSocket Error:', error);
+                    appendStoryText('\n\nConnection error occurred. Please refresh the page to try again.');
+                };
+
+                storyWebSocket.onclose = function(event) {
+                    if (!event.wasClean) {
+                        console.error('WebSocket connection died');
+                        appendStoryText('\n\nConnection lost. Please refresh the page to continue the story.');
+                    }
+                };
                 
                 // When connection opens, send the stored state
                 storyWebSocket.onopen = function() {
@@ -216,7 +229,7 @@
                             history: storyState.history || [],
                             correct_answers: storyState.correct_answers || 0,
                             total_questions: storyState.total_questions || 0,
-                            previous_content: storyState.previous_content  // Pass previous content
+                            previous_content: storyState.previous_content
                         }
                     }));
                     
@@ -225,6 +238,10 @@
                         choice: storyState.choice || 'start'
                     }));
                 };
+            } else if (depth > 0) {
+                // If we have a depth but missing required state, reset to beginning
+                sessionStorage.clear();
+                window.location.href = '/';
             }
         };
 
