@@ -21,7 +21,9 @@ Your task is to generate engaging story segments that:
 3. Seamlessly integrate educational elements when provided
 4. End each segment with clear choice points that advance the story
 5. Use multiple paragraphs separated by blank lines to ensure readability.
-   The question and its choices, if any, should appear in a separate paragraph from the main narrative."""
+   The question and its choices, if any, should appear in a separate paragraph from the main narrative.
+6. Keep the story to 3 paragraphs max.
+"""
 
 
 def build_user_prompt(
