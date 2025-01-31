@@ -20,10 +20,21 @@ Your task is to generate engaging story segments that:
 2. Create meaningful consequences for user decisions
 3. Seamlessly integrate educational elements when provided
 4. End each segment with clear choice points that advance the story
-5. Use multiple paragraphs separated by blank lines to ensure readability.
-   The question and its choices, if any, should appear in a separate paragraph from the main narrative.
-6. Keep the story to 3 paragraphs max.
-"""
+5. Use multiple paragraphs separated by blank lines to ensure readability
+6. Keep the story to 3 paragraphs max
+7. For story choices, ALWAYS use this exact format at the end:
+
+<CHOICES>
+- Choice A: [First choice description]
+- Choice B: [Second choice description]
+</CHOICES>
+
+The choices section must:
+- Start with <CHOICES> on its own line
+- List exactly two choices prefixed with "Choice A:" and "Choice B:"
+- End with </CHOICES> on its own line
+- Be placed after the main narrative
+- Contain meaningful, contextual choices that advance the story"""
 
 
 def build_user_prompt(
@@ -33,9 +44,16 @@ def build_user_prompt(
     previous_questions: Optional[List[Dict[str, Any]]] = None,
 ) -> str:
     """Create a user prompt that includes story state and current requirements."""
+    # Format previous choices with display text
+    previous_choices = "Story beginning"
+    if state.history:
+        previous_choices = ", ".join(
+            f"{choice.display_text}" for choice in state.history
+        )
+
     base_prompt = f"""Current story state:
 - Depth: {state.depth} of 3
-- Previous choices: {", ".join(state.history) if state.history else "Story beginning"}"""
+- Previous choices: {previous_choices}"""
 
     if state.previous_content:
         base_prompt += f"\n\nPrevious story segment:\n{state.previous_content}"
@@ -175,7 +193,8 @@ def process_consequences(
 - Show how this understanding of {previous_question["question"]} connects to their current situation
 - Use this success to build confidence for future challenges"""
 
-    last_choice = state.history[-1]
+    # Get the last choice from history
+    last_choice = state.history[-1].node_id if state.history else None
     chosen_answer = (
         previous_question["wrong_answer1"]
         if last_choice == "wrong1"

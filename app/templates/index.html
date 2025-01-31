@@ -143,25 +143,35 @@
                     e.target.classList.add('bg-indigo-600', 'text-white');
                     
                     // Make the choice after a short delay to show the selection
-                    setTimeout(() => makeChoice(choice.id), 2000);
+                    setTimeout(() => makeChoice(choice.id, choice.text), 500);
                 };
                 choicesContainer.appendChild(button);
             });
         }
 
-        function makeChoice(choiceId) {
+        function makeChoice(choiceId, choiceText) {
             if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
                 // Get existing state or initialize new one
                 const existingState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
                 const currentDepth = parseInt(sessionStorage.getItem('storyDepth') || '0');
                 
+                // Update history with the new choice including both node_id and display_text
+                const history = existingState.history || [];
+                history.push({
+                    node_id: choiceId,
+                    display_text: choiceText
+                });
+                
                 // Store the current state in sessionStorage with ALL necessary fields
                 const currentState = {
                     storyCategory: existingState.storyCategory || document.getElementById('storyCategory').value,
                     lessonTopic: existingState.lessonTopic || document.getElementById('lessonTopic').value,
-                    choice: choiceId,
+                    choice: {
+                        node_id: choiceId,
+                        display_text: choiceText
+                    },
                     depth: currentDepth + 1,
-                    history: existingState.history || [],
+                    history: history,
                     correct_answers: existingState.correct_answers || 0,
                     total_questions: existingState.total_questions || 0,
                     previous_content: document.getElementById('storyContent').innerHTML
@@ -169,12 +179,18 @@
                 
                 sessionStorage.setItem('storyState', JSON.stringify(currentState));
                 sessionStorage.setItem('storyDepth', currentState.depth.toString());
+
+                // Send the choice with display text to the WebSocket
+                storyWebSocket.send(JSON.stringify({
+                    choice: {
+                        node_id: choiceId,
+                        display_text: choiceText
+                    }
+                }));
                 
-                // Close WebSocket before navigation
-                storyWebSocket.close();
-                
-                // Navigate to the next page
-                window.location.href = `/story/${currentState.depth}`;
+                // Clear the story content and choices to prepare for next segment
+                document.getElementById('storyContent').innerHTML = '';
+                document.getElementById('choicesContainer').innerHTML = '';
             }
         }
 
@@ -224,7 +240,7 @@
                     // First send the stored state
                     storyWebSocket.send(JSON.stringify({
                         state: {
-                            current_node: storyState.choice,
+                            current_node: storyState.choice?.node_id || 'start',
                             depth: depth,
                             history: storyState.history || [],
                             correct_answers: storyState.correct_answers || 0,
@@ -234,9 +250,18 @@
                     }));
                     
                     // Then send the choice to continue the story
-                    storyWebSocket.send(JSON.stringify({
-                        choice: storyState.choice || 'start'
-                    }));
+                    if (storyState.choice) {
+                        storyWebSocket.send(JSON.stringify({
+                            choice: {
+                                node_id: storyState.choice.node_id,
+                                display_text: storyState.choice.display_text
+                            }
+                        }));
+                    } else {
+                        storyWebSocket.send(JSON.stringify({
+                            choice: 'start'
+                        }));
+                    }
                 };
             } else if (depth > 0) {
                 // If we have a depth but missing required state, reset to beginning

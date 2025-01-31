@@ -1,9 +1,17 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from app.models.story import StoryState, StoryNode, QuestionHistory, StoryChoice
+from app.models.story import (
+    StoryState,
+    StoryNode,
+    QuestionHistory,
+    StoryChoice,
+    ChoiceHistory,
+    StoryChoices,
+)
 from app.services.llm import LLMService
 import yaml
 import pandas as pd
 import asyncio
+import re
 
 router = APIRouter()
 llm_service = LLMService()
@@ -113,10 +121,48 @@ async def generate_story_node(
             StoryChoice(text=question["wrong_answer2"], next_node="wrong2"),
         ]
     else:
-        story_choices = [
-            StoryChoice(text=f"Choice {i + 1}", next_node=f"node_{state.depth}_{i}")
-            for i in range(2)
-        ]
+        # Extract structured choices from the story content
+        try:
+            # Find the choices section
+            choices_start = story_content.find("<CHOICES>")
+            choices_end = story_content.find("</CHOICES>")
+
+            if choices_start == -1 or choices_end == -1:
+                raise ValueError("Could not find choice markers in story content")
+
+            # Extract and clean up the choices section
+            choices_text = story_content[choices_start:choices_end].strip()
+            # Remove the choices section from the main content
+            story_content = story_content[:choices_start].strip()
+
+            # Parse choices using regex
+            choice_pattern = r"Choice ([AB]): (.+)$"
+            choices = []
+
+            for line in choices_text.split("\n"):
+                match = re.search(choice_pattern, line.strip())
+                if match:
+                    choices.append(match.group(2).strip())
+
+            # Validate choices using Pydantic
+            story_choices_model = StoryChoices(choices=choices)
+
+            # Create StoryChoice objects
+            story_choices = [
+                StoryChoice(text=choice_text, next_node=f"node_{state.depth}_{i}")
+                for i, choice_text in enumerate(story_choices_model.choices)
+            ]
+
+        except Exception as e:
+            print(f"Error parsing choices: {e}")
+            # Fallback to generic choices if parsing fails
+            story_choices = [
+                StoryChoice(
+                    text=f"Continue with option {i + 1}",
+                    next_node=f"node_{state.depth}_{i}",
+                )
+                for i in range(2)
+            ]
 
     # Debug output for choices
     print("\n=== DEBUG: Story Choices ===")
@@ -151,30 +197,58 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
             data = await websocket.receive_json()
             print(f"\nDEBUG: Received WebSocket data: {data}")
 
-            choice = data.get("choice")
-
             # If we receive a state update, use it to initialize our state
             if "state" in data:
+                # Convert history from client format to ChoiceHistory objects
+                history = []
+                client_history = data["state"].get("history", [])
+                if isinstance(client_history, list):
+                    for choice in client_history:
+                        if isinstance(choice, dict):
+                            history.append(
+                                ChoiceHistory(
+                                    node_id=choice.get("node_id", ""),
+                                    display_text=choice.get("display_text", ""),
+                                )
+                            )
+                        elif isinstance(choice, str):
+                            # Handle legacy format where only node_id was stored
+                            history.append(
+                                ChoiceHistory(
+                                    node_id=choice, display_text="Unknown choice"
+                                )
+                            )
+
                 state = StoryState(
                     current_node=data["state"].get("current_node", "start"),
-                    depth=data["state"].get(
-                        "depth", 1
-                    ),  # Default to 1 for first story page
-                    history=data["state"].get("history", []),
+                    depth=data["state"].get("depth", 1),
+                    history=history,
                     correct_answers=data["state"].get("correct_answers", 0),
                     total_questions=data["state"].get("total_questions", 0),
                     previous_content=data["state"].get("previous_content", None),
                     question_history=data["state"].get("question_history", []),
                 )
                 print(f"\nDEBUG: Updated state from client: {state}")
-                continue  # Skip to next iteration to wait for choice
-
-            if choice is None:
                 continue
 
+            choice_data = data.get("choice")
+            if choice_data is None:
+                continue
+
+            # Extract both node_id and display_text from choice
+            if isinstance(choice_data, dict):
+                node_id = choice_data.get("node_id", "")
+                display_text = choice_data.get("display_text", "")
+            else:
+                # Handle legacy format where only node_id was sent
+                node_id = choice_data
+                display_text = "Unknown choice"
+
             # Only append choice and increment depth for non-state messages
-            if choice != "start":  # Don't append "start" to history
-                state.history.append(choice)
+            if node_id != "start":
+                state.history.append(
+                    ChoiceHistory(node_id=node_id, display_text=display_text)
+                )
                 state.depth += 1
 
                 # After answering a question at odd depths
@@ -188,11 +262,11 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                         ].to_dict()
 
                         # Record this Q&A in history
-                        was_correct = choice == "correct"
+                        was_correct = node_id == "correct"
                         state.question_history.append(
                             QuestionHistory(
                                 question=answered_question,
-                                chosen_answer=choice,
+                                chosen_answer=node_id,
                                 was_correct=was_correct,
                             )
                         )
@@ -240,7 +314,12 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                     {
                         "type": "choices",
                         "choices": [
-                            {"text": choice.text, "id": choice.next_node}
+                            {
+                                "text": choice.text,
+                                "id": choice.next_node,
+                                "node_id": choice.next_node,
+                                "display_text": choice.text,
+                            }
                             for choice in story_node.choices
                         ],
                     }

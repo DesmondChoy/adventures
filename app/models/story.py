@@ -1,10 +1,23 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 
 
 class StoryChoice(BaseModel):
     text: str
     next_node: str
+
+
+class ChoiceHistory(BaseModel):
+    node_id: str
+    display_text: str
+
+
+class StoryChoices(BaseModel):
+    """Structured format for story choices."""
+
+    choices: List[str] = Field(
+        min_items=2, max_items=2, description="List of exactly two narrative choices"
+    )
 
 
 class StoryNode(BaseModel):
@@ -21,7 +34,7 @@ class QuestionHistory(BaseModel):
 class StoryState(BaseModel):
     current_node: str
     depth: int
-    history: List[str]
+    history: List[ChoiceHistory]
     correct_answers: int
     total_questions: int
     previous_content: Optional[str] = None
