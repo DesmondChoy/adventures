@@ -244,16 +244,12 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                 node_id = choice_data
                 display_text = "Unknown choice"
 
-            # Only append choice and increment depth for non-state messages
+            # Only append choice and increment depth for non-start messages
             if node_id != "start":
-                state.history.append(
-                    ChoiceHistory(node_id=node_id, display_text=display_text)
-                )
-                state.depth += 1
-
-                # After answering a question at odd depths
-                if state.depth % 2 == 0:
-                    # Load the question that was just answered
+                # Handle educational answers (odd depths) vs narrative choices (even depths)
+                if state.depth % 2 == 1:  # Educational answer
+                    # Process educational answer but don't update history
+                    # After answering a question at odd depths
                     lesson_data = load_lesson_data()
                     relevant_lessons = lesson_data[lesson_data["topic"] == lesson_topic]
                     if not relevant_lessons.empty:
@@ -274,7 +270,22 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                         if was_correct:
                             state.correct_answers += 1
                         state.total_questions += 1
+                else:  # Narrative choice (even depths)
+                    # Keep track of narrative choices while maintaining order
+                    # Filter out any educational answers that might have slipped in
+                    narrative_choices = [
+                        ch
+                        for ch in state.history
+                        if not ch.node_id in ["correct", "wrong1", "wrong2"]
+                    ]
+                    narrative_choices.append(
+                        ChoiceHistory(node_id=node_id, display_text=display_text)
+                    )
+                    # Keep only the most recent MAX_NARRATIVE_CHOICES choices to prevent unbounded growth
+                    MAX_NARRATIVE_CHOICES = 3  # Adjust based on story needs
+                    state.history = narrative_choices[-MAX_NARRATIVE_CHOICES:]
 
+                state.depth += 1
                 print(
                     f"\nDEBUG: Updated state after choice: depth={state.depth}, history={state.history}"
                 )
