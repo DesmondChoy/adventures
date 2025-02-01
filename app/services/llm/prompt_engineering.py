@@ -61,7 +61,7 @@ def build_user_prompt(
     if previous_questions:
         last_qa = previous_questions[-1]
         consequences_guidance = process_consequences(
-            state, last_qa["was_correct"], last_qa["question"]
+            state, last_qa["was_correct"], last_qa["question"], last_qa["chosen_answer"]
         )
 
         if question:
@@ -182,6 +182,7 @@ def process_consequences(
     state: StoryState,
     was_correct: Optional[bool] = None,
     previous_question: Optional[Dict[str, Any]] = None,
+    chosen_answer: Optional[str] = None,
 ) -> str:
     """Generate appropriate story consequences based on question response."""
     if was_correct is None or previous_question is None:
@@ -192,14 +193,6 @@ def process_consequences(
 - Acknowledge that the character correctly identified {previous_question["correct_answer"]} as the answer
 - Show how this understanding of {previous_question["question"]} connects to their current situation
 - Use this success to build confidence for future challenges"""
-
-    # Get the last choice from history
-    last_choice = state.history[-1].node_id if state.history else None
-    chosen_answer = (
-        previous_question["wrong_answer1"]
-        if last_choice == "wrong1"
-        else previous_question["wrong_answer2"]
-    )
 
     return f"""The story should:
 - Acknowledge that the character answered {chosen_answer}

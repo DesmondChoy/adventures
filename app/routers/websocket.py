@@ -262,7 +262,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                         state.question_history.append(
                             QuestionHistory(
                                 question=answered_question,
-                                chosen_answer=node_id,
+                                chosen_answer=display_text,
                                 was_correct=was_correct,
                             )
                         )

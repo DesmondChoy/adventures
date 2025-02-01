@@ -16,7 +16,7 @@ class StoryChoices(BaseModel):
     """Structured format for story choices."""
 
     choices: List[str] = Field(
-        min_items=2, max_items=2, description="List of exactly two narrative choices"
+        min_length=2, max_length=2, description="List of exactly two narrative choices"
     )
 
 
