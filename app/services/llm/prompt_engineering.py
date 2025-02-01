@@ -58,21 +58,22 @@ def build_user_prompt(
     if state.previous_content:
         base_prompt += f"\n\nPrevious story segment:\n{state.previous_content}"
 
-    if previous_questions:
+    # Only process consequences when transitioning from an educational question (odd depth)
+    # to the next story segment (even depth)
+    consequences_guidance = ""
+    if previous_questions and (state.depth % 2 == 0):
         last_qa = previous_questions[-1]
         consequences_guidance = process_consequences(
             state, last_qa["was_correct"], last_qa["question"], last_qa["chosen_answer"]
         )
 
+    if previous_questions:
         if question:
             return f"""{base_prompt}
 
 Continue the story, acknowledging the previous answer{" and earlier responses" if len(previous_questions) > 1 else ""} while leading to a new question.
 
 {consequences_guidance}
-
-Previous Question History:
-{format_question_history(previous_questions)}
 
 The story should naturally build towards this question:
 {question["question"]}
@@ -94,9 +95,6 @@ The educational answers that will be presented separately are:
 Continue the story based on the character's previous answer{" and earlier responses" if len(previous_questions) > 1 else ""}.
 
 {consequences_guidance}
-
-Previous Question History:
-{format_question_history(previous_questions)}
 
 IMPORTANT:
 1. The story should clearly but naturally acknowledge the impact of their previous answer
