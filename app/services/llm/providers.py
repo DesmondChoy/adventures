@@ -29,8 +29,7 @@ class OpenAIService(BaseLLMService):
             story_config, state, question, previous_questions
         )
 
-        # Debug output
-        print("\n=== DEBUG: LLM Request ===")
+        print("\n=== DEBUG: LLM Prompt Request ===")
         print("System Prompt:")
         print(system_prompt)
         print("\nUser Prompt:")
@@ -38,15 +37,14 @@ class OpenAIService(BaseLLMService):
         print("========================\n")
 
         try:
-            # Call the LLM with our prompts
             stream = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                temperature=0.7,  # Balanced between creativity and consistency
-                stream=True,  # Enable streaming for real-time story delivery
+                temperature=0.9,
+                stream=True,
             )
 
             collected_response = ""
@@ -62,7 +60,7 @@ class OpenAIService(BaseLLMService):
             print("========================\n")
 
         except Exception as e:
-            print(f"\n=== ERROR: LLM Request Failed ===")
+            print("\n=== ERROR: LLM Request Failed ===")
             print(f"Error type: {type(e).__name__}")
             print(f"Error message: {str(e)}")
             print("===============================\n")
