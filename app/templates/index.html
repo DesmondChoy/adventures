@@ -72,9 +72,23 @@
             document.getElementById('formContainer').classList.add('hidden');
             document.getElementById('storyContainer').classList.remove('hidden');
             
-            // Initialize WebSocket connection
-            const wsUrl = `ws://${window.location.host}/ws/story/${storyCategory}/${lessonTopic}`;
+            // Initialize WebSocket connection with proper protocol
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/story/${storyCategory}/${lessonTopic}`;
             storyWebSocket = new WebSocket(wsUrl);
+            
+            // Add error handling
+            storyWebSocket.onerror = function(error) {
+                console.error('WebSocket Error:', error);
+                document.getElementById('storyContent').innerHTML += '\n\nConnection error occurred. Please refresh the page to try again.';
+            };
+
+            storyWebSocket.onclose = function(event) {
+                if (!event.wasClean) {
+                    console.error('WebSocket connection died');
+                    document.getElementById('storyContent').innerHTML += '\n\nConnection lost. Please refresh the page to continue the story.';
+                }
+            };
             
             // Handle incoming messages
             storyWebSocket.onmessage = function(event) {
@@ -204,8 +218,9 @@
                 document.getElementById('formContainer').classList.add('hidden');
                 document.getElementById('storyContainer').classList.remove('hidden');
                 
-                // Connect to WebSocket with stored state
-                const wsUrl = `ws://${window.location.host}/ws/story/${storyState.storyCategory}/${storyState.lessonTopic}`;
+                // Connect to WebSocket with stored state using proper protocol
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws/story/${storyState.storyCategory}/${storyState.lessonTopic}`;
                 storyWebSocket = new WebSocket(wsUrl);
                 
                 // Set up message handling
