@@ -9,8 +9,10 @@
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
-        <h1 class="text-4xl font-bold text-center mb-4">Learning Odyssey</h1>
-        <div class="text-center space-y-2 mb-8">
+        <h1 class="text-4xl font-bold text-center mb-4">
+            <a href="/" class="hover:text-indigo-600 transition-colors duration-200">Learning Odyssey</a>
+        </h1>
+        <div id="introText" class="text-center space-y-2 mb-8">
             <p class="text-xl text-indigo-600 font-medium">Where no two stories are ever the same.</p>
             <p class="text-gray-600 max-w-2xl mx-auto">Choose your path and learn through engaging, personalized adventures.</p>
         </div>
@@ -72,8 +74,9 @@
             const storyCategory = document.getElementById('storyCategory').value;
             const lessonTopic = document.getElementById('lessonTopic').value;
             
-            // Hide the form container and show the story container
+            // Hide the form container and intro text, and show the story container
             document.getElementById('formContainer').classList.add('hidden');
+            document.getElementById('introText').classList.add('hidden');
             document.getElementById('storyContainer').classList.remove('hidden');
             
             // Initialize WebSocket connection with proper protocol
@@ -235,8 +238,9 @@
             const depth = parseInt(sessionStorage.getItem('storyDepth') || '0');
             
             if (depth > 0 && storyState && storyState.storyCategory && storyState.lessonTopic) {
-                // Hide the form and show story container
+                // Hide the form and intro text, and show story container
                 document.getElementById('formContainer').classList.add('hidden');
+                document.getElementById('introText').classList.add('hidden');
                 document.getElementById('storyContainer').classList.remove('hidden');
                 
                 // Connect to WebSocket with stored state using proper protocol
