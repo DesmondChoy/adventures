@@ -12,19 +12,28 @@ import yaml
 import pandas as pd
 import asyncio
 import re
+from functools import lru_cache
 
 router = APIRouter()
 llm_service = LLMService()
 
 
-# Load story and lesson data
+# Cache for story and lesson data
+@lru_cache(maxsize=1)
 def load_story_data():
     with open("app/data/stories.yaml", "r") as f:
         return yaml.safe_load(f)
 
 
+@lru_cache(maxsize=1)
 def load_lesson_data():
     return pd.read_csv("app/data/lessons.csv")
+
+
+# Constants for streaming optimization
+WORD_BATCH_SIZE = 5  # Number of words to send at once
+WORD_DELAY = 0.02  # Reduced delay between word batches
+PARAGRAPH_DELAY = 0.1  # Reduced delay between paragraphs
 
 
 async def generate_story_node(
@@ -181,6 +190,10 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
     """Handle WebSocket connection for story streaming."""
     await websocket.accept()
 
+    # Pre-load data at connection time
+    story_data = load_story_data()
+    lesson_data = load_lesson_data()
+
     # Initialize with default state
     state = StoryState(
         current_node="start",
@@ -250,7 +263,6 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                 if state.depth % 2 == 1:  # Educational answer
                     # Process educational answer but don't update history
                     # After answering a question at odd depths
-                    lesson_data = load_lesson_data()
                     relevant_lessons = lesson_data[lesson_data["topic"] == lesson_topic]
                     if not relevant_lessons.empty:
                         answered_question = relevant_lessons.iloc[
@@ -301,26 +313,20 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                     p.strip() for p in story_node.content.split("\n\n") if p.strip()
                 ]
 
-                # Process first paragraph
-                if paragraphs:
-                    words = paragraphs[0].split()
-                    for word in words:
-                        await websocket.send_text(word + " ")
-                        await asyncio.sleep(0.05)  # Small delay between words
+                # Process paragraphs with optimized streaming
+                for i, paragraph in enumerate(paragraphs):
+                    if i > 0:  # Add paragraph break for all except first
+                        await websocket.send_text("\n\n")
+                        await asyncio.sleep(PARAGRAPH_DELAY)
 
-                # Process remaining paragraphs
-                for paragraph in paragraphs[1:]:
-                    # Send paragraph break
-                    await websocket.send_text("\n\n")
-                    await asyncio.sleep(0.2)  # Slightly longer pause between paragraphs
-
-                    # Stream words in the paragraph
+                    # Stream words in batches
                     words = paragraph.split()
-                    for word in words:
-                        await websocket.send_text(word + " ")
-                        await asyncio.sleep(0.05)  # Small delay between words
+                    for i in range(0, len(words), WORD_BATCH_SIZE):
+                        batch = words[i : i + WORD_BATCH_SIZE]
+                        await websocket.send_text(" ".join(batch) + " ")
+                        await asyncio.sleep(WORD_DELAY)
 
-                # Send choices as a separate message
+                # Send choices immediately after content
                 await websocket.send_json(
                     {
                         "type": "choices",
