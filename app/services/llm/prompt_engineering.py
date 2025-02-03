@@ -36,14 +36,8 @@ The choices section must:
 - Contain meaningful, contextual choices that advance the story"""
 
 
-def build_user_prompt(
-    story_config: Dict[str, Any],
-    state: StoryState,
-    question: Optional[Dict[str, Any]] = None,
-    previous_questions: Optional[List[Dict[str, Any]]] = None,
-) -> str:
-    """Create a user prompt that includes story state and current requirements."""
-    # Format previous choices with display text
+def _build_base_prompt(state: StoryState) -> str:
+    """Creates the base prompt with story state information."""
     previous_choices = "Story beginning"
     if state.history:
         previous_choices = ", ".join(
@@ -57,53 +51,15 @@ def build_user_prompt(
     if state.previous_content:
         base_prompt += f"\n\nPrevious story segment:\n{state.previous_content}"
 
-    # Only process consequences when transitioning from an educational question (odd depth)
-    # to the next story segment (even depth)
-    consequences_guidance = ""
-    if previous_questions and (state.depth % 2 == 0):
-        last_qa = previous_questions[-1]
-        consequences_guidance = process_consequences(
-            state, last_qa["was_correct"], last_qa["question"], last_qa["chosen_answer"]
-        )
+    return base_prompt
 
-    if previous_questions:
-        if question:
-            return f"""{base_prompt}
 
-Continue the story, acknowledging the previous answer{" and earlier responses" if len(previous_questions) > 1 else ""} while leading to a new question.
-
-{consequences_guidance}
-
-The story should naturally build towards this question:
-{question["question"]}
-
-CRITICAL INSTRUCTIONS:
-1. First address the consequences of the previous answer
-2. Then naturally transition to a situation where the new question arises
-3. The question should emerge from the story events or character interactions
-4. DO NOT include any story-based choices or decisions
-5. The question should feel like a natural part of the character's journey
-
-The educational answers that will be presented separately are:
-- {question["correct_answer"]}
-- {question["wrong_answer1"]}
-- {question["wrong_answer2"]}"""
-        else:
-            return f"""{base_prompt}
-
-Continue the story based on the character's previous answer{" and earlier responses" if len(previous_questions) > 1 else ""}.
-
-{consequences_guidance}
-
-IMPORTANT:
-1. The story should clearly but naturally acknowledge the impact of their previous answer
-2. Build towards a natural story decision point
-3. The story choices will be provided separately - do not list them in the narrative
-4. End the scene at a moment of decision - explicitly list the choices"""
-
-    if state.depth == 1 and not state.history:
-        if question:
-            return f"""{base_prompt}
+def _build_opening_scene_prompt(
+    base_prompt: str, question: Optional[Dict[str, Any]]
+) -> str:
+    """Builds prompt for the opening scene."""
+    if question:
+        return f"""{base_prompt}
 
 Generate the opening scene of the story, introducing the setting and main character. 
 The scene should establish the world and protagonist while naturally leading to this educational question:
@@ -121,16 +77,20 @@ The educational answers that will be presented separately are:
 - {question["correct_answer"]}
 - {question["wrong_answer1"]}
 - {question["wrong_answer2"]}"""
-        else:
-            return f"""{base_prompt}
+
+    return f"""{base_prompt}
 
 Generate the opening scene of the story, introducing the setting and main character. 
 The scene should establish the world and protagonist while building towards a natural educational moment.
 
 IMPORTANT: Do not include any story choices or decision points in this scene."""
 
-    if question:
-        return f"""{base_prompt}
+
+def _build_educational_question_prompt(
+    base_prompt: str, question: Dict[str, Any]
+) -> str:
+    """Builds prompt for educational questions."""
+    return f"""{base_prompt}
 
 Continue the story, leading to a situation where the following educational question naturally arises: 
 {question["question"]}
@@ -148,17 +108,134 @@ The educational answers that will be presented separately are:
 - {question["wrong_answer1"]}
 - {question["wrong_answer2"]}"""
 
+
+def _build_story_continuation_prompt(base_prompt: str) -> str:
+    """Builds prompt for regular story continuation."""
     return f"""{base_prompt}
 
-Continue the story based on the previous choices, creating meaningful 
-consequences for the character's decisions. Focus on character development and 
-plot progression.
+Continue the story by:
+1. Following directly from the previous story segment (if provided above)
+2. Taking into account the previous choices made in the story
+3. Creating meaningful consequences for these decisions
+4. Focusing on character development and plot progression
 
 IMPORTANT:
 1. DO NOT include any educational questions or historical facts
 2. Build towards a natural story decision point
 3. The story choices will be provided separately - do not list them in the narrative
 4. End the scene at a moment of decision - explicitly list the choices"""
+
+
+def _build_question_continuation_prompt(
+    base_prompt: str,
+    consequences_guidance: str,
+    question: Dict[str, Any],
+    num_previous_questions: int,
+) -> str:
+    """Builds prompt for continuing with a new question."""
+    return f"""{base_prompt}
+
+Continue the story, acknowledging the previous answer{" and earlier responses" if num_previous_questions > 1 else ""} while leading to a new question.
+
+{consequences_guidance}
+
+The story should naturally build towards this question:
+{question["question"]}
+
+CRITICAL INSTRUCTIONS:
+1. First address the consequences of the previous answer
+2. Then naturally transition to a situation where the new question arises
+3. The question should emerge from the story events or character interactions
+4. DO NOT include any story-based choices or decisions
+5. The question should feel like a natural part of the character's journey
+
+The educational answers that will be presented separately are:
+- {question["correct_answer"]}
+- {question["wrong_answer1"]}
+- {question["wrong_answer2"]}"""
+
+
+def _build_answer_continuation_prompt(
+    base_prompt: str, consequences_guidance: str, num_previous_questions: int
+) -> str:
+    """Builds prompt for continuing after an answer."""
+    return f"""{base_prompt}
+
+Continue the story based on the character's previous answer{" and earlier responses" if num_previous_questions > 1 else ""}.
+
+{consequences_guidance}
+
+IMPORTANT:
+1. The story should clearly but naturally acknowledge the impact of their previous answer
+2. Build towards a natural story decision point
+3. The story choices will be provided separately - do not list them in the narrative
+4. End the scene at a moment of decision - explicitly list the choices"""
+
+
+def build_user_prompt(
+    story_config: Dict[str, Any],
+    state: StoryState,
+    question: Optional[Dict[str, Any]] = None,
+    previous_questions: Optional[List[Dict[str, Any]]] = None,
+) -> str:
+    """Create a user prompt that includes story state and current requirements."""
+    base_prompt = _build_base_prompt(state)
+
+    # Handle consequences for educational questions
+    consequences_guidance = ""
+    if previous_questions and (state.depth % 2 == 0):
+        last_qa = previous_questions[-1]
+        consequences_guidance = process_consequences(
+            state, last_qa["was_correct"], last_qa["question"], last_qa["chosen_answer"]
+        )
+
+    # Handle opening scene
+    if state.depth == 1 and not state.history:
+        return _build_opening_scene_prompt(base_prompt, question)
+
+    # Alternate between educational questions (odd depths) and story choices (even depths)
+    if state.depth % 2 == 1:
+        # Odd depths are for educational questions
+        if question:
+            # For depth > 1, we need to continue the story from previous choice
+            if state.depth > 1:
+                story_continuation = _build_story_continuation_prompt(base_prompt)
+                # Replace the IMPORTANT section with educational question instructions
+                story_continuation = story_continuation.replace(
+                    "IMPORTANT:",
+                    f"""Continue the story, leading to a situation where the following educational question naturally arises: 
+{question["question"]}
+
+CRITICAL INSTRUCTIONS:""",
+                ).replace(
+                    """1. DO NOT include any educational questions or historical facts
+2. Build towards a natural story decision point
+3. The story choices will be provided separately - do not list them in the narrative
+4. End the scene at a moment of decision - explicitly list the choices""",
+                    """1. The story should flow naturally towards the educational question
+2. The question should be asked by a character or emerge from the situation
+3. DO NOT include any story-based choices or decisions
+4. DO NOT use bullet points, numbered lists, or dashes
+5. DO NOT end with "What should X do?" or similar prompts
+6. Focus ONLY on building up to the educational question
+
+The educational answers that will be presented separately are:
+- {question["correct_answer"]}
+- {question["wrong_answer1"]}
+- {question["wrong_answer2"]}""",
+                )
+                return story_continuation
+            return _build_educational_question_prompt(base_prompt, question)
+    else:
+        # Even depths are for story choices
+        if previous_questions:
+            return _build_answer_continuation_prompt(
+                base_prompt, consequences_guidance, len(previous_questions)
+            )
+        return _build_story_continuation_prompt(base_prompt)
+
+    # Fallback to story continuation if no other conditions met
+    return _build_story_continuation_prompt(base_prompt)
 
 
 def format_question_history(previous_questions: List[Dict[str, Any]]) -> str:
