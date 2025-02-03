@@ -80,13 +80,13 @@
             // Add error handling
             storyWebSocket.onerror = function(error) {
                 console.error('WebSocket Error:', error);
-                document.getElementById('storyContent').innerHTML += '\n\nConnection error occurred. Please refresh the page to try again.';
+                document.getElementById('storyContent').textContent += '\n\nConnection error occurred. Please refresh the page to try again.';
             };
 
             storyWebSocket.onclose = function(event) {
                 if (!event.wasClean) {
                     console.error('WebSocket connection died');
-                    document.getElementById('storyContent').innerHTML += '\n\nConnection lost. Please refresh the page to continue the story.';
+                    document.getElementById('storyContent').textContent += '\n\nConnection lost. Please refresh the page to continue the story.';
                 }
             };
             
@@ -97,10 +97,14 @@
                     const data = JSON.parse(event.data);
                     if (data.type === 'choices') {
                         displayChoices(data.choices);
+                    } else if (data.type === 'story') {
+                        appendStoryText(data.content);
                     }
                 } catch (e) {
-                    // If not JSON, it's a story text chunk
-                    appendStoryText(event.data);
+                    // If not JSON, treat as raw story text
+                    const textDecoder = new TextDecoder('utf-8');
+                    const decodedText = typeof event.data === 'string' ? event.data : textDecoder.decode(event.data);
+                    appendStoryText(decodedText);
                 }
             };
             
@@ -129,8 +133,21 @@
 
         function appendStoryText(text) {
             const storyContent = document.getElementById('storyContent');
-            // Append text while preserving newlines
-            storyContent.innerHTML += text;
+            
+            // Create a temporary div to safely decode HTML entities
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = text;
+            const decodedText = tempDiv.textContent;
+            
+            // Ensure proper text encoding and preserve all characters
+            const normalizedText = decodedText
+                .replace(/[\u2018\u2019]/g, "'")   // Smart quotes (single)
+                .replace(/[\u201C\u201D]/g, '"')   // Smart quotes (double)
+                .replace(/\u2014/g, '--')          // Em dash
+                .replace(/\u2013/g, '-')           // En dash
+                .replace(/\u2026/g, '...');        // Ellipsis
+            
+            storyContent.textContent += normalizedText;
             // Auto-scroll to keep up with the story
             storyContent.scrollTop = storyContent.scrollHeight;
         }
@@ -188,7 +205,7 @@
                     history: history,
                     correct_answers: existingState.correct_answers || 0,
                     total_questions: existingState.total_questions || 0,
-                    previous_content: document.getElementById('storyContent').innerHTML
+                    previous_content: document.getElementById('storyContent').textContent
                 };
                 
                 sessionStorage.setItem('storyState', JSON.stringify(currentState));
@@ -203,7 +220,7 @@
                 }));
                 
                 // Clear the story content and choices to prepare for next segment
-                document.getElementById('storyContent').innerHTML = '';
+                document.getElementById('storyContent').textContent = '';
                 document.getElementById('choicesContainer').innerHTML = '';
             }
         }
