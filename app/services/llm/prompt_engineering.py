@@ -21,8 +21,7 @@ Your task is to generate engaging story segments that:
 3. Seamlessly integrate educational elements when provided
 4. End each segment with clear choice points that advance the story
 5. Use multiple paragraphs separated by blank lines to ensure readability
-6. Keep the story to 3 paragraphs max
-7. For story choices, ALWAYS use this exact format at the end:
+6. For story choices, ALWAYS use this exact format at the end:
 
 <CHOICES>
 - Choice A: [First choice description]
