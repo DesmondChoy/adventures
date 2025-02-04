@@ -1,3 +1,7 @@
+# Environment variables
+.env
+.env.*
+
 # Python
 __pycache__/
 *.py[cod]
@@ -22,12 +26,9 @@ wheels/
 
 # Virtual Environment
 venv/
-ENV/
 env/
+ENV/
 .venv/
-
-# Environment Variables
-.env
 
 # IDE
 .idea/
@@ -35,18 +36,17 @@ env/
 *.swp
 *.swo
 
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite3
+
 # OS
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-logs/
-.specstory
-
-# Local development
-*.db
-*.sqlite3 
 
 .cursorignore
 .cursorrules

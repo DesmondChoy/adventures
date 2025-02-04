@@ -7,11 +7,15 @@ from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.routers import web, websocket
 from app.utils.logging_config import setup_logging
+from dotenv import load_dotenv
 import os
 import uuid
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
+
+# Load environment variables
+load_dotenv()
 
 # Setup structured logging
 logger = setup_logging()
