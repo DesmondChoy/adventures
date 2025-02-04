@@ -11,6 +11,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         start_time = datetime.utcnow()
         session = request.session
         request_id = session.get("request_id", "no_request_id")
+        response = None
 
         # Log request start
         logger.info(
@@ -50,7 +51,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "request_id": request_id,
                     "path": request.url.path,
                     "method": request.method,
-                    "status_code": getattr(response, "status_code", 500),
+                    "status_code": getattr(response, "status_code", 500)
+                    if response
+                    else 500,
                     "duration_ms": duration_ms,
                 },
             )

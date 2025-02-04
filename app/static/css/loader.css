@@ -1,0 +1,65 @@
+/* Loader Component Styles */
+
+/* Base loader container */
+.loader-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+}
+
+/* Default spinner style */
+.loader {
+    border: 3px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 3px solid #4f46e5; /* Indigo color matching your theme */
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+/* Spinner animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Utility class for hiding elements */
+.loader-hidden {
+    display: none;
+}
+
+/* Size variants */
+.loader-sm {
+    width: 24px;
+    height: 24px;
+    border-width: 2px;
+}
+
+.loader-lg {
+    width: 56px;
+    height: 56px;
+    border-width: 4px;
+}
+
+/* Color variants - can be customized based on your theme */
+.loader-primary {
+    border-top-color: #4f46e5; /* Indigo */
+}
+
+.loader-secondary {
+    border-top-color: #6b7280; /* Gray */
+}
+
+.loader-success {
+    border-top-color: #10b981; /* Green */
+}
+
+/* Speed variants */
+.loader-slow {
+    animation-duration: 2s;
+}
+
+.loader-fast {
+    animation-duration: 0.5s;
+} 

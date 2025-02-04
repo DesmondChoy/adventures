@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Learning Odyssey</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/loader.css">
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
@@ -56,6 +57,10 @@
         <!-- Story Container (Initially Hidden) -->
         <div id="storyContainer" class="mt-8 max-w-2xl mx-auto hidden">
             <div class="bg-white rounded-xl shadow-md p-6">
+                <!-- Modular Loader -->
+                <div id="loader" class="loader-container">
+                    <div class="loader loader-primary loader-md"></div>
+                </div>
                 <div id="storyContent" class="prose max-w-none mb-6 whitespace-pre-wrap"></div>
                 
                 <div id="choicesContainer" class="space-y-3">
@@ -68,6 +73,15 @@
     <script>
         let storyWebSocket;
         
+        // Loader utility functions
+        function showLoader() {
+            document.getElementById('loader').classList.remove('loader-hidden');
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').classList.add('loader-hidden');
+        }
+        
         document.getElementById('storyForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -78,6 +92,9 @@
             document.getElementById('formContainer').classList.add('hidden');
             document.getElementById('introText').classList.add('hidden');
             document.getElementById('storyContainer').classList.remove('hidden');
+            
+            // Show loader before establishing WebSocket connection
+            showLoader();
             
             // Initialize WebSocket connection with proper protocol
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -93,10 +110,12 @@
             // Add error handling
             storyWebSocket.onerror = function(error) {
                 console.error('WebSocket Error:', error);
+                hideLoader();
                 document.getElementById('storyContent').textContent += '\n\nConnection error occurred. Please refresh the page to try again.';
             };
 
             storyWebSocket.onclose = function(event) {
+                hideLoader();
                 if (!event.wasClean) {
                     console.error('WebSocket connection died');
                     document.getElementById('storyContent').textContent += '\n\nConnection lost. Please refresh the page to continue the story.';
@@ -109,14 +128,17 @@
                     // Try to parse as JSON (for choices)
                     const data = JSON.parse(event.data);
                     if (data.type === 'choices') {
+                        hideLoader();
                         displayChoices(data.choices);
                     } else if (data.type === 'story') {
+                        hideLoader();
                         appendStoryText(data.content);
                     }
                 } catch (e) {
                     // If not JSON, treat as raw story text
                     const textDecoder = new TextDecoder('utf-8');
                     const decodedText = typeof event.data === 'string' ? event.data : textDecoder.decode(event.data);
+                    hideLoader();
                     appendStoryText(decodedText);
                 }
             };
@@ -195,6 +217,9 @@
 
         function makeChoice(choiceId, choiceText) {
             if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
+                // Show loader before sending choice
+                showLoader();
+                
                 // Get existing state or initialize new one
                 const existingState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
                 const currentDepth = parseInt(sessionStorage.getItem('storyDepth') || '0');
@@ -244,6 +269,9 @@
             const depth = parseInt(sessionStorage.getItem('storyDepth') || '0');
             
             if (depth > 0 && storyState && storyState.storyCategory && storyState.lessonTopic) {
+                // Show loader during session restoration
+                showLoader();
+                
                 // Hide the form and intro text, and show story container
                 document.getElementById('formContainer').classList.add('hidden');
                 document.getElementById('introText').classList.add('hidden');
