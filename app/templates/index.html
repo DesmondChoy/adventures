@@ -82,6 +82,12 @@
             // Initialize WebSocket connection with proper protocol
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws/story/${storyCategory}/${lessonTopic}`;
+            
+            // Clear and show the story container before initializing WebSocket
+            const storyContent = document.getElementById('storyContent');
+            storyContent.textContent = '';
+            document.getElementById('storyContainer').classList.remove('hidden');
+            
             storyWebSocket = new WebSocket(wsUrl);
             
             // Add error handling
