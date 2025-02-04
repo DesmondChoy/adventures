@@ -58,7 +58,7 @@
         <div id="storyContainer" class="mt-8 max-w-2xl mx-auto hidden">
             <div class="bg-white rounded-xl shadow-md p-6">
                 <!-- Modular Loader -->
-                <div id="loader" class="loader-container">
+                <div id="loader" class="loader-container hidden">
                     <div class="loader loader-primary loader-md"></div>
                 </div>
                 <div id="storyContent" class="prose max-w-none mb-6 whitespace-pre-wrap"></div>
@@ -73,13 +73,47 @@
     <script>
         let storyWebSocket;
         
+        // Function to reset application state
+        function resetApplicationState() {
+            // Clear session storage
+            sessionStorage.clear();
+            
+            // Show the form and intro text
+            document.getElementById('formContainer').classList.remove('hidden');
+            document.getElementById('introText').classList.remove('hidden');
+            
+            // Hide the story container and loader
+            document.getElementById('storyContainer').classList.add('hidden');
+            document.getElementById('loader').classList.add('hidden');
+            
+            // Clear story content and choices
+            document.getElementById('storyContent').textContent = '';
+            document.getElementById('choicesContainer').innerHTML = '';
+            
+            // Close WebSocket if it exists
+            if (storyWebSocket) {
+                storyWebSocket.close();
+                storyWebSocket = null;
+            }
+            
+            // Reset form selections
+            document.getElementById('storyCategory').value = '';
+            document.getElementById('lessonTopic').value = '';
+        }
+
+        // Add click handler to banner
+        document.querySelector('h1 a').addEventListener('click', function(e) {
+            e.preventDefault();
+            resetApplicationState();
+        });
+        
         // Loader utility functions
         function showLoader() {
-            document.getElementById('loader').classList.remove('loader-hidden');
+            document.getElementById('loader').classList.remove('hidden');
         }
 
         function hideLoader() {
-            document.getElementById('loader').classList.add('loader-hidden');
+            document.getElementById('loader').classList.add('hidden');
         }
         
         document.getElementById('storyForm').addEventListener('submit', function(e) {
@@ -287,11 +321,14 @@
                     try {
                         const data = JSON.parse(event.data);
                         if (data.type === 'choices') {
+                            hideLoader();
                             displayChoices(data.choices);
                         } else {
+                            hideLoader();
                             appendStoryText(event.data);
                         }
                     } catch (e) {
+                        hideLoader();
                         appendStoryText(event.data);
                     }
                 };
@@ -299,10 +336,12 @@
                 // Add error handling
                 storyWebSocket.onerror = function(error) {
                     console.error('WebSocket Error:', error);
+                    hideLoader();
                     appendStoryText('\n\nConnection error occurred. Please refresh the page to try again.');
                 };
 
                 storyWebSocket.onclose = function(event) {
+                    hideLoader();
                     if (!event.wasClean) {
                         console.error('WebSocket connection died');
                         appendStoryText('\n\nConnection lost. Please refresh the page to continue the story.');
@@ -341,6 +380,9 @@
                 // If we have a depth but missing required state, reset to beginning
                 sessionStorage.clear();
                 window.location.href = '/';
+            } else {
+                // Make sure loader is hidden on fresh page load
+                hideLoader();
             }
         };
 
