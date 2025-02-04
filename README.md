@@ -6,7 +6,7 @@ An AI-powered interactive storytelling app where every journey is unique. Seamle
 
 - Real-time WebSocket communication
 - Structured logging system
-- AI/LLM integration (Provider agnostic)
+- AI/LLM integration (Multi-provider support: OpenAI, Google Gemini)
 - Modern web interface with dynamic loading
 - Middleware stack for request tracking and logging
 
@@ -15,7 +15,9 @@ An AI-powered interactive storytelling app where every journey is unique. Seamle
 - **Backend**: FastAPI, Python 3.x
 - **Frontend**: HTML, CSS, WebSocket
 - **Database**: SQLAlchemy with SQLite
-- **AI Integration**: OpenAI API
+- **AI Integration**: 
+  - OpenAI GPT-4o
+  - Google Gemini
 - **Logging**: Structured logging with JSON format
 
 ## Setup
@@ -32,7 +34,12 @@ An AI-powered interactive storytelling app where every journey is unique. Seamle
    ```bash
    pip install -r requirements.txt
    ```
-4. Create a `.env` file with required environment variables
+4. Create a `.env` file with required environment variables:
+   ```
+   # Choose one of these API keys based on your preferred provider
+   OPENAI_API_KEY=your_openai_key
+   GOOGLE_API_KEY=your_google_key
+   ```
 5. Run the application:
    ```bash
    uvicorn app.main:app --reload

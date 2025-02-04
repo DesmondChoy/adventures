@@ -4,7 +4,7 @@ from app.models.story import StoryState
 
 def build_system_prompt(story_config: Dict[str, Any]) -> str:
     """Create a system prompt that establishes the storytelling framework."""
-    return f"""You are a master storyteller crafting an interactive educational story.
+    base_prompt = f"""You are a master storyteller crafting an interactive educational story.
 
 Writing Style:
 - Maintain a {story_config["tone"]} tone throughout the narrative
@@ -19,8 +19,10 @@ Your task is to generate engaging story segments that:
 1. Maintain narrative consistency with previous choices
 2. Create meaningful consequences for user decisions
 3. Seamlessly integrate educational elements when provided
-4. End each segment with clear choice points that advance the story
-5. Use multiple paragraphs separated by blank lines to ensure readability
+4. Use multiple paragraphs separated by blank lines to ensure readability"""
+
+    # Add choice format instructions only for story segments (not educational questions)
+    choice_instructions = """5. End each segment with clear choice points that advance the story
 6. For story choices, ALWAYS use this exact format at the end:
 
 <CHOICES>
@@ -34,6 +36,12 @@ The choices section must:
 - End with </CHOICES> on its own line
 - Be placed after the main narrative
 - Contain meaningful, contextual choices that advance the story"""
+
+    return (
+        base_prompt + "\n\n" + choice_instructions
+        if not "question" in story_config
+        else base_prompt
+    )
 
 
 def _build_base_prompt(state: StoryState) -> str:
