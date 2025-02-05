@@ -213,22 +213,47 @@
             storyWebSocket.onopen = function() {
                 // First send the stored state if it exists
                 const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
+                const selectedStoryLength = parseInt(document.getElementById('storyLength').value);
+                
                 if (Object.keys(storyState).length > 0) {
                     storyWebSocket.send(JSON.stringify({
                         state: {
-                            current_node: storyState.choice,
+                            current_node: storyState.choice?.node_id || 'start',
                             depth: parseInt(sessionStorage.getItem('storyDepth') || '0'),
                             history: storyState.history || [],
                             correct_answers: storyState.correct_answers || 0,
-                            total_questions: storyState.total_questions || 0
+                            total_questions: storyState.total_questions || 0,
+                            previous_content: storyState.previous_content,
+                            story_length: storyState.storyLength || selectedStoryLength
+                        }
+                    }));
+                } else {
+                    // Always send initial state with story length
+                    storyWebSocket.send(JSON.stringify({
+                        state: {
+                            current_node: 'start',
+                            depth: 0,
+                            history: [],
+                            correct_answers: 0,
+                            total_questions: 0,
+                            story_length: selectedStoryLength
                         }
                     }));
                 }
                 
                 // Then send the choice to continue the story
-                storyWebSocket.send(JSON.stringify({
-                    choice: storyState.choice || 'start'
-                }));
+                if (storyState.choice) {
+                    storyWebSocket.send(JSON.stringify({
+                        choice: {
+                            node_id: storyState.choice.node_id,
+                            display_text: storyState.choice.display_text
+                        }
+                    }));
+                } else {
+                    storyWebSocket.send(JSON.stringify({
+                        choice: 'start'
+                    }));
+                }
             };
         });
 

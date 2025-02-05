@@ -176,6 +176,7 @@ def _build_story_continuation_prompt(base_prompt: str) -> str:
             "2. Making choices particularly impactful\n"
             "3. Preparing for a satisfying conclusion\n"
             "4. Ensuring educational elements are reinforced"
+            "5. The story must come to an end."
         ),
     }.get(story_phase, "")
 

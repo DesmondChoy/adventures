@@ -194,17 +194,8 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
     story_data = load_story_data()
     lesson_data = load_lesson_data()
 
-    # Initialize with default state
-    state = StoryState(
-        current_node="start",
-        depth=1,
-        history=[],
-        correct_answers=0,
-        total_questions=0,
-        previous_content=None,
-        question_history=[],
-        story_length=3,  # Default to shortest length
-    )
+    # Initialize state as None - will be set after receiving initial state message
+    state = None
 
     try:
         while True:
@@ -213,9 +204,33 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
 
             # If we receive a state update, use it to initialize our state
             if "state" in data:
+                client_state = data["state"]
+                print(
+                    f"\nDEBUG: Received client state with story_length: {client_state.get('story_length', 3)}"
+                )
+
+                # Ensure all required fields are present with appropriate defaults
+                validated_state = {
+                    "current_node": client_state.get("current_node", "start"),
+                    "depth": max(
+                        1, client_state.get("depth", 1)
+                    ),  # Ensure minimum depth of 1
+                    "correct_answers": max(
+                        0, client_state.get("correct_answers", 0)
+                    ),  # Ensure non-negative
+                    "total_questions": max(
+                        0, client_state.get("total_questions", 0)
+                    ),  # Ensure non-negative
+                    "story_length": max(
+                        3, min(7, client_state.get("story_length", 3))
+                    ),  # Ensure between 3 and 7
+                    "previous_content": client_state.get("previous_content", None),
+                    "question_history": client_state.get("question_history", []),
+                }
+
                 # Convert history from client format to ChoiceHistory objects
                 history = []
-                client_history = data["state"].get("history", [])
+                client_history = client_state.get("history", [])
                 if isinstance(client_history, list):
                     for choice in client_history:
                         if isinstance(choice, dict):
@@ -233,19 +248,25 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                                 )
                             )
 
+                # Initialize or update state with validated values
                 state = StoryState(
-                    current_node=data["state"].get("current_node", "start"),
-                    depth=data["state"].get("depth", 1),
+                    current_node=validated_state["current_node"],
+                    depth=validated_state["depth"],
                     history=history,
-                    correct_answers=data["state"].get("correct_answers", 0),
-                    total_questions=data["state"].get("total_questions", 0),
-                    previous_content=data["state"].get("previous_content", None),
-                    question_history=data["state"].get("question_history", []),
-                    story_length=data["state"].get(
-                        "story_length", 3
-                    ),  # Get story length from state
+                    correct_answers=validated_state["correct_answers"],
+                    total_questions=validated_state["total_questions"],
+                    previous_content=validated_state["previous_content"],
+                    question_history=validated_state["question_history"],
+                    story_length=validated_state["story_length"],
                 )
-                print(f"\nDEBUG: Updated state from client: {state}")
+                print(f"\nDEBUG: Initialized state with validated values: {state}")
+                continue
+
+            # Ensure state is initialized before processing any choices
+            if state is None:
+                print(
+                    "\nDEBUG: Error - State not initialized. Waiting for initial state message."
+                )
                 continue
 
             choice_data = data.get("choice")
