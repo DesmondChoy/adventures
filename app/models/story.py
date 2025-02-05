@@ -39,3 +39,6 @@ class StoryState(BaseModel):
     total_questions: int
     previous_content: Optional[str] = None
     question_history: List[QuestionHistory] = []  # Track all Q&A history
+    story_length: int = Field(
+        default=3, ge=3, le=7
+    )  # Default to 3, must be between 3 and 7

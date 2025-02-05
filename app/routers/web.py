@@ -77,7 +77,7 @@ async def story_page(request: Request, depth: int):
     """Render the story page for the given depth."""
     context = get_session_context(request)
 
-    if depth < 1 or depth > 3:
+    if depth < 1 or depth > 7:  # Updated to match maximum story length
         logger.warning(
             f"Invalid story depth requested: {depth}",
             extra={

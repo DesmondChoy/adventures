@@ -2,8 +2,15 @@ from typing import Any, Dict, Optional, List
 from app.models.story import StoryState
 
 
-def build_system_prompt(story_config: Dict[str, Any]) -> str:
-    """Create a system prompt that establishes the storytelling framework."""
+def build_system_prompt(
+    story_config: Dict[str, Any], is_question_depth: bool = False
+) -> str:
+    """Create a system prompt that establishes the storytelling framework.
+
+    Args:
+        story_config: Configuration for the story
+        is_question_depth: Whether this is a depth that should include an educational question
+    """
     base_prompt = f"""You are a master storyteller crafting an interactive educational story.
 
 Writing Style:
@@ -39,7 +46,7 @@ The choices section must:
 
     return (
         base_prompt + "\n\n" + choice_instructions
-        if not "question" in story_config
+        if not is_question_depth
         else base_prompt
     )
 
@@ -52,9 +59,24 @@ def _build_base_prompt(state: StoryState) -> str:
             f"{choice.display_text}" for choice in state.history
         )
 
-    base_prompt = f"""Current story state:
-- Depth: {state.depth} of 3
-- Previous choices: {previous_choices}"""
+    # Calculate remaining depths and story phase
+    remaining_depths = state.story_length - state.depth
+    story_phase = (
+        "OPENING"
+        if state.depth == 1
+        else "CLOSING"
+        if remaining_depths <= 1
+        else "MIDDLE"
+        if remaining_depths <= state.story_length // 2
+        else "EARLY"
+    )
+
+    base_prompt = (
+        f"Current story state:\n"
+        f"- Depth: {state.depth} of {state.story_length}\n"
+        f"- Story Phase: {story_phase}\n"
+        f"- Previous choices: {previous_choices}"
+    )
 
     if state.previous_content:
         base_prompt += f"\n\nPrevious story segment:\n{state.previous_content}"
@@ -67,11 +89,14 @@ def _build_opening_scene_prompt(
 ) -> str:
     """Builds prompt for the opening scene."""
     if question:
+        chapter_count = base_prompt.split("of ")[1].split("\n")[0]
         return f"""{base_prompt}
 
 Generate the opening scene of the story, introducing the setting and main character. 
 The scene should establish the world and protagonist while naturally leading to this educational question:
 {question["question"]}
+
+Remember this is the beginning of a {chapter_count}-chapter journey.
 
 CRITICAL INSTRUCTIONS:
 1. Create an immersive fantasy world that will subtly connect to {question["question"].split()[0]}'s history
@@ -86,10 +111,12 @@ The educational answers that will be presented separately are:
 - {question["wrong_answer1"]}
 - {question["wrong_answer2"]}"""
 
+    chapter_count = base_prompt.split("of ")[1].split("\n")[0]
     return f"""{base_prompt}
 
 Generate the opening scene of the story, introducing the setting and main character. 
 The scene should establish the world and protagonist while building towards a natural educational moment.
+Remember this is the beginning of a {chapter_count}-chapter journey.
 
 IMPORTANT: Do not include any story choices or decision points in this scene."""
 
@@ -98,7 +125,35 @@ def _build_educational_question_prompt(
     base_prompt: str, question: Dict[str, Any]
 ) -> str:
     """Builds prompt for educational questions."""
+    # Extract story phase from base prompt
+    story_phase = [line for line in base_prompt.split("\n") if "Story Phase:" in line][
+        0
+    ].split(": ")[1]
+
+    phase_guidance = {
+        "EARLY": (
+            "Story Focus:\n"
+            "- Introduce educational elements that help establish the world\n"
+            "- Connect learning moments to character discovery\n"
+            "- Set up future educational themes"
+        ),
+        "MIDDLE": (
+            "Story Focus:\n"
+            "- Deepen the educational significance to the plot\n"
+            "- Connect learning to rising stakes\n"
+            "- Use knowledge as a tool for overcoming challenges"
+        ),
+        "CLOSING": (
+            "Story Focus:\n"
+            "- Bring educational themes full circle\n"
+            "- Show how knowledge has transformed the character\n"
+            "- Create satisfying connections to previous learning moments"
+        ),
+    }.get(story_phase, "")
+
     return f"""{base_prompt}
+
+{phase_guidance}
 
 Continue the story, leading to a situation where the following educational question naturally arises: 
 {question["question"]}
@@ -119,7 +174,36 @@ The educational answers that will be presented separately are:
 
 def _build_story_continuation_prompt(base_prompt: str) -> str:
     """Builds prompt for regular story continuation."""
+    # Extract story phase from base prompt
+    story_phase = [line for line in base_prompt.split("\n") if "Story Phase:" in line][
+        0
+    ].split(": ")[1]
+
+    phase_guidance = {
+        "EARLY": (
+            "Focus on:\n"
+            "1. Expanding the world and introducing key elements\n"
+            "2. Setting up potential future challenges\n"
+            "3. Developing character motivations"
+        ),
+        "MIDDLE": (
+            "Focus on:\n"
+            "1. Deepening the plot complications\n"
+            "2. Raising the stakes of decisions\n"
+            "3. Building towards the story's climax"
+        ),
+        "CLOSING": (
+            "Focus on:\n"
+            "1. Beginning to resolve major plot threads\n"
+            "2. Making choices particularly impactful\n"
+            "3. Preparing for a satisfying conclusion\n"
+            "4. Ensuring educational elements are reinforced"
+        ),
+    }.get(story_phase, "")
+
     return f"""{base_prompt}
+
+{phase_guidance}
 
 Continue the story by:
 1. Following directly from the previous story segment (if provided above)
@@ -187,6 +271,12 @@ def build_user_prompt(
     previous_questions: Optional[List[Dict[str, Any]]] = None,
 ) -> str:
     """Create a user prompt that includes story state and current requirements."""
+    # Determine if this is a question depth (odd depths are for questions)
+    is_question_depth = state.depth % 2 == 1
+
+    # Get system prompt with appropriate choice instructions
+    system_prompt = build_system_prompt(story_config, is_question_depth)
+
     base_prompt = _build_base_prompt(state)
 
     # Handle consequences for educational questions
@@ -199,17 +289,16 @@ def build_user_prompt(
 
     # Handle opening scene
     if state.depth == 1 and not state.history:
-        return _build_opening_scene_prompt(base_prompt, question)
-
+        user_prompt = _build_opening_scene_prompt(base_prompt, question)
     # Alternate between educational questions (odd depths) and story choices (even depths)
-    if state.depth % 2 == 1:
+    elif state.depth % 2 == 1:
         # Odd depths are for educational questions
         if question:
             # For depth > 1, we need to continue the story from previous choice
             if state.depth > 1:
                 story_continuation = _build_story_continuation_prompt(base_prompt)
                 # Replace the IMPORTANT section with educational question instructions
-                story_continuation = story_continuation.replace(
+                user_prompt = story_continuation.replace(
                     "IMPORTANT:",
                     f"""Continue the story, leading to a situation where the following educational question naturally arises: 
 {question["question"]}
@@ -232,18 +321,19 @@ The educational answers that will be presented separately are:
 - {question["wrong_answer1"]}
 - {question["wrong_answer2"]}""",
                 )
-                return story_continuation
-            return _build_educational_question_prompt(base_prompt, question)
+            else:
+                user_prompt = _build_educational_question_prompt(base_prompt, question)
     else:
         # Even depths are for story choices
         if previous_questions:
-            return _build_answer_continuation_prompt(
+            user_prompt = _build_answer_continuation_prompt(
                 base_prompt, consequences_guidance, len(previous_questions)
             )
-        return _build_story_continuation_prompt(base_prompt)
+        else:
+            user_prompt = _build_story_continuation_prompt(base_prompt)
 
-    # Fallback to story continuation if no other conditions met
-    return _build_story_continuation_prompt(base_prompt)
+    # Combine system and user prompts
+    return f"{system_prompt}\n\n{user_prompt}"
 
 
 def format_question_history(previous_questions: List[Dict[str, Any]]) -> str:

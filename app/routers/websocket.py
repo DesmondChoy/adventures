@@ -203,6 +203,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
         total_questions=0,
         previous_content=None,
         question_history=[],
+        story_length=3,  # Default to shortest length
     )
 
     try:
@@ -240,6 +241,9 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                     total_questions=data["state"].get("total_questions", 0),
                     previous_content=data["state"].get("previous_content", None),
                     question_history=data["state"].get("question_history", []),
+                    story_length=data["state"].get(
+                        "story_length", 3
+                    ),  # Get story length from state
                 )
                 print(f"\nDEBUG: Updated state from client: {state}")
                 continue
@@ -301,6 +305,33 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                 print(
                     f"\nDEBUG: Updated state after choice: depth={state.depth}, history={state.history}"
                 )
+
+                # Check if we've reached the story length limit
+                if state.depth > state.story_length:
+                    # Send a final message indicating story completion
+                    await websocket.send_text(
+                        "\n\nCongratulations! You've completed your journey."
+                    )
+                    await websocket.send_json(
+                        {
+                            "type": "story_complete",
+                            "stats": {
+                                "total_questions": state.total_questions,
+                                "correct_answers": state.correct_answers,
+                                "completion_percentage": round(
+                                    (
+                                        state.correct_answers
+                                        / state.total_questions
+                                        * 100
+                                    )
+                                    if state.total_questions > 0
+                                    else 0,
+                                    1,
+                                ),
+                            },
+                        }
+                    )
+                    break
 
             try:
                 # Generate the complete story node

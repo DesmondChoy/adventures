@@ -36,6 +36,19 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700">
+                        Choose Your Journey
+                    </label>
+                    <select id="storyLength" name="storyLength" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="">Select journey length...</option>
+                        <option value="3">Quick Quest (3 chapters)</option>
+                        <option value="5">Epic Tale (5 chapters)</option>
+                        <option value="7">Legendary Saga (7 chapters)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">
                         Choose a Lesson Topic
                     </label>
                     <select id="lessonTopic" name="lessonTopic" required
@@ -99,6 +112,7 @@
             // Reset form selections
             document.getElementById('storyCategory').value = '';
             document.getElementById('lessonTopic').value = '';
+            document.getElementById('storyLength').value = '';
         }
 
         // Add click handler to banner
@@ -121,6 +135,7 @@
             
             const storyCategory = document.getElementById('storyCategory').value;
             const lessonTopic = document.getElementById('lessonTopic').value;
+            const storyLength = parseInt(document.getElementById('storyLength').value);
             
             // Hide the form container and intro text, and show the story container
             document.getElementById('formContainer').classList.add('hidden');
@@ -167,6 +182,23 @@
                     } else if (data.type === 'story') {
                         hideLoader();
                         appendStoryText(data.content);
+                    } else if (data.type === 'story_complete') {
+                        hideLoader();
+                        // Display completion stats
+                        const statsHtml = `
+                            <div class="mt-6 p-4 bg-green-50 rounded-lg">
+                                <h3 class="text-lg font-semibold text-green-800 mb-2">Journey Complete!</h3>
+                                <div class="text-sm text-green-700">
+                                    <p>Questions Answered: ${data.stats.total_questions}</p>
+                                    <p>Correct Answers: ${data.stats.correct_answers}</p>
+                                    <p>Success Rate: ${data.stats.completion_percentage}%</p>
+                                </div>
+                                <button onclick="resetApplicationState()" 
+                                        class="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                                    Start New Journey
+                                </button>
+                            </div>`;
+                        document.getElementById('choicesContainer').innerHTML = statsHtml;
                     }
                 } catch (e) {
                     // If not JSON, treat as raw story text
@@ -269,6 +301,7 @@
                 const currentState = {
                     storyCategory: existingState.storyCategory || document.getElementById('storyCategory').value,
                     lessonTopic: existingState.lessonTopic || document.getElementById('lessonTopic').value,
+                    storyLength: existingState.storyLength || parseInt(document.getElementById('storyLength').value),
                     choice: {
                         node_id: choiceId,
                         display_text: choiceText
@@ -302,7 +335,7 @@
             const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
             const depth = parseInt(sessionStorage.getItem('storyDepth') || '0');
             
-            if (depth > 0 && storyState && storyState.storyCategory && storyState.lessonTopic) {
+            if (depth > 0 && storyState && storyState.storyCategory && storyState.lessonTopic && storyState.storyLength) {
                 // Show loader during session restoration
                 showLoader();
                 
@@ -358,7 +391,8 @@
                             history: storyState.history || [],
                             correct_answers: storyState.correct_answers || 0,
                             total_questions: storyState.total_questions || 0,
-                            previous_content: storyState.previous_content
+                            previous_content: storyState.previous_content,
+                            story_length: storyState.storyLength
                         }
                     }));
                     
