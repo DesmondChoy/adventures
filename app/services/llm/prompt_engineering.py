@@ -11,7 +11,7 @@ def build_system_prompt(
         story_config: Configuration for the story
         is_question_depth: Whether this is a depth that should include an educational question
     """
-    base_prompt = f"""You are a master storyteller crafting an interactive educational story.
+    return f"""You are a master storyteller crafting an interactive educational story.
 
 Writing Style:
 - Maintain a {story_config["tone"]} tone throughout the narrative
@@ -27,28 +27,6 @@ Your task is to generate engaging story segments that:
 2. Create meaningful consequences for user decisions
 3. Seamlessly integrate educational elements when provided
 4. Use multiple paragraphs separated by blank lines to ensure readability"""
-
-    # Add choice format instructions only for story segments (not educational questions)
-    choice_instructions = """5. End each segment with clear choice points that advance the story
-6. For story choices, ALWAYS use this exact format at the end:
-
-<CHOICES>
-- Choice A: [First choice description]
-- Choice B: [Second choice description]
-</CHOICES>
-
-The choices section must:
-- Start with <CHOICES> on its own line
-- List exactly two choices prefixed with "Choice A:" and "Choice B:"
-- End with </CHOICES> on its own line
-- Be placed after the main narrative
-- Contain meaningful, contextual choices that advance the story"""
-
-    return (
-        base_prompt + "\n\n" + choice_instructions
-        if not is_question_depth
-        else base_prompt
-    )
 
 
 def _build_base_prompt(state: StoryState) -> str:
@@ -215,7 +193,22 @@ IMPORTANT:
 1. DO NOT include any educational questions or historical facts
 2. Build towards a natural story decision point
 3. The story choices will be provided separately - do not list them in the narrative
-4. End the scene at a moment of decision - explicitly list the choices"""
+4. End the scene at a moment of decision - explicitly list the choices
+
+CHOICE FORMAT INSTRUCTIONS:
+Use this exact format for the choices at the end:
+
+<CHOICES>
+- Choice A: [First choice description]
+- Choice B: [Second choice description]
+</CHOICES>
+
+The choices section must:
+- Start with <CHOICES> on its own line
+- List exactly two choices prefixed with "Choice A:" and "Choice B:"
+- End with </CHOICES> on its own line
+- Be placed after the main narrative
+- Contain meaningful, contextual choices that advance the story"""
 
 
 def _build_question_continuation_prompt(
@@ -223,13 +216,19 @@ def _build_question_continuation_prompt(
     consequences_guidance: str,
     question: Dict[str, Any],
     num_previous_questions: int,
+    previous_questions: Optional[List[Dict[str, Any]]] = None,
 ) -> str:
     """Builds prompt for continuing with a new question."""
-    return f"""{base_prompt}
+    prompt = f"""{base_prompt}
 
 Continue the story, acknowledging the previous answer{" and earlier responses" if num_previous_questions > 1 else ""} while leading to a new question.
 
-{consequences_guidance}
+{consequences_guidance}"""
+
+    if previous_questions and len(previous_questions) > 1:
+        prompt += f"\n\nPrevious question history:\n{format_question_history(previous_questions[:-1])}"
+
+    prompt += f"""
 
 The story should naturally build towards this question:
 {question["question"]}
@@ -246,22 +245,49 @@ The educational answers that will be presented separately are:
 - {question["wrong_answer1"]}
 - {question["wrong_answer2"]}"""
 
+    return prompt
+
 
 def _build_answer_continuation_prompt(
-    base_prompt: str, consequences_guidance: str, num_previous_questions: int
+    base_prompt: str,
+    consequences_guidance: str,
+    num_previous_questions: int,
+    previous_questions: Optional[List[Dict[str, Any]]] = None,
 ) -> str:
     """Builds prompt for continuing after an answer."""
-    return f"""{base_prompt}
+    prompt = f"""{base_prompt}
 
 Continue the story based on the character's previous answer{" and earlier responses" if num_previous_questions > 1 else ""}.
 
-{consequences_guidance}
+{consequences_guidance}"""
+
+    if previous_questions and len(previous_questions) > 1:
+        prompt += f"\n\nPrevious question history:\n{format_question_history(previous_questions[:-1])}"
+
+    prompt += """
 
 IMPORTANT:
 1. The story should clearly but naturally acknowledge the impact of their previous answer
 2. Build towards a natural story decision point
 3. The story choices will be provided separately - do not list them in the narrative
-4. End the scene at a moment of decision - explicitly list the choices"""
+4. End the scene at a moment of decision - explicitly list the choices
+
+CHOICE FORMAT INSTRUCTIONS:
+Use this exact format for the choices at the end:
+
+<CHOICES>
+- Choice A: [First choice description]
+- Choice B: [Second choice description]
+</CHOICES>
+
+The choices section must:
+- Start with <CHOICES> on its own line
+- List exactly two choices prefixed with "Choice A:" and "Choice B:"
+- End with </CHOICES> on its own line
+- Be placed after the main narrative
+- Contain meaningful, contextual choices that advance the story"""
+
+    return prompt
 
 
 def build_user_prompt(
@@ -296,30 +322,15 @@ def build_user_prompt(
         if question:
             # For depth > 1, we need to continue the story from previous choice
             if state.depth > 1:
-                story_continuation = _build_story_continuation_prompt(base_prompt)
-                # Replace the IMPORTANT section with educational question instructions
-                user_prompt = story_continuation.replace(
-                    "IMPORTANT:",
-                    f"""Continue the story, leading to a situation where the following educational question naturally arises: 
-{question["question"]}
-
-CRITICAL INSTRUCTIONS:""",
-                ).replace(
-                    """1. DO NOT include any educational questions or historical facts
-2. Build towards a natural story decision point
-3. The story choices will be provided separately - do not list them in the narrative
-4. End the scene at a moment of decision - explicitly list the choices""",
-                    """1. The story should flow naturally towards the educational question
-2. The question should be asked by a character or emerge from the situation
-3. DO NOT include any story-based choices or decisions
-4. DO NOT use bullet points, numbered lists, or dashes
-5. DO NOT end with "What should X do?" or similar prompts
-6. Focus ONLY on building up to the educational question
-
-The educational answers that will be presented separately are:
-- {question["correct_answer"]}
-- {question["wrong_answer1"]}
-- {question["wrong_answer2"]}""",
+                num_previous_questions = (
+                    len(previous_questions) if previous_questions else 0
+                )
+                user_prompt = _build_question_continuation_prompt(
+                    base_prompt,
+                    consequences_guidance,
+                    question,
+                    num_previous_questions,
+                    previous_questions,
                 )
             else:
                 user_prompt = _build_educational_question_prompt(base_prompt, question)
@@ -327,13 +338,16 @@ The educational answers that will be presented separately are:
         # Even depths are for story choices
         if previous_questions:
             user_prompt = _build_answer_continuation_prompt(
-                base_prompt, consequences_guidance, len(previous_questions)
+                base_prompt,
+                consequences_guidance,
+                len(previous_questions),
+                previous_questions,
             )
         else:
             user_prompt = _build_story_continuation_prompt(base_prompt)
 
-    # Combine system and user prompts
-    return f"{system_prompt}\n\n{user_prompt}"
+    # Return the combined prompt with system prompt and user content
+    return f"{system_prompt}\n\n---\n\n{user_prompt}"
 
 
 def format_question_history(previous_questions: List[Dict[str, Any]]) -> str:
