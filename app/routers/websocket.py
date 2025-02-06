@@ -179,7 +179,7 @@ async def generate_story_node(
         print(f"Choice {i}: {choice.text} (next_node: {choice.next_node})")
     print("========================\n")
 
-    # Store the current content for the next segment
+    # Store the current content for the next chapter
     state.previous_content = story_content
 
     return StoryNode(content=story_content, choices=story_choices)

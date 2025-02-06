@@ -22,7 +22,7 @@ Story Elements to Include:
 - Setting types: {", ".join(story_config["narrative_elements"]["setting_types"])}
 - Character archetypes: {", ".join(story_config["narrative_elements"]["character_archetypes"])}
 
-Your task is to generate engaging story segments that:
+Your task is to generate engaging story chapters that:
 1. Maintain narrative consistency with previous choices
 2. Create meaningful consequences for user decisions
 3. Seamlessly integrate educational elements when provided
@@ -57,7 +57,7 @@ def _build_base_prompt(state: StoryState) -> str:
     )
 
     if state.previous_content:
-        base_prompt += f"\n\nPrevious story segment:\n{state.previous_content}"
+        base_prompt += f"\n\nPrevious chapter content:\n{state.previous_content}"
 
     return base_prompt
 
@@ -185,7 +185,7 @@ def _build_story_continuation_prompt(base_prompt: str) -> str:
 {phase_guidance}
 
 Continue the story by:
-1. Following directly from the previous story segment (if provided above)
+1. Following directly from the previous chapter content (if provided above)
 2. Taking into account the previous choices made in the story
 3. Creating meaningful consequences for these decisions
 4. Focusing on character development and plot progression

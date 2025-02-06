@@ -23,7 +23,7 @@ class OpenAIService(BaseLLMService):
         question: Optional[Dict[str, Any]] = None,
         previous_questions: Optional[List[Dict[str, Any]]] = None,
     ):
-        """Generate the story segment as a stream of chunks."""
+        """Generate the story chapter content as a stream of chunks."""
         # Build prompts using the shared prompt engineering module
         system_prompt = build_system_prompt(story_config)
         user_prompt = build_user_prompt(
@@ -94,7 +94,7 @@ class GeminiService(BaseLLMService):
         question: Optional[Dict[str, Any]] = None,
         previous_questions: Optional[List[Dict[str, Any]]] = None,
     ):
-        """Generate the story segment as a stream of chunks."""
+        """Generate the story chapter content as a stream of chunks."""
         # Build prompts using the shared prompt engineering module
         system_prompt = build_system_prompt(story_config)
         user_prompt = build_user_prompt(

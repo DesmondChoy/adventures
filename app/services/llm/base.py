@@ -63,5 +63,5 @@ class BaseLLMService(ABC):
         previous_questions: Optional[List[Dict[str, Any]]] = None,
         context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[str, None]:
-        """Generate the story segment as a stream of chunks."""
+        """Generate the story chapter content as a stream of chunks."""
         pass
