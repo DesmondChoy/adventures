@@ -76,7 +76,7 @@
                 </div>
                 <div id="storyContent" class="prose max-w-none mb-6 whitespace-pre-wrap"></div>
                 
-                <div id="choicesContainer" class="grid gap-3">
+                <div id="choicesContainer" class="flex flex-col gap-3 w-full">
                     <!-- Choices will be inserted here -->
                 </div>
             </div>
@@ -282,14 +282,9 @@
             const choicesContainer = document.getElementById('choicesContainer');
             choicesContainer.innerHTML = ''; // Clear existing choices
             
-            // Add grid columns class based on number of choices
-            choicesContainer.className = choices.length === 3 ? 
-                'grid gap-3 grid-cols-1 md:grid-cols-3' : 
-                'grid gap-3';
-            
             choices.forEach(choice => {
                 const button = document.createElement('button');
-                button.className = 'w-full p-4 text-left border rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500';
+                button.className = 'w-full p-4 mb-3 text-left border rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500';
                 button.textContent = choice.text;
                 button.onclick = (e) => {
                     // Disable all buttons and highlight selected one

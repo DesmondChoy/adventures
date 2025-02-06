@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Dict, Any, Optional
 
 
@@ -16,7 +16,8 @@ class StoryNode(BaseModel):
     content: str
     choices: List[StoryChoice]
 
-    @validator("choices")
+    @field_validator("choices", mode="after")
+    @classmethod
     def validate_choices(cls, v, values):
         if not v:
             raise ValueError("Must have at least one choice")
