@@ -200,16 +200,19 @@ CHOICE FORMAT INSTRUCTIONS:
 Use this exact format for the choices at the end:
 
 <CHOICES>
-- Choice A: [First choice description]
-- Choice B: [Second choice description]
+Choice A: [First choice description]
+Choice B: [Second choice description]
+Choice C: [Third choice description]
 </CHOICES>
 
 The choices section must:
 - Start with <CHOICES> on its own line
-- List exactly two choices prefixed with "Choice A:" and "Choice B:"
+- List exactly three choices prefixed with "Choice A:", "Choice B:", and "Choice C:"
 - End with </CHOICES> on its own line
 - Be placed after the main narrative
-- Contain meaningful, contextual choices that advance the story"""
+- Each choice should be meaningful and distinct
+- Choices should represent different approaches or directions for the story
+- All choices must advance the plot in interesting ways"""
 
 
 def _build_question_continuation_prompt(
@@ -277,16 +280,19 @@ CHOICE FORMAT INSTRUCTIONS:
 Use this exact format for the choices at the end:
 
 <CHOICES>
-- Choice A: [First choice description]
-- Choice B: [Second choice description]
+Choice A: [First choice description]
+Choice B: [Second choice description]
+Choice C: [Third choice description]
 </CHOICES>
 
 The choices section must:
 - Start with <CHOICES> on its own line
-- List exactly two choices prefixed with "Choice A:" and "Choice B:"
+- List exactly three choices prefixed with "Choice A:", "Choice B:", and "Choice C:"
 - End with </CHOICES> on its own line
 - Be placed after the main narrative
-- Contain meaningful, contextual choices that advance the story"""
+- Each choice should be meaningful and distinct
+- Choices should represent different approaches or directions for the story
+- All choices must advance the plot in interesting ways"""
 
     return prompt
 

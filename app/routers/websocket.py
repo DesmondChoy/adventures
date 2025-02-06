@@ -5,7 +5,6 @@ from app.models.story import (
     QuestionHistory,
     StoryChoice,
     ChoiceHistory,
-    StoryChoices,
 )
 from app.services.llm import LLMService
 import yaml
@@ -124,11 +123,16 @@ async def generate_story_node(
 
     # Extract choices based on chapter
     if is_question_chapter and question:
+        # Create choices dynamically from the question data
         story_choices = [
-            StoryChoice(text=question["correct_answer"], next_node="correct"),
-            StoryChoice(text=question["wrong_answer1"], next_node="wrong1"),
-            StoryChoice(text=question["wrong_answer2"], next_node="wrong2"),
+            StoryChoice(text=question["correct_answer"], next_node="correct")
         ]
+        # Add all wrong answers dynamically
+        wrong_answer_keys = [
+            k for k in question.keys() if k.startswith("wrong_answer") and question[k]
+        ]
+        for i, key in enumerate(wrong_answer_keys, 1):
+            story_choices.append(StoryChoice(text=question[key], next_node=f"wrong{i}"))
     else:
         # Extract structured choices from the story content
         try:
@@ -145,7 +149,7 @@ async def generate_story_node(
             story_content = story_content[:choices_start].strip()
 
             # Parse choices using regex
-            choice_pattern = r"Choice ([AB]): (.+)$"
+            choice_pattern = r"Choice ([ABC]): (.+)$"  # Updated to include C
             choices = []
 
             for line in choices_text.split("\n"):
@@ -153,13 +157,13 @@ async def generate_story_node(
                 if match:
                     choices.append(match.group(2).strip())
 
-            # Validate choices using Pydantic
-            story_choices_model = StoryChoices(choices=choices)
+            if len(choices) != 3:  # Validate we have exactly 3 choices
+                raise ValueError("Must have exactly 3 story choices")
 
             # Create StoryChoice objects
             story_choices = [
                 StoryChoice(text=choice_text, next_node=f"node_{state.chapter}_{i}")
-                for i, choice_text in enumerate(story_choices_model.choices)
+                for i, choice_text in enumerate(choices)
             ]
 
         except Exception as e:
@@ -170,7 +174,7 @@ async def generate_story_node(
                     text=f"Continue with option {i + 1}",
                     next_node=f"node_{state.chapter}_{i}",
                 )
-                for i in range(2)
+                for i in range(3)  # Generate 3 fallback choices
             ]
 
     # Debug output for choices

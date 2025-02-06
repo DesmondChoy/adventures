@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import List, Dict, Any, Optional
 
 
@@ -12,17 +12,21 @@ class ChoiceHistory(BaseModel):
     display_text: str
 
 
-class StoryChoices(BaseModel):
-    """Structured format for story choices."""
-
-    choices: List[str] = Field(
-        min_length=2, max_length=2, description="List of exactly two narrative choices"
-    )
-
-
 class StoryNode(BaseModel):
     content: str
     choices: List[StoryChoice]
+
+    @validator("choices")
+    def validate_choices(cls, v, values):
+        if not v:
+            raise ValueError("Must have at least one choice")
+        # Story progression should have exactly 3 choices
+        # Educational questions can have variable number of choices based on the database
+        if len(v) < 3 and all(
+            not c.next_node.startswith(("correct", "wrong")) for c in v
+        ):
+            raise ValueError("Story progression must have exactly 3 choices")
+        return v
 
 
 class QuestionHistory(BaseModel):
