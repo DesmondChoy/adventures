@@ -3,13 +3,13 @@ from app.models.story import StoryState
 
 
 def build_system_prompt(
-    story_config: Dict[str, Any], is_question_depth: bool = False
+    story_config: Dict[str, Any], is_question_chapter: bool = False
 ) -> str:
     """Create a system prompt that establishes the storytelling framework.
 
     Args:
         story_config: Configuration for the story
-        is_question_depth: Whether this is a depth that should include an educational question
+        is_question_chapter: Whether this is a chapter that should include an educational question
     """
     return f"""You are a master storyteller crafting an interactive educational story.
 
@@ -37,21 +37,21 @@ def _build_base_prompt(state: StoryState) -> str:
             f"{choice.display_text}" for choice in state.history
         )
 
-    # Calculate remaining depths and story phase
-    remaining_depths = state.story_length - state.depth
+    # Calculate remaining chapters and story phase
+    remaining_chapters = state.story_length - state.chapter
     story_phase = (
-        "OPENING"
-        if state.depth == 1
-        else "CLOSING"
-        if remaining_depths <= 1
+        "EARLY"
+        if state.chapter == 1
+        else "FINAL"
+        if remaining_chapters <= 1
+        else "LATE"
+        if remaining_chapters <= state.story_length // 2
         else "MIDDLE"
-        if remaining_depths <= state.story_length // 2
-        else "EARLY"
     )
 
     base_prompt = (
         f"Current story state:\n"
-        f"- Depth: {state.depth} of {state.story_length}\n"
+        f"- Chapter: {state.chapter} of {state.story_length}\n"
         f"- Story Phase: {story_phase}\n"
         f"- Previous choices: {previous_choices}"
     )
@@ -121,7 +121,7 @@ def _build_educational_question_prompt(
             "- Connect learning to rising stakes\n"
             "- Use knowledge as a tool for overcoming challenges"
         ),
-        "CLOSING": (
+        "FINAL": (
             "Story Focus:\n"
             "- Bring educational themes full circle\n"
             "- Show how knowledge has transformed the character\n"
@@ -170,7 +170,7 @@ def _build_story_continuation_prompt(base_prompt: str) -> str:
             "2. Raising the stakes of decisions\n"
             "3. Building towards the story's climax"
         ),
-        "CLOSING": (
+        "FINAL": (
             "Focus on:\n"
             "1. Beginning to resolve major plot threads\n"
             "2. Making choices particularly impactful\n"
@@ -298,31 +298,31 @@ def build_user_prompt(
     previous_questions: Optional[List[Dict[str, Any]]] = None,
 ) -> str:
     """Create a user prompt that includes story state and current requirements."""
-    # Determine if this is a question depth (odd depths are for questions)
-    is_question_depth = state.depth % 2 == 1
+    # Determine if this is a question chapter (odd chapters are for questions)
+    is_question_chapter = state.chapter % 2 == 1
 
     # Get system prompt with appropriate choice instructions
-    system_prompt = build_system_prompt(story_config, is_question_depth)
+    system_prompt = build_system_prompt(story_config, is_question_chapter)
 
     base_prompt = _build_base_prompt(state)
 
     # Handle consequences for educational questions
     consequences_guidance = ""
-    if previous_questions and (state.depth % 2 == 0):
+    if previous_questions and (state.chapter % 2 == 0):
         last_qa = previous_questions[-1]
         consequences_guidance = process_consequences(
             state, last_qa["was_correct"], last_qa["question"], last_qa["chosen_answer"]
         )
 
     # Handle opening scene
-    if state.depth == 1 and not state.history:
+    if state.chapter == 1 and not state.history:
         user_prompt = _build_opening_scene_prompt(base_prompt, question)
-    # Alternate between educational questions (odd depths) and story choices (even depths)
-    elif state.depth % 2 == 1:
-        # Odd depths are for educational questions
+    # Alternate between educational questions (odd chapters) and story choices (even chapters)
+    elif state.chapter % 2 == 1:
+        # Odd chapters are for educational questions
         if question:
-            # For depth > 1, we need to continue the story from previous choice
-            if state.depth > 1:
+            # For chapter > 1, we need to continue the story from previous choice
+            if state.chapter > 1:
                 num_previous_questions = (
                     len(previous_questions) if previous_questions else 0
                 )
@@ -336,7 +336,7 @@ def build_user_prompt(
             else:
                 user_prompt = _build_educational_question_prompt(base_prompt, question)
     else:
-        # Even depths are for story choices
+        # Even chapters are for story choices
         if previous_questions:
             user_prompt = _build_answer_continuation_prompt(
                 base_prompt,

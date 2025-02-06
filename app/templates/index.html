@@ -219,7 +219,7 @@
                     storyWebSocket.send(JSON.stringify({
                         state: {
                             current_node: storyState.choice?.node_id || 'start',
-                            depth: parseInt(sessionStorage.getItem('storyDepth') || '0'),
+                            chapter: parseInt(sessionStorage.getItem('storyChapter') || '0'),
                             history: storyState.history || [],
                             correct_answers: storyState.correct_answers || 0,
                             total_questions: storyState.total_questions || 0,
@@ -232,7 +232,7 @@
                     storyWebSocket.send(JSON.stringify({
                         state: {
                             current_node: 'start',
-                            depth: 0,
+                            chapter: 0,
                             history: [],
                             correct_answers: 0,
                             total_questions: 0,
@@ -313,7 +313,7 @@
                 
                 // Get existing state or initialize new one
                 const existingState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
-                const currentDepth = parseInt(sessionStorage.getItem('storyDepth') || '0');
+                const currentChapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
                 
                 // Update history with the new choice including both node_id and display_text
                 const history = existingState.history || [];
@@ -331,7 +331,7 @@
                         node_id: choiceId,
                         display_text: choiceText
                     },
-                    depth: currentDepth + 1,
+                    chapter: currentChapter + 1,
                     history: history,
                     correct_answers: existingState.correct_answers || 0,
                     total_questions: existingState.total_questions || 0,
@@ -339,7 +339,7 @@
                 };
                 
                 sessionStorage.setItem('storyState', JSON.stringify(currentState));
-                sessionStorage.setItem('storyDepth', currentState.depth.toString());
+                sessionStorage.setItem('storyChapter', currentState.chapter.toString());
 
                 // Send the choice with display text to the WebSocket
                 storyWebSocket.send(JSON.stringify({
@@ -358,9 +358,9 @@
         // On page load, check if we're continuing a story
         window.onload = function() {
             const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
-            const depth = parseInt(sessionStorage.getItem('storyDepth') || '0');
+            const chapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
             
-            if (depth > 0 && storyState && storyState.storyCategory && storyState.lessonTopic && storyState.storyLength) {
+            if (chapter > 0 && storyState && storyState.storyCategory && storyState.lessonTopic && storyState.storyLength) {
                 // Show loader during session restoration
                 showLoader();
                 
@@ -412,7 +412,7 @@
                     storyWebSocket.send(JSON.stringify({
                         state: {
                             current_node: storyState.choice?.node_id || 'start',
-                            depth: depth,
+                            chapter: chapter,
                             history: storyState.history || [],
                             correct_answers: storyState.correct_answers || 0,
                             total_questions: storyState.total_questions || 0,
@@ -435,8 +435,8 @@
                         }));
                     }
                 };
-            } else if (depth > 0) {
-                // If we have a depth but missing required state, reset to beginning
+            } else if (chapter > 0) {
+                // If we have a chapter but missing required state, reset to beginning
                 sessionStorage.clear();
                 window.location.href = '/';
             } else {

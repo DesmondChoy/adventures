@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 import yaml
 import pandas as pd
@@ -72,52 +72,46 @@ async def root(request: Request):
         raise
 
 
-@router.get("/story/{depth}")
-async def story_page(request: Request, depth: int):
-    """Render the story page for the given depth."""
-    context = get_session_context(request)
-
-    if depth < 1 or depth > 7:  # Updated to match maximum story length
-        logger.warning(
-            f"Invalid story depth requested: {depth}",
-            extra={
-                **context,
-                "path": f"/story/{depth}",
-                "method": "GET",
-                "depth": depth,
-            },
-        )
-        return {"error": "Invalid story depth"}
-
+@router.get("/story/{chapter}")
+async def story_page(request: Request, chapter: int):
+    """Render the story page for the given chapter."""
     try:
+        # Validate chapter number
+        if chapter < 1 or chapter > 7:  # Updated to match maximum story length
+            logger.error(
+                f"Invalid story chapter requested: {chapter}",
+                extra={
+                    "request_id": request.state.request_id,
+                    "path": f"/story/{chapter}",
+                    "status_code": 400,
+                    "chapter": chapter,
+                },
+            )
+            return {"error": "Invalid story chapter"}
+
         logger.info(
-            f"Loading story page for depth {depth}",
+            f"Loading story page for chapter {chapter}",
             extra={
-                **context,
-                "path": f"/story/{depth}",
-                "method": "GET",
-                "depth": depth,
+                "request_id": request.state.request_id,
+                "path": f"/story/{chapter}",
+                "status_code": 200,
+                "chapter": chapter,
             },
         )
-
         return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
-                "story_categories": [],  # Empty as we'll use stored state
-                "lesson_topics": [],  # Empty as we'll use stored state
-                **context,  # Pass session context to template
-            },
+            "story.html",
+            {"request": request},
         )
     except Exception as e:
         logger.error(
-            f"Error rendering story page for depth {depth}",
+            f"Error rendering story page for chapter {chapter}",
             extra={
-                **context,
-                "path": f"/story/{depth}",
-                "method": "GET",
-                "depth": depth,
+                "request_id": request.state.request_id,
+                "path": f"/story/{chapter}",
+                "status_code": 500,
+                "chapter": chapter,
                 "error": str(e),
             },
+            exc_info=True,
         )
-        raise
+        raise HTTPException(status_code=500, detail="Internal server error")

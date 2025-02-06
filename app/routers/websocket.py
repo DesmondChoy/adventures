@@ -63,10 +63,10 @@ async def generate_story_node(
     story_data = load_story_data()
     story_config = story_data["story_categories"][story_category]
 
-    # Determine if we need an educational question (odd depths) or story choices (even depths)
-    is_question_depth = state.depth % 2 == 1  # True for depths 1, 3, etc.
+    # Determine if we need an educational question (odd chapters) or story choices (even chapters)
+    is_question_chapter = state.chapter % 2 == 1  # True for chapters 1, 3, etc.
 
-    # Load question for odd depths (including depth 1)
+    # Load question for odd chapters (including chapter 1)
     question = None
     previous_questions = []
 
@@ -85,10 +85,10 @@ async def generate_story_node(
             print(f"Q{i}: {pq['question']['question']}")
             print(f"Chosen: {pq['chosen_answer']} (Correct: {pq['was_correct']})")
 
-    # Load new question if at question depth
-    if is_question_depth:
+    # Load new question if at question chapter
+    if is_question_chapter:
         lesson_data = load_lesson_data()
-        print(f"\nDEBUG: Loading question at depth {state.depth}")
+        print(f"\nDEBUG: Loading question at chapter {state.chapter}")
         print(
             f"DEBUG: Looking for topic '{lesson_topic}' in available topics: {lesson_data['topic'].unique()}"
         )
@@ -111,7 +111,7 @@ async def generate_story_node(
         async for chunk in llm_service.generate_story_stream(
             story_config,
             state,
-            question,  # Pass question for odd depths
+            question,  # Pass question for odd chapters
             previous_questions,  # Pass all previous Q&A history
         ):
             story_content += chunk
@@ -122,8 +122,8 @@ async def generate_story_node(
         print("===============================\n")
         raise  # Re-raise the exception after logging
 
-    # Extract choices based on depth
-    if is_question_depth and question:
+    # Extract choices based on chapter
+    if is_question_chapter and question:
         story_choices = [
             StoryChoice(text=question["correct_answer"], next_node="correct"),
             StoryChoice(text=question["wrong_answer1"], next_node="wrong1"),
@@ -158,7 +158,7 @@ async def generate_story_node(
 
             # Create StoryChoice objects
             story_choices = [
-                StoryChoice(text=choice_text, next_node=f"node_{state.depth}_{i}")
+                StoryChoice(text=choice_text, next_node=f"node_{state.chapter}_{i}")
                 for i, choice_text in enumerate(story_choices_model.choices)
             ]
 
@@ -168,7 +168,7 @@ async def generate_story_node(
             story_choices = [
                 StoryChoice(
                     text=f"Continue with option {i + 1}",
-                    next_node=f"node_{state.depth}_{i}",
+                    next_node=f"node_{state.chapter}_{i}",
                 )
                 for i in range(2)
             ]
@@ -212,9 +212,9 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                 # Ensure all required fields are present with appropriate defaults
                 validated_state = {
                     "current_node": client_state.get("current_node", "start"),
-                    "depth": max(
-                        1, client_state.get("depth", 1)
-                    ),  # Ensure minimum depth of 1
+                    "chapter": max(
+                        1, client_state.get("chapter", 1)
+                    ),  # Ensure minimum chapter of 1
                     "correct_answers": max(
                         0, client_state.get("correct_answers", 0)
                     ),  # Ensure non-negative
@@ -251,7 +251,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                 # Initialize or update state with validated values
                 state = StoryState(
                     current_node=validated_state["current_node"],
-                    depth=validated_state["depth"],
+                    chapter=validated_state["chapter"],
                     history=history,
                     correct_answers=validated_state["correct_answers"],
                     total_questions=validated_state["total_questions"],
@@ -282,12 +282,12 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                 node_id = choice_data
                 display_text = "Unknown choice"
 
-            # Only append choice and increment depth for non-start messages
+            # Only append choice and increment chapter for non-start messages
             if node_id != "start":
-                # Handle educational answers (odd depths) vs narrative choices (even depths)
-                if state.depth % 2 == 1:  # Educational answer
+                # Handle educational answers (odd chapters) vs narrative choices (even chapters)
+                if state.chapter % 2 == 1:  # Educational answer
                     # Process educational answer but don't update history
-                    # After answering a question at odd depths
+                    # After answering a question at odd chapters
                     relevant_lessons = lesson_data[lesson_data["topic"] == lesson_topic]
                     if not relevant_lessons.empty:
                         answered_question = relevant_lessons.iloc[
@@ -307,7 +307,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                         if was_correct:
                             state.correct_answers += 1
                         state.total_questions += 1
-                else:  # Narrative choice (even depths)
+                else:  # Narrative choice (even chapters)
                     # Keep track of narrative choices while maintaining order
                     # Filter out any educational answers that might have slipped in
                     narrative_choices = [
@@ -322,13 +322,13 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                     MAX_NARRATIVE_CHOICES = 3  # Adjust based on story needs
                     state.history = narrative_choices[-MAX_NARRATIVE_CHOICES:]
 
-                state.depth += 1
+                state.chapter += 1
                 print(
-                    f"\nDEBUG: Updated state after choice: depth={state.depth}, history={state.history}"
+                    f"\nDEBUG: Updated state after choice: chapter={state.chapter}, history={state.history}"
                 )
 
                 # Check if we've reached the story length limit
-                if state.depth > state.story_length:
+                if state.chapter > state.story_length:
                     # Send a final message indicating story completion
                     await websocket.send_text(
                         "\n\nCongratulations! You've completed your journey."

@@ -33,7 +33,7 @@ class QuestionHistory(BaseModel):
 
 class StoryState(BaseModel):
     current_node: str
-    depth: int
+    chapter: int
     history: List[ChoiceHistory]
     correct_answers: int
     total_questions: int

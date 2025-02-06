@@ -50,7 +50,7 @@ class StorySession(Base):
     id = Column(Integer, primary_key=True, index=True)
     category_id = Column(Integer, ForeignKey("story_categories.id"))
     topic_id = Column(Integer, ForeignKey("lesson_topics.id"))
-    current_depth = Column(Integer, default=0)
+    current_chapter = Column(Integer, default=0)
     correct_answers = Column(Integer, default=0)
     total_questions = Column(Integer, default=0)
 

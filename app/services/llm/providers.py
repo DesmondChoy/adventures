@@ -71,7 +71,7 @@ class OpenAIService(BaseLLMService):
 class GeminiService(BaseLLMService):
     """Google Gemini implementation of the LLM service."""
 
-    def __init__(self, model: str = "gemini-2.0-flash-exp"):
+    def __init__(self, model: str = "gemini-2.0-flash-001"):
         """Initialize Gemini service with the specified model."""
         self.model = model
         api_key = os.getenv("GOOGLE_API_KEY")
