@@ -42,7 +42,10 @@ class StoryState(BaseModel):
     history: List[ChoiceHistory]
     correct_answers: int
     total_questions: int
-    previous_content: Optional[str] = None
+    previous_content: Optional[str] = (
+        None  # Content of the most recently completed chapter
+    )
+    all_previous_content: List[str] = []  # List of all previous chapter contents
     question_history: List[QuestionHistory] = []  # Track all Q&A history
     story_length: int = Field(
         default=3, ge=3, le=7

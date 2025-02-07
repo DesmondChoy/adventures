@@ -33,7 +33,6 @@ def _build_base_prompt(state: StoryState) -> str:
     """Creates the base prompt with story state information."""
     # Build chapter history with decisions and outcomes
     chapter_history = []
-    current_content = ""
 
     # Track question/answer history alongside story progression
     qa_index = 0
@@ -45,10 +44,14 @@ def _build_base_prompt(state: StoryState) -> str:
         # Add chapter number
         chapter_history.append(f"Chapter {chapter_num}:")
 
-        # For the current chapter, we might not have content yet
-        if chapter_num < state.chapter and state.previous_content:
-            current_content = state.previous_content
-            chapter_history.append(current_content)
+        # Add the chapter content if available
+        if chapter_num < state.chapter:  # Previous chapters
+            content_index = chapter_num - 1  # Convert to 0-based index
+            if content_index < len(state.all_previous_content):
+                chapter_history.append(state.all_previous_content[content_index])
+            elif chapter_num == state.chapter - 1 and state.previous_content:
+                # Use previous_content only for the most recently completed chapter
+                chapter_history.append(state.previous_content)
 
         # Add educational outcomes for odd-numbered chapters (question chapters)
         if chapter_num % 2 == 1 and qa_index < len(state.question_history):
@@ -66,11 +69,18 @@ def _build_base_prompt(state: StoryState) -> str:
             qa_index += 1
 
         # Add story choices for even-numbered chapters
-        choice_index = (chapter_num - 1) // 2
-        if chapter_num % 2 == 0 and choice_index < len(state.history):
-            chapter_history.append(
-                f"\nChoice Made: {state.history[choice_index].display_text}"
-            )
+        if chapter_num % 2 == 0 and chapter_num < state.chapter:
+            # Only include choices for completed even-numbered chapters
+            narrative_choices = [
+                ch
+                for ch in state.history
+                if not ch.node_id in ["correct", "wrong1", "wrong2"]
+            ]
+            choice_index = (chapter_num - 2) // 2  # Adjust index for even chapters
+            if choice_index < len(narrative_choices):
+                chapter_history.append(
+                    f"\nChoice Made: {narrative_choices[choice_index].display_text}"
+                )
 
     # Calculate story phase
     remaining_chapters = state.story_length - state.chapter

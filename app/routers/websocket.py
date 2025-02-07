@@ -183,8 +183,10 @@ async def generate_story_node(
         print(f"Choice {i}: {choice.text} (next_node: {choice.next_node})")
     print("========================\n")
 
-    # Store the current content for the next chapter
-    state.previous_content = story_content
+    # Store the current content in the state's history
+    if state.previous_content:  # If there's content from the previous chapter
+        state.all_previous_content.append(state.previous_content)  # Add it to history
+    state.previous_content = story_content  # Store current content for next chapter
 
     return StoryNode(content=story_content, choices=story_choices)
 
@@ -229,6 +231,9 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                         3, min(7, client_state.get("story_length", 3))
                     ),  # Ensure between 3 and 7
                     "previous_content": client_state.get("previous_content", None),
+                    "all_previous_content": client_state.get(
+                        "all_previous_content", []
+                    ),
                     "question_history": client_state.get("question_history", []),
                 }
 
@@ -260,6 +265,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                     correct_answers=validated_state["correct_answers"],
                     total_questions=validated_state["total_questions"],
                     previous_content=validated_state["previous_content"],
+                    all_previous_content=validated_state["all_previous_content"],
                     question_history=validated_state["question_history"],
                     story_length=validated_state["story_length"],
                 )

@@ -335,13 +335,33 @@
                     history: history,
                     correct_answers: existingState.correct_answers || 0,
                     total_questions: existingState.total_questions || 0,
-                    previous_content: document.getElementById('storyContent').textContent
+                    previous_content: document.getElementById('storyContent').textContent,
+                    all_previous_content: existingState.all_previous_content || []
                 };
                 
+                // If we have previous content, add it to the history before clearing
+                if (currentState.previous_content && currentState.previous_content.trim()) {
+                    currentState.all_previous_content.push(currentState.previous_content);
+                }
+
                 sessionStorage.setItem('storyState', JSON.stringify(currentState));
                 sessionStorage.setItem('storyChapter', currentState.chapter.toString());
 
-                // Send the choice with display text to the WebSocket
+                // First send the state update
+                storyWebSocket.send(JSON.stringify({
+                    state: {
+                        current_node: currentState.choice?.node_id || 'start',
+                        chapter: currentState.chapter,
+                        history: currentState.history || [],
+                        correct_answers: currentState.correct_answers || 0,
+                        total_questions: currentState.total_questions || 0,
+                        previous_content: currentState.previous_content,
+                        all_previous_content: currentState.all_previous_content,
+                        story_length: currentState.storyLength
+                    }
+                }));
+
+                // Then send the choice message
                 storyWebSocket.send(JSON.stringify({
                     choice: {
                         node_id: choiceId,
