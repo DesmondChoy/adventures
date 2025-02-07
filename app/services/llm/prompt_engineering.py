@@ -58,9 +58,7 @@ def _build_base_prompt(state: StoryState) -> str:
                     f"\nQuestion: {qa.question['question']}",
                     f"\nStudent's Answer: {qa.chosen_answer}",
                     f"\nOutcome: {'Correct' if qa.was_correct else 'Incorrect'}",
-                    f"\nCorrect Answer: {qa.question['correct_answer']}"
-                    if not qa.was_correct
-                    else "",
+                    f"\nCorrect Answer: {qa.question['correct_answer']}",
                 ]
             )
             qa_index += 1
@@ -91,7 +89,7 @@ def _build_base_prompt(state: StoryState) -> str:
         else "MIDDLE"
     )
 
-    # Build the base prompt
+    # Build the base prompt with complete history
     base_prompt = (
         f"Current story state:\n"
         f"- Chapter: {state.chapter} of {state.story_length}\n"

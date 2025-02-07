@@ -336,7 +336,8 @@
                     correct_answers: existingState.correct_answers || 0,
                     total_questions: existingState.total_questions || 0,
                     previous_content: document.getElementById('storyContent').textContent,
-                    all_previous_content: existingState.all_previous_content || []
+                    all_previous_content: existingState.all_previous_content || [],
+                    question_history: existingState.question_history || []
                 };
                 
                 // If we have previous content, add it to the history before clearing
@@ -357,6 +358,7 @@
                         total_questions: currentState.total_questions || 0,
                         previous_content: currentState.previous_content,
                         all_previous_content: currentState.all_previous_content,
+                        question_history: currentState.question_history || [],
                         story_length: currentState.storyLength
                     }
                 }));

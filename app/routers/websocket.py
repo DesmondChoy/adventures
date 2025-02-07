@@ -197,7 +197,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
     await websocket.accept()
 
     # Pre-load data at connection time
-    story_data = load_story_data()
+    story_config = load_story_data()
     lesson_data = load_lesson_data()
 
     # Initialize state as None - will be set after receiving initial state message
@@ -296,8 +296,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
             if node_id != "start":
                 # Handle educational answers (odd chapters) vs narrative choices (even chapters)
                 if state.chapter % 2 == 1:  # Educational answer
-                    # Process educational answer but don't update history
-                    # After answering a question at odd chapters
+                    # Process educational answer and update question history
                     relevant_lessons = lesson_data[lesson_data["topic"] == lesson_topic]
                     if not relevant_lessons.empty:
                         answered_question = relevant_lessons.iloc[
@@ -329,7 +328,9 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                         ChoiceHistory(node_id=node_id, display_text=display_text)
                     )
                     # Keep only the most recent MAX_NARRATIVE_CHOICES choices to prevent unbounded growth
-                    MAX_NARRATIVE_CHOICES = 3  # Adjust based on story needs
+                    MAX_NARRATIVE_CHOICES = (
+                        state.story_length
+                    )  # Adjust based on story length
                     state.history = narrative_choices[-MAX_NARRATIVE_CHOICES:]
 
                 state.chapter += 1
@@ -370,7 +371,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                     story_category, lesson_topic, state
                 )
 
-                # Split into paragraphs and stream each word while maintaining paragraph structure
+                # Split content into paragraphs for streaming
                 paragraphs = [
                     p.strip() for p in story_node.content.split("\n\n") if p.strip()
                 ]
