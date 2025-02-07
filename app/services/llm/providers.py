@@ -5,6 +5,9 @@ import google.generativeai as genai
 from app.models.story import StoryState
 from app.services.llm.base import BaseLLMService
 from app.services.llm.prompt_engineering import build_system_prompt, build_user_prompt
+import logging
+
+logger = logging.getLogger("story_app")
 
 
 class OpenAIService(BaseLLMService):
@@ -14,7 +17,7 @@ class OpenAIService(BaseLLMService):
         self.model = model
         self.client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         if not os.getenv("OPENAI_API_KEY"):
-            print("WARNING: OPENAI_API_KEY is not set in environment variables!")
+            logger.warning("OPENAI_API_KEY is not set in environment variables!")
 
     async def generate_story_stream(
         self,
@@ -28,12 +31,11 @@ class OpenAIService(BaseLLMService):
         system_prompt = build_system_prompt(story_config)
         user_prompt = build_user_prompt(state, question, previous_questions)
 
-        print("\n=== DEBUG: LLM Prompt Request ===")
-        print("System Prompt:")
-        print(system_prompt)
-        print("\nUser Prompt:")
-        print(user_prompt)
-        print("========================\n")
+        # Log the prompts
+        logger.info(
+            "LLM Prompt Request",
+            extra={"llm_prompt": f"System: {system_prompt}\n\nUser: {user_prompt}"},
+        )
 
         try:
             stream = await self.client.chat.completions.create(
@@ -54,15 +56,17 @@ class OpenAIService(BaseLLMService):
                     yield content
 
             # Log the complete response after streaming
-            print("\n=== DEBUG: LLM Response ===")
-            print(collected_response)
-            print("========================\n")
+            logger.info("LLM Response", extra={"llm_response": collected_response})
 
         except Exception as e:
-            print("\n=== ERROR: LLM Request Failed ===")
-            print(f"Error type: {type(e).__name__}")
-            print(f"Error message: {str(e)}")
-            print("===============================\n")
+            logger.error(
+                "LLM Request Failed",
+                extra={
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "llm_prompt": f"System: {system_prompt}\n\nUser: {user_prompt}",
+                },
+            )
             raise  # Re-raise the exception after logging
 
 
@@ -74,7 +78,7 @@ class GeminiService(BaseLLMService):
         self.model = model
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
-            print("WARNING: GOOGLE_API_KEY is not set in environment variables!")
+            logger.warning("GOOGLE_API_KEY is not set in environment variables!")
         genai.configure(api_key=api_key)
         # Initialize with system prompt as part of model configuration
         self.client = genai.GenerativeModel(

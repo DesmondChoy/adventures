@@ -88,22 +88,22 @@ def setup_logging():
 
     logging.setLoggerClass(StructuredLogger)
     logger = logging.getLogger("story_app")
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.INFO)  # Changed to INFO to allow LLM logs
 
     try:
-        # Console handler for development
+        # Console handler - show INFO for LLM logs, WARNING for others
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)
+        console_handler.setLevel(logging.INFO)  # Changed to INFO to show LLM logs
         logger.addHandler(console_handler)
 
-        # File handler for persistent logs
+        # File handler for persistent logs - keep all logs
         file_handler = logging.FileHandler("logs/app.log")
         file_handler.setLevel(logging.INFO)
         logger.addHandler(file_handler)
     except Exception as e:
         print(f"Failed to setup logging handlers: {str(e)}")
         # Fallback to basic logging
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(level=logging.INFO)  # Changed to INFO
         logger = logging.getLogger("story_app")
         logger.error(f"Logging setup failed: {str(e)}")
 
