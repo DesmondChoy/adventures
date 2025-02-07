@@ -2,14 +2,11 @@ from typing import Any, Dict, Optional, List
 from app.models.story import StoryState
 
 
-def build_system_prompt(
-    story_config: Dict[str, Any], is_question_chapter: bool = False
-) -> str:
+def build_system_prompt(story_config: Dict[str, Any]) -> str:
     """Create a system prompt that establishes the storytelling framework.
 
     Args:
         story_config: Configuration for the story
-        is_question_chapter: Whether this is a chapter that should include an educational question
     """
     return f"""You are a master storyteller crafting an interactive educational story.
 
@@ -349,9 +346,6 @@ def build_user_prompt(
     previous_questions: Optional[List[Dict[str, Any]]] = None,
 ) -> str:
     """Create a user prompt that includes story state and current requirements."""
-    # Determine if this is a question chapter (odd chapters are for questions)
-    is_question_chapter = state.chapter % 2 == 1
-
     base_prompt = _build_base_prompt(state)
 
     # Handle consequences for educational questions
@@ -359,7 +353,7 @@ def build_user_prompt(
     if previous_questions and (state.chapter % 2 == 0):
         last_qa = previous_questions[-1]
         consequences_guidance = process_consequences(
-            state, last_qa["was_correct"], last_qa["question"], last_qa["chosen_answer"]
+            last_qa["was_correct"], last_qa["question"], last_qa["chosen_answer"]
         )
 
     # Handle opening scene
@@ -411,7 +405,6 @@ def format_question_history(previous_questions: List[Dict[str, Any]]) -> str:
 
 
 def process_consequences(
-    state: StoryState,
     was_correct: Optional[bool] = None,
     previous_question: Optional[Dict[str, Any]] = None,
     chosen_answer: Optional[str] = None,
