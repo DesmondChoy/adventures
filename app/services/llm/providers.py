@@ -26,9 +26,7 @@ class OpenAIService(BaseLLMService):
         """Generate the story chapter content as a stream of chunks."""
         # Build prompts using the shared prompt engineering module
         system_prompt = build_system_prompt(story_config)
-        user_prompt = build_user_prompt(
-            story_config, state, question, previous_questions
-        )
+        user_prompt = build_user_prompt(state, question, previous_questions)
 
         print("\n=== DEBUG: LLM Prompt Request ===")
         print("System Prompt:")
@@ -97,9 +95,7 @@ class GeminiService(BaseLLMService):
         """Generate the story chapter content as a stream of chunks."""
         # Build prompts using the shared prompt engineering module
         system_prompt = build_system_prompt(story_config)
-        user_prompt = build_user_prompt(
-            story_config, state, question, previous_questions
-        )
+        user_prompt = build_user_prompt(state, question, previous_questions)
 
         print("\n=== DEBUG: LLM Prompt Request ===")
         print("System Prompt:")

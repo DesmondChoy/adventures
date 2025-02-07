@@ -338,7 +338,6 @@ The choices section must:
 
 
 def build_user_prompt(
-    story_config: Dict[str, Any],
     state: StoryState,
     question: Optional[Dict[str, Any]] = None,
     previous_questions: Optional[List[Dict[str, Any]]] = None,
