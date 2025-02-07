@@ -31,13 +31,48 @@ Your task is to generate engaging story chapters that:
 
 def _build_base_prompt(state: StoryState) -> str:
     """Creates the base prompt with story state information."""
-    previous_choices = "Story beginning"
-    if state.history:
-        previous_choices = ", ".join(
-            f"{choice.display_text}" for choice in state.history
-        )
+    # Build chapter history with decisions and outcomes
+    chapter_history = []
+    current_content = ""
 
-    # Calculate remaining chapters and story phase
+    # Track question/answer history alongside story progression
+    qa_index = 0
+
+    for chapter_num in range(1, state.chapter + 1):
+        if chapter_num > 1:  # Add separator between chapters
+            chapter_history.append("\n---\n")
+
+        # Add chapter number
+        chapter_history.append(f"Chapter {chapter_num}:")
+
+        # For the current chapter, we might not have content yet
+        if chapter_num < state.chapter and state.previous_content:
+            current_content = state.previous_content
+            chapter_history.append(current_content)
+
+        # Add educational outcomes for odd-numbered chapters (question chapters)
+        if chapter_num % 2 == 1 and qa_index < len(state.question_history):
+            qa = state.question_history[qa_index]
+            chapter_history.extend(
+                [
+                    f"\nQuestion: {qa.question['question']}",
+                    f"\nStudent's Answer: {qa.chosen_answer}",
+                    f"\nOutcome: {'Correct' if qa.was_correct else 'Incorrect'}",
+                    f"\nCorrect Answer: {qa.question['correct_answer']}"
+                    if not qa.was_correct
+                    else "",
+                ]
+            )
+            qa_index += 1
+
+        # Add story choices for even-numbered chapters
+        choice_index = (chapter_num - 1) // 2
+        if chapter_num % 2 == 0 and choice_index < len(state.history):
+            chapter_history.append(
+                f"\nChoice Made: {state.history[choice_index].display_text}"
+            )
+
+    # Calculate story phase
     remaining_chapters = state.story_length - state.chapter
     story_phase = (
         "EARLY"
@@ -49,15 +84,15 @@ def _build_base_prompt(state: StoryState) -> str:
         else "MIDDLE"
     )
 
+    # Build the base prompt
     base_prompt = (
         f"Current story state:\n"
         f"- Chapter: {state.chapter} of {state.story_length}\n"
         f"- Story Phase: {story_phase}\n"
-        f"- Previous choices: {previous_choices}"
+        f"- Educational Progress: {state.correct_answers}/{state.total_questions} questions answered correctly\n\n"
+        f"Complete Story History:\n"
+        f"{''.join(filter(None, chapter_history))}"  # filter(None) removes empty strings
     )
-
-    if state.previous_content:
-        base_prompt += f"\n\nPrevious chapter content:\n{state.previous_content}"
 
     return base_prompt
 
@@ -307,9 +342,6 @@ def build_user_prompt(
     # Determine if this is a question chapter (odd chapters are for questions)
     is_question_chapter = state.chapter % 2 == 1
 
-    # Get system prompt with appropriate choice instructions
-    system_prompt = build_system_prompt(story_config, is_question_chapter)
-
     base_prompt = _build_base_prompt(state)
 
     # Handle consequences for educational questions
@@ -322,7 +354,7 @@ def build_user_prompt(
 
     # Handle opening scene
     if state.chapter == 1 and not state.history:
-        user_prompt = _build_opening_scene_prompt(base_prompt, question)
+        return _build_opening_scene_prompt(base_prompt, question)
     # Alternate between educational questions (odd chapters) and story choices (even chapters)
     elif state.chapter % 2 == 1:
         # Odd chapters are for educational questions
@@ -332,7 +364,7 @@ def build_user_prompt(
                 num_previous_questions = (
                     len(previous_questions) if previous_questions else 0
                 )
-                user_prompt = _build_question_continuation_prompt(
+                return _build_question_continuation_prompt(
                     base_prompt,
                     consequences_guidance,
                     question,
@@ -340,21 +372,18 @@ def build_user_prompt(
                     previous_questions,
                 )
             else:
-                user_prompt = _build_educational_question_prompt(base_prompt, question)
+                return _build_educational_question_prompt(base_prompt, question)
     else:
         # Even chapters are for story choices
         if previous_questions:
-            user_prompt = _build_answer_continuation_prompt(
+            return _build_answer_continuation_prompt(
                 base_prompt,
                 consequences_guidance,
                 len(previous_questions),
                 previous_questions,
             )
         else:
-            user_prompt = _build_story_continuation_prompt(base_prompt)
-
-    # Return the combined prompt with system prompt and user content
-    return f"{system_prompt}\n\n---\n\n{user_prompt}"
+            return _build_story_continuation_prompt(base_prompt)
 
 
 def format_question_history(previous_questions: List[Dict[str, Any]]) -> str:
