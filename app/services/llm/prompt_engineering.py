@@ -24,10 +24,12 @@ The choices section must:
 
 def _format_educational_answers(question: Dict[str, Any]) -> str:
     """Format the educational answers section consistently."""
+    # Get the answers in their randomized order
+    answers = [answer["text"] for answer in question["answers"]]
     return f"""The educational answers that will be presented separately are:
-- {question["correct_answer"]}
-- {question["wrong_answer1"]}
-- {question["wrong_answer2"]}"""
+- {answers[0]}
+- {answers[1]}
+- {answers[2]}"""
 
 
 def _get_phase_guidance(story_phase: str) -> str:
@@ -106,12 +108,18 @@ def _build_base_prompt(state: StoryState) -> str:
         # Add educational outcomes for odd-numbered chapters (question chapters)
         if chapter_num % 2 == 1 and qa_index < len(state.question_history):
             qa = state.question_history[qa_index]
+            # Find the correct answer from the answers array
+            correct_answer = next(
+                answer["text"]
+                for answer in qa.question["answers"]
+                if answer["is_correct"]
+            )
             chapter_history.extend(
                 [
                     f"\nQuestion: {qa.question['question']}",
                     f"\nStudent's Answer: {qa.chosen_answer}",
                     f"\nOutcome: {'Correct' if qa.was_correct else 'Incorrect'}",
-                    f"\nCorrect Answer: {qa.question['correct_answer']}",
+                    f"\nCorrect Answer: {correct_answer}",
                 ]
             )
             qa_index += 1
@@ -351,7 +359,13 @@ def format_question_history(previous_questions: List[Dict[str, Any]]) -> str:
             f"Chosen: {qa['chosen_answer']} ({'Correct' if qa['was_correct'] else 'Incorrect'})"
         )
         if not qa["was_correct"]:
-            history.append(f"Correct Answer: {qa['question']['correct_answer']}")
+            # Find the correct answer from the answers array
+            correct_answer = next(
+                answer["text"]
+                for answer in qa["question"]["answers"]
+                if answer["is_correct"]
+            )
+            history.append(f"Correct Answer: {correct_answer}")
         history.append("")  # Add blank line between QAs
     return "\n".join(history)
 
@@ -365,15 +379,22 @@ def process_consequences(
     if was_correct is None or previous_question is None:
         return ""
 
+    # Find the correct answer from the answers array
+    correct_answer = next(
+        answer["text"]
+        for answer in previous_question["answers"]
+        if answer["is_correct"]
+    )
+
     if was_correct:
         return f"""The story should:
-- Acknowledge that the character correctly identified {previous_question["correct_answer"]} as the answer
+- Acknowledge that the character correctly identified {correct_answer} as the answer
 - Show how this understanding of {previous_question["question"]} connects to their current situation
 - Use this success to build confidence for future challenges"""
 
     return f"""The story should:
 - Acknowledge that the character answered {chosen_answer}
-- Explain that {previous_question["correct_answer"]} was the correct answer
+- Explain that {correct_answer} was the correct answer
 - Show how this misunderstanding of {previous_question["question"]} leads to a valuable learning moment
 - Use this as an opportunity for growth and deeper understanding
 - Connect the correction to their current situation and future challenges"""

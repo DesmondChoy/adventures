@@ -4,6 +4,7 @@ import pandas as pd
 import json
 from app.database import SessionLocal, init_db
 from app.database import StoryCategory, LessonTopic
+import random
 
 
 def load_story_data():
@@ -16,6 +17,44 @@ def load_story_data():
 def load_lesson_data():
     """Load and process lesson data from CSV file."""
     return pd.read_csv("app/data/lessons.csv")
+
+
+def sample_question(topic: str, exclude_questions: list = None) -> dict:
+    """Sample a random question from the specified topic, excluding any previously used questions.
+
+    Args:
+        topic: The topic to sample from
+        exclude_questions: List of questions to exclude from sampling
+
+    Returns:
+        dict: Question data including question, answers, and explanation
+    """
+    df = load_lesson_data()
+    topic_questions = df[df["topic"] == topic]
+
+    if exclude_questions:
+        topic_questions = topic_questions[
+            ~topic_questions["question"].isin(exclude_questions)
+        ]
+
+    if len(topic_questions) == 0:
+        raise ValueError(f"No more available questions for topic: {topic}")
+
+    sampled = topic_questions.sample(n=1).iloc[0]
+
+    # Create list of all answers and randomize their order
+    all_answers = [
+        {"text": sampled["correct_answer"], "is_correct": True},
+        {"text": sampled["wrong_answer1"], "is_correct": False},
+        {"text": sampled["wrong_answer2"], "is_correct": False},
+    ]
+    randomized_answers = random.sample(all_answers, k=len(all_answers))
+
+    return {
+        "question": sampled["question"],
+        "answers": randomized_answers,
+        "explanation": sampled["explanation"],
+    }
 
 
 def init_story_categories(db, story_data):

@@ -1,6 +1,7 @@
 # Learning Odyssey
 
-An AI-powered interactive storytelling app where every journey is unique. Seamlessly blend narrative adventures with educational content.
+An AI-powered interactive storytelling app for children where narrative adventures seamless blend with educational content.  
+Go anywhere and learn anything - your imagination is the limit!
 
 🚀 **[Try it live](https://learning-odyssey.up.railway.app/)**
 

@@ -7,6 +7,7 @@ from app.models.story import (
     ChoiceHistory,
 )
 from app.services.llm import LLMService
+from app.init_data import sample_question
 import yaml
 import pandas as pd
 import asyncio
@@ -64,8 +65,8 @@ async def generate_story_node(
     story_data = load_story_data()
     story_config = story_data["story_categories"][story_category]
 
-    # Determine if we need an educational question (odd chapters) or story choices (even chapters)
-    is_question_chapter = state.chapter % 2 == 1  # True for chapters 1, 3, etc.
+    # Determine if we need an educational question
+    is_question_chapter = state.chapter % 2 == 1
 
     # Load question for odd chapters (including chapter 1)
     question = None
@@ -90,25 +91,16 @@ async def generate_story_node(
 
     # Load new question if at question chapter
     if is_question_chapter:
-        lesson_data = load_lesson_data()
-        logger.debug(f"\nDEBUG: Loading question at chapter {state.chapter}")
-        logger.debug(
-            f"DEBUG: Looking for topic '{lesson_topic}' in available topics: {lesson_data['topic'].unique()}"
-        )
-
-        relevant_lessons = lesson_data[lesson_data["topic"] == lesson_topic]
-        logger.debug(
-            f"DEBUG: Found {len(relevant_lessons)} lessons for topic {lesson_topic}"
-        )
-
-        if not relevant_lessons.empty:
-            question = relevant_lessons.iloc[
-                state.total_questions % len(relevant_lessons)
-            ].to_dict()
+        try:
+            # Get list of previously asked questions
+            used_questions = [qh.question["question"] for qh in state.question_history]
+            # Sample a new question
+            question = sample_question(lesson_topic, exclude_questions=used_questions)
             logger.debug(f"DEBUG: Selected question: {question['question']}")
-            logger.debug(
-                f"DEBUG: Choices: {question['correct_answer']}, {question['wrong_answer1']}, {question['wrong_answer2']}"
-            )
+            logger.debug(f"DEBUG: Answers: {question['answers']}")
+        except ValueError as e:
+            logger.error(f"Error sampling question: {e}")
+            raise
 
     # Generate story content using LLM
     story_content = ""
@@ -116,8 +108,8 @@ async def generate_story_node(
         async for chunk in llm_service.generate_story_stream(
             story_config,
             state,
-            question,  # Pass question for odd chapters
-            previous_questions,  # Pass all previous Q&A history
+            question,
+            previous_questions,
         ):
             story_content += chunk
     except Exception as e:
@@ -125,20 +117,21 @@ async def generate_story_node(
         logger.error(f"Error type: {type(e).__name__}")
         logger.error(f"Error message: {str(e)}")
         logger.error("===============================\n")
-        raise  # Re-raise the exception after logging
+        raise
 
     # Extract choices based on chapter
     if is_question_chapter and question:
-        # Create choices dynamically from the question data
-        story_choices = [
-            StoryChoice(text=question["correct_answer"], next_node="correct")
-        ]
-        # Add all wrong answers dynamically
-        wrong_answer_keys = [
-            k for k in question.keys() if k.startswith("wrong_answer") and question[k]
-        ]
-        for i, key in enumerate(wrong_answer_keys, 1):
-            story_choices.append(StoryChoice(text=question[key], next_node=f"wrong{i}"))
+        # Create choices from randomized answers
+        story_choices = []
+        for answer in question["answers"]:
+            story_choices.append(
+                StoryChoice(
+                    text=answer["text"],
+                    next_node="correct"
+                    if answer["is_correct"]
+                    else f"wrong{len(story_choices) + 1}",
+                )
+            )
     else:
         # Extract structured choices from the story content
         try:
@@ -155,7 +148,7 @@ async def generate_story_node(
             story_content = story_content[:choices_start].strip()
 
             # Parse choices using regex
-            choice_pattern = r"Choice ([ABC]): (.+)$"  # Updated to include C
+            choice_pattern = r"Choice ([ABC]): (.+)$"
             choices = []
 
             for line in choices_text.split("\n"):
@@ -163,7 +156,7 @@ async def generate_story_node(
                 if match:
                     choices.append(match.group(2).strip())
 
-            if len(choices) != 3:  # Validate we have exactly 3 choices
+            if len(choices) != 3:
                 raise ValueError("Must have exactly 3 story choices")
 
             # Create StoryChoice objects
@@ -171,7 +164,6 @@ async def generate_story_node(
                 StoryChoice(text=choice_text, next_node=f"node_{state.chapter}_{i}")
                 for i, choice_text in enumerate(choices)
             ]
-
         except Exception as e:
             logger.error(f"Error parsing choices: {e}")
             # Fallback to generic choices if parsing fails
@@ -180,7 +172,7 @@ async def generate_story_node(
                     text=f"Continue with option {i + 1}",
                     next_node=f"node_{state.chapter}_{i}",
                 )
-                for i in range(3)  # Generate 3 fallback choices
+                for i in range(3)
             ]
 
     # Debug output for choices
@@ -190,9 +182,9 @@ async def generate_story_node(
     logger.debug("========================\n")
 
     # Store the current content in the state's history
-    if state.previous_content:  # If there's content from the previous chapter
-        state.all_previous_content.append(state.previous_content)  # Add it to history
-    state.previous_content = story_content  # Store current content for next chapter
+    if state.previous_content:
+        state.all_previous_content.append(state.previous_content)
+    state.previous_content = story_content
 
     return StoryNode(content=story_content, choices=story_choices)
 
@@ -293,18 +285,25 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
             # Only append choice and increment chapter for non-start messages
             if node_id != "start":
                 if state.chapter % 2 == 1:  # Educational answer
-                    # Process educational answer and update question history
-                    relevant_lessons = lesson_data[lesson_data["topic"] == lesson_topic]
-                    if not relevant_lessons.empty:
-                        answered_question = relevant_lessons.iloc[
-                            state.total_questions % len(relevant_lessons)
-                        ].to_dict()
+                    # Get list of previously asked questions
+                    used_questions = [
+                        qh.question["question"] for qh in state.question_history
+                    ]
+
+                    try:
+                        # Sample the current question again to get its data
+                        current_question = sample_question(
+                            lesson_topic,
+                            exclude_questions=used_questions[:-1]
+                            if used_questions
+                            else None,
+                        )
 
                         # Record this Q&A in history
                         was_correct = node_id == "correct"
                         state.question_history.append(
                             QuestionHistory(
-                                question=answered_question,
+                                question=current_question,
                                 chosen_answer=display_text,
                                 was_correct=was_correct,
                             )
@@ -313,6 +312,9 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                         if was_correct:
                             state.correct_answers += 1
                         state.total_questions += 1
+                    except ValueError as e:
+                        logger.error(f"Error processing answer: {e}")
+                        raise
                 else:  # Narrative choice (even chapters)
                     narrative_choices = [
                         ch
