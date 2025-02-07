@@ -1,0 +1,12 @@
+---
+description: Maintain WebSocket State Synchronization
+globs: 
+---
+
+# Your rule content
+
+The client and server states must remain synchronized throughout the story session. The WebSocket communication in [websocket.py](mdc:app/routers/websocket.py) is responsible for transmitting state updates between the client and server.
+
+Rule: When implementing changes that affect state, ensure that the WebSocket communication correctly serializes and deserializes the StoryState object. Verify that state updates on the server are accurately reflected on the client and vice versa. Pay close attention to the data structures sent over the WebSocket to avoid discrepancies or data loss during state transitions.
+
+Rationale: Desynchronized state between client and server will lead to a broken user experience, lost progress, and unpredictable application behavior. Maintaining strict synchronization is essential for a functional interactive story.

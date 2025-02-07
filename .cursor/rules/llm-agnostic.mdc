@@ -1,0 +1,8 @@
+---
+description: LLM Agnostic Implementation & Cross-Compatibility Testing
+globs: 
+---
+
+# Your rule content
+
+When modifying prompt logic in [prompt_engineering.py](mdc:app/services/llm/prompt_engineering.py), all code changes must be designed to be LLM-agnostic, avoiding vendor-specific logic. When modifying LLM interactions, ensure compatibility with both OpenAI and Google Gemini providers in [providers.py](mdc:app/services/llm/providers.py). Test changes thoroughly with both providers to confirm consistent functionality and prevent regressions. Focus on the prompt engineering and service abstraction layers to manage provider differences, keeping core application logic independent of specific LLM APIs.

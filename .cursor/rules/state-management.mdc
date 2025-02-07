@@ -1,0 +1,14 @@
+---
+description: Maintain Centralized State Management via StoryState
+globs: 
+---
+
+# Your rule content
+
+User choices and responses to educational questions are the primary drivers of state transitions. When a user makes a choice or answers a question, the application must update the StoryState in [story.py](mdc:app/models/story.py) accordingly.
+
+The StoryState class is the single source of truth for the story's progression. All relevant story information (chapter number, history, question progress, etc.) must be managed within this class. Ensure that these transitions are correctly implemented in the WebSocket message handling logic in [websocket.py](mdc:app/routers/websocket.py)
+
+Rule: Do not introduce ad-hoc state variables outside of the StoryState model. All new state information required for story progression, user context, or educational tracking must be added as attributes to the StoryState class. This ensures a clear and maintainable state structure, preventing scattered and inconsistent state management.
+Rationale: Centralized state simplifies debugging, enhances predictability, and makes it easier to reason about the application's behavior as it evolves.
+

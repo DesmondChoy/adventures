@@ -1,5 +1,58 @@
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Literal
 from app.models.story import StoryState
+
+
+# Constants for commonly used prompt sections
+CHOICE_FORMAT_INSTRUCTIONS = """CHOICE FORMAT INSTRUCTIONS:
+Use this exact format for the choices at the end:
+
+<CHOICES>
+Choice A: [First choice description]
+Choice B: [Second choice description]
+Choice C: [Third choice description]
+</CHOICES>
+
+The choices section must:
+- Start with <CHOICES> on its own line
+- List exactly three choices prefixed with "Choice A:", "Choice B:", and "Choice C:"
+- End with </CHOICES> on its own line
+- Be placed after the main narrative
+- Each choice should be meaningful and distinct
+- Choices should represent different approaches or directions for the story
+- All choices must advance the plot in interesting ways"""
+
+
+def _format_educational_answers(question: Dict[str, Any]) -> str:
+    """Format the educational answers section consistently."""
+    return f"""The educational answers that will be presented separately are:
+- {question["correct_answer"]}
+- {question["wrong_answer1"]}
+- {question["wrong_answer2"]}"""
+
+
+def _get_phase_guidance(story_phase: str) -> str:
+    """Get the appropriate guidance based on story phase."""
+    return {
+        "EARLY": (
+            "Story Focus:\n"
+            "- Introduce educational elements that help establish the world\n"
+            "- Connect learning moments to character discovery\n"
+            "- Set up future educational themes"
+        ),
+        "MIDDLE": (
+            "Story Focus:\n"
+            "- Deepen the educational significance to the plot\n"
+            "- Connect learning to rising stakes\n"
+            "- Use knowledge as a tool for overcoming challenges"
+        ),
+        "FINAL": (
+            "Story Focus:\n"
+            "- Bring educational themes full circle\n"
+            "- Show how knowledge has transformed the character\n"
+            "- Create satisfying connections to previous learning moments"
+            "- Prepare for a satisfying conclusion"
+        ),
+    }.get(story_phase, "")
 
 
 def build_system_prompt(story_config: Dict[str, Any]) -> str:
@@ -99,16 +152,29 @@ def _build_base_prompt(state: StoryState) -> str:
         f"{''.join(filter(None, chapter_history))}"  # filter(None) removes empty strings
     )
 
-    return base_prompt
+    return base_prompt, story_phase
 
 
-def _build_opening_scene_prompt(
-    base_prompt: str, question: Optional[Dict[str, Any]]
+def _build_chapter_prompt(
+    base_prompt: str,
+    story_phase: str,
+    chapter_type: Literal[
+        "opening", "question", "story", "question_continuation", "answer_continuation"
+    ],
+    question: Optional[Dict[str, Any]] = None,
+    consequences_guidance: str = "",
+    num_previous_questions: int = 0,
+    previous_questions: Optional[List[Dict[str, Any]]] = None,
 ) -> str:
-    """Builds prompt for the opening scene."""
-    if question:
+    """Builds the appropriate prompt based on chapter type and state."""
+
+    phase_guidance = _get_phase_guidance(story_phase)
+
+    # Build prompt based on chapter type
+    if chapter_type == "opening":
         chapter_count = base_prompt.split("of ")[1].split("\n")[0]
-        return f"""{base_prompt}
+        if question:
+            return f"""{base_prompt}
 
 Generate the opening scene of the story, introducing the setting and main character. 
 The scene should establish the world and protagonist while naturally leading to this educational question:
@@ -124,13 +190,9 @@ CRITICAL INSTRUCTIONS:
 5. DO NOT end with "What should X do?" or similar prompts
 6. The question should feel like a natural part of the character's discovery
 
-The educational answers that will be presented separately are:
-- {question["correct_answer"]}
-- {question["wrong_answer1"]}
-- {question["wrong_answer2"]}"""
-
-    chapter_count = base_prompt.split("of ")[1].split("\n")[0]
-    return f"""{base_prompt}
+{_format_educational_answers(question)}"""
+        else:
+            return f"""{base_prompt}
 
 Generate the opening scene of the story, introducing the setting and main character. 
 The scene should establish the world and protagonist while building towards a natural educational moment.
@@ -138,38 +200,8 @@ Remember this is the beginning of a {chapter_count}-chapter journey.
 
 IMPORTANT: Do not include any story choices or decision points in this scene."""
 
-
-def _build_educational_question_prompt(
-    base_prompt: str, question: Dict[str, Any]
-) -> str:
-    """Builds prompt for educational questions."""
-    # Extract story phase from base prompt
-    story_phase = [line for line in base_prompt.split("\n") if "Story Phase:" in line][
-        0
-    ].split(": ")[1]
-
-    phase_guidance = {
-        "EARLY": (
-            "Story Focus:\n"
-            "- Introduce educational elements that help establish the world\n"
-            "- Connect learning moments to character discovery\n"
-            "- Set up future educational themes"
-        ),
-        "MIDDLE": (
-            "Story Focus:\n"
-            "- Deepen the educational significance to the plot\n"
-            "- Connect learning to rising stakes\n"
-            "- Use knowledge as a tool for overcoming challenges"
-        ),
-        "FINAL": (
-            "Story Focus:\n"
-            "- Bring educational themes full circle\n"
-            "- Show how knowledge has transformed the character\n"
-            "- Create satisfying connections to previous learning moments"
-        ),
-    }.get(story_phase, "")
-
-    return f"""{base_prompt}
+    elif chapter_type == "question":
+        return f"""{base_prompt}
 
 {phase_guidance}
 
@@ -184,43 +216,10 @@ CRITICAL INSTRUCTIONS:
 5. DO NOT end with "What should X do?" or similar prompts
 6. Focus ONLY on building up to the educational question
 
-The educational answers that will be presented separately are:
-- {question["correct_answer"]}
-- {question["wrong_answer1"]}
-- {question["wrong_answer2"]}"""
+{_format_educational_answers(question)}"""
 
-
-def _build_story_continuation_prompt(base_prompt: str) -> str:
-    """Builds prompt for regular story continuation."""
-    # Extract story phase from base prompt
-    story_phase = [line for line in base_prompt.split("\n") if "Story Phase:" in line][
-        0
-    ].split(": ")[1]
-
-    phase_guidance = {
-        "EARLY": (
-            "Focus on:\n"
-            "1. Expanding the world and introducing key elements\n"
-            "2. Setting up potential future challenges\n"
-            "3. Developing character motivations"
-        ),
-        "MIDDLE": (
-            "Focus on:\n"
-            "1. Deepening the plot complications\n"
-            "2. Raising the stakes of decisions\n"
-            "3. Building towards the story's climax"
-        ),
-        "FINAL": (
-            "Focus on:\n"
-            "1. Beginning to resolve major plot threads\n"
-            "2. Making choices particularly impactful\n"
-            "3. Preparing for a satisfying conclusion\n"
-            "4. Ensuring educational elements are reinforced"
-            "5. The story must come to an end."
-        ),
-    }.get(story_phase, "")
-
-    return f"""{base_prompt}
+    elif chapter_type == "story":
+        return f"""{base_prompt}
 
 {phase_guidance}
 
@@ -236,43 +235,19 @@ IMPORTANT:
 3. The story choices will be provided separately - do not list them in the narrative
 4. End the scene at a moment of decision - explicitly list the choices
 
-CHOICE FORMAT INSTRUCTIONS:
-Use this exact format for the choices at the end:
+{CHOICE_FORMAT_INSTRUCTIONS}"""
 
-<CHOICES>
-Choice A: [First choice description]
-Choice B: [Second choice description]
-Choice C: [Third choice description]
-</CHOICES>
-
-The choices section must:
-- Start with <CHOICES> on its own line
-- List exactly three choices prefixed with "Choice A:", "Choice B:", and "Choice C:"
-- End with </CHOICES> on its own line
-- Be placed after the main narrative
-- Each choice should be meaningful and distinct
-- Choices should represent different approaches or directions for the story
-- All choices must advance the plot in interesting ways"""
-
-
-def _build_question_continuation_prompt(
-    base_prompt: str,
-    consequences_guidance: str,
-    question: Dict[str, Any],
-    num_previous_questions: int,
-    previous_questions: Optional[List[Dict[str, Any]]] = None,
-) -> str:
-    """Builds prompt for continuing with a new question."""
-    prompt = f"""{base_prompt}
+    elif chapter_type == "question_continuation":
+        prompt = f"""{base_prompt}
 
 Continue the story, acknowledging the previous answer{" and earlier responses" if num_previous_questions > 1 else ""} while leading to a new question.
 
 {consequences_guidance}"""
 
-    if previous_questions and len(previous_questions) > 1:
-        prompt += f"\n\nPrevious question history:\n{format_question_history(previous_questions[:-1])}"
+        if previous_questions and len(previous_questions) > 1:
+            prompt += f"\n\nPrevious question history:\n{format_question_history(previous_questions[:-1])}"
 
-    prompt += f"""
+        prompt += f"""
 
 The story should naturally build towards this question:
 {question["question"]}
@@ -284,31 +259,21 @@ CRITICAL INSTRUCTIONS:
 4. DO NOT include any story-based choices or decisions
 5. The question should feel like a natural part of the character's journey
 
-The educational answers that will be presented separately are:
-- {question["correct_answer"]}
-- {question["wrong_answer1"]}
-- {question["wrong_answer2"]}"""
+{_format_educational_answers(question)}"""
 
-    return prompt
+        return prompt
 
-
-def _build_answer_continuation_prompt(
-    base_prompt: str,
-    consequences_guidance: str,
-    num_previous_questions: int,
-    previous_questions: Optional[List[Dict[str, Any]]] = None,
-) -> str:
-    """Builds prompt for continuing after an answer."""
-    prompt = f"""{base_prompt}
+    else:  # answer_continuation
+        prompt = f"""{base_prompt}
 
 Continue the story based on the character's previous answer{" and earlier responses" if num_previous_questions > 1 else ""}.
 
 {consequences_guidance}"""
 
-    if previous_questions and len(previous_questions) > 1:
-        prompt += f"\n\nPrevious question history:\n{format_question_history(previous_questions[:-1])}"
+        if previous_questions and len(previous_questions) > 1:
+            prompt += f"\n\nPrevious question history:\n{format_question_history(previous_questions[:-1])}"
 
-    prompt += """
+        prompt += f"""
 
 IMPORTANT:
 1. The story should clearly but naturally acknowledge the impact of their previous answer
@@ -316,25 +281,9 @@ IMPORTANT:
 3. The story choices will be provided separately - do not list them in the narrative
 4. End the scene at a moment of decision - explicitly list the choices
 
-CHOICE FORMAT INSTRUCTIONS:
-Use this exact format for the choices at the end:
+{CHOICE_FORMAT_INSTRUCTIONS}"""
 
-<CHOICES>
-Choice A: [First choice description]
-Choice B: [Second choice description]
-Choice C: [Third choice description]
-</CHOICES>
-
-The choices section must:
-- Start with <CHOICES> on its own line
-- List exactly three choices prefixed with "Choice A:", "Choice B:", and "Choice C:"
-- End with </CHOICES> on its own line
-- Be placed after the main narrative
-- Each choice should be meaningful and distinct
-- Choices should represent different approaches or directions for the story
-- All choices must advance the plot in interesting ways"""
-
-    return prompt
+        return prompt
 
 
 def build_user_prompt(
@@ -343,7 +292,7 @@ def build_user_prompt(
     previous_questions: Optional[List[Dict[str, Any]]] = None,
 ) -> str:
     """Create a user prompt that includes story state and current requirements."""
-    base_prompt = _build_base_prompt(state)
+    base_prompt, story_phase = _build_base_prompt(state)
 
     # Handle consequences for educational questions
     consequences_guidance = ""
@@ -355,7 +304,7 @@ def build_user_prompt(
 
     # Handle opening scene
     if state.chapter == 1 and not state.history:
-        return _build_opening_scene_prompt(base_prompt, question)
+        return _build_chapter_prompt(base_prompt, story_phase, "opening", question)
     # Alternate between educational questions (odd chapters) and story choices (even chapters)
     elif state.chapter % 2 == 1:
         # Odd chapters are for educational questions
@@ -365,26 +314,32 @@ def build_user_prompt(
                 num_previous_questions = (
                     len(previous_questions) if previous_questions else 0
                 )
-                return _build_question_continuation_prompt(
+                return _build_chapter_prompt(
                     base_prompt,
-                    consequences_guidance,
+                    story_phase,
+                    "question_continuation",
                     question,
+                    consequences_guidance,
                     num_previous_questions,
                     previous_questions,
                 )
             else:
-                return _build_educational_question_prompt(base_prompt, question)
+                return _build_chapter_prompt(
+                    base_prompt, story_phase, "question", question
+                )
     else:
         # Even chapters are for story choices
         if previous_questions:
-            return _build_answer_continuation_prompt(
+            return _build_chapter_prompt(
                 base_prompt,
-                consequences_guidance,
-                len(previous_questions),
-                previous_questions,
+                story_phase,
+                "answer_continuation",
+                consequences_guidance=consequences_guidance,
+                num_previous_questions=len(previous_questions),
+                previous_questions=previous_questions,
             )
         else:
-            return _build_story_continuation_prompt(base_prompt)
+            return _build_chapter_prompt(base_prompt, story_phase, "story")
 
 
 def format_question_history(previous_questions: List[Dict[str, Any]]) -> str:
