@@ -2,13 +2,32 @@
 description: Maintain Centralized State Management via StoryState
 globs: 
 ---
+---
+description: Maintain Centralized State Management via StoryState
+globs: 
+---
 
-# Your rule content
+# State Management Rules: Centralized StoryState
 
-User choices and responses to educational questions are the primary drivers of state transitions. When a user makes a choice or answers a question, the application must update the StoryState in [story.py](mdc:app/models/story.py) accordingly.
+## Overview
 
-The StoryState class is the single source of truth for the story's progression. All relevant story information (chapter number, history, question progress, etc.) must be managed within this class. Ensure that these transitions are correctly implemented in the WebSocket message handling logic in [websocket.py](mdc:app/routers/websocket.py)
+User choices and responses to educational questions are the primary drivers of state transitions.  The `StoryState` class, defined in `app/models/story.py`, acts as the single source of truth for the application's state.  All state changes must be managed through this class.
 
-Rule: Do not introduce ad-hoc state variables outside of the StoryState model. All new state information required for story progression, user context, or educational tracking must be added as attributes to the StoryState class. This ensures a clear and maintainable state structure, preventing scattered and inconsistent state management.
-Rationale: Centralized state simplifies debugging, enhances predictability, and makes it easier to reason about the application's behavior as it evolves.
+## Rule: Centralized State with `StoryState`
 
+*   **No Ad-Hoc State:** Do not introduce state variables outside of the `StoryState` model.
+*   **Comprehensive State:** All information related to story progression, user context, or educational tracking must be added as attributes to the `StoryState` class.
+*   **WebSocket Synchronization:** State transitions, triggered by user actions, must be correctly implemented in the WebSocket message handling logic within `app/routers/websocket.py`. This ensures the client and server remain synchronized.
+*   **Linked File Updates:** Any modifications to state management (additions, removals, or updates to `StoryState` or related logic) require corresponding updates in all linked files.  Obsolete functions or classes must be updated or removed.
+
+## Rationale
+
+*   **Simplified Debugging:** Centralized state makes it easier to track down issues.
+*   **Enhanced Predictability:**  The application's behavior is more predictable with a single source of truth for state.
+*   **Maintainability:**  Centralized state simplifies reasoning about the application and makes future modifications easier.
+*   **Code Integrity:** Consistent updates across linked files prevent errors.
+
+## Key Files
+
+*   **State Definition:** `app/models/story.py`
+*   **WebSocket Logic:** `app/routers/websocket.py`

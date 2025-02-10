@@ -46,14 +46,14 @@ class LessonResponse(BaseModel):
     """User's response to a lesson chapter's question."""
     question: Dict[str, Any]
     chosen_answer: str
-    is_correct: bool  # renamed from was_correct to is_correct
+    is_correct: bool
 
 
 class ChapterData(BaseModel):
     """A chapter with its content and the user's response."""
     chapter_number: int
     content: str
-    chapter_type: ChapterType  # Using Enum instead of Literal
+    chapter_type: ChapterType
     response: Optional[Union[StoryResponse, LessonResponse]] = None
 
     @field_validator("chapter_number")
