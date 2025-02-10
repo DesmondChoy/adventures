@@ -211,3 +211,92 @@ AdventureState
    - Choice format remains strictly consistent for frontend parsing
    - Lesson question format standardized for UI display
    - Clear separation between content and interaction elements 
+
+## app/routers/websocket.py Changes
+
+### State Management Improvements
+1. AdventureState Initialization:
+   - State now initialized using AdventureState Pydantic model with required `current_chapter_id` and `story_length`
+   - Chapters list managed through AdventureState.chapters: List[ChapterData]
+   - All state access now uses AdventureState's properties and validators
+
+2. Chapter Type Determination:
+   - Chapter types read from story_config["chapter_types"] array in stories.yaml
+   - Types converted to ChapterType enum (LESSON or STORY)
+   - Validation through ChapterData.chapter_type field validator
+
+3. Response Handling:
+   - Responses stored in ChapterData.response as Union[StoryResponse, LessonResponse]
+   - StoryResponse contains chosen_path and choice_text
+   - LessonResponse contains question dict, chosen_answer, and is_correct
+   - Validation through ChapterData's Pydantic model
+
+4. History Management:
+   - Previous lessons accessed through AdventureState.chapters filtering
+   - Each chapter's data stored in ChapterData Pydantic model
+   - Question history filtered using: `[ch for ch in state.chapters if ch.type == ChapterType.LESSON]`
+   - Responses accessed through ChapterData.response field
+
+### Content Generation
+1. Choice Generation:
+   - Story choices created as List[StoryChoice] in ChapterContent
+   - next_chapter IDs generated using chapter numbers from state.chapters.length
+   - Story chapters require exactly 3 choices (validated in ChapterContent)
+   - Lesson choices generated from question["answers"] with correct/wrong paths
+
+2. Question Management:
+   - Questions excluded using chapter response data: 
+     ```python
+     exclude_questions=[
+         ch.response.question["question"]
+         for ch in state.chapters
+         if ch.type == ChapterType.LESSON
+     ]
+     ```
+   - Questions stored in LessonResponse.question field
+   - Validation through LessonResponse Pydantic model
+
+### WebSocket Communication
+1. State Synchronization:
+   - Client state updated with complete AdventureState serialization
+   - Chapter updates include full ChapterData model fields
+   - Choices serialized from ChapterContent.choices list
+   - All models use Pydantic's .dict() for serialization
+
+2. Message Structure:
+   - "chapter_update" message includes:
+     ```python
+     {
+         "type": "chapter_update",
+         "state": {
+             "current_chapter_id": str,
+             "current_chapter": ChapterData.dict(),
+             "choices": List[StoryChoice.dict()]
+         }
+     }
+     ```
+   - "story_complete" includes full state with stats from AdventureState properties
+
+### Architecture Improvements
+1. Model-Driven Design:
+   - All state managed through Pydantic models:
+     - AdventureState: Top-level state container
+     - ChapterData: Individual chapter state
+     - ChapterContent: Chapter content and choices
+     - StoryResponse/LessonResponse: User interactions
+
+2. Type Safety:
+   - ChapterType enum enforced through Pydantic validators
+   - Response types validated through Union type hints
+   - Model fields validated through Pydantic field validators
+
+### Migration Notes
+1. Client Updates Required:
+   - Handle new state structure matching AdventureState model
+   - Process ChapterData format for chapter updates
+   - Update choice handling to match StoryChoice model
+
+2. Configuration Requirements:
+   - stories.yaml must include chapter_types array matching ChapterType enum values
+   - Chapter sequence must match AdventureState.story_length
+   - All responses must match either StoryResponse or LessonResponse models 

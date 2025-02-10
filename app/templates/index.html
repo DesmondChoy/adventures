@@ -184,21 +184,7 @@
                         appendStoryText(data.content);
                     } else if (data.type === 'story_complete') {
                         hideLoader();
-                        // Display completion stats
-                        const statsHtml = `
-                            <div class="mt-6 p-4 bg-green-50 rounded-lg">
-                                <h3 class="text-lg font-semibold text-green-800 mb-2">Journey Complete!</h3>
-                                <div class="text-sm text-green-700">
-                                    <p>Questions Answered: ${data.stats.total_questions}</p>
-                                    <p>Correct Answers: ${data.stats.correct_answers}</p>
-                                    <p>Success Rate: ${data.stats.completion_percentage}%</p>
-                                </div>
-                                <button onclick="resetApplicationState()" 
-                                        class="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
-                                    Start New Journey
-                                </button>
-                            </div>`;
-                        document.getElementById('choicesContainer').innerHTML = statsHtml;
+                        displayStats(data);
                     }
                 } catch (e) {
                     // If not JSON, treat as raw story text
@@ -218,12 +204,12 @@
                 if (Object.keys(storyState).length > 0) {
                     storyWebSocket.send(JSON.stringify({
                         state: {
-                            current_node: storyState.choice?.node_id || 'start',
-                            chapter: parseInt(sessionStorage.getItem('storyChapter') || '0'),
-                            history: storyState.history || [],
-                            correct_answers: storyState.correct_answers || 0,
-                            total_questions: storyState.total_questions || 0,
-                            previous_content: storyState.previous_content,
+                            current_chapter_id: storyState.choice?.chosen_path || 'start',
+                            current_chapter_number: parseInt(sessionStorage.getItem('storyChapter') || '0'),
+                            story_choices: storyState.story_choices || [],
+                            correct_lesson_answers: storyState.correct_lesson_answers || 0,
+                            total_lessons: storyState.total_lessons || 0,
+                            previous_chapter_content: storyState.previous_chapter_content,
                             story_length: storyState.storyLength || selectedStoryLength
                         }
                     }));
@@ -231,11 +217,12 @@
                     // Always send initial state with story length
                     storyWebSocket.send(JSON.stringify({
                         state: {
-                            current_node: 'start',
-                            chapter: 0,
-                            history: [],
-                            correct_answers: 0,
-                            total_questions: 0,
+                            current_chapter_id: 'start',
+                            current_chapter_number: 0,
+                            story_choices: [],
+                            correct_lesson_answers: 0,
+                            total_lessons: 0,
+                            previous_chapter_content: '',
                             story_length: selectedStoryLength
                         }
                     }));
@@ -245,8 +232,8 @@
                 if (storyState.choice) {
                     storyWebSocket.send(JSON.stringify({
                         choice: {
-                            node_id: storyState.choice.node_id,
-                            display_text: storyState.choice.display_text
+                            chosen_path: storyState.choice.chosen_path,
+                            choice_text: storyState.choice.choice_text
                         }
                     }));
                 } else {
@@ -315,11 +302,11 @@
                 const existingState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
                 const currentChapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
                 
-                // Update history with the new choice including both node_id and display_text
-                const history = existingState.history || [];
+                // Update history with the new choice including both chosen_path and choice_text
+                const history = existingState.story_choices || [];
                 history.push({
-                    node_id: choiceId,
-                    display_text: choiceText
+                    chosen_path: choiceId,
+                    choice_text: choiceText
                 });
                 
                 // Store the current state in sessionStorage with ALL necessary fields
@@ -328,37 +315,37 @@
                     lessonTopic: existingState.lessonTopic || document.getElementById('lessonTopic').value,
                     storyLength: existingState.storyLength || parseInt(document.getElementById('storyLength').value),
                     choice: {
-                        node_id: choiceId,
-                        display_text: choiceText
+                        chosen_path: choiceId,
+                        choice_text: choiceText
                     },
-                    chapter: currentChapter + 1,
-                    history: history,
-                    correct_answers: existingState.correct_answers || 0,
-                    total_questions: existingState.total_questions || 0,
-                    previous_content: document.getElementById('storyContent').textContent,
+                    current_chapter_number: currentChapter + 1,
+                    story_choices: history,
+                    correct_lesson_answers: existingState.correct_lesson_answers || 0,
+                    total_lessons: existingState.total_lessons || 0,
+                    previous_chapter_content: document.getElementById('storyContent').textContent,
                     all_previous_content: existingState.all_previous_content || [],
-                    question_history: existingState.question_history || []
+                    lesson_responses: existingState.lesson_responses || []
                 };
-                
+             
                 // If we have previous content, add it to the history before clearing
-                if (currentState.previous_content && currentState.previous_content.trim()) {
-                    currentState.all_previous_content.push(currentState.previous_content);
+                if (currentState.previous_chapter_content && currentState.previous_chapter_content.trim()) {
+                    currentState.all_previous_content.push(currentState.previous_chapter_content);
                 }
 
                 sessionStorage.setItem('storyState', JSON.stringify(currentState));
-                sessionStorage.setItem('storyChapter', currentState.chapter.toString());
+                sessionStorage.setItem('storyChapter', currentState.current_chapter_number.toString());
 
                 // First send the state update
                 storyWebSocket.send(JSON.stringify({
                     state: {
-                        current_node: currentState.choice?.node_id || 'start',
-                        chapter: currentState.chapter,
-                        history: currentState.history || [],
-                        correct_answers: currentState.correct_answers || 0,
-                        total_questions: currentState.total_questions || 0,
-                        previous_content: currentState.previous_content,
+                        current_chapter_id: currentState.choice?.chosen_path || 'start',
+                        current_chapter_number: currentState.current_chapter_number,
+                        story_choices: currentState.story_choices || [],
+                        correct_lesson_answers: currentState.correct_lesson_answers || 0,
+                        total_lessons: currentState.total_lessons || 0,
+                        previous_chapter_content: currentState.previous_chapter_content,
                         all_previous_content: currentState.all_previous_content,
-                        question_history: currentState.question_history || [],
+                        lesson_responses: currentState.lesson_responses || [],
                         story_length: currentState.storyLength
                     }
                 }));
@@ -366,8 +353,8 @@
                 // Then send the choice message
                 storyWebSocket.send(JSON.stringify({
                     choice: {
-                        node_id: choiceId,
-                        display_text: choiceText
+                        chosen_path: choiceId,
+                        choice_text: choiceText
                     }
                 }));
                 
@@ -375,6 +362,24 @@
                 document.getElementById('storyContent').textContent = '';
                 document.getElementById('choicesContainer').innerHTML = '';
             }
+        }
+
+        // Update the stats display
+        function displayStats(data) {
+            const statsHtml = `
+                <div class="text-center p-4">
+                    <h3 class="text-lg font-semibold text-green-800 mb-2">Journey Complete!</h3>
+                    <div class="text-sm text-green-700">
+                        <p>Total Lessons: ${data.stats.total_lessons}</p>
+                        <p>Correct Answers: ${data.stats.correct_lesson_answers}</p>
+                        <p>Success Rate: ${data.stats.completion_percentage}%</p>
+                    </div>
+                    <button onclick="resetApplicationState()" 
+                            class="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                        Start New Journey
+                    </button>
+                </div>`;
+            document.getElementById('choicesContainer').innerHTML = statsHtml;
         }
 
         // On page load, check if we're continuing a story
@@ -433,12 +438,12 @@
                     // First send the stored state
                     storyWebSocket.send(JSON.stringify({
                         state: {
-                            current_node: storyState.choice?.node_id || 'start',
-                            chapter: chapter,
-                            history: storyState.history || [],
-                            correct_answers: storyState.correct_answers || 0,
-                            total_questions: storyState.total_questions || 0,
-                            previous_content: storyState.previous_content,
+                            current_chapter_id: storyState.choice?.chosen_path || 'start',
+                            current_chapter_number: chapter,
+                            story_choices: storyState.story_choices || [],
+                            correct_lesson_answers: storyState.correct_lesson_answers || 0,
+                            total_lessons: storyState.total_lessons || 0,
+                            previous_chapter_content: storyState.previous_chapter_content,
                             story_length: storyState.storyLength
                         }
                     }));
@@ -447,8 +452,8 @@
                     if (storyState.choice) {
                         storyWebSocket.send(JSON.stringify({
                             choice: {
-                                node_id: storyState.choice.node_id,
-                                display_text: storyState.choice.display_text
+                                chosen_path: storyState.choice.chosen_path,
+                                choice_text: storyState.choice.choice_text
                             }
                         }));
                     } else {
