@@ -47,6 +47,14 @@
    - Better variable names (`v` → `chapters`)
    - Extracted complex conditions
    - Added explicit type checking
+   - Enhanced chapter validation against story_length
+   - Added clear validation error messages
+
+3. Enhanced lesson history handling:
+   - Removed conditional check for multiple lessons
+   - Show all previous lessons in history
+   - Consistent history display for both lesson and story chapters
+   - Improved narrative continuity
 
 ### String Literal Changes
 - `"lesson"` → `ChapterType.LESSON`
@@ -93,6 +101,8 @@ AdventureState
 2. Chapter numbers must be sequential starting from 1
 3. Chapter numbers must be positive
 4. Choices list cannot be empty
+5. Total chapters cannot exceed story_length (default: 3, range: 3-7)
+6. Chapter sequence must match expected range (1 to N)
 
 ### Type Checking Notes
 - Added `type: ignore[union-attr]` for response access in properties

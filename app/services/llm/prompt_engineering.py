@@ -226,8 +226,8 @@ IMPORTANT: Do not include any story choices or decision points in this scene."""
 {consequences_guidance}
 
 """
-            if previous_lessons and len(previous_lessons) > 1:
-                continuation_text += f"Previous lesson history:\n{format_lesson_history(previous_lessons[:-1])}\n\n"
+            if previous_lessons:
+                continuation_text += f"Previous lesson history:\n{format_lesson_history(previous_lessons)}\n\n"
 
         return f"""{base_prompt}
 
@@ -255,8 +255,8 @@ CRITICAL INSTRUCTIONS:
 {consequences_guidance}
 
 """
-            if previous_lessons and len(previous_lessons) > 1:
-                continuation_text += f"Previous lesson history:\n{format_lesson_history(previous_lessons[:-1])}\n\n"
+            if previous_lessons:
+                continuation_text += f"Previous lesson history:\n{format_lesson_history(previous_lessons)}\n\n"
 
         return f"""{base_prompt}
 

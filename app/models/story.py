@@ -31,14 +31,6 @@ class ChapterContent(BaseModel):
     def validate_choices(cls, v, _) -> List[StoryChoice]:  # renamed values to _ since unused
         if not v:
             raise ValueError("Must have at least one choice")
-        
-        is_story_chapter = all(
-            not choice.next_chapter.startswith(("correct", "wrong")) 
-            for choice in v
-        )
-        
-        if is_story_chapter and len(v) < 3:
-            raise ValueError("Story chapters must have exactly 3 choices")
         return v
 
 
@@ -52,15 +44,25 @@ class LessonResponse(BaseModel):
 class ChapterData(BaseModel):
     """A chapter with its content and the user's response."""
     chapter_number: int
-    content: str
+    content: str  # Keep this as string, as it represents the raw content
     chapter_type: ChapterType
     response: Optional[Union[StoryResponse, LessonResponse]] = None
+    chapter_content: ChapterContent  # Add the ChapterContent object
 
     @field_validator("chapter_number")
     @classmethod
     def validate_chapter_number(cls, v: int) -> int:
         if v < 1:
             raise ValueError("Chapter number must be positive")
+        return v
+
+    @field_validator("chapter_content", mode="after")
+    @classmethod
+    def validate_chapter_content(cls, v: ChapterContent, values: Dict[str, Any]) -> ChapterContent:
+        chapter_type = values.get("chapter_type")
+
+        if chapter_type == ChapterType.STORY and len(v.choices) != 3:
+            raise ValueError("Story chapters must have exactly 3 choices")
         return v
 
 
@@ -137,9 +139,15 @@ class AdventureState(BaseModel):
         if not chapters:
             return chapters
             
+        # Validate chapter sequence
         chapter_numbers = [chapter.chapter_number for chapter in chapters]
         expected_numbers = list(range(1, len(chapters) + 1))
         
         if chapter_numbers != expected_numbers:
             raise ValueError("Chapter numbers must be sequential starting from 1")
+
+        # Validate against story_length
+        if len(chapters) > cls.model_fields["story_length"].default:
+            raise ValueError(f"Number of chapters cannot exceed story_length ({cls.model_fields['story_length'].default})")
+            
         return chapters
