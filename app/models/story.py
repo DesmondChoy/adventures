@@ -1,52 +1,145 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union, Literal
+from enum import Enum
+
+
+class ChapterType(str, Enum):
+    """Type of chapter in the adventure."""
+    LESSON = "lesson"
+    STORY = "story"
 
 
 class StoryChoice(BaseModel):
+    """Available choice at the end of a story chapter."""
     text: str
-    next_node: str
+    next_chapter: str
 
 
-class ChoiceHistory(BaseModel):
-    node_id: str
-    display_text: str
+class StoryResponse(BaseModel):
+    """User's response to a story chapter's choices."""
+    chosen_path: str
+    choice_text: str
 
 
-class StoryNode(BaseModel):
+class ChapterContent(BaseModel):
+    """Content and available choices for a chapter."""
     content: str
     choices: List[StoryChoice]
 
     @field_validator("choices", mode="after")
     @classmethod
-    def validate_choices(cls, v, values):
+    def validate_choices(cls, v, _) -> List[StoryChoice]:  # renamed values to _ since unused
         if not v:
             raise ValueError("Must have at least one choice")
-        # Story progression should have exactly 3 choices
-        # Educational questions can have variable number of choices based on the database
-        if len(v) < 3 and all(
-            not c.next_node.startswith(("correct", "wrong")) for c in v
-        ):
-            raise ValueError("Story progression must have exactly 3 choices")
+        
+        is_story_chapter = all(
+            not choice.next_chapter.startswith(("correct", "wrong")) 
+            for choice in v
+        )
+        
+        if is_story_chapter and len(v) < 3:
+            raise ValueError("Story chapters must have exactly 3 choices")
         return v
 
 
-class QuestionHistory(BaseModel):
+class LessonResponse(BaseModel):
+    """User's response to a lesson chapter's question."""
     question: Dict[str, Any]
     chosen_answer: str
-    was_correct: bool
+    is_correct: bool  # renamed from was_correct to is_correct
 
 
-class StoryState(BaseModel):
-    current_node: str
-    chapter: int
-    history: List[ChoiceHistory]
-    correct_answers: int
-    total_questions: int
-    previous_content: Optional[str] = (
-        None  # Content of the most recently completed chapter
-    )
-    all_previous_content: List[str] = []  # List of all previous chapter contents
-    question_history: List[QuestionHistory] = []  # Track all Q&A history
-    story_length: int = Field(
-        default=3, ge=3, le=7
-    )  # Default to 3, must be between 3 and 7
+class ChapterData(BaseModel):
+    """A chapter with its content and the user's response."""
+    chapter_number: int
+    content: str
+    chapter_type: ChapterType  # Using Enum instead of Literal
+    response: Optional[Union[StoryResponse, LessonResponse]] = None
+
+    @field_validator("chapter_number")
+    @classmethod
+    def validate_chapter_number(cls, v: int) -> int:
+        if v < 1:
+            raise ValueError("Chapter number must be positive")
+        return v
+
+
+class AdventureState(BaseModel):
+    """Tracks progression and responses through the educational adventure."""
+    current_chapter_id: str
+    chapters: List[ChapterData] = []
+    story_length: int = Field(default=3, ge=3, le=7)
+
+    @property
+    def current_chapter_number(self) -> int:
+        """Current chapter number (1-based indexing)"""
+        return len(self.chapters) + 1
+
+    def _is_lesson_response(self, chapter: ChapterData) -> bool:
+        """Helper method to check if chapter has a valid lesson response."""
+        return (
+            chapter.chapter_type == ChapterType.LESSON
+            and chapter.response is not None
+            and isinstance(chapter.response, LessonResponse)
+        )
+
+    def _is_story_response(self, chapter: ChapterData) -> bool:
+        """Helper method to check if chapter has a valid story response."""
+        return (
+            chapter.chapter_type == ChapterType.STORY
+            and chapter.response is not None
+            and isinstance(chapter.response, StoryResponse)
+        )
+
+    @property
+    def correct_lesson_answers(self) -> int:
+        """Number of correctly answered lesson questions"""
+        return sum(
+            1 for chapter in self.chapters
+            if self._is_lesson_response(chapter) 
+            and chapter.response.is_correct  # type: ignore[union-attr]
+        )
+
+    @property
+    def total_lessons(self) -> int:
+        """Total number of lesson chapters encountered"""
+        return sum(1 for chapter in self.chapters if chapter.chapter_type == ChapterType.LESSON)
+
+    @property
+    def story_choices(self) -> List[StoryResponse]:
+        """List of choices made in story chapters"""
+        return [
+            chapter.response for chapter in self.chapters
+            if self._is_story_response(chapter)
+        ]  # type: ignore[misc]
+
+    @property
+    def lesson_responses(self) -> List[LessonResponse]:
+        """List of responses to lesson questions"""
+        return [
+            chapter.response for chapter in self.chapters
+            if self._is_lesson_response(chapter)
+        ]  # type: ignore[misc]
+
+    @property
+    def all_previous_content(self) -> List[str]:
+        """Content from all completed chapters"""
+        return [chapter.content for chapter in self.chapters]
+
+    @property
+    def previous_chapter_content(self) -> Optional[str]:
+        """Content from the most recently completed chapter"""
+        return self.chapters[-1].content if self.chapters else None
+
+    @field_validator("chapters")
+    @classmethod
+    def validate_chapters(cls, chapters: List[ChapterData]) -> List[ChapterData]:
+        if not chapters:
+            return chapters
+            
+        chapter_numbers = [chapter.chapter_number for chapter in chapters]
+        expected_numbers = list(range(1, len(chapters) + 1))
+        
+        if chapter_numbers != expected_numbers:
+            raise ValueError("Chapter numbers must be sequential starting from 1")
+        return chapters
