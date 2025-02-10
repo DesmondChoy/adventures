@@ -9,6 +9,7 @@ from app.models.story import (
     StoryChoice,
 )
 from app.services.llm import LLMService
+from app.services.chapter_manager import ChapterManager
 from app.init_data import sample_question
 import yaml
 import pandas as pd
@@ -16,9 +17,11 @@ import asyncio
 import re
 import logging
 from functools import lru_cache
+import random
 
 router = APIRouter()
 llm_service = LLMService()
+chapter_manager = ChapterManager()
 logger = logging.getLogger("story_app")
 
 
@@ -38,6 +41,46 @@ def load_lesson_data():
 WORD_BATCH_SIZE = 5  # Number of words to send at once
 WORD_DELAY = 0.02  # Reduced delay between word batches
 PARAGRAPH_DELAY = 0.1  # Reduced delay between paragraphs
+
+
+def determine_chapter_types(story_length: int, available_questions: int) -> list[ChapterType]:
+    """Determine the sequence of chapter types for the entire story up front.
+    
+    Args:
+        story_length: Total number of chapters in the story
+        available_questions: Number of available questions in the database for the topic
+        
+    Returns:
+        List of ChapterType values representing the type of each chapter
+        
+    Raises:
+        ValueError: If there aren't enough questions for the required lessons
+    """
+    # First and last chapters must be lessons, so we need at least 2 questions
+    if available_questions < 2:
+        raise ValueError(f"Need at least 2 questions, but only have {available_questions}")
+        
+    # Initialize with all chapters as STORY type
+    chapter_types = [ChapterType.STORY] * story_length
+    
+    # First and last chapters are always lessons
+    chapter_types[0] = ChapterType.LESSON
+    chapter_types[-1] = ChapterType.LESSON
+    
+    # Calculate how many more lesson chapters we can add
+    remaining_questions = available_questions - 2  # subtract first and last lessons
+    if remaining_questions > 0:
+        # Get positions for potential additional lessons (excluding first and last positions)
+        available_positions = list(range(1, story_length - 1))
+        # Randomly select positions for additional lessons, up to the number of remaining questions
+        num_additional_lessons = min(remaining_questions, len(available_positions))
+        lesson_positions = random.sample(available_positions, num_additional_lessons)
+        
+        # Set selected positions to LESSON type
+        for pos in lesson_positions:
+            chapter_types[pos] = ChapterType.LESSON
+            
+    return chapter_types
 
 
 async def generate_chapter(
@@ -208,12 +251,24 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
             if "state" in data:
                 validated_state = data["state"]
                 if not state:
-                    # Initialize state with validated values and empty chapters list
-                    state = AdventureState(
-                        current_chapter_id="start",  # Initialize with start
-                        story_length=validated_state["story_length"],
-                        chapters=[]  # Initialize with empty chapters list
-                    )
+                    total_chapters = validated_state["story_length"]
+                    
+                    try:
+                        # Use ChapterManager to handle initialization logic
+                        available_questions = chapter_manager.count_available_questions(lesson_topic)
+                        chapter_types = chapter_manager.determine_chapter_types(total_chapters, available_questions)
+                        
+                        # Store chapter types in story configuration
+                        story_data = load_story_data()
+                        story_config = story_data["story_categories"][story_category]
+                        story_config["chapter_types"] = chapter_types
+                        
+                        # Initialize state using ChapterManager
+                        state = chapter_manager.initialize_adventure_state(total_chapters, chapter_types)
+                        
+                    except ValueError as e:
+                        await websocket.send_text(str(e))
+                        break
                 else:
                     # Update existing state from validated chapters
                     if "chapters" in validated_state:

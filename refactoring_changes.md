@@ -300,3 +300,32 @@ AdventureState
    - stories.yaml must include chapter_types array matching ChapterType enum values
    - Chapter sequence must match AdventureState.story_length
    - All responses must match either StoryResponse or LessonResponse models 
+
+## app/services/chapter_manager.py Changes
+
+### Service Creation
+- Moved chapter type determination logic from WebSocket handler to dedicated service
+- Implemented ratio-based lesson distribution (MAX_LESSON_RATIO = 0.4)
+- Added structured logging for chapter type determination process
+
+### Core Features
+1. Chapter Type Rules:
+   - First and last chapters are always lessons
+   - Middle chapters randomly assigned based on:
+     - Available questions in topic
+     - Maximum lesson ratio constraint (40%)
+
+2. Question Management:
+   - Validates minimum question requirement (2 for first/last)
+   - Tracks available questions per topic
+   - Prevents over-allocation of lessons
+
+### Logging Implementation
+- Added process tracking for chapter type determination
+- Logs constraints and final chapter sequence
+- Integrates with existing logging system for debugging
+
+### Migration Impact
+- WebSocket handler now delegates chapter type logic to ChapterManager
+- Chapter types determined upfront and stored in story configuration
+- Requires minimum 2 questions per topic for adventure initialization 

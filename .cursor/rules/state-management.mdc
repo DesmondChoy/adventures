@@ -1,9 +1,5 @@
 ---
-description: Maintain Centralized State Management via StoryState
-globs: 
----
----
-description: Maintain Centralized State Management via StoryState
+description: Maintain Centralized State Management via AdventureState
 globs: 
 ---
 
@@ -12,6 +8,29 @@ globs:
 ## Overview
 
 User choices and responses to educational questions are the primary drivers of state transitions. The `AdventureState` class, defined in `app/models/story.py`, acts as the single source of truth for the application's state. All state changes must be managed through this class. The `ChapterType` enum, also defined in `app/models/story.py`, is the *authoritative* source for determining whether a chapter is a `STORY` or `LESSON` chapter.
+
+## Chapter Type Determination
+
+The adventure begins when a user selects their adventure category and lesson topic and clicks the start adventure button. From this point forward, each chapter in the adventure must be either a `STORY` or `LESSON` type, with distinct characteristics:
+
+### Story Chapters (`ChapterType.STORY`)
+* End with exactly three narrative choices (# of choices might change in future)
+* Choices represent different paths the story can take
+* No correct or wrong answers - all choices are valid narrative decisions
+* Choices affect the story's direction and future content
+* Response is captured in `StoryResponse` model
+
+### Lesson Chapters (`ChapterType.LESSON`)
+* End with an educational question related to the lesson topic
+* Have multiple possible answers, with exactly one correct answer
+* Responses affect the educational progression tracking
+* Question and response captured in `LessonResponse` model
+
+The determination of a chapter's type is a fundamental aspect of the application's architecture and must be explicitly set when generating new chapters. This typing system ensures:
+1. Clear separation between narrative progression and educational content
+2. Proper validation of chapter content and responses
+3. Accurate tracking of both story choices and learning progress
+4. Consistent user experience across the adventure
 
 ## Rule: Centralized State with `AdventureState` and `ChapterType`
 
@@ -33,3 +52,4 @@ User choices and responses to educational questions are the primary drivers of s
 
 * **State Definition:** `app/models/story.py`
 * **WebSocket Logic:** `app/routers/websocket.py`
+
