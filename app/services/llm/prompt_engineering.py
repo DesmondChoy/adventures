@@ -10,7 +10,7 @@ from app.models.story import (
 
 # Constants for commonly used prompt sections
 CHOICE_FORMAT_INSTRUCTIONS = """CHOICE FORMAT INSTRUCTIONS:
-Use this exact format for the choices at the end:
+Use this EXACT format for the choices, with NO indentation and NO line breaks within choices:
 
 <CHOICES>
 Choice A: [First choice description]
@@ -18,14 +18,31 @@ Choice B: [Second choice description]
 Choice C: [Third choice description]
 </CHOICES>
 
-The choices section must:
-- Start with <CHOICES> on its own line
-- List exactly three choices prefixed with "Choice A:", "Choice B:", and "Choice C:"
-- End with </CHOICES> on its own line
-- Be placed after the main narrative
-- Each choice should be meaningful and distinct
-- Choices should represent different approaches or directions for the story
-- All choices must advance the plot in interesting ways"""
+The choices section MUST:
+1. Start with <CHOICES> on its own line with NO indentation
+2. Have exactly three choices, each on its own line with NO indentation
+3. Each choice MUST start with "Choice [A/B/C]: " followed by the choice text
+4. Each choice MUST be on a single line (NO line breaks within choices)
+5. End with </CHOICES> on its own line with NO indentation
+6. Each choice should be meaningful and distinct
+7. All choices must advance the plot in interesting ways
+
+Example of CORRECT formatting:
+<CHOICES>
+Choice A: Use magic to create a protective shield around the garden.
+Choice B: Seek help from the wise elder in the nearby village.
+Choice C: Search the ancient library for a solution in the old tomes.
+</CHOICES>
+
+Example of INCORRECT formatting:
+<CHOICES>
+    Choice A: Use magic to create a protective 
+    shield around the garden.
+Choice B: Seek help from 
+the wise elder in the nearby village.
+  Choice C: Search the ancient library 
+  for a solution in the old tomes.
+</CHOICES>"""
 
 
 class LessonQuestion(TypedDict):
@@ -82,7 +99,13 @@ def build_system_prompt(story_config: Dict[str, Any]) -> str:
     Args:
         story_config: Configuration for the story
     """
-    return f"""You are a master storyteller crafting an interactive educational story.
+    # Add choice formatting rules to the system prompt
+    choice_rules = """
+IMPORTANT: When writing choices, ensure each choice is COMPLETELY contained on a single line.
+DO NOT use any line breaks or word wrapping within choices.
+"""
+    
+    base_prompt = f"""You are a master storyteller crafting an interactive educational story.
 
 Writing Style:
 - Maintain a {story_config["tone"]} tone throughout the narrative
@@ -98,6 +121,8 @@ Your task is to generate engaging story chapters that:
 2. Create meaningful consequences for user decisions
 3. Seamlessly integrate lesson elements when provided
 4. Use multiple paragraphs separated by blank lines to ensure readability"""
+
+    return base_prompt + choice_rules
 
 
 def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
