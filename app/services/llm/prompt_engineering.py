@@ -106,14 +106,11 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
     chapter_history: list[str] = []
 
     for chapter in state.chapters:  # type: ChapterData
-        if len(chapter_history) > 0:  # Add separator between chapters
-            chapter_history.append("\n---\n")
-
-        # Add chapter number
-        chapter_history.append(f"Chapter {chapter.chapter_number}:")
+        # Add chapter number with proper formatting
+        chapter_history.append(f"Chapter {chapter.chapter_number}:\n")
 
         # Add the chapter content
-        chapter_history.append(chapter.content)
+        chapter_history.append(f"{chapter.content.strip()}\n")
 
         # Add lesson outcomes for lesson chapters
         if chapter.chapter_type == ChapterType.LESSON and chapter.response:
@@ -126,10 +123,10 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
             )
             chapter_history.extend(
                 [
-                    f"\nLesson Question: {lesson_response.question['question']}",
-                    f"\nStudent's Answer: {lesson_response.chosen_answer}",
-                    f"\nOutcome: {'Correct' if lesson_response.is_correct else 'Incorrect'}",
-                    f"\nCorrect Answer: {correct_answer}",
+                    f"\nLesson Question: {lesson_response.question['question']}\n",
+                    f"Student's Answer: {lesson_response.chosen_answer}\n",
+                    f"Outcome: {'Correct' if lesson_response.is_correct else 'Incorrect'}\n",
+                    f"Correct Answer: {correct_answer}\n",
                 ]
             )
 
@@ -137,18 +134,30 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
         if chapter.chapter_type == ChapterType.STORY and chapter.response:
             story_response = cast(StoryResponse, chapter.response)  # Type cast since we know it's a StoryResponse
             chapter_history.append(
-                f"\nChoice Made: {story_response.choice_text}"
+                f"\nChoice Made: {story_response.choice_text}\n"
             )
+        
+        # Add separator between chapters
+        if len(state.chapters) > 1 and chapter != state.chapters[-1]:
+            chapter_history.append("---\n")
 
-    # Calculate story phase
-    remaining_chapters = state.story_length - state.current_chapter_number
+    # Calculate story phase based on story progression percentage
+    total_chapters = state.story_length
+    current_chapter = state.current_chapter_number
+    progress_percentage = (current_chapter / total_chapters) * 100
+
+    # Educational context: Story phases help maintain narrative pacing
+    # EARLY: First chapter (introduction, world-building)
+    # MIDDLE: Core chapters (rising action, character development)
+    # LATE: Final quarter (building to climax)
+    # FINAL: Last chapter (resolution)
     story_phase = (
         "EARLY"
-        if state.current_chapter_number == 1
+        if current_chapter == 1
         else "FINAL"
-        if remaining_chapters <= 1
+        if current_chapter == total_chapters
         else "LATE"
-        if remaining_chapters <= state.story_length // 2
+        if progress_percentage >= 75  # Last quarter of the story
         else "MIDDLE"
     )
 
@@ -158,7 +167,7 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
         f"- Chapter: {state.current_chapter_number} of {state.story_length}\n"
         f"- Story Phase: {story_phase}\n"
         f"- Lesson Progress: {state.correct_lesson_answers}/{state.total_lessons} lessons answered correctly\n\n"
-        f"Complete Story History:\n"
+        f"Complete Story History:\n"  # Single newline for clean formatting
         f"{''.join(filter(None, chapter_history))}"  # filter(None) removes empty strings
     )
 

@@ -39,6 +39,8 @@ The determination of a chapter's type is a fundamental aspect of the application
 * **WebSocket Synchronization:** State transitions, triggered by user actions, must be correctly implemented in the WebSocket message handling logic within `app/routers/websocket.py`. This ensures the client and server remain synchronized.
 * **Linked File Updates:** Any modifications to state management (additions, removals, or updates to `AdventureState` or related logic) require corresponding updates in all linked files. Obsolete functions or classes must be updated or removed.
 * **Authoritative Chapter Type:** Any logic that needs to distinguish between story chapters and lesson chapters *must* use the `ChapterType` enum. Do *not* rely on indirect inferences (e.g., checking the format of choice strings). The `ChapterData` model, which includes both `chapter_type` (the enum) and `chapter_content` (the chapter's content and choices), should be used for validation and logic related to chapter types.
+* **Dynamic Story Length:** Story length is user-configurable and may change in future updates. NEVER hard-code assumptions about the number of chapters in any logic. Instead, use `state.story_length` and calculate proportions or progress based on percentages of total length.
+
 
 ## Rationale
 
