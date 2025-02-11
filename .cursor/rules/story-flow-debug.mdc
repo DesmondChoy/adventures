@@ -2,7 +2,15 @@
 description: Story Flow: Validation rules and debugging checkpoints
 globs: 
 ---
-# Prompt Engineering Debug Guide
+# Story Flow Debug Guide
+
+<story_testing>
+When running story generation tests: 
+1. ALWAYS run the test file directly with Python:
+   `source .venv/bin/activate && python tests/test_story_generation.py`
+2. DO NOT use pytest as it will hide the debug output
+3. This ensures you can see all prompts and LLM responses in the output
+</story_testing>
 
 ## CRITICAL: Narrative Context Checks
 Before anything else, verify these essential context points:
