@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional, List, AsyncGenerator
 from abc import ABC, abstractmethod
-from app.models.story import StoryState
+from app.models.story import AdventureState
 import logging
 from contextlib import asynccontextmanager
 
@@ -58,7 +58,7 @@ class BaseLLMService(ABC):
     async def generate_story_stream(
         self,
         story_config: Dict[str, Any],
-        state: StoryState,
+        state: AdventureState,
         question: Optional[Dict[str, Any]] = None,
         previous_questions: Optional[List[Dict[str, Any]]] = None,
         context: Optional[Dict[str, Any]] = None,

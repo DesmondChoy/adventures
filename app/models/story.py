@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from typing import List, Dict, Any, Optional, Union, Literal
 from enum import Enum
 
@@ -58,8 +58,8 @@ class ChapterData(BaseModel):
 
     @field_validator("chapter_content", mode="after")
     @classmethod
-    def validate_chapter_content(cls, v: ChapterContent, values: Dict[str, Any]) -> ChapterContent:
-        chapter_type = values.get("chapter_type")
+    def validate_chapter_content(cls, v: ChapterContent, info: ValidationInfo) -> ChapterContent:
+        chapter_type = info.data.get("chapter_type")
 
         if chapter_type == ChapterType.STORY and len(v.choices) != 3:
             raise ValueError("Story chapters must have exactly 3 choices")

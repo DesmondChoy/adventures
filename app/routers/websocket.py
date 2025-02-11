@@ -127,7 +127,7 @@ async def generate_chapter(
             "is_correct": chapter.response.is_correct,
         }
         for chapter in state.chapters
-        if chapter.type == ChapterType.LESSON and chapter.response
+        if chapter.chapter_type == ChapterType.LESSON and chapter.response
     ]
     
     if previous_lessons:
@@ -145,7 +145,7 @@ async def generate_chapter(
             used_questions = [
                 chapter.response.question["question"]
                 for chapter in state.chapters
-                if chapter.type == ChapterType.LESSON and chapter.response
+                if chapter.chapter_type == ChapterType.LESSON and chapter.response
             ]
             # Sample a new question
             question = sample_question(lesson_topic, exclude_questions=used_questions)
@@ -349,7 +349,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                             exclude_questions=[
                                 chapter.response.question["question"]
                                 for chapter in state.chapters
-                                if chapter.type == ChapterType.LESSON and chapter.response
+                                if chapter.chapter_type == ChapterType.LESSON and chapter.response
                             ]
                         )
                         
@@ -442,6 +442,14 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                     await websocket.send_text("\n\n")
                     await asyncio.sleep(PARAGRAPH_DELAY)
 
+                # Get the chapter type for the current chapter
+                story_data = load_story_data()
+                story_config = story_data["story_categories"][story_category]
+                current_chapter_number = len(state.chapters) + 1
+                chapter_type = story_config["chapter_types"][current_chapter_number - 1]
+                if not isinstance(chapter_type, ChapterType):
+                    chapter_type = ChapterType(chapter_type)
+
                 # Send complete chapter data with choices
                 await websocket.send_json({
                     "type": "chapter_update",
@@ -452,17 +460,20 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                             "content": chapter_content.content,
                             "chapter_type": chapter_type.value,
                             "chapter_content": chapter_content.dict()
-                        },
-                        "choices": [
-                            {
-                                "text": choice.text,
-                                "id": choice.next_chapter,
-                                "chosen_path": choice.next_chapter,
-                                "choice_text": choice.text,
-                            }
-                            for choice in chapter_content.choices
-                        ],
+                        }
                     }
+                })
+
+                # Send choices separately to trigger the choice display
+                await websocket.send_json({
+                    "type": "choices",
+                    "choices": [
+                        {
+                            "text": choice.text,
+                            "id": choice.next_chapter
+                        }
+                        for choice in chapter_content.choices
+                    ]
                 })
 
             except Exception as e:

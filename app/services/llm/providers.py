@@ -1,11 +1,12 @@
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, AsyncGenerator
 import os
 from openai import AsyncOpenAI
 import google.generativeai as genai
-from app.models.story import StoryState
+from app.models.story import AdventureState
 from app.services.llm.base import BaseLLMService
 from app.services.llm.prompt_engineering import build_system_prompt, build_user_prompt
 import logging
+from abc import ABC, abstractmethod
 
 logger = logging.getLogger("story_app")
 
@@ -22,10 +23,11 @@ class OpenAIService(BaseLLMService):
     async def generate_story_stream(
         self,
         story_config: Dict[str, Any],
-        state: StoryState,
+        state: AdventureState,
         question: Optional[Dict[str, Any]] = None,
         previous_questions: Optional[List[Dict[str, Any]]] = None,
-    ):
+        context: Optional[Dict[str, Any]] = None,
+    ) -> AsyncGenerator[str, None]:
         """Generate the story chapter content as a stream of chunks."""
         # Build prompts using the shared prompt engineering module
         system_prompt = build_system_prompt(story_config)
@@ -92,10 +94,11 @@ class GeminiService(BaseLLMService):
     async def generate_story_stream(
         self,
         story_config: Dict[str, Any],
-        state: StoryState,
+        state: AdventureState,
         question: Optional[Dict[str, Any]] = None,
         previous_questions: Optional[List[Dict[str, Any]]] = None,
-    ):
+        context: Optional[Dict[str, Any]] = None,
+    ) -> AsyncGenerator[str, None]:
         """Generate the story chapter content as a stream of chunks."""
         # Build prompts using the shared prompt engineering module
         system_prompt = build_system_prompt(story_config)

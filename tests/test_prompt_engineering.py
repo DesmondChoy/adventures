@@ -1,6 +1,6 @@
 import pytest
 from app.services.llm.prompt_engineering import process_consequences
-from app.models.story import StoryState, ChoiceHistory
+from app.models.story import AdventureState
 
 
 def test_process_consequences_with_incorrect_answer():

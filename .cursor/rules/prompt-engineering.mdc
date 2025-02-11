@@ -1,0 +1,56 @@
+---
+description: State Transitions Between Chapters
+globs: 
+---
+# Pre-Chapter Transition
+   - Get state.current_chapter_number as len(chapters) + 1
+   - Calculate remaining_chapters = state.story_length - state.current_chapter_number
+   - Get chapter_type from state.chapters[-1].chapter_type
+   - Calculate story phase based on position:
+     - EARLY: state.current_chapter_number == 1
+     - FINAL: remaining_chapters <= 1
+     - MIDDLE: All other cases
+
+# Chapter Content Generation
+  - Based on chapter_type:
+     - For ChapterType.LESSON:
+       - Sample new question excluding previously used ones
+       - Generate content leading to question
+       - Collect user response
+       - If state.chapters[-1].response.is_correct: increment state.correct_lesson_answers
+       - Append new LessonResponse to state.chapters[-1].response
+     - For ChapterType.STORY:
+       - Generate content leading to choice
+       - Present three choices
+       - Collect user choice
+       - Append new StoryResponse to state.chapters[-1].response
+
+# Post-Chapter Processing
+   - Append new ChapterData to state.chapters
+   - Ensure response type matches chapter_type
+   - Validate state.total_lessons count
+   - Validate state consistency:
+     - state.current_chapter_number matches chapters length
+     - Update state.correct_lesson_answers based on response.is_correct
+     - Generate content leading to question
+
+# Chapter Response Flow
+
+## Lesson Chapter Response
+   - Input: User's answer choice
+   - Validation: Must match one of state.chapters[-1].response.question.answers
+   - State Updates:
+     - Set state.chapters[-1].response.chosen_answer
+     - Set state.chapters[-1].response.is_correct based on answer correctness
+     - Update state.correct_lesson_answers if response.is_correct is true
+     - Generate content leading to choice
+
+## Story Chapter Response
+   - Input: User's choice (A, B, or C)
+   - Validation: Must match one of state.chapters[-1].chapter_content.choices
+   - State Updates:
+     - Set response.choice_text
+     - Append new StoryResponse to state.chapters[-1].response
+     - Present three choices
+
+// ... existing code ...
