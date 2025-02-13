@@ -369,118 +369,138 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                 chosen_path = choice_data
                 choice_text = "Unknown choice"
 
-            # Only process choice and update chapters for non-start messages
-            if chosen_path != "start":
-                # Get the chapter type from the story configuration
-                story_data = load_story_data()
-                story_config = story_data["story_categories"][story_category]
-                current_chapter_number = len(state.chapters) + 1
-                chapter_type = story_config["chapter_types"][current_chapter_number - 1]
-                if not isinstance(chapter_type, ChapterType):
-                    chapter_type = ChapterType(
-                        chapter_type
-                    )  # Convert string to enum if needed
+            # Generate the next chapter
+            try:
+                # Only process choice and update chapters for non-start messages
+                if chosen_path != "start":
+                    # Get the chapter type from the story configuration
+                    story_data = load_story_data()
+                    story_config = story_data["story_categories"][story_category]
+                    current_chapter_number = len(state.chapters) + 1
+                    chapter_type = story_config["chapter_types"][
+                        current_chapter_number - 1
+                    ]
+                    if not isinstance(chapter_type, ChapterType):
+                        chapter_type = ChapterType(
+                            chapter_type
+                        )  # Convert string to enum if needed
 
-                # Generate the new chapter content first
-                chapter_content = await generate_chapter(
-                    story_category, lesson_topic, state
-                )
+                    # Create the appropriate response object based on chapter type
+                    if chapter_type == ChapterType.LESSON:
+                        try:
+                            # Sample the current question
+                            current_question = sample_question(
+                                lesson_topic,
+                                exclude_questions=[
+                                    chapter.response.question["question"]
+                                    for chapter in state.chapters
+                                    if chapter.chapter_type == ChapterType.LESSON
+                                    and chapter.response
+                                ],
+                            )
 
-                # Create the appropriate response object based on chapter type
-                if chapter_type == ChapterType.LESSON:
-                    try:
-                        # Sample the current question
-                        current_question = sample_question(
-                            lesson_topic,
-                            exclude_questions=[
-                                chapter.response.question["question"]
-                                for chapter in state.chapters
-                                if chapter.chapter_type == ChapterType.LESSON
-                                and chapter.response
-                            ],
+                            # Create lesson response
+                            response = LessonResponse(
+                                question=current_question,
+                                chosen_answer=choice_text,
+                                is_correct=chosen_path == "correct",
+                            )
+                        except ValueError as e:
+                            logger.error(f"Error sampling question: {e}")
+                            raise
+                    else:
+                        # Create story response
+                        response = StoryResponse(
+                            chosen_path=chosen_path, choice_text=choice_text
                         )
 
-                        # Create lesson response
-                        response = LessonResponse(
-                            question=current_question,
-                            chosen_answer=choice_text,
-                            is_correct=chosen_path == "correct",
+                    # Update current_chapter_id before appending new chapter
+                    state.current_chapter_id = chosen_path
+
+                    # Validate and append the new chapter with response
+                    try:
+                        state.chapters.append(
+                            ChapterData(
+                                chapter_number=current_chapter_number,
+                                content="",  # Will be filled after generation
+                                chapter_type=chapter_type,
+                                response=response,
+                                chapter_content=ChapterContent(
+                                    content="",
+                                    choices=[
+                                        StoryChoice(
+                                            text="Loading...",
+                                            next_chapter=f"pending_{i}",
+                                        )
+                                        for i in range(3)
+                                    ]
+                                    if chapter_type == ChapterType.STORY
+                                    else [
+                                        StoryChoice(
+                                            text="Loading...", next_chapter="pending"
+                                        )
+                                    ],
+                                ),  # Temporary content with appropriate number of choices
+                            )
                         )
                     except ValueError as e:
-                        logger.error(f"Error sampling question: {e}")
-                        raise
-                else:
-                    # Create story response
-                    response = StoryResponse(
-                        chosen_path=chosen_path, choice_text=choice_text
-                    )
+                        logger.error(f"Error adding chapter: {e}")
+                        await websocket.send_text(
+                            "\n\nAn error occurred while processing your choice. Please try again."
+                        )
+                        continue
 
-                # Create and append the new chapter with all required fields
-                new_chapter = ChapterData(
-                    chapter_number=current_chapter_number,
-                    content=chapter_content.content,
-                    chapter_type=chapter_type,
-                    response=response,
-                    chapter_content=chapter_content,
-                )
-
-                # Update current_chapter_id before appending new chapter
-                state.current_chapter_id = chosen_path
-
-                # Validate and append the new chapter
-                try:
-                    state.chapters.append(new_chapter)
-                except ValueError as e:
-                    logger.error(f"Error adding chapter: {e}")
-                    await websocket.send_text(
-                        "\n\nAn error occurred while processing your choice. Please try again."
-                    )
-                    continue
-
-                # Check if we've reached the story length limit
-                if len(state.chapters) >= state.story_length:
-                    # Send complete state with all chapter data
-                    await websocket.send_json(
-                        {
-                            "type": "story_complete",
-                            "state": {
-                                "current_chapter_id": state.current_chapter_id,
-                                "chapters": [
-                                    {
-                                        "chapter_number": ch.chapter_number,
-                                        "content": ch.content,
-                                        "chapter_type": ch.chapter_type.value,
-                                        "response": ch.response.dict()
-                                        if ch.response
-                                        else None,
-                                        "chapter_content": ch.chapter_content.dict(),
-                                    }
-                                    for ch in state.chapters
-                                ],
-                                "story_length": state.story_length,
-                                "stats": {
-                                    "total_lessons": state.total_lessons,
-                                    "correct_lesson_answers": state.correct_lesson_answers,
-                                    "completion_percentage": round(
-                                        (
-                                            state.correct_lesson_answers
-                                            / state.total_lessons
-                                            * 100
-                                        )
-                                        if state.total_lessons > 0
-                                        else 0
-                                    ),
+                    # Check if we've reached the story length limit
+                    if len(state.chapters) >= state.story_length:
+                        # Send complete state with all chapter data
+                        await websocket.send_json(
+                            {
+                                "type": "story_complete",
+                                "state": {
+                                    "current_chapter_id": state.current_chapter_id,
+                                    "chapters": [
+                                        {
+                                            "chapter_number": ch.chapter_number,
+                                            "content": ch.content,
+                                            "chapter_type": ch.chapter_type.value,
+                                            "response": ch.response.dict()
+                                            if ch.response
+                                            else None,
+                                            "chapter_content": ch.chapter_content.dict()
+                                            if ch.chapter_content
+                                            else None,
+                                        }
+                                        for ch in state.chapters
+                                    ],
+                                    "story_length": state.story_length,
+                                    "stats": {
+                                        "total_lessons": state.total_lessons,
+                                        "correct_lesson_answers": state.correct_lesson_answers,
+                                        "completion_percentage": round(
+                                            (
+                                                state.correct_lesson_answers
+                                                / state.total_lessons
+                                                * 100
+                                            )
+                                            if state.total_lessons > 0
+                                            else 0
+                                        ),
+                                    },
                                 },
-                            },
-                        }
-                    )
-                    break
+                            }
+                        )
+                        break
 
-            # Generate and stream the next chapter
-            try:
+                # Generate the chapter content
                 chapter_content = await generate_chapter(
                     story_category, lesson_topic, state
                 )
+
+                # Update the current chapter with generated content if it exists
+                if state.chapters and chosen_path != "start":
+                    current_chapter = state.chapters[-1]
+                    current_chapter.content = chapter_content.content
+                    current_chapter.chapter_content = chapter_content
                 paragraphs = [
                     p.strip()
                     for p in chapter_content.content.split("\n\n")
