@@ -97,7 +97,7 @@ def setup_logging():
         logger.addHandler(console_handler)
 
         # File handler for persistent logs - keep all logs
-        file_handler = logging.FileHandler("logs/app.log")
+        file_handler = logging.FileHandler("logs/fastapi_server.log")
         file_handler.setLevel(
             logging.INFO
         )  # Keep file handler at INFO or DEBUG, depending on your needs. INFO is fine to reduce file size.

@@ -13,6 +13,10 @@ import time
 logging.basicConfig(
     level=logging.DEBUG,  # Changed from INFO to DEBUG - Ensure DEBUG level for simulation
     format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("logs/simulation_debug.log"),
+        logging.StreamHandler(),
+    ],
 )
 # Configure websockets logger to only show warnings and errors
 logging.getLogger("websockets").setLevel(logging.WARNING)
