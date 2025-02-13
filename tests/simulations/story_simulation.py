@@ -215,6 +215,9 @@ async def simulate_story():
                 # Chapter generation loop
                 current_chapter = 1
                 while current_chapter <= story_length and not should_exit:
+                    logger.debug(
+                        f"Processing chapter {current_chapter} of {story_length}"
+                    )
                     print_separator(f"Chapter {current_chapter}")
 
                     try:
@@ -241,6 +244,11 @@ async def simulate_story():
                                         logger.debug(
                                             f"Parsed JSON response:\n{formatted_json}"
                                         )
+
+                                        # Display prompts if present in the response
+                                        if "prompt" in response_data:
+                                            print_separator("Prompt")
+                                            print(response_data["prompt"])
 
                                         if (
                                             response_data.get("type")
@@ -274,9 +282,16 @@ async def simulate_story():
                                             )
                                             return
                                 except json.JSONDecodeError:
-                                    # Not JSON, must be story content
-                                    story_content.append(response_raw)
-                                    print(response_raw, end="", flush=True)
+                                    # Not JSON, must be story content or completion
+                                    if response_raw.startswith("Prompt:"):
+                                        print_separator("Prompt")
+                                        print(response_raw)
+                                    elif response_raw.startswith("Completion:"):
+                                        print_separator("Completion")
+                                        print(response_raw)
+                                    else:
+                                        story_content.append(response_raw)
+                                        print(response_raw, end="", flush=True)
                                 except Exception as e:
                                     logger.error(f"Error parsing response: {e}")
                                     logger.debug(
@@ -332,6 +347,12 @@ async def simulate_story():
                                 f"Sent choice: {json.dumps(choice_message, indent=2)}"
                             )
                             current_chapter += 1
+                            if current_chapter > story_length:
+                                print_separator("Story Complete")
+                                logger.info(
+                                    f"Reached maximum story length of {story_length} chapters. Ending simulation."
+                                )
+                                return
 
                     except Exception as e:
                         logger.error(f"Error during chapter {current_chapter}: {e}")
