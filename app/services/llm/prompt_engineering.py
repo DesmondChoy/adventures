@@ -47,12 +47,14 @@ the wise elder in the nearby village.
 
 class LessonQuestion(TypedDict):
     """Structure of a lesson question."""
+
     question: str
     answers: List[Dict[str, Any]]  # List of {text: str, is_correct: bool}
 
 
 class LessonHistory(TypedDict):
     """Structure of a lesson history entry."""
+
     question: LessonQuestion
     chosen_answer: str
     is_correct: bool
@@ -104,7 +106,7 @@ def build_system_prompt(story_config: Dict[str, Any]) -> str:
 IMPORTANT: When writing choices, ensure each choice is COMPLETELY contained on a single line.
 DO NOT use any line breaks or word wrapping within choices.
 """
-    
+
     base_prompt = f"""You are a master storyteller crafting an interactive educational story.
 
 Writing Style:
@@ -139,7 +141,9 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
 
         # Add lesson outcomes for lesson chapters
         if chapter.chapter_type == ChapterType.LESSON and chapter.response:
-            lesson_response = cast(LessonResponse, chapter.response)  # Type cast since we know it's a LessonResponse
+            lesson_response = cast(
+                LessonResponse, chapter.response
+            )  # Type cast since we know it's a LessonResponse
             # Find the correct answer from the answers array
             correct_answer = next(
                 answer["text"]
@@ -157,11 +161,11 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
 
         # Add story choices for story chapters
         if chapter.chapter_type == ChapterType.STORY and chapter.response:
-            story_response = cast(StoryResponse, chapter.response)  # Type cast since we know it's a StoryResponse
-            chapter_history.append(
-                f"\nChoice Made: {story_response.choice_text}\n"
-            )
-        
+            story_response = cast(
+                StoryResponse, chapter.response
+            )  # Type cast since we know it's a StoryResponse
+            chapter_history.append(f"\nChoice Made: {story_response.choice_text}\n")
+
         # Add separator between chapters
         if len(state.chapters) > 1 and chapter != state.chapters[-1]:
             chapter_history.append("---\n")
@@ -196,6 +200,54 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
         f"{''.join(filter(None, chapter_history))}"  # filter(None) removes empty strings
     )
 
+    # Debug log the complete history being used
+    import logging
+
+    logger = logging.getLogger("story_app")
+    logger.debug("\n=== DEBUG: LLM Prompt Request ===")
+    logger.debug("System Prompt:")
+    logger.debug(
+        "You are a master storyteller crafting an interactive educational story."
+    )
+    logger.debug("\nStory State:")
+    logger.debug(f"- Chapter: {state.current_chapter_number} of {state.story_length}")
+    logger.debug(f"- Story Phase: {story_phase}")
+    logger.debug(
+        f"- Lesson Progress: {state.correct_lesson_answers}/{state.total_lessons}"
+    )
+    logger.debug("\nComplete Story History:")
+
+    # Log each chapter's content and responses
+    for chapter in state.chapters:
+        logger.debug(f"\nChapter {chapter.chapter_number}:")
+        logger.debug("Content:")
+        logger.debug(chapter.content.strip())
+
+        if chapter.chapter_type == ChapterType.LESSON and chapter.response:
+            lesson_response = cast(LessonResponse, chapter.response)
+            correct_answer = next(
+                answer["text"]
+                for answer in lesson_response.question["answers"]
+                if answer["is_correct"]
+            )
+            logger.debug("\nLesson Outcome:")
+            logger.debug(f"Question: {lesson_response.question['question']}")
+            logger.debug(f"Student's Answer: {lesson_response.chosen_answer}")
+            logger.debug(
+                f"Outcome: {'Correct' if lesson_response.is_correct else 'Incorrect'}"
+            )
+            logger.debug(f"Correct Answer: {correct_answer}")
+
+        if chapter.chapter_type == ChapterType.STORY and chapter.response:
+            story_response = cast(StoryResponse, chapter.response)
+            logger.debug("\nStory Choice:")
+            logger.debug(f"Chosen: {story_response.choice_text}")
+
+        if len(state.chapters) > 1 and chapter != state.chapters[-1]:
+            logger.debug("\n---")
+
+    logger.debug("\n========================\n")
+
     return base_prompt, story_phase
 
 
@@ -210,7 +262,7 @@ def _build_chapter_prompt(
     is_opening: bool = False,
 ) -> str:
     """Builds the appropriate prompt based on chapter type and state.
-    
+
     Args:
         base_prompt: Base story state and history
         story_phase: Current phase of the story (EARLY, MIDDLE, FINAL)
@@ -327,9 +379,7 @@ def build_user_prompt(
         if num_previous_lessons > 0:
             last_lesson = previous_lessons[-1]
             consequences_guidance = process_consequences(
-                last_lesson.is_correct,
-                last_lesson.question,
-                last_lesson.chosen_answer
+                last_lesson.is_correct, last_lesson.question, last_lesson.chosen_answer
             )
 
     # Determine chapter properties
@@ -377,9 +427,7 @@ def process_consequences(
     """Generate appropriate story consequences based on lesson response."""
     # Find the correct answer from the answers array
     correct_answer = next(
-        answer["text"]
-        for answer in lesson_question["answers"]
-        if answer["is_correct"]
+        answer["text"] for answer in lesson_question["answers"] if answer["is_correct"]
     )
 
     if is_correct:

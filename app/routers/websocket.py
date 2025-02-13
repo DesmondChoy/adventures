@@ -414,33 +414,23 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                             chosen_path=chosen_path, choice_text=choice_text
                         )
 
-                    # Update current_chapter_id before appending new chapter
+                    # Update current_chapter_id
                     state.current_chapter_id = chosen_path
 
-                    # Validate and append the new chapter with response
+                    # Generate the chapter content first
+                    chapter_content = await generate_chapter(
+                        story_category, lesson_topic, state
+                    )
+
+                    # Now append the chapter with the generated content
                     try:
                         state.chapters.append(
                             ChapterData(
                                 chapter_number=current_chapter_number,
-                                content="",  # Will be filled after generation
+                                content=chapter_content.content,  # Use generated content
                                 chapter_type=chapter_type,
                                 response=response,
-                                chapter_content=ChapterContent(
-                                    content="",
-                                    choices=[
-                                        StoryChoice(
-                                            text="Loading...",
-                                            next_chapter=f"pending_{i}",
-                                        )
-                                        for i in range(3)
-                                    ]
-                                    if chapter_type == ChapterType.STORY
-                                    else [
-                                        StoryChoice(
-                                            text="Loading...", next_chapter="pending"
-                                        )
-                                    ],
-                                ),  # Temporary content with appropriate number of choices
+                                chapter_content=chapter_content,  # Use generated content
                             )
                         )
                     except ValueError as e:
@@ -491,16 +481,28 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                         )
                         break
 
-                # Generate the chapter content
-                chapter_content = await generate_chapter(
-                    story_category, lesson_topic, state
-                )
+                # If this is the start, generate and store the first chapter
+                if chosen_path == "start":
+                    chapter_content = await generate_chapter(
+                        story_category, lesson_topic, state
+                    )
+                    # Get chapter type for first chapter
+                    story_data = load_story_data()
+                    story_config = story_data["story_categories"][story_category]
+                    chapter_type = story_config["chapter_types"][0]
+                    if not isinstance(chapter_type, ChapterType):
+                        chapter_type = ChapterType(chapter_type)
 
-                # Update the current chapter with generated content if it exists
-                if state.chapters and chosen_path != "start":
-                    current_chapter = state.chapters[-1]
-                    current_chapter.content = chapter_content.content
-                    current_chapter.chapter_content = chapter_content
+                    # Store the first chapter
+                    state.chapters.append(
+                        ChapterData(
+                            chapter_number=1,
+                            content=chapter_content.content,
+                            chapter_type=chapter_type,
+                            chapter_content=chapter_content,
+                            response=None,  # First chapter has no response yet
+                        )
+                    )
                 paragraphs = [
                     p.strip()
                     for p in chapter_content.content.split("\n\n")
