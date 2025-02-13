@@ -58,9 +58,3 @@ app/
 ├── static/             # Static assets (CSS, JS)
 └── utils/              # Utility functions
 ```
-
-## Development
-
-- Run tests: `pytest`
-- View logs: Check `logs/app.log`
-- Development server runs on `http://localhost:8000`
