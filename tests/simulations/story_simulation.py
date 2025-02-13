@@ -7,43 +7,41 @@ import pandas as pd
 import logging
 import urllib.parse
 import signal
-import subprocess
 import time
-import sys
-from pathlib import Path
 
 # Configure Logging
 logging.basicConfig(
-    level=logging.DEBUG,  # Changed from INFO to DEBUG
+    level=logging.DEBUG,  # Changed from INFO to DEBUG - Ensure DEBUG level for simulation
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 # Configure websockets logger to only show warnings and errors
 logging.getLogger("websockets").setLevel(logging.WARNING)
-# Allow debug logs from story_app logger
-logging.getLogger("story_app").setLevel(logging.DEBUG)
-logger = logging.getLogger(__name__)
+# Allow debug logs from story_app logger - CRITICAL FIX: Get the story_app logger
+logger = logging.getLogger("story_app")
+logger.setLevel(logging.DEBUG)  # Ensure story_app logger is also at DEBUG level
+
+simulation_logger = logging.getLogger(
+    __name__
+)  # Keep a separate logger for simulation script itself
+simulation_logger.setLevel(
+    logging.DEBUG
+)  # Set simulation script logger to DEBUG as well
 
 # Constants
 MAX_RETRIES = 3
 RETRY_DELAY = 2  # seconds
 WEBSOCKET_TIMEOUT = 30  # seconds
-SERVER_STARTUP_WAIT = 5  # seconds to wait for server startup
 
 # Global variables for cleanup
 websocket = None
 should_exit = False
-fastapi_process = None
 
 
 def signal_handler(signum, frame):
     """Handle cleanup on interrupt"""
-    global should_exit, fastapi_process
-    logger.info("\nReceived interrupt signal. Cleaning up...")
+    global should_exit
+    simulation_logger.info("\nReceived interrupt signal. Cleaning up...")
     should_exit = True
-    if fastapi_process:
-        logger.info("Shutting down FastAPI server...")
-        fastapi_process.terminate()
-        fastapi_process.wait()
 
 
 # Register signal handlers
@@ -67,7 +65,7 @@ def load_story_data():
         with open("app/data/stories.yaml", "r") as f:
             return yaml.safe_load(f)
     except Exception as e:
-        logger.error(f"Failed to load story data: {e}")
+        simulation_logger.error(f"Failed to load story data: {e}")
         return {"story_categories": {}}
 
 
@@ -76,7 +74,7 @@ def load_lesson_data():
     try:
         return pd.read_csv("app/data/lessons.csv")
     except Exception as e:
-        logger.error(f"Failed to load lesson data: {e}")
+        simulation_logger.error(f"Failed to load lesson data: {e}")
         return pd.DataFrame(columns=["topic"])
 
 
@@ -94,54 +92,8 @@ def get_random_lesson_topic(lesson_df):
 
 def get_random_story_length():
     """Randomly select a story length."""
-    story_lengths = [3, 5, 7]  # Mirror available options in index.html
+    story_lengths = [3, 3, 3]  # Mirror available options in index.html
     return random.choice(story_lengths)
-
-
-def start_fastapi_server():
-    """Start the FastAPI server in a separate process."""
-    global fastapi_process
-
-    try:
-        # Check if server is already running
-        import socket
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex(("127.0.0.1", 8000))
-        sock.close()
-
-        if result == 0:
-            logger.info("FastAPI server is already running on port 8000")
-            return True
-
-        logger.info("Starting FastAPI server...")
-        # Use python executable from current environment
-        python_path = sys.executable
-        # Get the project root directory (assuming we're in tests/simulations)
-        project_root = Path(__file__).parent.parent.parent
-
-        # Start the FastAPI server
-        fastapi_process = subprocess.Popen(
-            [python_path, "-m", "uvicorn", "app.main:app", "--reload"],
-            cwd=str(project_root),
-            creationflags=subprocess.CREATE_NEW_CONSOLE,
-        )
-
-        # Wait for server to start
-        logger.info(f"Waiting {SERVER_STARTUP_WAIT} seconds for server to start...")
-        time.sleep(SERVER_STARTUP_WAIT)
-
-        # Check if process is still running
-        if fastapi_process.poll() is None:
-            logger.info("FastAPI server started successfully")
-            return True
-        else:
-            logger.error("FastAPI server failed to start")
-            return False
-
-    except Exception as e:
-        logger.error(f"Error starting FastAPI server: {e}")
-        return False
 
 
 async def simulate_story():
@@ -166,22 +118,22 @@ async def simulate_story():
     print("=" * 80)
 
     # Remove duplicate logging of configuration
-    logger.debug(
+    simulation_logger.debug(
         f"Starting story simulation with: Category='{story_category}', Topic='{lesson_topic}', Length={story_length} chapters"
     )
 
     uri = f"ws://localhost:8000/ws/story/{urllib.parse.quote(story_category)}/{urllib.parse.quote(lesson_topic)}"
-    logger.debug("Attempting WebSocket connection...")
+    simulation_logger.debug("Attempting WebSocket connection...")
 
     # Add retry logic for WebSocket connection
     for retry in range(MAX_RETRIES):
         if should_exit:
-            logger.info("Received exit signal during retry loop")
+            simulation_logger.info("Received exit signal during retry loop")
             return
 
         try:
             websocket = await websockets.connect(uri)
-            logger.info("WebSocket connection established.")
+            simulation_logger.info("WebSocket connection established.")
 
             try:
                 # Send initial state message with story length
@@ -195,10 +147,13 @@ async def simulate_story():
                         "previous_chapter_content": "",
                         "story_length": story_length,
                         "chapters": [],
+                        "story_category": story_category,  # Add story category
+                        "lesson_topic": lesson_topic,  # Add lesson topic
+                        "story_length_num": story_length,  # Add story length (numerical for easier processing if needed)
                     }
                 }
                 await websocket.send(json.dumps(initial_state_message))
-                logger.debug(
+                simulation_logger.debug(
                     f"Sent initial state: {json.dumps(initial_state_message, indent=2)}"
                 )
 
@@ -208,14 +163,14 @@ async def simulate_story():
                     "choice": {"chosen_path": "start", "choice_text": "Start Story"},
                 }
                 await websocket.send(json.dumps(start_choice_message))
-                logger.debug(
+                simulation_logger.debug(
                     f"Sent start choice: {json.dumps(start_choice_message, indent=2)}"
                 )
 
                 # Chapter generation loop
                 current_chapter = 1
                 while current_chapter <= story_length and not should_exit:
-                    logger.debug(
+                    simulation_logger.debug(
                         f"Processing chapter {current_chapter} of {story_length}"
                     )
                     print_separator(f"Chapter {current_chapter}")
@@ -241,14 +196,9 @@ async def simulate_story():
                                         formatted_json = json.dumps(
                                             response_data, indent=2
                                         )
-                                        logger.debug(
+                                        simulation_logger.debug(
                                             f"Parsed JSON response:\n{formatted_json}"
                                         )
-
-                                        # Display prompts if present in the response
-                                        if "prompt" in response_data:
-                                            print_separator("Prompt")
-                                            print(response_data["prompt"])
 
                                         if (
                                             response_data.get("type")
@@ -283,29 +233,24 @@ async def simulate_story():
                                             return
                                 except json.JSONDecodeError:
                                     # Not JSON, must be story content or completion
-                                    if response_raw.startswith("Prompt:"):
-                                        print_separator("Prompt")
-                                        print(response_raw)
-                                    elif response_raw.startswith("Completion:"):
-                                        print_separator("Completion")
-                                        print(response_raw)
-                                    else:
-                                        story_content.append(response_raw)
-                                        print(response_raw, end="", flush=True)
+                                    story_content.append(response_raw)
+                                    print(response_raw, end="", flush=True)
                                 except Exception as e:
-                                    logger.error(f"Error parsing response: {e}")
-                                    logger.debug(
+                                    simulation_logger.error(
+                                        f"Error parsing response: {e}"
+                                    )
+                                    simulation_logger.debug(
                                         f"Problematic response:\n{response_raw}"
                                     )
                                     raise
 
                             except asyncio.TimeoutError:
-                                logger.error(
+                                simulation_logger.error(
                                     f"Timeout waiting for response in chapter {current_chapter}"
                                 )
                                 raise
                             except websockets.exceptions.ConnectionClosed as e:
-                                logger.error(
+                                simulation_logger.error(
                                     f"WebSocket connection closed during chapter {current_chapter}: {e}"
                                 )
                                 raise
@@ -343,19 +288,21 @@ async def simulate_story():
                                 },
                             }
                             await websocket.send(json.dumps(choice_message))
-                            logger.debug(
+                            simulation_logger.debug(
                                 f"Sent choice: {json.dumps(choice_message, indent=2)}"
                             )
                             current_chapter += 1
                             if current_chapter > story_length:
                                 print_separator("Story Complete")
-                                logger.info(
+                                simulation_logger.info(
                                     f"Reached maximum story length of {story_length} chapters. Ending simulation."
                                 )
                                 return
 
                     except Exception as e:
-                        logger.error(f"Error during chapter {current_chapter}: {e}")
+                        simulation_logger.error(
+                            f"Error during chapter {current_chapter}: {e}"
+                        )
                         raise
 
             finally:
@@ -363,56 +310,57 @@ async def simulate_story():
                     try:
                         await websocket.close()
                     except Exception as e:
-                        logger.debug(f"Error during websocket cleanup: {e}")
+                        simulation_logger.debug(f"Error during websocket cleanup: {e}")
 
         except websockets.exceptions.InvalidStatusCode as e:
-            logger.error(
+            simulation_logger.error(
                 f"Failed to connect to WebSocket (attempt {retry + 1}/{MAX_RETRIES}): {e}"
             )
             if retry < MAX_RETRIES - 1 and not should_exit:
-                logger.info(f"Retrying in {RETRY_DELAY} seconds...")
+                simulation_logger.info(f"Retrying in {RETRY_DELAY} seconds...")
                 await asyncio.sleep(RETRY_DELAY)
             else:
-                logger.error("Max retries reached or exit requested. Exiting.")
+                simulation_logger.error(
+                    "Max retries reached or exit requested. Exiting."
+                )
                 return
         except Exception as e:
-            logger.error(f"Unexpected error (attempt {retry + 1}/{MAX_RETRIES}): {e}")
+            simulation_logger.error(
+                f"Unexpected error (attempt {retry + 1}/{MAX_RETRIES}): {e}"
+            )
             if retry < MAX_RETRIES - 1 and not should_exit:
-                logger.info(f"Retrying in {RETRY_DELAY} seconds...")
+                simulation_logger.info(f"Retrying in {RETRY_DELAY} seconds...")
                 await asyncio.sleep(RETRY_DELAY)
             else:
-                logger.error("Max retries reached or exit requested. Exiting.")
+                simulation_logger.error(
+                    "Max retries reached or exit requested. Exiting."
+                )
                 return
         finally:
             if websocket:
                 try:
                     await websocket.close()
                 except Exception as e:
-                    logger.debug(f"Error during websocket cleanup: {e}")
+                    simulation_logger.debug(f"Error during websocket cleanup: {e}")
 
-    logger.info("Simulation finished.")
+    simulation_logger.info("Simulation finished.")
 
 
 if __name__ == "__main__":
     try:
-        # Start FastAPI server first
-        if not start_fastapi_server():
-            logger.error("Failed to start FastAPI server. Exiting.")
-            sys.exit(1)
+        # Assume FastAPI server is already running
+        simulation_logger.info(
+            "Assuming FastAPI server is already running at http://localhost:8000"
+        )
 
         # Run the simulation
         asyncio.run(simulate_story())
     except KeyboardInterrupt:
-        logger.info("\nSimulation interrupted by user")
+        simulation_logger.info("\nSimulation interrupted by user")
     finally:
         # Ensure we clean up any remaining connections
         if websocket:
             try:
                 asyncio.run(websocket.close())
             except Exception as e:
-                logger.debug(f"Error during websocket cleanup: {e}")
-        # Shutdown FastAPI server
-        if fastapi_process:
-            logger.info("Shutting down FastAPI server...")
-            fastapi_process.terminate()
-            fastapi_process.wait()
+                simulation_logger.debug(f"Error during websocket cleanup: {e}")

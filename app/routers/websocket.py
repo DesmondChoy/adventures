@@ -257,6 +257,23 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                 validated_state = data["state"]
                 if not state:
                     total_chapters = validated_state["story_length"]
+                    story_category_log = validated_state.get(
+                        "story_category", "N/A"
+                    )  # Extract story_category
+                    lesson_topic_log = validated_state.get(
+                        "lesson_topic", "N/A"
+                    )  # Extract lesson_topic
+                    story_length_log = validated_state.get(
+                        "story_length_num", "N/A"
+                    )  # Extract story_length_num
+
+                    logger.debug(
+                        "=== Story Configuration ==="
+                    )  # Log using story_app logger
+                    logger.debug(f"Category: {story_category_log}")
+                    logger.debug(f"Topic: {lesson_topic_log}")
+                    logger.debug(f"Length: {story_length_log} chapters")
+                    logger.debug("=============================")
 
                     try:
                         # Use ChapterManager to handle initialization logic
