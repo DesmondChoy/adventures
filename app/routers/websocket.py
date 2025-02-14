@@ -396,14 +396,21 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                     if previous_chapter.chapter_type == ChapterType.LESSON:
                         # For lesson chapters, use the question that was stored when the chapter was generated
                         try:
+                            # Find the correct answer from the stored question
+                            correct_answer = next(
+                                answer["text"]
+                                for answer in previous_chapter.question["answers"]
+                                if answer["is_correct"]
+                            )
                             # Create response using the stored question
                             lesson_response = LessonResponse(
                                 question=previous_chapter.question,  # Use the question we stored
                                 chosen_answer=choice_text,
-                                is_correct=chosen_path == "correct",
+                                is_correct=choice_text == correct_answer,
                             )
                             # Update the previous chapter's response
                             previous_chapter.response = lesson_response
+                            logger.debug(f"Created lesson response: {lesson_response}")
                         except Exception as e:
                             logger.error(f"Error creating lesson response: {e}")
                             await websocket.send_text(
@@ -428,16 +435,18 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
 
                     # Now append the next chapter with no response yet
                     try:
-                        state.chapters.append(
-                            ChapterData(
-                                chapter_number=current_chapter_number,
-                                content=chapter_content.content,
-                                chapter_type=chapter_type,
-                                response=None,  # New chapter starts with no response
-                                chapter_content=chapter_content,
-                                question=sampled_question,  # Store the question if it's a lesson chapter
-                            )
+                        new_chapter = ChapterData(
+                            chapter_number=current_chapter_number,
+                            content=chapter_content.content,
+                            chapter_type=chapter_type,
+                            response=None,  # New chapter starts with no response
+                            chapter_content=chapter_content,
+                            question=sampled_question,  # Store the question if it's a lesson chapter
                         )
+                        state.chapters.append(new_chapter)
+                        logger.debug(f"Added new chapter {current_chapter_number}")
+                        logger.debug(f"Chapter type: {chapter_type}")
+                        logger.debug(f"Has question: {sampled_question is not None}")
                     except ValueError as e:
                         logger.error(f"Error adding chapter: {e}")
                         await websocket.send_text(
