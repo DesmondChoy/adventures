@@ -20,7 +20,7 @@ class OpenAIService(BaseLLMService):
         if not os.getenv("OPENAI_API_KEY"):
             logger.warning("OPENAI_API_KEY is not set in environment variables!")
 
-    async def generate_story_stream(
+    async def generate_chapter_stream(
         self,
         story_config: Dict[str, Any],
         state: AdventureState,
@@ -28,7 +28,7 @@ class OpenAIService(BaseLLMService):
         previous_questions: Optional[List[Dict[str, Any]]] = None,
         context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[str, None]:
-        """Generate the story chapter content as a stream of chunks."""
+        """Generate the chapter content (story or lesson) as a stream of chunks."""
         # Build prompts using the shared prompt engineering module
         system_prompt = build_system_prompt(story_config)
         user_prompt = build_user_prompt(state, question, previous_questions)
@@ -91,7 +91,7 @@ class GeminiService(BaseLLMService):
             ),
         )
 
-    async def generate_story_stream(
+    async def generate_chapter_stream(
         self,
         story_config: Dict[str, Any],
         state: AdventureState,
@@ -99,7 +99,7 @@ class GeminiService(BaseLLMService):
         previous_questions: Optional[List[Dict[str, Any]]] = None,
         context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[str, None]:
-        """Generate the story chapter content as a stream of chunks."""
+        """Generate the chapter content (story or lesson) as a stream of chunks."""
         # Build prompts using the shared prompt engineering module
         system_prompt = build_system_prompt(story_config)
         user_prompt = build_user_prompt(state, question, previous_questions)

@@ -26,22 +26,6 @@ The choices section MUST:
 5. End with </CHOICES> on its own line with NO indentation
 6. Each choice should be meaningful and distinct
 7. All choices must advance the plot in interesting ways
-
-Example of CORRECT formatting:
-<CHOICES>
-Choice A: Use magic to create a protective shield around the garden.
-Choice B: Seek help from the wise elder in the nearby village.
-Choice C: Search the ancient library for a solution in the old tomes.
-</CHOICES>
-
-Example of INCORRECT formatting:
-<CHOICES>
-    Choice A: Use magic to create a protective 
-    shield around the garden.
-Choice B: Seek help from 
-the wise elder in the nearby village.
-  Choice C: Search the ancient library 
-  for a solution in the old tomes.
 </CHOICES>"""
 
 
@@ -74,22 +58,22 @@ def _get_phase_guidance(story_phase: str) -> str:
     """Get the appropriate guidance based on story phase."""
     return {
         "EARLY": (
-            "Story Focus:\n"
+            "Phase Guidance:\n"
             "- Introduce lesson elements that help establish the world\n"
             "- Connect learning moments to character discovery\n"
             "- Set up future lesson themes"
         ),
         "MIDDLE": (
-            "Story Focus:\n"
+            "Phase Guidance:\n"
             "- Deepen the lesson significance to the plot\n"
             "- Connect learning to rising stakes\n"
             "- Use knowledge as a tool for overcoming challenges"
         ),
         "FINAL": (
-            "Story Focus:\n"
+            "Phase Guidance:\n"
             "- Bring lesson themes full circle\n"
             "- Show how knowledge has transformed the character\n"
-            "- Create satisfying connections to previous learning moments"
+            "- Create satisfying connections to previous learning moments\n"
             "- Prepare for a satisfying conclusion"
         ),
     }.get(story_phase, "")

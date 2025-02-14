@@ -159,7 +159,7 @@ async def generate_chapter(
 
     # Generate story content
     try:
-        async for chunk in llm_service.generate_story_stream(
+        async for chunk in llm_service.generate_chapter_stream(
             story_config,
             state,
             question,

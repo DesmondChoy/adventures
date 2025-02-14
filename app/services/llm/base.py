@@ -55,7 +55,7 @@ class BaseLLMService(ABC):
         )
 
     @abstractmethod
-    async def generate_story_stream(
+    async def generate_chapter_stream(
         self,
         story_config: Dict[str, Any],
         state: AdventureState,
@@ -63,5 +63,5 @@ class BaseLLMService(ABC):
         previous_questions: Optional[List[Dict[str, Any]]] = None,
         context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[str, None]:
-        """Generate the story chapter content as a stream of chunks."""
+        """Generate the chapter content (story or lesson) as a stream of chunks."""
         pass
