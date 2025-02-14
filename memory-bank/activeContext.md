@@ -27,20 +27,18 @@ The project is implementing core Learning Odyssey features with emphasis on stat
    - Error handling
 
 ## Recent Changes
-- Enhanced lesson response handling:
-  * Added question field to ChapterData model
-  * Store sampled question with lesson chapters
-  * Use stored question when creating responses
-  * Include question in state serialization
-  * Maintain question data consistency
-- Fixed critical issue with Chapter 1 responses:
-  * First chapter (always lesson) now stores question
-  * Question data persists through state updates
-  * Proper response creation for all lesson chapters
-- State management improvements:
-  * Better state serialization with question data
-  * Consistent question handling throughout chapter lifecycle
-  * Robust error handling for lesson responses
+- Improved prompt engineering for narrative continuity:
+  * Made process_consequences() chapter-aware
+  * Different guidance based on chapter context:
+    - Chapter 2: Full correction and learning moment
+    - Later chapters: Focus on growth and evolution
+  * Updated build_user_prompt() to pass chapter context
+  * Eliminated redundant lesson acknowledgments
+  * Enhanced natural story progression
+- Previous Changes:
+  * Enhanced lesson response handling
+  * Fixed Chapter 1 response issues
+  * Improved state management
 
 ## Active Decisions
 

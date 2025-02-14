@@ -104,11 +104,18 @@ graph TD
      - Connect learning to current situation
   
   2. After Lesson Chapter (Incorrect Answer):
-     - Address the misunderstanding
-     - Provide correct information naturally
-     - Create growth opportunity
-     - Show learning from mistakes
-     - Connect correction to current events
+     - Chapter 2 (Immediate Response):
+       * Address the misunderstanding directly
+       * Provide correct information naturally
+       * Create growth opportunity
+       * Show learning from mistakes
+       * Connect correction to current events
+     - Later Chapters:
+       * Build upon previous learning
+       * Show evolved understanding
+       * Connect growth to current challenges
+       * Avoid redundant explanations
+       * Focus on character development
   
   3. After Story Chapter:
      - Direct continuation from chosen path

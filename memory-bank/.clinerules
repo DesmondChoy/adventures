@@ -67,15 +67,23 @@
    - Even perfect state management is useless if data isn't in prompt
    - LLMs can't maintain continuity without history
    - Always verify what's actually in the prompt
-2. Prompt Debugging Priority:
+2. Chapter-Aware Narrative:
+   - Track chapter numbers for context-appropriate responses
+   - Different handling for immediate vs. later chapters
+   - Avoid redundant explanations in later chapters
+   - Focus on character growth and development
+3. Prompt Debugging Priority:
    - First check if required data is passed to prompt
    - Then verify data appears in final prompt
+   - Validate chapter context is properly used
    - Only then consider LLM guidance issues
-3. Common Issues:
+4. Common Issues:
    - Optional parameters not being passed
    - State properties not being utilized
    - Missing history in prompts
    - Incomplete context
+   - Redundant narrative elements
+   - Missing chapter awareness
 
 ## Development Workflow
 
