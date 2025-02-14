@@ -18,48 +18,51 @@ graph TD
         LLM
     end
 
-    subgraph Question Flow
-        QS[Question Sampling] --> AS
-        AS --> SF[Shuffle Answers]
+    subgraph Content Sources
+        CSV[lessons.csv] --> CM
+        LLM --> CM
     end
 ```
 
 ## Core Components
 
 ### 1. AdventureState (`app/models/story.py`)
-- Centralized state management
+- Centralized adventure state management
 - Chapter progression tracking
-- Story length handling
+- Adventure length handling
 - ChapterType enum management
 - Question and answer tracking
+- Narrative continuity enforcement
 
 ### 2. WebSocket Router (`app/routers/websocket.py`)
 - State synchronization
-- Initial topic selection handling
+- Initial topic and length selection
 - Question sampling coordination
-- Answer shuffling management
+- Answer validation
+- Choice processing
 
 ### 3. Chapter Manager (`app/services/chapter_manager.py`)
-- First chapter lesson enforcement
-- Dynamic question sampling
-- Answer shuffling implementation
-- Chapter type determination
-- Story flow control
+- Chapter type determination (MAX_LESSON_RATIO: 40%)
+- First/last chapter lesson enforcement
+- Question sampling from lessons.csv
+- LLM narrative generation
+- Adventure flow control
 
 ### 4. LLM Integration (`app/services/llm/`)
 - Provider-agnostic implementation
-- Cross-provider compatibility
-- Prompt engineering
+- Narrative generation for both chapter types
+- Story choice generation
+- Narrative continuity management
 - Response processing
 
 ## Design Patterns
 
-### 1. Initial Chapter Pattern
-- User topic selection at landing
-- First chapter always lesson type
-- Dynamic question sampling
-- Answer shuffling mechanism
-- Feedback processing
+### 1. Chapter Type Pattern
+- Adventure length selection at landing
+- Chapter sequence determined upfront
+- First/last chapters always lessons
+- Middle chapters randomly assigned (max 40% lessons)
+- Limited by available questions in lessons.csv
 
 ### 2. State Management Pattern
 - Centralized AdventureState
@@ -67,33 +70,83 @@ graph TD
 - State serialization
 - Recovery mechanisms
 
-### 3. Question Management Pattern
-- Topic-based sampling
-- Answer randomization
-- No question repetition
-- Feedback tracking
+### 3. Content Management Pattern
+- Lesson questions from lessons.csv
+- LLM-generated narratives
+- LLM-generated story choices
+- Narrative continuity enforcement
+- Consequence handling
 
-### 4. Testing Pattern
-- Automated story simulation
+### 4. Narrative Continuity Pattern
+- Previous Chapter Impact:
+  1. After Lesson Chapter (Correct Answer):
+     - Acknowledge understanding of the concept
+     - Show practical application of knowledge
+     - Build confidence for future challenges
+     - Connect learning to current situation
+  
+  2. After Lesson Chapter (Incorrect Answer):
+     - Address the misunderstanding
+     - Provide correct information naturally
+     - Create growth opportunity
+     - Show learning from mistakes
+     - Connect correction to current events
+  
+  3. After Story Chapter:
+     - Direct continuation from chosen path
+     - Reference specific choice details
+     - Show consequences of decision
+     - Maintain consistent world state
+
+- Continuity Enforcement:
+  1. LLM Prompt Engineering:
+     - Includes complete chapter history
+     - Highlights recent decisions/answers
+     - Enforces consequence guidelines
+     - Maintains character development
+  
+  2. State Management:
+     - Tracks all chapter outcomes
+     - Maintains decision history
+     - Records learning progress
+     - Ensures consistent references
+
+- Cross-Chapter Connections:
+  1. Knowledge Integration:
+     - Connect lessons to story events
+     - Use previous lessons in choices
+     - Build upon established concepts
+     - Create learning callbacks
+  
+  2. Character Development:
+     - Consistent personality traits
+     - Growth from experiences
+     - Learning from mistakes
+     - Decision impact on character
+
+### 5. Testing Pattern
+- Automated adventure simulation
 - Question sampling validation
-- Answer shuffling verification
+- Choice generation verification
 - State validation
 
 ## Component Relationships
 
 ### Initial Flow
-1. User selects topic at landing
-2. First chapter enforced as lesson
-3. Question sampled from topic
-4. Answers shuffled for display
-5. State tracks user response
+1. User selects topic and length at landing
+2. ChapterManager determines chapter sequence
+3. First chapter (lesson) begins
+4. Question sampled from lessons.csv
+5. LLM generates narrative
+6. State tracks progression
 
 ### Chapter Progression
-1. Dynamic question sampling
-2. Answer shuffling for engagement
-3. Story chapters offer choices
-4. Length determined by state.story_length
-5. No repeat questions in session
+1. Content source varies by chapter type:
+   - Lesson: lessons.csv + LLM narrative
+   - Story: Full LLM generation
+2. Narrative continuity maintained
+3. Previous chapter consequences reflected
+4. No repeat questions in session
 
 ## Technical Decisions
 

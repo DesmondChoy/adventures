@@ -1,54 +1,63 @@
 # Active Context
 
 ## Current Focus
-The project is implementing core Learning Odyssey features with emphasis on initial user experience and question handling:
+The project is implementing core Learning Odyssey features with emphasis on adventure flow and content generation:
 
-1. Initial Flow Implementation
-   - Landing page topic selection
-   - First chapter lesson enforcement
-   - Dynamic question sampling
-   - Answer shuffling mechanism
-   - Feedback processing
+1. Adventure Flow Implementation
+   - Landing page topic and length selection
+   - Chapter type determination (ChapterManager)
+   - Content source management:
+     - Lesson Chapters: lessons.csv questions + LLM narrative wrapper
+     - Story Chapters: Full LLM generation
+   - Narrative continuity enforcement
 
-2. Question Management
-   - Topic-based sampling system
-   - Answer randomization
-   - Duplicate prevention
+2. Content Management
+   - Lesson database (lessons.csv) integration
+   - LLM narrative generation for both chapter types:
+     - Lesson chapters: Contextual narrative around predefined questions
+     - Story chapters: Complete narrative with choices
+   - Story choice generation and validation
+   - Consequence system implementation
    - History tracking
-   - Validation mechanisms
 
 3. State Synchronization
-   - Question and answer tracking
-   - Progress monitoring
+   - Adventure progression tracking
+   - Narrative continuity maintenance
    - WebSocket communication
    - Error handling
 
 ## Recent Changes
-- First chapter lesson type enforcement
-- Dynamic question sampling implementation
-- Answer shuffling mechanism
-- Topic selection handling
-- State tracking enhancements
+- Chapter type determination logic (40% max lessons)
+- Content source integration (lessons.csv)
+- LLM narrative generation system:
+  * Lesson chapters require narrative context for questions
+  * Story chapters have full narrative freedom
+- Adventure state tracking enhancements
+- Consequence system implementation
 
 ## Active Decisions
 
 ### Architecture
-1. Question Flow
-   - Sample from user-selected topic
-   - Shuffle all answer options
-   - Track used questions
-   - Prevent duplicates
-   - Validate selections
+1. Content Flow
+   - Lesson content:
+     * Questions from lessons.csv
+     * Narrative wrapper from LLM
+     * Must maintain story continuity
+   - Story content:
+     * Full LLM generation
+     * Three narrative choices
+   - Track chapter outcomes
+   - Maintain narrative continuity
 
 2. State Management
-   - Question history tracking
-   - Answer selection recording
+   - Adventure history tracking
+   - Choice/answer recording
    - Progress monitoring
    - Error recovery
 
 3. Testing Approach
-   - Question sampling validation
-   - Shuffle verification
+   - Content integration validation
+   - Narrative generation verification
    - State consistency checks
    - Error scenario coverage
 
@@ -61,7 +70,7 @@ The project is implementing core Learning Odyssey features with emphasis on init
    - State updates
 
 2. Flow Control
-   - First chapter enforcement
+   - First chapter enforcement (lesson type with narrative)
    - Dynamic sampling
    - Answer randomization
    - Progress tracking
@@ -98,7 +107,7 @@ The project is implementing core Learning Odyssey features with emphasis on init
 ### Product
 1. User Experience
    - Topic selection
-   - Question presentation
+   - Question presentation within narrative
    - Answer interaction
    - Feedback clarity
 

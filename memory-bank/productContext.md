@@ -1,7 +1,7 @@
 # Product Context
 
 ## Purpose
-Learning Odyssey transforms traditional education into an engaging, personalized journey by combining structured lessons with dynamic storytelling. The application creates a unique learning experience where educational content and narrative choices alternate seamlessly.
+Learning Odyssey transforms traditional education into an engaging, personalized adventure by combining structured lessons with dynamic storytelling. The application creates a unique learning experience where educational content and narrative choices work together to create an immersive journey.
 
 ## Problem Space
 Traditional educational platforms often lack:
@@ -11,51 +11,56 @@ Traditional educational platforms often lack:
 - Personalized learning paths
 
 Learning Odyssey solves these challenges through:
-1. Dynamic lesson sampling and answer shuffling
-2. User-selected lesson topics at start
-3. Choice-based narrative progression
+1. Pre-defined educational content (lessons.csv) with dynamic narrative delivery
+2. User-selected topics and adventure length
+3. LLM-generated narrative choices
 4. Real-time state synchronization
 
 ## User Experience Flow
 
-1. Initial Interaction
+1. Initial Setup
    - User selects lesson topic at landing page
+   - User chooses adventure length
+   - System determines chapter sequence
    - First chapter is always a lesson type
-   - Question dynamically sampled from selected topic
-   - Answer options shuffled for engagement
-   - Immediate feedback on answer selection
+   - Last chapter is always a lesson type
 
-2. Story Progression
-   - Subsequent chapters alternate between lessons and story
-   - Story chapters offer narrative choices
-   - Lesson chapters sample new questions
-   - Answers always shuffled for interactivity
-   - Dynamic story length adaptation
+2. Adventure Progression
+   - Chapter types determined by ChapterManager (max 40% lessons)
+   - Lesson Chapters:
+     - Questions from curated lessons.csv
+     - LLM generates contextual narrative
+     - Answers affect future narrative
+   - Story Chapters:
+     - Fully LLM-generated content
+     - Three unique narrative choices
+     - Choices affect future chapters
 
 3. State Management
    - Real-time state synchronization
-   - Consistent user progression tracking
-   - Reliable state recovery
+   - Narrative continuity enforcement
+   - Progress tracking
    - Cross-provider LLM support
 
 ## Key Features
 
-1. Dynamic Question System
-   - User-selected lesson topics
-   - Random question sampling
-   - Answer shuffling for engagement
+1. Dynamic Content System
+   - Pre-defined lesson database (lessons.csv)
+   - LLM-generated narratives
+   - Unique story choices each time
    - No repeat questions in session
-   - Immediate feedback
+   - Consequence-driven progression
 
-2. Chapter Flow
-   - First chapter always lesson type
-   - Alternating chapter types
-   - Dynamic story length
-   - Choice-based progression
+2. Chapter Structure
+   - Strategic chapter type distribution
+   - First/last chapters are lessons
+   - Middle chapters follow 40% lesson max
+   - Every chapter maintains narrative flow
+   - All choices affect future content
 
 3. State Handling
-   - Centralized AdventureState management
-   - WebSocket state synchronization
+   - Centralized AdventureState
+   - WebSocket synchronization
    - Provider-agnostic LLM integration
    - Robust error handling
 
