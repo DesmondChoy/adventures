@@ -91,7 +91,7 @@ async def generate_chapter(
     story_category: str,
     lesson_topic: str,
     state: AdventureState,
-) -> ChapterContent:
+) -> tuple[ChapterContent, dict | None]:
     """Generate a complete chapter with content and choices.
 
     This function orchestrates the story generation process by:
@@ -106,7 +106,9 @@ async def generate_chapter(
         state: The current state of the story session
 
     Returns:
-        ChapterContent: A complete chapter with content and choices
+        tuple[ChapterContent, dict | None]: A tuple containing:
+            - ChapterContent: The generated chapter content
+            - dict | None: The question object for lesson chapters, None for story chapters
     """
     # Load story configuration
     story_data = load_story_data()
@@ -238,7 +240,8 @@ async def generate_chapter(
         logger.debug(f"Choice {i}: {choice.text} (next_chapter: {choice.next_chapter})")
     logger.debug("========================\n")
 
-    return ChapterContent(content=story_content, choices=story_choices)
+    # Return both the chapter content and the question (if it's a lesson chapter)
+    return ChapterContent(content=story_content, choices=story_choices), question
 
 
 @router.websocket("/ws/story/{story_category}/{lesson_topic}")
@@ -347,6 +350,9 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                                     chapter_type=chapter_type,
                                     response=response,
                                     chapter_content=chapter_content,
+                                    question=chapter_data.get(
+                                        "question"
+                                    ),  # Include question from state
                                 )
                             )
 
@@ -385,52 +391,51 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                             chapter_type
                         )  # Convert string to enum if needed
 
-                    # Create the appropriate response object based on chapter type
-                    if chapter_type == ChapterType.LESSON:
+                    # First, handle the response to the previous chapter
+                    previous_chapter = state.chapters[-1]  # Get the last chapter
+                    if previous_chapter.chapter_type == ChapterType.LESSON:
+                        # For lesson chapters, use the question that was stored when the chapter was generated
                         try:
-                            # Sample the current question
-                            current_question = sample_question(
-                                lesson_topic,
-                                exclude_questions=[
-                                    chapter.response.question["question"]
-                                    for chapter in state.chapters
-                                    if chapter.chapter_type == ChapterType.LESSON
-                                    and chapter.response
-                                ],
-                            )
-
-                            # Create lesson response
-                            response = LessonResponse(
-                                question=current_question,
+                            # Create response using the stored question
+                            lesson_response = LessonResponse(
+                                question=previous_chapter.question,  # Use the question we stored
                                 chosen_answer=choice_text,
                                 is_correct=chosen_path == "correct",
                             )
-                        except ValueError as e:
-                            logger.error(f"Error sampling question: {e}")
-                            raise
+                            # Update the previous chapter's response
+                            previous_chapter.response = lesson_response
+                        except Exception as e:
+                            logger.error(f"Error creating lesson response: {e}")
+                            await websocket.send_text(
+                                "\n\nAn error occurred while processing your answer. Please try again."
+                            )
+                            continue
                     else:
-                        # Create story response
-                        response = StoryResponse(
+                        # Create story response for the previous chapter
+                        story_response = StoryResponse(
                             chosen_path=chosen_path, choice_text=choice_text
                         )
+                        # Update the previous chapter's response
+                        previous_chapter.response = story_response
 
                     # Update current_chapter_id
                     state.current_chapter_id = chosen_path
 
-                    # Generate the chapter content first
-                    chapter_content = await generate_chapter(
+                    # Generate the next chapter content
+                    chapter_content, sampled_question = await generate_chapter(
                         story_category, lesson_topic, state
                     )
 
-                    # Now append the chapter with the generated content
+                    # Now append the next chapter with no response yet
                     try:
                         state.chapters.append(
                             ChapterData(
                                 chapter_number=current_chapter_number,
-                                content=chapter_content.content,  # Use generated content
+                                content=chapter_content.content,
                                 chapter_type=chapter_type,
-                                response=response,
-                                chapter_content=chapter_content,  # Use generated content
+                                response=None,  # New chapter starts with no response
+                                chapter_content=chapter_content,
+                                question=sampled_question,  # Store the question if it's a lesson chapter
                             )
                         )
                     except ValueError as e:
@@ -459,6 +464,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                                             "chapter_content": ch.chapter_content.dict()
                                             if ch.chapter_content
                                             else None,
+                                            "question": ch.question,  # Include question in serialized state
                                         }
                                         for ch in state.chapters
                                     ],
@@ -483,7 +489,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
 
                 # If this is the start, generate and store the first chapter
                 if chosen_path == "start":
-                    chapter_content = await generate_chapter(
+                    chapter_content, sampled_question = await generate_chapter(
                         story_category, lesson_topic, state
                     )
                     # Get chapter type for first chapter
@@ -493,7 +499,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                     if not isinstance(chapter_type, ChapterType):
                         chapter_type = ChapterType(chapter_type)
 
-                    # Store the first chapter
+                    # Store the first chapter with the question if it's a lesson
                     state.chapters.append(
                         ChapterData(
                             chapter_number=1,
@@ -501,8 +507,10 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                             chapter_type=chapter_type,
                             chapter_content=chapter_content,
                             response=None,  # First chapter has no response yet
+                            question=sampled_question,  # Store the question if it's a lesson chapter
                         )
                     )
+
                 paragraphs = [
                     p.strip()
                     for p in chapter_content.content.split("\n\n")
@@ -540,6 +548,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                                 "content": chapter_content.content,
                                 "chapter_type": chapter_type.value,
                                 "chapter_content": chapter_content.dict(),
+                                "question": sampled_question,  # Include question in chapter update
                             },
                         },
                     }
