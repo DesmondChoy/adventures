@@ -1,7 +1,7 @@
 # Active Context
 
 ## Current Focus
-The project is implementing core Learning Odyssey features with emphasis on adventure flow and content generation:
+The project is implementing core Learning Odyssey features with emphasis on state management and lesson handling:
 
 1. Adventure Flow Implementation
    - Landing page topic and length selection
@@ -27,17 +27,20 @@ The project is implementing core Learning Odyssey features with emphasis on adve
    - Error handling
 
 ## Recent Changes
-- Chapter type determination logic (40% max lessons)
-- Content source integration (lessons.csv)
-- LLM narrative generation system:
-  * Lesson chapters require narrative context for questions
-  * Story chapters have full narrative freedom
-- Adventure state tracking enhancements
-- Consequence system implementation
-- Critical prompt debugging insight:
-  * Perfect state management is useless if data isn't passed to prompt
-  * Always verify what's actually in the prompt before assuming LLM guidance issues
-  * Common issue: Optional parameters not being utilized
+- Enhanced lesson response handling:
+  * Added question field to ChapterData model
+  * Store sampled question with lesson chapters
+  * Use stored question when creating responses
+  * Include question in state serialization
+  * Maintain question data consistency
+- Fixed critical issue with Chapter 1 responses:
+  * First chapter (always lesson) now stores question
+  * Question data persists through state updates
+  * Proper response creation for all lesson chapters
+- State management improvements:
+  * Better state serialization with question data
+  * Consistent question handling throughout chapter lifecycle
+  * Robust error handling for lesson responses
 
 ## Active Decisions
 
@@ -45,8 +48,9 @@ The project is implementing core Learning Odyssey features with emphasis on adve
 1. Content Flow
    - Lesson content:
      * Questions from lessons.csv
-     * Narrative wrapper from LLM
-     * Must maintain story continuity
+     * Store question with chapter data
+     * Use stored question for responses
+     * Maintain state consistency
    - Story content:
      * Full LLM generation
      * Three narrative choices

@@ -12,8 +12,11 @@
 - **State Management**: AdventureState
   - Centralized in models/story.py
   - Complete state tracking
+  - Question data persistence
   - WebSocket synchronization
   - ChapterType enum support
+  - Response handling
+  - Error recovery
 
 - **Language**: Python 3.x
   - Type hints throughout
@@ -66,9 +69,12 @@ pytest-asyncio==0.21.1
 
 ### State Management
 - Complete state tracking required
+- Question data persistence
 - Real-time synchronization needed
 - Recovery mechanisms essential
 - Cross-provider compatibility
+- Response handling consistency
+- Error recovery procedures
 
 ### LLM Integration
 - Provider-agnostic implementation
@@ -118,18 +124,40 @@ pytest-asyncio==0.21.1
 - Lesson context verification
 - Choice context validation
 - State consistency checks
+- Question data validation
+- Response handling verification
+- Error recovery monitoring
+- State transition tracking
 
 ### State Management
 - WebSocket monitoring
 - State transition logging
 - Recovery verification
 - Error tracking
+- Question persistence checks
+- Response data validation
+- State consistency verification
+- Error pattern analysis
+
+### Question Handling
+- Question sampling validation
+- Answer shuffling verification
+- Response creation monitoring
+- State persistence checks
+- Error recovery tracking
+- Data consistency validation
+- State transition verification
+- Performance monitoring
 
 ### LLM Integration
 - Provider response logging
 - Prompt verification
 - Error case testing
 - Performance monitoring
+- Question context validation
+- Response data verification
+- State consistency checks
+- Error pattern analysis
 
 ## Monitoring
 

@@ -67,17 +67,35 @@ graph TD
 ### 2. State Management Pattern
 - Centralized AdventureState
 - WebSocket synchronization
-- State serialization
+- Complete state serialization
+- Question data persistence
 - Recovery mechanisms
 
-### 3. Content Management Pattern
+### 3. Question Handling Pattern
+- Question Lifecycle:
+  1. Sample question from lessons.csv
+  2. Store with chapter data
+  3. Use for response creation
+  4. Persist through state updates
+- State Consistency:
+  1. Store question on chapter creation
+  2. Include in state serialization
+  3. Restore from client state
+  4. Use for response handling
+- Error Management:
+  1. Validate question data
+  2. Handle missing questions
+  3. Recover from errors
+  4. Maintain state consistency
+
+### 4. Content Management Pattern
 - Lesson questions from lessons.csv
 - LLM-generated narratives
 - LLM-generated story choices
 - Narrative continuity enforcement
 - Consequence handling
 
-### 4. Narrative Continuity Pattern
+### 5. Narrative Continuity Pattern
 - Previous Chapter Impact:
   1. After Lesson Chapter (Correct Answer):
      - Acknowledge understanding of the concept
@@ -124,7 +142,7 @@ graph TD
      - Learning from mistakes
      - Decision impact on character
 
-### 5. Testing Pattern
+### 6. Testing Pattern
 - Automated adventure simulation
 - Question sampling validation
 - Choice generation verification

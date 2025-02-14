@@ -44,16 +44,22 @@
 ## Known Issues
 
 ### State Management
-1. Need complete WebSocket synchronization
-2. State recovery mechanisms pending
-3. Error handling improvements needed
-4. Performance optimization required
+1. State recovery mechanisms pending
+2. Performance optimization required
+3. Need more comprehensive error scenarios
+4. Edge case handling improvements needed
 
 ### LLM Integration
 1. Cross-provider testing needed
 2. Response standardization incomplete
 3. Rate limiting implementation pending
 4. Error recovery enhancement needed
+
+### Question Handling
+1. Need more efficient question sampling
+2. Answer shuffling optimization needed
+3. Question state persistence improvements
+4. Better error recovery for lesson responses
 
 ### Testing
 1. Story simulation framework incomplete
@@ -64,16 +70,16 @@
 ## Next Milestones
 
 ### Short Term
-1. Complete state synchronization
-2. Implement recovery mechanisms
+1. Implement recovery mechanisms
+2. Optimize performance
 3. Enhance error handling
-4. Setup testing framework
+4. Improve question sampling efficiency
 
 ### Medium Term
-1. Advanced state management
+1. Advanced error recovery
 2. Enhanced provider integration
 3. Comprehensive testing
-4. Performance optimization
+4. Question handling optimization
 
 ### Long Term
 1. Advanced flow control
@@ -84,16 +90,22 @@
 ## Implementation Status
 
 ### State Management
-- Basic model implemented
-- Synchronization in progress
-- Recovery pending
-- Error handling partial
+- Complete model implemented
+- Full state synchronization
+- Question data persistence
+- Basic error handling
 
 ### LLM Integration
 - Provider abstraction ready
-- Response handling partial
-- Error management basic
+- Response handling complete
+- Error management improved
 - Testing needed
+
+### Question Handling
+- Basic sampling implemented
+- Answer shuffling working
+- State persistence complete
+- Error handling improved
 
 ### Testing Framework
 - Basic structure ready

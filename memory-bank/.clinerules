@@ -28,23 +28,32 @@
 ### State Management
 1. All state must be in AdventureState
 2. No state variables outside AdventureState
-3. Complete WebSocket synchronization required
+3. Complete state serialization required
 4. Use ChapterType enum for chapter types
 5. Dynamic story length via state.story_length
+6. Question data persistence mandatory
+7. State consistency across updates
+8. Error recovery mechanisms
 
 ### Question Handling
 1. Sample from user-selected topic
-2. Shuffle all answer options
+2. Store question with chapter data
 3. Track used questions
 4. Prevent duplicates
 5. Validate answer selection
+6. Maintain question persistence
+7. Handle question errors gracefully
+8. Ensure state consistency
 
 ### Chapter Flow
 1. First chapter always lesson type
-2. Questions sampled dynamically
-3. Answers shuffled for engagement
-4. Alternating lesson/story chapters
-5. Choice-based story progression
+2. Store question with first chapter
+3. Questions sampled dynamically
+4. Answers shuffled for engagement
+5. Alternating lesson/story chapters
+6. Choice-based story progression
+7. Question data persistence
+8. Response handling consistency
 
 ### LLM Integration
 1. Provider-agnostic implementation
@@ -99,18 +108,30 @@
 2. Check sampling logic
 3. Confirm shuffle implementation
 4. Validate answer tracking
+5. Verify question persistence
+6. Test response creation
+7. Check state consistency
+8. Monitor error handling
 
 ### State Validation
 1. Check question history
 2. Verify answer selections
 3. Validate chapter types
 4. Confirm state transitions
+5. Test question persistence
+6. Verify response handling
+7. Check error recovery
+8. Monitor state consistency
 
 ### Response Chain
 1. Verify question format
 2. Check answer order
 3. Validate feedback
 4. Confirm state updates
+5. Test question handling
+6. Verify response creation
+7. Check error handling
+8. Monitor state consistency
 
 ### Prompt Debugging
 1. Verify State Passing:
@@ -133,24 +154,40 @@
 2. Manage shuffle errors
 3. Track invalid answers
 4. Log question issues
+5. Handle missing questions
+6. Recover from errors
+7. Maintain state consistency
+8. Log error details
 
 ### State Errors
 1. Handle synchronization failures
 2. Implement recovery mechanisms
 3. Maintain error boundaries
 4. Log state transitions
+5. Handle question errors
+6. Recover from failures
+7. Ensure data consistency
+8. Monitor error patterns
 
 ### WebSocket Errors
 1. Handle connection drops
 2. Implement reconnection
 3. Maintain state consistency
 4. Log connection events
+5. Handle question errors
+6. Recover from failures
+7. Ensure data integrity
+8. Monitor error patterns
 
 ### Prompt Errors
 1. Log complete prompt content
 2. Track missing state data
 3. Monitor continuity breaks
 4. Validate data flow
+5. Handle question errors
+6. Recover from failures
+7. Ensure consistency
+8. Monitor error patterns
 
 ## Testing Strategy
 
@@ -159,24 +196,40 @@
 2. Test shuffle algorithm
 3. Validate answer tracking
 4. Check duplicate prevention
+5. Test question persistence
+6. Verify response creation
+7. Check error handling
+8. Monitor state consistency
 
 ### State Testing
 1. Verify synchronization
 2. Test recovery mechanisms
 3. Validate error handling
 4. Check performance
+5. Test question handling
+6. Verify response creation
+7. Check state consistency
+8. Monitor error patterns
 
 ### Integration Testing
 1. Test full user flow
 2. Verify question cycles
 3. Validate answer interactions
 4. Check state consistency
+5. Test question handling
+6. Verify response creation
+7. Check error recovery
+8. Monitor system health
 
 ### Prompt Testing
 1. Verify state inclusion
 2. Test history passing
 3. Validate continuity
 4. Check data flow
+5. Test question handling
+6. Verify response creation
+7. Check error handling
+8. Monitor consistency
 
 ## Documentation Standards
 
@@ -185,15 +238,27 @@
 2. Function docstrings mandatory
 3. Complex logic needs comments
 4. State changes must be logged
+5. Question handling documented
+6. Response creation explained
+7. Error handling detailed
+8. State flow documented
 
 ### System Documentation
 1. Question flow documentation
 2. State management flows
 3. Testing procedures
 4. Error handling strategies
+5. Question handling patterns
+6. Response creation flows
+7. State consistency rules
+8. Error recovery procedures
 
 ### Prompt Documentation
 1. Document required state
 2. List critical data points
 3. Explain continuity requirements
 4. Detail debugging steps
+5. Document question handling
+6. Explain response creation
+7. Detail error handling
+8. Describe state management
