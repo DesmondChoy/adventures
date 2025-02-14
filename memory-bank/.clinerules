@@ -1,0 +1,151 @@
+# Cline Rules for Learning Odyssey
+
+## Core Concepts
+
+### Naming Conventions
+1. Chapter: Unit of progression (LESSON or STORY type)
+2. Lesson: Educational content with questions and answers
+3. Story: Narrative content with user choices
+4. State: Complete application state in AdventureState
+
+### Initial Flow Requirements
+1. First chapter MUST be lesson type
+2. Questions sampled from user-selected topic
+3. Answer options MUST be shuffled
+4. No question repetition in session
+5. Immediate feedback required
+
+### File Organization
+1. Core application code in `app/` directory
+2. State management in `models/story.py`
+3. LLM integration in `services/llm/`
+4. WebSocket handling in `routers/websocket.py`
+5. Tests in `tests/` directory
+
+## Implementation Guidelines
+
+### State Management
+1. All state must be in AdventureState
+2. No state variables outside AdventureState
+3. Complete WebSocket synchronization required
+4. Use ChapterType enum for chapter types
+5. Dynamic story length via state.story_length
+
+### Question Handling
+1. Sample from user-selected topic
+2. Shuffle all answer options
+3. Track used questions
+4. Prevent duplicates
+5. Validate answer selection
+
+### Chapter Flow
+1. First chapter always lesson type
+2. Questions sampled dynamically
+3. Answers shuffled for engagement
+4. Alternating lesson/story chapters
+5. Choice-based story progression
+
+### LLM Integration
+1. Provider-agnostic implementation
+2. Cross-provider compatibility required
+3. Abstract provider differences
+4. Keep core logic LLM-API independent
+5. Test with both OpenAI and Gemini
+
+## Development Workflow
+
+### Code Changes
+1. Question sampling changes need tests
+2. Answer shuffling requires validation
+3. State changes need synchronization
+4. WebSocket changes need connection tests
+
+### Testing Requirements
+1. Run story simulation on changes to:
+   - app/services/llm/*
+   - app/routers/websocket.py
+   - app/services/chapter_manager.py
+   - app/models/story.py
+   - app/init_data.py
+   - app/data/stories.yaml
+   - app/data/lessons.csv
+
+### Debugging Process
+1. Verify question sampling
+2. Check answer shuffling
+3. Validate state updates
+4. Analyze error cases
+
+## Critical Paths
+
+### Question Flow Debugging
+1. Verify topic selection
+2. Check sampling logic
+3. Confirm shuffle implementation
+4. Validate answer tracking
+
+### State Validation
+1. Check question history
+2. Verify answer selections
+3. Validate chapter types
+4. Confirm state transitions
+
+### Response Chain
+1. Verify question format
+2. Check answer order
+3. Validate feedback
+4. Confirm state updates
+
+## Error Handling
+
+### Question Errors
+1. Handle sampling failures
+2. Manage shuffle errors
+3. Track invalid answers
+4. Log question issues
+
+### State Errors
+1. Handle synchronization failures
+2. Implement recovery mechanisms
+3. Maintain error boundaries
+4. Log state transitions
+
+### WebSocket Errors
+1. Handle connection drops
+2. Implement reconnection
+3. Maintain state consistency
+4. Log connection events
+
+## Testing Strategy
+
+### Question Testing
+1. Verify sampling logic
+2. Test shuffle algorithm
+3. Validate answer tracking
+4. Check duplicate prevention
+
+### State Testing
+1. Verify synchronization
+2. Test recovery mechanisms
+3. Validate error handling
+4. Check performance
+
+### Integration Testing
+1. Test full user flow
+2. Verify question cycles
+3. Validate answer interactions
+4. Check state consistency
+
+## Documentation Standards
+
+### Code Documentation
+1. Type hints required
+2. Function docstrings mandatory
+3. Complex logic needs comments
+4. State changes must be logged
+
+### System Documentation
+1. Question flow documentation
+2. State management flows
+3. Testing procedures
+4. Error handling strategies

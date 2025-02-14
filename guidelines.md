@@ -44,8 +44,10 @@ These guidelines are critical for maintaining code integrity and application fun
 *   Update all linked files when modifying `AdventureState`.
 *   Use `ChapterType` enum (in `app/models/story.py`) authoritatively for chapter type.
 *   Use `state.story_length` for dynamic story length handling, avoid hardcoding chapter counts.
+*   First chapter is always a lesson type with a question sampled from the user-selected lesson topic.
+*   Questions are dynamically sampled and answers are shuffled for each lesson chapter to enhance interactivity.
 
-**Rationale:** Simplifies debugging, predictability, and maintainability.
+**Rationale:** Simplifies debugging, predictability, and maintainability. Dynamic question sampling and answer shuffling ensures varied learning experiences.
 
 **Key Files:**
 
