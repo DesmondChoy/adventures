@@ -34,6 +34,10 @@ The project is implementing core Learning Odyssey features with emphasis on adve
   * Story chapters have full narrative freedom
 - Adventure state tracking enhancements
 - Consequence system implementation
+- Critical prompt debugging insight:
+  * Perfect state management is useless if data isn't passed to prompt
+  * Always verify what's actually in the prompt before assuming LLM guidance issues
+  * Common issue: Optional parameters not being utilized
 
 ## Active Decisions
 
@@ -60,6 +64,7 @@ The project is implementing core Learning Odyssey features with emphasis on adve
    - Narrative generation verification
    - State consistency checks
    - Error scenario coverage
+   - Prompt data flow validation
 
 ### Implementation
 1. Initial Experience
@@ -82,6 +87,7 @@ The project is implementing core Learning Odyssey features with emphasis on adve
    - Answer shuffling
    - State consistency
    - Error recovery
+   - Prompt data completeness
 
 ## Current Considerations
 
@@ -103,6 +109,7 @@ The project is implementing core Learning Odyssey features with emphasis on adve
    - State verification
    - Error coverage
    - Performance metrics
+   - Prompt data verification
 
 ### Product
 1. User Experience
@@ -122,6 +129,7 @@ The project is implementing core Learning Odyssey features with emphasis on adve
    - State reliability
    - Error handling
    - Recovery procedures
+   - Prompt data flow
 
 ## Next Steps
 
@@ -131,18 +139,21 @@ The project is implementing core Learning Odyssey features with emphasis on adve
    - Shuffle validation
    - State verification
    - Error scenarios
+   - Prompt data validation
 
 2. Implementation
    - Topic selection refinement
    - Sampling optimization
    - Shuffle improvements
    - Error handling
+   - Prompt data flow fixes
 
 3. Documentation
    - Flow documentation
    - State management
    - Testing procedures
    - Error handling
+   - Prompt debugging guide
 
 ### Short Term
 1. Features
@@ -150,15 +161,18 @@ The project is implementing core Learning Odyssey features with emphasis on adve
    - Improved shuffling
    - Better feedback
    - Error recovery
+   - Robust prompt data flow
 
 2. Testing
    - Comprehensive scenarios
    - Performance metrics
    - Error coverage
    - State validation
+   - Prompt completeness checks
 
 3. Documentation
    - System architecture
    - Flow patterns
    - Testing guides
    - Recovery procedures
+   - Prompt debugging procedures

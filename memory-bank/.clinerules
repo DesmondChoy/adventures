@@ -53,6 +53,21 @@
 4. Keep core logic LLM-API independent
 5. Test with both OpenAI and Gemini
 
+### Prompt Engineering
+1. CRITICAL: All relevant state MUST be passed into prompts
+   - Even perfect state management is useless if data isn't in prompt
+   - LLMs can't maintain continuity without history
+   - Always verify what's actually in the prompt
+2. Prompt Debugging Priority:
+   - First check if required data is passed to prompt
+   - Then verify data appears in final prompt
+   - Only then consider LLM guidance issues
+3. Common Issues:
+   - Optional parameters not being passed
+   - State properties not being utilized
+   - Missing history in prompts
+   - Incomplete context
+
 ## Development Workflow
 
 ### Code Changes
@@ -97,6 +112,20 @@
 3. Validate feedback
 4. Confirm state updates
 
+### Prompt Debugging
+1. Verify State Passing:
+   - Check what properties are available in state
+   - Confirm they're being passed to prompt builder
+   - Verify they appear in final prompt
+2. Check Data Flow:
+   - Trace data from state to prompt
+   - Look for optional parameters
+   - Verify history inclusion
+3. Analyze Prompt Content:
+   - Review complete prompt output
+   - Check for missing context
+   - Verify continuity elements
+
 ## Error Handling
 
 ### Question Errors
@@ -116,6 +145,12 @@
 2. Implement reconnection
 3. Maintain state consistency
 4. Log connection events
+
+### Prompt Errors
+1. Log complete prompt content
+2. Track missing state data
+3. Monitor continuity breaks
+4. Validate data flow
 
 ## Testing Strategy
 
@@ -137,6 +172,12 @@
 3. Validate answer interactions
 4. Check state consistency
 
+### Prompt Testing
+1. Verify state inclusion
+2. Test history passing
+3. Validate continuity
+4. Check data flow
+
 ## Documentation Standards
 
 ### Code Documentation
@@ -150,3 +191,9 @@
 2. State management flows
 3. Testing procedures
 4. Error handling strategies
+
+### Prompt Documentation
+1. Document required state
+2. List critical data points
+3. Explain continuity requirements
+4. Detail debugging steps
