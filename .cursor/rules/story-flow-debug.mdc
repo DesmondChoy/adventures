@@ -1,16 +1,12 @@
 ---
+description: 
+globs: 
+---
+---
 description: Story Flow: Validation rules and debugging checkpoints
 globs: 
 ---
 # Story Flow Debug Guide
-
-<story_testing>
-When running story generation tests: 
-1. ALWAYS run the test file directly with Python:
-   `source .venv/bin/activate && python tests/test_story_generation.py`
-2. DO NOT use pytest as it will hide the debug output
-3. This ensures you can see all prompts and LLM responses in the output
-</story_testing>
 
 ## CRITICAL: Narrative Context Checks
 Before anything else, verify these essential context points:
@@ -33,7 +29,7 @@ If previous chapter was LESSON type:
 If previous chapter was STORY type:
 - ✓ ONLY chosen option: state.chapters[-1].response.choice_text
 - ✓ NO other choices should be included
-- ✓ Choice consequences must be reflected
+- ✓ Chapter narrative must progress based on Choice Made
 - Debug: Verify only selected choice appears in prompt
 
 ## Quick Debug Checklist
