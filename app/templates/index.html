@@ -67,6 +67,13 @@
             </form>
         </div>
 
+        <!-- Loader Overlay - NEW -->
+        <div id="loaderOverlay" class="loader-overlay hidden">
+            <div class="loader-icon">
+                <div class="loader-triangle animate-spin-accelerate"></div>
+            </div>
+        </div>
+        
         <!-- Story Container (Initially Hidden) -->
         <div id="storyContainer" class="mt-8 max-w-2xl mx-auto hidden">
             <div class="bg-white rounded-xl shadow-md p-6">
@@ -95,9 +102,10 @@
             document.getElementById('formContainer').classList.remove('hidden');
             document.getElementById('introText').classList.remove('hidden');
             
-            // Hide the story container and loader
+            // Hide the story container and loaders
             document.getElementById('storyContainer').classList.add('hidden');
-            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('loaderOverlay').classList.remove('active');
+            document.getElementById('loaderOverlay').classList.add('hidden');
             
             // Clear story content and choices
             document.getElementById('storyContent').textContent = '';
@@ -123,11 +131,17 @@
         
         // Loader utility functions
         function showLoader() {
-            document.getElementById('loader').classList.remove('hidden');
+            const overlay = document.getElementById('loaderOverlay');
+            overlay.classList.remove('hidden');
+            // Use setTimeout to ensure the transition works
+            setTimeout(() => overlay.classList.add('active'), 0);
         }
 
         function hideLoader() {
-            document.getElementById('loader').classList.add('hidden');
+            const overlay = document.getElementById('loaderOverlay');
+            overlay.classList.remove('active');
+            // Wait for transition to complete before hiding
+            setTimeout(() => overlay.classList.add('hidden'), 300);
         }
         
         document.getElementById('storyForm').addEventListener('submit', function(e) {
