@@ -62,6 +62,18 @@ The project is implementing core Learning Odyssey features:
 
 ## Current Considerations
 
+### Testing Framework (`tests/simulations/story_simulation.py`)
+- Primary purpose:
+  * Generate test data through random adventure progression
+  * Provide comprehensive logs for test validation
+  * Support testing requirements when core components change
+- Current status:
+  * Successfully generates required DEBUG level logs
+  * Captures all state changes and responses
+  * Maintains WebSocket communication
+  * Implements robust error handling
+  * Functions as intended for test data generation
+
 ### Technical
 1. Performance
    - LLM response times

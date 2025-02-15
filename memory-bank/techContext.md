@@ -60,18 +60,19 @@ pytest-asyncio==0.21.1
    ```
 
 ### Testing Environment (`tests/simulations/`)
-- Story simulation framework:
-  * Complete adventure simulation
-  * Chapter type sequence validation
-  * LESSON/STORY content verification
-  * State persistence checks
-  * Error scenario coverage
-  * Performance benchmarking
+- Story simulation framework (story_simulation.py):
+  * Primary purpose: Generate test data and logs
+  * Random adventure progression
+  * Comprehensive DEBUG level logging
+  * WebSocket communication validation
+  * Error handling and retry logic
+  * Test data generation for validation
 - State transition validation:
   * AdventureState consistency
   * WebSocket synchronization
   * Recovery mechanism testing
   * Error boundary validation
+  * Comprehensive log generation
 - LLM provider compatibility:
   * OpenAI/Gemini cross-testing
   * Response format validation
