@@ -83,6 +83,9 @@ class AdventureState(BaseModel):
     current_chapter_id: str
     chapters: List[ChapterData] = []
     story_length: int = Field(default=3, ge=3, le=7)
+    planned_chapter_types: List[
+        ChapterType
+    ] = []  # Pre-determined sequence of chapter types
 
     @property
     def current_chapter_number(self) -> int:

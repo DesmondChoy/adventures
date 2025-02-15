@@ -66,11 +66,19 @@ graph TD
 - STORY chapters use full LLM generation
 
 ### 2. State Management Pattern
-- Centralized AdventureState
-- WebSocket synchronization
-- Complete state serialization
-- Question data persistence
-- Recovery mechanisms
+- Centralized AdventureState:
+  * Single source of truth for all state
+  * Complete state serialization
+  * Pre-determined chapter sequence via planned_chapter_types
+  * Question data persistence
+  * Recovery mechanisms
+
+- Chapter Type Management:
+  * Sequence determined upfront by ChapterManager
+  * Stored in AdventureState.planned_chapter_types
+  * Used consistently across all components
+  * No hard-coded assumptions about chapter types
+  * Maintains state integrity throughout adventure
 
 ### 3. Question Handling Pattern
 - Question Lifecycle:

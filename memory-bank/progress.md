@@ -14,6 +14,7 @@
 - [x] ChapterType enum implementation
 - [x] Story length handling
 - [x] Basic state synchronization
+- [x] Chapter type sequence tracking
 
 ### LLM Integration
 - [x] Provider abstraction layer
@@ -57,7 +58,7 @@
 
 ### Content Flow (`app/services/chapter_manager.py`)
 1. Question sampling optimization needed
-2. LESSON/STORY transition handling
+2. ~~LESSON/STORY transition handling~~ ✓ Implemented via planned_chapter_types
 3. State persistence refinement
 4. Error recovery enhancement
 

@@ -178,6 +178,7 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
     base_prompt = (
         f"Current story state:\n"
         f"- Chapter: {state.current_chapter_number} of {state.story_length}\n"
+        f"- ChapterType: {state.planned_chapter_types[state.current_chapter_number - 1]}\n"
         f"- Story Phase: {story_phase}\n"
         f"- Lesson Progress: {state.correct_lesson_answers}/{state.total_lessons} lessons answered correctly\n\n"
         f"Complete Story History:\n"  # Single newline for clean formatting

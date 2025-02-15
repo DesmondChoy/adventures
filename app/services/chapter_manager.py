@@ -160,5 +160,8 @@ class ChapterManager:
             },
         )
         return AdventureState(
-            current_chapter_id="start", story_length=total_chapters, chapters=[]
+            current_chapter_id="start",
+            story_length=total_chapters,
+            chapters=[],
+            planned_chapter_types=chapter_types,
         )

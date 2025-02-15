@@ -17,15 +17,28 @@ The project is implementing core Learning Odyssey features:
    - LLM response validation
    - History tracking in AdventureState
 
-## Recent Changes (`app/services/llm/prompt_engineering.py`)
+## Recent Changes
+
+### State Management (`app/models/story.py`)
+- Added planned_chapter_types to AdventureState:
+  * Pre-determined sequence of chapter types
+  * Stored during state initialization
+  * Single source of truth for chapter progression
+  * Maintains complete state serialization
+
+### Chapter Management (`app/services/chapter_manager.py`)
+- Enhanced state initialization:
+  * Store chapter type sequence in AdventureState
+  * Maintain sequence through entire adventure
+  * Improved state consistency
+  * Better error handling
+
+### Prompt Engineering (`app/services/llm/prompt_engineering.py`)
 - Improved narrative continuity:
-  * Made process_consequences() chapter-aware
-  * Context-specific guidance:
-    - LESSON Chapter 2: Full correction and learning
-    - Later chapters: Growth and evolution focus
-  * Updated build_user_prompt() with chapter context
-  * Removed redundant acknowledgments
-  * Enhanced progression logic
+  * Use planned_chapter_types for accurate chapter type info
+  * Removed hard-coded chapter type assumptions
+  * Enhanced state-driven progression
+  * Better state consistency in prompts
 
 ## Active Decisions
 
