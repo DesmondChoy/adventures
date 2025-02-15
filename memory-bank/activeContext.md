@@ -1,180 +1,117 @@
 # Active Context
 
 ## Current Focus
-The project is implementing core Learning Odyssey features with emphasis on state management and lesson handling:
+The project is implementing core Learning Odyssey features:
 
-1. Adventure Flow Implementation
+1. Adventure Flow Implementation (`app/services/chapter_manager.py`)
    - Landing page topic and length selection
-   - Chapter type determination (ChapterManager)
-   - Content source management:
-     - Lesson Chapters: lessons.csv questions + LLM narrative wrapper
-     - Story Chapters: Full LLM generation
-   - Narrative continuity enforcement
+   - ChapterType determination (LESSON/STORY)
+   - Content source integration:
+     - LESSON chapters: lessons.csv + LLM narrative wrapper
+     - STORY chapters: Full LLM generation
+   - Narrative continuity via prompt engineering
 
-2. Content Management
-   - Lesson database (lessons.csv) integration
-   - LLM narrative generation for both chapter types:
-     - Lesson chapters: Contextual narrative around predefined questions
-     - Story chapters: Complete narrative with choices
-   - Story choice generation and validation
-   - Consequence system implementation
-   - History tracking
+2. Content Management (`app/data/`)
+   - lessons.csv integration for LESSON chapters
+   - stories.yaml templates for STORY chapters
+   - LLM response validation
+   - History tracking in AdventureState
 
-3. State Synchronization
-   - Adventure progression tracking
-   - Narrative continuity maintenance
-   - WebSocket communication
-   - Error handling
-
-## Recent Changes
-- Improved prompt engineering for narrative continuity:
+## Recent Changes (`app/services/llm/prompt_engineering.py`)
+- Improved narrative continuity:
   * Made process_consequences() chapter-aware
-  * Different guidance based on chapter context:
-    - Chapter 2: Full correction and learning moment
-    - Later chapters: Focus on growth and evolution
-  * Updated build_user_prompt() to pass chapter context
-  * Eliminated redundant lesson acknowledgments
-  * Enhanced natural story progression
-- Previous Changes:
-  * Enhanced lesson response handling
-  * Fixed Chapter 1 response issues
-  * Improved state management
+  * Context-specific guidance:
+    - LESSON Chapter 2: Full correction and learning
+    - Later chapters: Growth and evolution focus
+  * Updated build_user_prompt() with chapter context
+  * Removed redundant acknowledgments
+  * Enhanced progression logic
 
 ## Active Decisions
 
 ### Architecture
-1. Content Flow
-   - Lesson content:
+1. Content Flow (`app/services/chapter_manager.py`)
+   - LESSON chapters:
      * Questions from lessons.csv
-     * Store question with chapter data
-     * Use stored question for responses
-     * Maintain state consistency
-   - Story content:
+     * LLM narrative wrapper
+     * Response validation
+   - STORY chapters:
      * Full LLM generation
-     * Three narrative choices
-   - Track chapter outcomes
-   - Maintain narrative continuity
+     * Three choices per chapter
+   - Outcome tracking in AdventureState
+   - Narrative continuity via prompts
 
-2. State Management
-   - Adventure history tracking
-   - Choice/answer recording
-   - Progress monitoring
-   - Error recovery
-
-3. Testing Approach
-   - Content integration validation
-   - Narrative generation verification
-   - State consistency checks
-   - Error scenario coverage
-   - Prompt data flow validation
+2. Testing Strategy (`tests/simulations/`)
+   - Story simulation framework
+   - Response validation
+   - State verification
+   - Error handling coverage
 
 ### Implementation
-1. Initial Experience
-   - Topic selection UI
-   - Question sampling logic
-   - Answer shuffling algorithm
-   - Feedback mechanism
-   - State updates
+1. User Experience (`app/routers/web.py`)
+   - Topic selection interface
+   - Adventure length selection
+   - Real-time feedback system
+   - WebSocket state updates
 
-2. Flow Control
-   - First chapter enforcement (lesson type with narrative)
-   - Dynamic sampling
-   - Answer randomization
-   - Progress tracking
-   - Error handling
-
-3. Validation
-   - Topic selection
-   - Question sampling
-   - Answer shuffling
-   - State consistency
-   - Error recovery
-   - Prompt data completeness
+2. Flow Control (`app/services/chapter_manager.py`)
+   - LESSON type enforcement for first/last chapters
+   - MAX_LESSON_RATIO (40%) for middle chapters
+   - Dynamic content sampling
+   - Error recovery mechanisms
 
 ## Current Considerations
 
 ### Technical
-1. Question Handling
-   - Sampling efficiency
-   - Shuffle reliability
-   - Duplicate prevention
-   - Error cases
+1. Performance
+   - LLM response times
+   - WebSocket latency
+   - State synchronization speed
+   - Error recovery time
 
-2. State Management
-   - History tracking
-   - Selection validation
-   - Progress monitoring
-   - Recovery procedures
-
-3. Testing
-   - Flow validation
-   - State verification
-   - Error coverage
-   - Performance metrics
-   - Prompt data verification
+2. Reliability
+   - WebSocket connection stability
+   - LLM service availability
+   - State consistency
+   - Error handling coverage
 
 ### Product
 1. User Experience
-   - Topic selection
-   - Question presentation within narrative
-   - Answer interaction
-   - Feedback clarity
+   - Topic relevance
+   - Narrative engagement
+   - Learning effectiveness
+   - Error feedback clarity
 
-2. Learning
-   - Question relevance
-   - Answer effectiveness
-   - Progress visibility
-   - Engagement metrics
-
-3. System
-   - Response times
-   - State reliability
-   - Error handling
-   - Recovery procedures
-   - Prompt data flow
+2. Content Quality
+   - Question appropriateness
+   - Narrative coherence
+   - Choice meaningfulness
+   - Learning progression
 
 ## Next Steps
 
-### Immediate
-1. Testing
-   - Question sampling tests
-   - Shuffle validation
-   - State verification
-   - Error scenarios
-   - Prompt data validation
+### Immediate (`tests/simulations/`)
+1. Testing Framework
+   - Story simulation expansion
+   - Performance benchmarking
+   - Error scenario coverage
+   - State transition validation
 
 2. Implementation
-   - Topic selection refinement
-   - Sampling optimization
-   - Shuffle improvements
-   - Error handling
-   - Prompt data flow fixes
-
-3. Documentation
-   - Flow documentation
-   - State management
-   - Testing procedures
-   - Error handling
-   - Prompt debugging guide
+   - WebSocket stability improvements
+   - LLM response optimization
+   - Error recovery enhancement
+   - State sync refinement
 
 ### Short Term
 1. Features
-   - Enhanced sampling
-   - Improved shuffling
-   - Better feedback
-   - Error recovery
-   - Robust prompt data flow
+   - Enhanced topic selection
+   - Improved narrative generation
+   - Better error feedback
+   - Faster state recovery
 
 2. Testing
-   - Comprehensive scenarios
-   - Performance metrics
-   - Error coverage
-   - State validation
-   - Prompt completeness checks
-
-3. Documentation
-   - System architecture
-   - Flow patterns
-   - Testing guides
-   - Recovery procedures
-   - Prompt debugging procedures
+   - Load testing framework
+   - Cross-provider validation
+   - Error simulation
+   - Performance profiling

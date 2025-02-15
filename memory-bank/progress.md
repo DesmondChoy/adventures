@@ -43,92 +43,67 @@
 
 ## Known Issues
 
-### State Management
-1. State recovery mechanisms pending
-2. Performance optimization required
-3. Need more comprehensive error scenarios
-4. Edge case handling improvements needed
+### State Management (`app/models/story.py`)
+1. Recovery mechanisms incomplete
+2. Performance bottlenecks identified
+3. Error scenario coverage gaps
+4. Edge case handling needed
 
-### LLM Integration
-1. Cross-provider testing needed
-2. Response standardization incomplete
-3. Rate limiting implementation pending
-4. Error recovery enhancement needed
+### LLM Integration (`app/services/llm/`)
+1. OpenAI/Gemini cross-testing needed
+2. Response format standardization pending
+3. Rate limiting implementation required
+4. Error recovery improvements needed
 
-### Question Handling
-1. Need more efficient question sampling
-2. Answer shuffling optimization needed
-3. Question state persistence improvements
-4. Better error recovery for lesson responses
-
-### Testing
-1. Story simulation framework incomplete
-2. State validation tools needed
-3. Provider compatibility testing required
-4. Error scenario coverage missing
+### Content Flow (`app/services/chapter_manager.py`)
+1. Question sampling optimization needed
+2. LESSON/STORY transition handling
+3. State persistence refinement
+4. Error recovery enhancement
 
 ## Next Milestones
 
 ### Short Term
-1. Implement recovery mechanisms
-2. Optimize performance
-3. Enhance error handling
-4. Improve question sampling efficiency
+1. State recovery implementation (`app/models/story.py`)
+2. Performance optimization (`app/routers/websocket.py`)
+3. Error handling enhancement (`app/services/llm/`)
+4. Content flow improvements (`app/services/chapter_manager.py`)
 
 ### Medium Term
-1. Advanced error recovery
-2. Enhanced provider integration
-3. Comprehensive testing
-4. Question handling optimization
+1. Advanced error recovery system
+2. LLM provider abstraction layer
+3. Story simulation framework (`tests/simulations/`)
+4. Content management optimization
 
 ### Long Term
-1. Advanced flow control
-2. Enhanced error recovery
-3. Complete test coverage
-4. System scalability
+1. Advanced chapter flow control
+2. Multi-provider LLM support
+3. Comprehensive testing suite
+4. System scaling architecture
 
 ## Implementation Status
 
-### State Management
-- Complete model implemented
-- Full state synchronization
-- Question data persistence
-- Basic error handling
+### Core Systems
+1. State Management (`app/models/story.py`)
+   - AdventureState model complete
+   - WebSocket synchronization active
+   - Question persistence working
+   - Basic error handling implemented
 
-### LLM Integration
-- Provider abstraction ready
-- Response handling complete
-- Error management improved
-- Testing needed
+2. LLM Integration (`app/services/llm/`)
+   - Provider abstraction layer ready
+   - Response processing working
+   - Error handling functional
+   - Cross-provider testing pending
 
-### Question Handling
-- Basic sampling implemented
-- Answer shuffling working
-- State persistence complete
-- Error handling improved
+3. Content Management (`app/services/chapter_manager.py`)
+   - ChapterType handling implemented
+   - LESSON/STORY flow working
+   - Content sampling functional
+   - Error recovery in progress
 
-### Testing Framework
-- Basic structure ready
-- Simulation pending
-- Validation tools needed
-- Coverage incomplete
-
-## Testing Status
-
-### Story Flow
-- Basic progression working
-- Dynamic sampling pending
-- Answer shuffling needed
-- Choice handling partial
-
-### State Validation
-- Basic checks implemented
-- Recovery testing needed
-- Error scenarios pending
-- Performance metrics missing
-
-### Provider Testing
-- Basic integration tested
-- Cross-provider pending
-- Response validation needed
-- Error cases incomplete
+4. Testing Framework (`tests/simulations/`)
+   - Basic structure implemented
+   - Story simulation pending
+   - State validation needed
+   - Error scenarios incomplete

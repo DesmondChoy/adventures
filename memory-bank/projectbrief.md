@@ -5,41 +5,46 @@ Learning Odyssey is an interactive educational platform that combines dynamic st
 
 ## Core Requirements
 
-1. State Management
-   - Centralized `AdventureState` in `app/models/story.py`
-   - Complete state synchronization via WebSocket
-   - Dynamic story length handling via `state.story_length`
-   - Chapter type management using `ChapterType` enum
+1. State Management (`app/models/story.py`)
+   - AdventureState as single source of truth
+   - WebSocket state synchronization
+   - Dynamic length via state.story_length
+   - ChapterType enum (LESSON/STORY)
 
-2. LLM Integration
-   - Provider-agnostic implementation
-   - Cross-provider compatibility (OpenAI and Gemini)
-   - Robust prompt engineering in `prompt_engineering.py`
-   - Abstract provider differences in service layer
+2. LLM Integration (`app/services/llm/`)
+   - Provider abstraction layer
+   - OpenAI/Gemini compatibility
+   - Prompt engineering system
+   - Response standardization
 
-3. Story & Lesson Flow
-   - First chapter always lesson type with dynamic question sampling
-   - Alternating lesson and story chapters
-   - Dynamic question sampling and answer shuffling
-   - Choice-based narrative progression
+3. Content Flow (`app/services/chapter_manager.py`)
+   - First/last chapters: LESSON type
+   - Middle chapters: MAX_LESSON_RATIO (40%)
+   - LESSON chapters: lessons.csv + LLM
+   - STORY chapters: Full LLM generation
 
 4. System Architecture
-   - FastAPI backend with WebSocket support
-   - Real-time state synchronization
-   - Automated story flow testing
-   - Comprehensive error handling
+   - FastAPI/WebSocket backend
+   - Real-time state updates
+   - Story simulation framework
+   - Error recovery system
 
 ## Project Goals
-1. Create engaging, personalized learning experiences
-2. Maintain provider-agnostic LLM integration
-3. Ensure robust state management and synchronization
-4. Provide automated testing and validation
-5. Enable dynamic content adaptation
+1. Personalized learning journeys
+2. Provider-agnostic LLM system
+3. Reliable state management
+4. Automated testing suite
+5. Dynamic content system
 
 ## Success Criteria
-- Seamless state synchronization
-- Consistent story and lesson flow
-- Provider-independent LLM operation
-- Comprehensive test coverage
-- Automated story flow validation
-- Real-time user interaction handling
+1. Technical Requirements
+   - Real-time state synchronization
+   - Consistent LESSON/STORY flow
+   - Cross-provider LLM support
+   - Comprehensive test coverage
+
+2. User Experience
+   - Engaging narrative continuity
+   - Meaningful choice impact
+   - Effective learning integration
+   - Reliable error recovery

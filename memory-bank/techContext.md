@@ -59,48 +59,73 @@ pytest-asyncio==0.21.1
    python -m pytest tests/
    ```
 
-### Testing Environment
-- Automated story simulation
-- State transition validation
-- Cross-provider LLM testing
-- WebSocket connection testing
+### Testing Environment (`tests/simulations/`)
+- Story simulation framework:
+  * Complete adventure simulation
+  * Chapter type sequence validation
+  * LESSON/STORY content verification
+  * State persistence checks
+  * Error scenario coverage
+  * Performance benchmarking
+- State transition validation:
+  * AdventureState consistency
+  * WebSocket synchronization
+  * Recovery mechanism testing
+  * Error boundary validation
+- LLM provider compatibility:
+  * OpenAI/Gemini cross-testing
+  * Response format validation
+  * Error handling verification
+  * Rate limiting compliance
+- WebSocket connection testing:
+  * Connection stability
+  * State synchronization
+  * Error recovery
+  * Performance metrics
 
 ## Technical Constraints
 
-### State Management
-- Complete state tracking required
-- Question data persistence
-- Real-time synchronization needed
-- Recovery mechanisms essential
-- Cross-provider compatibility
-- Response handling consistency
-- Error recovery procedures
+### State Management (`app/models/story.py`)
+- AdventureState as single source of truth
+- Real-time WebSocket synchronization
+- Complete state serialization
+- Error recovery system
 
-### LLM Integration
-- Provider-agnostic implementation
+### LLM Integration (`app/services/llm/`)
+- Provider abstraction layer
 - Response standardization
-- Error handling requirements
-- Rate limiting considerations
-
-### Testing Requirements
-- Automated story simulation
-- State validation
-- Flow verification
-- Error checking
+- Rate limiting implementation
+- Error handling system
 
 ## External Dependencies
 
-### LLM Providers
-- OpenAI API integration
-- Gemini API integration
-- Provider abstraction layer
-- Response standardization
+### LLM Providers (`app/services/llm/providers.py`)
+- OpenAI API client
+- Gemini API client
+- Provider interface
+- Response mapping
 
-### Testing Framework
-- pytest for unit tests
-- pytest-asyncio for async
-- Story simulation framework
-- State validation tools
+### Testing Framework (`tests/`)
+- pytest (unit tests):
+  * Component isolation
+  * Mocked dependencies
+  * Error scenarios
+  * Edge cases
+- pytest-asyncio (async):
+  * WebSocket operations
+  * LLM service calls
+  * State synchronization
+  * Timeout handling
+- story_simulation.py:
+  * End-to-end testing
+  * Adventure progression
+  * Content validation
+  * Error recovery
+- State validation:
+  * Serialization
+  * Persistence
+  * Recovery
+  * Consistency
 
 ## Development Tools
 
@@ -119,62 +144,46 @@ pytest-asyncio==0.21.1
 
 ## Debugging Tools
 
-### Story Flow
-- Narrative preservation checks
-- Lesson context verification
-- Choice context validation
-- State consistency checks
-- Question data validation
-- Response handling verification
-- Error recovery monitoring
-- State transition tracking
-
-### State Management
-- WebSocket monitoring
+### Story Flow (`app/services/chapter_manager.py`)
+- ChapterType validation
+- Content source verification
+- Narrative continuity checks
 - State transition logging
-- Recovery verification
-- Error tracking
-- Question persistence checks
-- Response data validation
-- State consistency verification
-- Error pattern analysis
 
-### Question Handling
-- Question sampling validation
-- Answer shuffling verification
-- Response creation monitoring
-- State persistence checks
-- Error recovery tracking
-- Data consistency validation
-- State transition verification
+### State Management (`app/models/story.py`)
+- WebSocket monitoring
+- State serialization checks
+- Recovery validation
+- Error tracking
+
+### Content Flow (`app/services/chapter_manager.py`)
+- LESSON/STORY validation
+- Content sampling verification
+- Response validation
 - Performance monitoring
 
-### LLM Integration
+### LLM Integration (`app/services/llm/`)
 - Provider response logging
 - Prompt verification
-- Error case testing
-- Performance monitoring
-- Question context validation
-- Response data verification
-- State consistency checks
-- Error pattern analysis
+- Error tracking
+- Performance metrics
 
 ## Monitoring
 
-### State Tracking
-- WebSocket connection status
+### System Health
+- WebSocket connections
 - State synchronization
-- Recovery events
-- Error rates
+- LLM availability
+- Error frequency
 
-### Performance
-- LLM response times
-- State transition speed
-- WebSocket latency
-- Resource utilization
+### Performance Metrics
+- Response latency
+- State update speed
+- Content generation time
+- Error recovery time
 
-### Testing Metrics
-- Story simulation success
-- State validation results
+### Testing Coverage
+- Story simulations
+- State transitions
 - Provider compatibility
-- Error recovery rates
+- Error scenarios

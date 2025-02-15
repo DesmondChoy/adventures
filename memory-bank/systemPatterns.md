@@ -57,12 +57,13 @@ graph TD
 
 ## Design Patterns
 
-### 1. Chapter Type Pattern
-- Adventure length selection at landing
-- Chapter sequence determined upfront
-- First/last chapters always lessons
-- Middle chapters randomly assigned (max 40% lessons)
-- Limited by available questions in lessons.csv
+### 1. Chapter Type Pattern (`app/services/chapter_manager.py`)
+- Adventure length selection at landing page
+- Chapter sequence determined by ChapterManager
+- First/last chapters always LESSON type
+- Middle chapters follow MAX_LESSON_RATIO (40%)
+- LESSON chapters limited by available questions in lessons.csv
+- STORY chapters use full LLM generation
 
 ### 2. State Management Pattern
 - Centralized AdventureState
@@ -95,59 +96,81 @@ graph TD
 - Narrative continuity enforcement
 - Consequence handling
 
-### 5. Narrative Continuity Pattern
+### 5. Narrative Continuity Pattern (`app/services/llm/prompt_engineering.py`)
 - Previous Chapter Impact:
-  1. After Lesson Chapter (Correct Answer):
+  1. After LESSON Chapter (Correct Answer):
      - Acknowledge understanding of the concept
      - Show practical application of knowledge
      - Build confidence for future challenges
      - Connect learning to current situation
+     - CRITICAL: Include specific answer in state
   
-  2. After Lesson Chapter (Incorrect Answer):
+  2. After LESSON Chapter (Incorrect Answer):
      - Chapter 2 (Immediate Response):
        * Address the misunderstanding directly
        * Provide correct information naturally
        * Create growth opportunity
        * Show learning from mistakes
        * Connect correction to current events
+       * CRITICAL: Include both incorrect and correct answers in state
      - Later Chapters:
        * Build upon previous learning
        * Show evolved understanding
        * Connect growth to current challenges
        * Avoid redundant explanations
        * Focus on character development
+       * CRITICAL: Reference previous corrections naturally
   
-  3. After Story Chapter:
+  3. After STORY Chapter:
      - Direct continuation from chosen path
      - Reference specific choice details
      - Show consequences of decision
      - Maintain consistent world state
+     - CRITICAL: Include full choice context in state
 
 - Continuity Enforcement:
   1. LLM Prompt Engineering:
-     - Includes complete chapter history
-     - Highlights recent decisions/answers
-     - Enforces consequence guidelines
-     - Maintains character development
+     - CRITICAL: All state properties must be in prompt
+     - Complete chapter history required
+     - Recent decisions/answers highlighted
+     - Consequence guidelines enforced
+     - Character development maintained
+     - Error if state data missing
   
   2. State Management:
-     - Tracks all chapter outcomes
-     - Maintains decision history
-     - Records learning progress
-     - Ensures consistent references
+     - Track all chapter outcomes in AdventureState
+     - Maintain complete decision history
+     - Record learning progress with timestamps
+     - Ensure consistent references
+     - Implement state recovery for prompt failures
 
 - Cross-Chapter Connections:
   1. Knowledge Integration:
-     - Connect lessons to story events
-     - Use previous lessons in choices
+     - Connect LESSON content to STORY events
+     - Use previous LESSON content in choices
      - Build upon established concepts
      - Create learning callbacks
+     - CRITICAL: Track concept relationships in state
   
   2. Character Development:
      - Consistent personality traits
      - Growth from experiences
      - Learning from mistakes
      - Decision impact on character
+     - CRITICAL: Maintain character state history
+
+- Error Recovery:
+  1. Prompt Failures:
+     - Log complete prompt content
+     - Track missing state properties
+     - Implement fallback responses
+     - Maintain narrative consistency
+  
+  2. State Inconsistency:
+     - Detect narrative discontinuity
+     - Implement state recovery
+     - Log recovery attempts
+     - Maintain error boundaries
 
 ### 6. Testing Pattern
 - Automated adventure simulation

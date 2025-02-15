@@ -3,87 +3,48 @@
 ## Core Concepts
 
 ### Naming Conventions
-1. Chapter: Unit of progression (LESSON or STORY type)
-2. Lesson: Educational content with questions and answers
-3. Story: Narrative content with user choices
-4. State: Complete application state in AdventureState
-5. Adventure: The overall journey of the user
+1. Chapter: Unit of progression in ChapterType enum (LESSON or STORY)
+   - LESSON: Educational content from lessons.csv with LLM narrative wrapper
+   - STORY: Fully LLM-generated narrative content with choices
+2. State: Complete application state in AdventureState class
+3. Adventure: Overall user journey tracked in AdventureState
 
-### Initial Flow Requirements
-1. First chapter MUST be lesson type
-2. Questions sampled from user-selected topic
-3. Answer options MUST be shuffled
-4. No question repetition in session
-5. Immediate feedback required
+### File Organization (`app/`)
+1. Core application code:
+   - State management: `models/story.py`
+   - LLM integration: `services/llm/`
+   - WebSocket handling: `routers/websocket.py`
+   - Chapter management: `services/chapter_manager.py`
+2. Content sources:
+   - Lesson database: `data/lessons.csv`
+   - Story templates: `data/stories.yaml`
+3. Tests: `tests/` directory
+   - Story simulations: `tests/simulations/story_simulation.py`
 
-### File Organization
-1. Core application code in `app/` directory
-2. State management in `models/story.py`
-3. LLM integration in `services/llm/`
-4. WebSocket handling in `routers/websocket.py`
-5. Tests in `tests/` directory
+### Critical Implementation Rules
+1. State Management:
+   - All state MUST be in AdventureState class
+   - Use ChapterType enum for chapter types
+   - Complete state serialization required
+   - Dynamic story length via state.story_length
+   - Type hints required for all state properties
+   - State changes must be logged
 
-## Implementation Guidelines
+2. Chapter Requirements:
+   - First chapter MUST be LESSON type
+   - Last chapter MUST be LESSON type
+   - Middle chapters follow MAX_LESSON_RATIO (40%)
+   - No question repetition in session
+   - Answer options MUST be shuffled
+   - Immediate feedback required
+   - Error recovery for failed state updates
 
-### State Management
-1. All state must be in AdventureState
-2. No state variables outside AdventureState
-3. Complete state serialization required
-4. Use ChapterType enum for chapter types
-5. Dynamic story length via state.story_length
-6. Question data persistence mandatory
-7. State consistency across updates
-8. Error recovery mechanisms
-
-### Question Handling
-1. Sample from user-selected topic
-2. Store question with chapter data
-3. Track used questions
-4. Prevent duplicates
-5. Validate answer selection
-6. Maintain question persistence
-7. Handle question errors gracefully
-8. Ensure state consistency
-
-### Chapter Flow
-1. First chapter always lesson type
-2. Store question with first chapter
-3. Questions sampled dynamically
-4. Answers shuffled for engagement
-5. Alternating lesson/story chapters
-6. Choice-based story progression
-7. Question data persistence
-8. Response handling consistency
-
-### LLM Integration
-1. Provider-agnostic implementation
-2. Cross-provider compatibility required
-3. Abstract provider differences
-4. Keep core logic LLM-API independent
-5. Test with both OpenAI and Gemini
-
-### Prompt Engineering
-1. CRITICAL: All relevant state MUST be passed into prompts
-   - Even perfect state management is useless if data isn't in prompt
-   - LLMs can't maintain continuity without history
-   - Always verify what's actually in the prompt
-2. Chapter-Aware Narrative:
-   - Track chapter numbers for context-appropriate responses
-   - Different handling for immediate vs. later chapters
-   - Avoid redundant explanations in later chapters
-   - Focus on character growth and development
-3. Prompt Debugging Priority:
-   - First check if required data is passed to prompt
-   - Then verify data appears in final prompt
-   - Validate chapter context is properly used
-   - Only then consider LLM guidance issues
-4. Common Issues:
-   - Optional parameters not being passed
-   - State properties not being utilized
-   - Missing history in prompts
-   - Incomplete context
-   - Redundant narrative elements
-   - Missing chapter awareness
+3. Documentation Requirements:
+   - Type hints required for all functions
+   - Docstrings mandatory for all classes/functions
+   - Complex logic must be commented
+   - Error handling must be documented
+   - State changes must be logged
 
 ## Development Workflow
 

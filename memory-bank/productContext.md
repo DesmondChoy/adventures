@@ -18,23 +18,23 @@ Learning Odyssey solves these challenges through:
 
 ## User Experience Flow
 
-1. Initial Setup
-   - User selects lesson topic at landing page
-   - User chooses adventure length
-   - System determines chapter sequence
-   - First chapter is always a lesson type
-   - Last chapter is always a lesson type
+1. Initial Setup (`app/routers/web.py`)
+   - Topic selection at landing page
+   - Adventure length selection
+   - ChapterManager determines sequence
+   - First chapter enforced as LESSON type
+   - Last chapter enforced as LESSON type
 
-2. Adventure Progression
-   - Chapter types determined by ChapterManager (max 40% lessons)
-   - Lesson Chapters:
-     - Questions from curated lessons.csv
-     - LLM generates contextual narrative
-     - Answers affect future narrative
-   - Story Chapters:
-     - Fully LLM-generated content
-     - Three unique narrative choices
-     - Choices affect future chapters
+2. Adventure Progression (`app/services/chapter_manager.py`)
+   - Chapter types follow MAX_LESSON_RATIO (40%)
+   - LESSON chapters:
+     - Questions from lessons.csv
+     - LLM narrative wrapper
+     - Answer impact on future chapters
+   - STORY chapters:
+     - Full LLM generation
+     - Three narrative choices
+     - Choice consequences
 
 3. State Management
    - Real-time state synchronization
@@ -44,42 +44,41 @@ Learning Odyssey solves these challenges through:
 
 ## Key Features
 
-1. Dynamic Content System
-   - Pre-defined lesson database (lessons.csv)
-   - LLM-generated narratives
-   - Unique story choices each time
-   - No repeat questions in session
-   - Consequence-driven progression
+1. Content Management (`app/data/`)
+   - Lesson database (lessons.csv)
+   - Story templates (stories.yaml)
+   - LLM narrative generation
+   - No question repetition
+   - Consequence system
 
-2. Chapter Structure
-   - Strategic chapter type distribution
-   - First/last chapters are lessons
-   - Middle chapters follow 40% lesson max
-   - Every chapter maintains narrative flow
-   - All choices affect future content
+2. Chapter Structure (`app/services/chapter_manager.py`)
+   - First/last chapters: LESSON type
+   - Middle chapters: MAX_LESSON_RATIO (40%)
+   - Narrative continuity
+   - Choice impact system
 
-3. State Handling
-   - Centralized AdventureState
-   - WebSocket synchronization
-   - Provider-agnostic LLM integration
-   - Robust error handling
+3. State Management (`app/models/story.py`)
+   - AdventureState centralization
+   - Real-time synchronization
+   - Complete state tracking
+   - Error recovery
 
 ## Success Metrics
 
 1. Learning Effectiveness
-   - Question response accuracy
-   - Topic comprehension
-   - Learning progression
+   - LESSON response accuracy
+   - Topic understanding
+   - Knowledge progression
    - Content retention
 
 2. User Engagement
-   - Initial topic selection
-   - Answer attempt diversity
-   - Session duration
+   - Topic selection patterns
+   - STORY choice diversity
+   - Session completion rate
    - Return frequency
 
-3. Technical Performance
-   - Question sampling speed
-   - Answer shuffling reliability
-   - State synchronization accuracy
-   - System stability
+3. System Performance
+   - Content generation speed
+   - State sync reliability
+   - Error recovery time
+   - System uptime
