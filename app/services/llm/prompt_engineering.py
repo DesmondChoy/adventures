@@ -185,54 +185,6 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
         f"{''.join(filter(None, chapter_history))}"  # filter(None) removes empty strings
     )
 
-    # Debug log the complete history being used
-    import logging
-
-    logger = logging.getLogger("story_app")
-    logger.debug("\n=== DEBUG: LLM Prompt Request ===")
-    logger.debug("System Prompt:")
-    logger.debug(
-        "You are a master storyteller crafting an interactive educational story."
-    )
-    logger.debug("\nStory State:")
-    logger.debug(f"- Chapter: {state.current_chapter_number} of {state.story_length}")
-    logger.debug(f"- Story Phase: {story_phase}")
-    logger.debug(
-        f"- Lesson Progress: {state.correct_lesson_answers}/{state.total_lessons}"
-    )
-    logger.debug("\nComplete Story History:")
-
-    # Log each chapter's content and responses
-    for chapter in state.chapters:
-        logger.debug(f"\nChapter {chapter.chapter_number}:")
-        logger.debug("Content:")
-        logger.debug(chapter.content.strip())
-
-        if chapter.chapter_type == ChapterType.LESSON and chapter.response:
-            lesson_response = cast(LessonResponse, chapter.response)
-            correct_answer = next(
-                answer["text"]
-                for answer in lesson_response.question["answers"]
-                if answer["is_correct"]
-            )
-            logger.debug("\nLesson Outcome:")
-            logger.debug(f"Question: {lesson_response.question['question']}")
-            logger.debug(f"Student's Answer: {lesson_response.chosen_answer}")
-            logger.debug(
-                f"Outcome: {'Correct' if lesson_response.is_correct else 'Incorrect'}"
-            )
-            logger.debug(f"Correct Answer: {correct_answer}")
-
-        if chapter.chapter_type == ChapterType.STORY and chapter.response:
-            story_response = cast(StoryResponse, chapter.response)
-            logger.debug("\nStory Choice:")
-            logger.debug(f"Chosen: {story_response.choice_text}")
-
-        if len(state.chapters) > 1 and chapter != state.chapters[-1]:
-            logger.debug("\n---")
-
-    logger.debug("\n========================\n")
-
     return base_prompt, story_phase
 
 
