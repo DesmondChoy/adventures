@@ -20,11 +20,26 @@ The project is implementing core Learning Odyssey features:
 ## Recent Changes
 
 ### State Management (`app/models/story.py`)
+- Enhanced state tracking system:
+  * Sequential progression via chapter_number
+  * Navigation paths via current_chapter_id
+  * Clear separation of concerns:
+    - ChapterManager uses chapter_number
+    - WebSocket router uses current_chapter_id
+  * Improved state serialization
+  * Better error recovery
+
 - Added planned_chapter_types to AdventureState:
   * Pre-determined sequence of chapter types
   * Stored during state initialization
   * Single source of truth for chapter progression
   * Maintains complete state serialization
+
+- Current focus areas:
+  * State synchronization optimization
+  * Navigation path validation
+  * Error recovery improvements
+  * Client-server state consistency
 
 ### Chapter Management (`app/services/chapter_manager.py`)
 - Enhanced state initialization:

@@ -73,6 +73,70 @@ graph TD
   * Question data persistence
   * Recovery mechanisms
 
+- Navigation State Pattern:
+  * Separation of Concerns:
+    - Sequential Tracking (chapter_number):
+      * ChapterManager's domain
+      * Handles progression logic
+      * Manages chapter sequencing
+      * Controls story length
+    - Navigation Tracking (current_chapter_id):
+      * WebSocket router's domain
+      * Manages routing/navigation
+      * Handles state restoration
+      * Controls narrative branching
+
+  * Educational Benefits:
+    - Comprehensive Progress Tracking:
+      * Linear progress via chapter_number
+      * Learning paths via current_chapter_id
+      * Student decision analysis
+      * Personalized narrative branches
+    - Learning Assessment:
+      * Track correct/incorrect answers
+      * Monitor decision patterns
+      * Analyze learning strategies
+      * Measure concept understanding
+
+  * System Architecture Benefits:
+    - Clear Separation of Concerns:
+      * Progression logic isolated
+      * Navigation handling separated
+      * Clean component boundaries
+      * Reduced system coupling
+    - Maintainability:
+      * Independent component testing
+      * Simplified debugging
+      * Clear responsibility boundaries
+      * Easier system extensions
+
+  * Implementation Details:
+    - Sequential Tracking:
+      * chapter_number (integer): Linear progression (1, 2, 3...)
+      * Used by ChapterManager for sequence validation
+      * Ensures proper chapter ordering
+      * Critical for chapter type determination
+    
+    - Navigation Tracking:
+      * current_chapter_id (string): User's path through content
+      * Values:
+        - "start": Initial state
+        - "correct"/"wrongX": Lesson responses
+        - "chapter_X_Y": Story choice paths
+      * Critical for client-server synchronization
+      * Enables branching narrative paths
+
+  * State Synchronization:
+    - WebSocket Updates:
+      * Sends current_chapter_id for client routing
+      * Maintains chapter_number for progression
+      * Ensures consistent state across client/server
+    
+    - Recovery Mechanisms:
+      * Can rebuild state from either tracker
+      * Maintains integrity during connection issues
+      * Supports state restoration from client data
+
 - Chapter Type Management:
   * Sequence determined upfront by ChapterManager
   * Stored in AdventureState.planned_chapter_types

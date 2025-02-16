@@ -87,7 +87,55 @@ pytest-asyncio==0.21.1
 ## Technical Constraints
 
 ### State Management (`app/models/story.py`)
-- AdventureState as single source of truth
+- AdventureState Implementation:
+  * Component Separation:
+    - ChapterManager:
+      * Uses chapter_number
+      * Handles progression
+      * Manages chapter types
+      * Controls story flow
+    - WebSocket Router:
+      * Uses current_chapter_id
+      * Manages client state
+      * Handles navigation
+      * Controls branching
+
+  * Educational Features:
+    - Progress Tracking:
+      * Sequential progression
+      * Learning path analysis
+      * Decision point tracking
+      * Performance assessment
+    - Personalization:
+      * Branching narratives
+      * Adaptive learning
+      * Choice consequences
+      * Learning style analysis
+
+  * Technical Advantages:
+    - System Integrity:
+      * Independent state validation
+      * Clear data ownership
+      * Simplified testing
+      * Robust error handling
+    - Maintainability:
+      * Modular components
+      * Clear responsibilities
+      * Easy debugging
+      * Future extensibility
+
+  * State Synchronization:
+    - WebSocket Protocol:
+      * Sends current_chapter_id for client updates
+      * Validates chapter_number for progression
+      * Maintains bidirectional state sync
+      * Handles connection recovery
+    - Error Recovery:
+      * State reconstruction from either tracker
+      * Connection interruption handling
+      * Client state restoration
+      * Integrity validation
+
 - Real-time WebSocket synchronization
 - Complete state serialization
 - Error recovery system
