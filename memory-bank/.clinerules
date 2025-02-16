@@ -23,8 +23,10 @@
 
 ### Critical Implementation Rules
 1. State Management:
-   - All state MUST be in AdventureState class
-   - Use ChapterType enum for chapter types
+   - AdventureState MUST be single source of truth
+   - NEVER hardcode chapter numbers (app logic may change)
+   - Use planned_chapter_types for chapter progression
+   - Base logic on state properties, not assumptions
    - Complete state serialization required
    - Dynamic story length via state.story_length
    - Type hints required for all state properties

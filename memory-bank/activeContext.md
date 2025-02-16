@@ -39,6 +39,11 @@ The project is implementing core Learning Odyssey features:
   * Removed hard-coded chapter type assumptions
   * Enhanced state-driven progression
   * Better state consistency in prompts
+- Simplified process_consequences():
+  * Removed hardcoded chapter number checks
+  * Logic now based purely on is_correct state
+  * Maintains high-quality narrative guidance
+  * Follows state-driven pattern
 
 ## Active Decisions
 

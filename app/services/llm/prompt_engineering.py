@@ -363,9 +363,9 @@ def process_consequences(
     is_correct: bool,
     lesson_question: Dict[str, Any],
     chosen_answer: str,
-    chapter_number: int,
+    chapter_number: int,  # Kept for backward compatibility but no longer used
 ) -> str:
-    """Generate appropriate story consequences based on lesson response and chapter context."""
+    """Generate appropriate story consequences based on lesson response."""
     # Find the correct answer from the answers array
     correct_answer = next(
         answer["text"] for answer in lesson_question["answers"] if answer["is_correct"]
@@ -376,18 +376,10 @@ def process_consequences(
 - Acknowledge that the character correctly identified {correct_answer} as the answer
 - Show how this understanding of {lesson_question["question"]} connects to their current situation
 - Use this success to build confidence for future challenges"""
-
-    # Only provide detailed correction guidance in the immediate next chapter
-    if chapter_number == 2:  # First chapter after the incorrect answer
+    else:
         return f"""The story should:
 - Acknowledge that the character answered {chosen_answer}
 - Explain that {correct_answer} was the correct answer
 - Show how this misunderstanding of {lesson_question["question"]} leads to a valuable learning moment
 - Use this as an opportunity for growth and deeper understanding
 - Connect the correction to their current situation and future challenges"""
-
-    # For later chapters, focus on moving forward
-    return f"""The story should:
-- Build upon the character's previous learning about {lesson_question["question"]}
-- Show how their understanding has evolved since learning the correct answer
-- Connect this growth to their current challenges"""
