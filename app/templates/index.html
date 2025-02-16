@@ -77,6 +77,16 @@
         <!-- Story Container (Initially Hidden) -->
         <div id="storyContainer" class="mt-8 max-w-2xl mx-auto hidden">
             <div class="bg-white rounded-xl shadow-md p-6">
+                <!-- Progress Tracking -->
+                <div class="w-full flex items-center space-x-4 mb-6">
+                    <div class="text-sm font-medium">
+                        Chapter <span id="current-chapter">1</span> of <span id="total-chapters">-</span>
+                    </div>
+                    <div class="flex-1 bg-gray-200 rounded-full h-2">
+                        <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300 ease-in-out" style="width: 0%"></div>
+                    </div>
+                </div>
+
                 <!-- Modular Loader -->
                 <div id="loader" class="loader-container hidden">
                     <div class="loader loader-primary loader-md"></div>
@@ -92,6 +102,14 @@
 
     <script>
         let storyWebSocket;
+        
+        // Function to update progress display
+        function updateProgress(currentChapter, totalChapters) {
+            document.getElementById('current-chapter').textContent = currentChapter;
+            document.getElementById('total-chapters').textContent = totalChapters;
+            const progressPercentage = (currentChapter / totalChapters) * 100;
+            document.getElementById('progress-bar').style.width = `${progressPercentage}%`;
+        }
         
         // Function to reset application state
         function resetApplicationState() {
@@ -110,6 +128,9 @@
             // Clear story content and choices
             document.getElementById('storyContent').textContent = '';
             document.getElementById('choicesContainer').innerHTML = '';
+            
+            // Reset progress
+            updateProgress(1, '-');
             
             // Close WebSocket if it exists
             if (storyWebSocket) {
@@ -150,6 +171,9 @@
             const storyCategory = document.getElementById('storyCategory').value;
             const lessonTopic = document.getElementById('lessonTopic').value;
             const storyLength = parseInt(document.getElementById('storyLength').value);
+            
+            // Initialize progress tracking
+            updateProgress(1, storyLength);
             
             // Hide the form container and intro text, and show the story container
             document.getElementById('formContainer').classList.add('hidden');
@@ -216,6 +240,9 @@
                 const selectedStoryLength = parseInt(document.getElementById('storyLength').value);
                 
                 if (Object.keys(storyState).length > 0) {
+                    const currentChapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
+                    updateProgress(currentChapter + 1, storyState.storyLength || selectedStoryLength);
+                    
                     storyWebSocket.send(JSON.stringify({
                         state: {
                             current_chapter_id: storyState.choice?.chosen_path || 'start',
@@ -348,6 +375,9 @@
 
                 sessionStorage.setItem('storyState', JSON.stringify(currentState));
                 sessionStorage.setItem('storyChapter', currentState.current_chapter_number.toString());
+                
+                // Update progress display
+                updateProgress(currentState.current_chapter_number + 1, currentState.storyLength);
 
                 // First send the state update
                 storyWebSocket.send(JSON.stringify({
@@ -404,6 +434,9 @@
             if (chapter > 0 && storyState && storyState.storyCategory && storyState.lessonTopic && storyState.storyLength) {
                 // Show loader during session restoration
                 showLoader();
+                
+                // Update progress display
+                updateProgress(chapter + 1, storyState.storyLength);
                 
                 // Hide the form and intro text, and show story container
                 document.getElementById('formContainer').classList.add('hidden');
