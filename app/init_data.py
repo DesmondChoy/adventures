@@ -54,6 +54,8 @@ def sample_question(topic: str, exclude_questions: list = None) -> dict:
         "question": sampled["question"],
         "answers": randomized_answers,
         "explanation": sampled["explanation"],
+        "topic": sampled["topic"],
+        "subtopic": sampled["subtopic"],
     }
 
 

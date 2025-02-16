@@ -51,10 +51,11 @@
 4. Edge case handling needed
 
 ### LLM Integration (`app/services/llm/`)
-1. OpenAI/Gemini cross-testing needed
-2. Response format standardization pending
-3. Rate limiting implementation required
-4. Error recovery improvements needed
+1. ~~Basic prompt engineering~~ ✓ Enhanced with topic/subtopic-based world building
+2. OpenAI/Gemini cross-testing needed
+3. Response format standardization pending
+4. Rate limiting implementation required
+5. Error recovery improvements needed
 
 ### Content Flow (`app/services/chapter_manager.py`)
 1. Question sampling optimization needed

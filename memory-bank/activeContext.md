@@ -34,6 +34,11 @@ The project is implementing core Learning Odyssey features:
   * Better error handling
 
 ### Prompt Engineering (`app/services/llm/prompt_engineering.py`)
+- Enhanced world-building system:
+  * Uses topic/subtopic for thematic world creation
+  * Improved data structures in LessonQuestion
+  * Better narrative coherence through subject connections
+  * More meaningful fantasy world generation
 - Improved narrative continuity:
   * Use planned_chapter_types for accurate chapter type info
   * Removed hard-coded chapter type assumptions

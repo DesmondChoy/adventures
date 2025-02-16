@@ -34,6 +34,9 @@ class LessonQuestion(TypedDict):
 
     question: str
     answers: List[Dict[str, Any]]  # List of {text: str, is_correct: bool}
+    topic: str
+    subtopic: str
+    explanation: str
 
 
 class LessonHistory(TypedDict):
@@ -223,7 +226,7 @@ The scene should establish the world and protagonist while naturally leading to 
 Remember this is the beginning of a {chapter_count}-chapter journey.
 
 CRITICAL INSTRUCTIONS:
-1. Create an immersive fantasy world that will subtly connect to {lesson_question["question"].split()[0]}'s history
+1. Create an immersive fantasy world that subtly connects to {lesson_question["topic"]}, including but not limited to {lesson_question["subtopic"]}
 2. The question should emerge naturally from the story events or character interactions
 3. DO NOT include any story-based choices or decisions
 4. DO NOT use bullet points, numbered lists, or dashes
