@@ -132,7 +132,11 @@ class ChapterManager:
         Returns:
             Number of available questions for the topic
         """
-        question_count = len(sample_question(lesson_topic, exclude_questions=[]))
+        from app.init_data import load_lesson_data
+
+        df = load_lesson_data()
+        topic_questions = df[df["topic"] == lesson_topic]
+        question_count = len(topic_questions)
         logger.info(
             f"Counted available questions for topic",
             extra={"lesson_topic": lesson_topic, "question_count": question_count},
@@ -141,13 +145,13 @@ class ChapterManager:
 
     @staticmethod
     def initialize_adventure_state(
-        total_chapters: int, chapter_types: List[ChapterType]
+        total_chapters: int, lesson_topic: str
     ) -> AdventureState:
         """Initialize a new adventure state with the determined chapter types.
 
         Args:
             total_chapters: Total number of chapters in the adventure
-            chapter_types: Pre-determined sequence of chapter types
+            lesson_topic: The topic of the lessons
 
         Returns:
             Initialized AdventureState object
@@ -156,8 +160,12 @@ class ChapterManager:
             "Initializing adventure state",
             extra={
                 "total_chapters": total_chapters,
-                "chapter_sequence": [ct.value for ct in chapter_types],
+                "lesson_topic": lesson_topic,
             },
+        )
+        available_questions = ChapterManager.count_available_questions(lesson_topic)
+        chapter_types = ChapterManager.determine_chapter_types(
+            total_chapters, available_questions
         )
         return AdventureState(
             current_chapter_id="start",

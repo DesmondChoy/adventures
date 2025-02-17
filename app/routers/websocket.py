@@ -114,9 +114,9 @@ async def generate_chapter(
     story_data = load_story_data()
     story_config = story_data["story_categories"][story_category]
 
-    # Get the chapter type from the story configuration based on the current chapter
+    # Get the chapter type from the planned chapter types in state
     current_chapter_number = len(state.chapters) + 1
-    chapter_type = story_config["chapter_types"][current_chapter_number - 1]
+    chapter_type = state.planned_chapter_types[current_chapter_number - 1]
     if not isinstance(chapter_type, ChapterType):
         chapter_type = ChapterType(chapter_type)  # Convert string to enum if needed
 
@@ -203,6 +203,9 @@ async def generate_chapter(
             # Remove the choices section from the main content
             story_content = story_content[:choices_start].strip()
 
+            # Remove any "Chapter X:" prefix
+            story_content = re.sub(r"^Chapter \d+:\s*", "", story_content).strip()
+
             # Parse choices using regex
             choice_pattern = r"Choice ([ABC]): (.+)$"
             choices = []
@@ -279,22 +282,9 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                     logger.debug("=============================")
 
                     try:
-                        # Use ChapterManager to handle initialization logic
-                        available_questions = chapter_manager.count_available_questions(
-                            lesson_topic
-                        )
-                        chapter_types = chapter_manager.determine_chapter_types(
-                            total_chapters, available_questions
-                        )
-
-                        # Store chapter types in story configuration
-                        story_data = load_story_data()
-                        story_config = story_data["story_categories"][story_category]
-                        story_config["chapter_types"] = chapter_types
-
                         # Initialize state using ChapterManager
                         state = chapter_manager.initialize_adventure_state(
-                            total_chapters, chapter_types
+                            total_chapters, lesson_topic
                         )
 
                     except ValueError as e:
@@ -380,16 +370,12 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                 # Only process choice and update chapters for non-start messages
                 if chosen_path != "start":
                     # Get the chapter type from the story configuration
-                    story_data = load_story_data()
-                    story_config = story_data["story_categories"][story_category]
                     current_chapter_number = len(state.chapters) + 1
-                    chapter_type = story_config["chapter_types"][
+                    chapter_type = state.planned_chapter_types[
                         current_chapter_number - 1
                     ]
                     if not isinstance(chapter_type, ChapterType):
-                        chapter_type = ChapterType(
-                            chapter_type
-                        )  # Convert string to enum if needed
+                        chapter_type = ChapterType(chapter_type)
 
                     # First, handle the response to the previous chapter
                     previous_chapter = state.chapters[-1]  # Get the last chapter
@@ -498,15 +484,30 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
 
                 # If this is the start, generate and store the first chapter
                 if chosen_path == "start":
+                    # Use ChapterManager to handle initialization logic AFTER topic and length are known
+                    available_questions = chapter_manager.count_available_questions(
+                        lesson_topic
+                    )
+
+                    chapter_types = chapter_manager.determine_chapter_types(
+                        total_chapters, available_questions
+                    )
+
+                    # Store chapter types in story configuration
+                    story_data = load_story_data()
+                    story_config = story_data["story_categories"][story_category]
+                    story_config["chapter_types"] = [ct.value for ct in chapter_types]  # type: ignore
+
+                    # Initialize state using ChapterManager
+                    state = chapter_manager.initialize_adventure_state(
+                        total_chapters, lesson_topic
+                    )
                     chapter_content, sampled_question = await generate_chapter(
                         story_category, lesson_topic, state
                     )
+
                     # Get chapter type for first chapter
-                    story_data = load_story_data()
-                    story_config = story_data["story_categories"][story_category]
-                    chapter_type = story_config["chapter_types"][0]
-                    if not isinstance(chapter_type, ChapterType):
-                        chapter_type = ChapterType(chapter_type)
+                    chapter_type = state.planned_chapter_types[0]
 
                     # Store the first chapter with the question if it's a lesson
                     state.chapters.append(

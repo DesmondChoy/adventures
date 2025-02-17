@@ -22,6 +22,15 @@
 - [x] Response processing
 - [x] Error handling framework
 
+### Content Management
+- [x] Correct chapter type determination and transitions
+
+### Bug Fixes
+- [x] Fixed incorrect chapter type determination in `ChapterManager.initialize_adventure_state`.
+- [x] Fixed incorrect chapter type determination in `story_websocket`.
+- [x] Fixed duplication of "Chapter X:" prefix in generated content.
+- [x] Resolved `TypeError` caused by incorrect chapter type logic.
+
 ## In Progress
 
 ### State Implementation
@@ -51,7 +60,6 @@
 4. Edge case handling needed
 
 ### LLM Integration (`app/services/llm/`)
-1. ~~Basic prompt engineering~~ ✓ Enhanced with topic/subtopic-based world building
 2. OpenAI/Gemini cross-testing needed
 3. Response format standardization pending
 4. Rate limiting implementation required
@@ -59,7 +67,6 @@
 
 ### Content Flow (`app/services/chapter_manager.py`)
 1. Question sampling optimization needed
-2. ~~LESSON/STORY transition handling~~ ✓ Implemented via planned_chapter_types
 3. State persistence refinement
 4. Error recovery enhancement
 

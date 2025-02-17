@@ -66,6 +66,9 @@
    - app/data/stories.yaml
    - app/data/lessons.csv
 
+### Note: 2025-02-17
+   - Story simulations should be run due to recent changes to app/routers/websocket.py and app/services/chapter_manager.py to fix chapter type and content issues.
+
 ### Debugging Process
 1. Verify question sampling
 2. Check answer shuffling

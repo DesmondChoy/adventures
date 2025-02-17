@@ -177,6 +177,12 @@ The project is implementing core Learning Odyssey features:
    - State sync refinement
    - Progress tracking refinements
 
+### Bug Fixes
+- Fixed incorrect chapter type determination in `ChapterManager.initialize_adventure_state` by passing the question count instead of the topic string.
+- Fixed incorrect chapter type determination in `story_websocket` by using `state.planned_chapter_types` instead of `story_config["chapter_types"]`.
+- Fixed duplication of "Chapter X:" prefix by removing it from the generated content in `generate_chapter` using a regular expression.
+- Resolved `TypeError` caused by incorrect chapter type logic.
+
 ### Short Term
 1. Features
    - Enhanced topic selection
@@ -191,3 +197,23 @@ The project is implementing core Learning Odyssey features:
    - Error simulation
    - Performance profiling
    - Progress tracking stress tests
+
+### Current Considerations
+
+#### Technical
+1. Performance
+   - LLM response times
+   - WebSocket latency
+   - State synchronization speed
+   - Error recovery time
+   - Progress updates smoothness
+
+2. Reliability
+   - WebSocket connection stability
+   - LLM service availability
+   - State consistency
+   - Error handling coverage
+   - Progress tracking accuracy
+
+#### Bug Fixes
+- Thorough testing, including story simulations, is required to verify the recent fixes and ensure no regressions were introduced.

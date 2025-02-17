@@ -64,6 +64,7 @@ graph TD
 - Middle chapters follow MAX_LESSON_RATIO (40%)
 - LESSON chapters limited by available questions in lessons.csv
 - STORY chapters use full LLM generation
+- The chapter type for each chapter during the adventure is determined using `state.planned_chapter_types`.
 
 ### 2. State Management Pattern
 - Centralized AdventureState:
@@ -143,6 +144,7 @@ graph TD
   * Used consistently across all components
   * No hard-coded assumptions about chapter types
   * Maintains state integrity throughout adventure
+  * The chapter type for each chapter is determined using `state.planned_chapter_types`.
 
 ### 3. Question Handling Pattern
 - Question Lifecycle:
