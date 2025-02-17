@@ -58,6 +58,10 @@ The project is implementing core Learning Odyssey features:
   * Error recovery improvements
   * Client-server state consistency
 
+### WebSocket Router (`app/routers/websocket.py`)
+- Fixed "N/A" values in "Story Configuration" debug logs by using the correct variables (`story_category`, `lesson_topic`) from the function signature instead of `validated_state`.
+- Removed duplicate call to `initialize_adventure_state` in `story_websocket` to prevent redundant state initialization.
+
 ### Chapter Management (`app/services/chapter_manager.py`)
 - Enhanced state initialization:
   * Store chapter type sequence in AdventureState
@@ -182,6 +186,8 @@ The project is implementing core Learning Odyssey features:
 - Fixed incorrect chapter type determination in `story_websocket` by using `state.planned_chapter_types` instead of `story_config["chapter_types"]`.
 - Fixed duplication of "Chapter X:" prefix by removing it from the generated content in `generate_chapter` using a regular expression.
 - Resolved `TypeError` caused by incorrect chapter type logic.
+- Fixed "N/A" values in "Story Configuration" debug logs by using the correct variables.
+- Removed duplicate call to `initialize_adventure_state` in `story_websocket`.
 
 ### Short Term
 1. Features

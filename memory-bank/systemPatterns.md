@@ -129,14 +129,17 @@ graph TD
 
   * State Synchronization:
     - WebSocket Updates:
-      * Sends current_chapter_id for client routing
-      * Maintains chapter_number for progression
-      * Ensures consistent state across client/server
-    
-    - Recovery Mechanisms:
-      * Can rebuild state from either tracker
-      * Maintains integrity during connection issues
-      * Supports state restoration from client data
+      * Sends current_chapter_id for client updates
+      * Validates chapter_number for progression
+      * Maintains bidirectional state sync
+      * Handles connection recovery
+    - Error Recovery:
+      * State reconstruction from either tracker
+      * Connection interruption handling
+      * Client state restoration
+      * Integrity validation
+
+  * **Important Implementation Detail:** The `story_category` and `lesson_topic` are passed as URL parameters to the WebSocket endpoint and are not included in the `validated_state`.
 
 - Chapter Type Management:
   * Sequence determined upfront by ChapterManager
@@ -236,15 +239,15 @@ graph TD
 - Error Recovery:
   1. Prompt Failures:
      - Log complete prompt content
-     - Track missing state properties
-     - Implement fallback responses
-     - Maintain narrative consistency
+     * Track missing state properties
+     * Implement fallback responses
+     * Maintain narrative consistency
   
   2. State Inconsistency:
-     - Detect narrative discontinuity
-     - Implement state recovery
-     - Log recovery attempts
-     - Maintain error boundaries
+     * Detect narrative discontinuity
+     * Implement state recovery
+     * Log recovery attempts
+     * Maintain error boundaries
 
 ### 6. Testing Pattern
 - Automated adventure simulation

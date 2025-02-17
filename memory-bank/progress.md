@@ -30,6 +30,8 @@
 - [x] Fixed incorrect chapter type determination in `story_websocket`.
 - [x] Fixed duplication of "Chapter X:" prefix in generated content.
 - [x] Resolved `TypeError` caused by incorrect chapter type logic.
+- [x] Fixed "N/A" values in "Story Configuration" debug logs.
+- [x] Removed duplicate call to `initialize_adventure_state` in `story_websocket`.
 
 ## In Progress
 

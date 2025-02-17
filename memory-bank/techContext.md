@@ -217,6 +217,11 @@ pytest-asyncio==0.21.1
 - Error tracking
 - Performance metrics
 
+### Debugging WebSocket Issues (`app/routers/websocket.py`)
+- Validate initial state parameters (`story_category`, `lesson_topic`, `story_length`) are correctly passed from the client.
+- Verify that `initialize_adventure_state` is only called once per adventure.
+- Use debug logging to track the flow of data and identify the source of incorrect values.
+
 ## Monitoring
 
 ### System Health

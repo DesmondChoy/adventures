@@ -263,29 +263,30 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                 validated_state = data["state"]
                 if not state:
                     total_chapters = validated_state["story_length"]
-                    story_category_log = validated_state.get(
-                        "story_category", "N/A"
-                    )  # Extract story_category
-                    lesson_topic_log = validated_state.get(
-                        "lesson_topic", "N/A"
-                    )  # Extract lesson_topic
-                    story_length_log = validated_state.get(
-                        "story_length_num", "N/A"
-                    )  # Extract story_length_num
-
-                    logger.debug(
-                        "=== Story Configuration ==="
-                    )  # Log using story_app logger
-                    logger.debug(f"Category: {story_category_log}")
-                    logger.debug(f"Topic: {lesson_topic_log}")
-                    logger.debug(f"Length: {story_length_log} chapters")
-                    logger.debug("=============================")
 
                     try:
                         # Initialize state using ChapterManager
                         state = chapter_manager.initialize_adventure_state(
                             total_chapters, lesson_topic
                         )
+
+                        story_category_log = validated_state.get(
+                            "story_category", "N/A"
+                        )  # Extract story_category
+                        lesson_topic_log = validated_state.get(
+                            "lesson_topic", "N/A"
+                        )  # Extract lesson_topic
+                        story_length_log = validated_state.get(
+                            "story_length", "N/A"
+                        )  # Extract story_length_num
+
+                        logger.debug(
+                            "=== Story Configuration ==="
+                        )  # Log using story_app logger
+                        logger.debug(f"Category: {story_category}")
+                        logger.debug(f"Topic: {lesson_topic}")
+                        logger.debug(f"Length: {story_length_log} chapters")
+                        logger.debug("=============================")
 
                     except ValueError as e:
                         await websocket.send_text(str(e))
@@ -484,24 +485,6 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
 
                 # If this is the start, generate and store the first chapter
                 if chosen_path == "start":
-                    # Use ChapterManager to handle initialization logic AFTER topic and length are known
-                    available_questions = chapter_manager.count_available_questions(
-                        lesson_topic
-                    )
-
-                    chapter_types = chapter_manager.determine_chapter_types(
-                        total_chapters, available_questions
-                    )
-
-                    # Store chapter types in story configuration
-                    story_data = load_story_data()
-                    story_config = story_data["story_categories"][story_category]
-                    story_config["chapter_types"] = [ct.value for ct in chapter_types]  # type: ignore
-
-                    # Initialize state using ChapterManager
-                    state = chapter_manager.initialize_adventure_state(
-                        total_chapters, lesson_topic
-                    )
                     chapter_content, sampled_question = await generate_chapter(
                         story_category, lesson_topic, state
                     )
@@ -540,10 +523,8 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                     await asyncio.sleep(PARAGRAPH_DELAY)
 
                 # Get the chapter type for the current chapter
-                story_data = load_story_data()
-                story_config = story_data["story_categories"][story_category]
                 current_chapter_number = len(state.chapters) + 1
-                chapter_type = story_config["chapter_types"][current_chapter_number - 1]
+                chapter_type = state.planned_chapter_types[current_chapter_number - 1]
                 if not isinstance(chapter_type, ChapterType):
                     chapter_type = ChapterType(chapter_type)
 
