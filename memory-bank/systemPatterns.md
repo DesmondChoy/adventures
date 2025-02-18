@@ -50,13 +50,11 @@ graph TD
 ### 4. Chapter Manager (`app/services/chapter_manager.py`)
 - Chapter type determination (MAX_LESSON_RATIO: 40%)
 - First/last chapter lesson enforcement
-- Question sampling from lessons.csv
-- LLM narrative generation
 - Adventure flow control
 
 ### 5. LLM Integration (`app/services/llm/`)
 - Provider-agnostic implementation
-- Narrative generation for both chapter types
+- **Narrative generation for both chapter types (using prompts in `app/services/llm/prompt_engineering.py`)**
 - Story choice generation
 - Narrative continuity management
 - Response processing
@@ -157,7 +155,7 @@ graph TD
 
 ### 3. Question Handling Pattern
 - Question Lifecycle:
-  1. Sample question from lessons.csv
+  1. Sample question from lessons.csv (handled by `ChapterManager`)
   2. Store with chapter data
   3. Use for response creation
   4. Persist through state updates
@@ -174,8 +172,8 @@ graph TD
 
 ### 4. Content Management Pattern
 - Lesson questions from lessons.csv
-- LLM-generated narratives
-- LLM-generated story choices
+- LLM-generated narratives (via `app/services/llm/prompt_engineering.py`)
+- LLM-generated story choices (via `app/services/llm/prompt_engineering.py`)
 - Narrative continuity enforcement
 - Consequence handling
 
@@ -267,14 +265,14 @@ graph TD
 1. User selects topic and length at landing
 2. ChapterManager determines chapter sequence
 3. First chapter (lesson) begins
-4. Question sampled from lessons.csv
-5. LLM generates narrative
+4. Question sampled from lessons.csv (by `ChapterManager`)
+5. LLM generates narrative (using prompts from `app/services/llm/prompt_engineering.py`)
 6. State tracks progression
 
 ### Chapter Progression
 1. Content source varies by chapter type:
-   - Lesson: lessons.csv + LLM narrative
-   - Story: Full LLM generation
+   - Lesson: lessons.csv + LLM narrative (prompted by `app/services/llm/prompt_engineering.py`)
+   - Story: Full LLM generation (prompted by `app/services/llm/prompt_engineering.py`)
 2. Narrative continuity maintained
 3. Previous chapter consequences reflected
 4. No repeat questions in session

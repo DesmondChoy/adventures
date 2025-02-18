@@ -3,10 +3,10 @@
 ## Current Focus
 The project is implementing core Learning Odyssey features:
 
-1. Adventure Flow Implementation (`app/services/chapter_manager.py`)
+1. Adventure Flow Implementation
    - Landing page topic and length selection
-   - ChapterType determination (LESSON/STORY)
-   - Content source integration:
+   - **`app/services/chapter_manager.py`**: ChapterType determination (LESSON/STORY)
+   - **`app/services/llm/prompt_engineering.py`**: Content source integration:
      - LESSON chapters: lessons.csv + LLM narrative wrapper
      - STORY chapters: Full LLM generation
    - Narrative continuity via prompt engineering
@@ -100,16 +100,21 @@ The project is implementing core Learning Odyssey features:
 ## Active Decisions
 
 ### Architecture
-1. Content Flow (`app/services/chapter_manager.py`)
-   - LESSON chapters:
-     * Questions from lessons.csv
-     * LLM narrative wrapper
-     * Response validation
-   - STORY chapters:
-     * Full LLM generation
-     * Three choices per chapter
-   - Outcome tracking in AdventureState
-   - Narrative continuity via prompts
+1. Content Flow
+    - **`app/services/chapter_manager.py`**:
+        - Determines ChapterType (LESSON/STORY)
+        - Enforces first/last chapter LESSON type
+        - Enforces MAX_LESSON_RATIO (40%) for middle chapters
+    - **`app/services/llm/prompt_engineering.py`**:
+        - LESSON chapters:
+            * Questions from lessons.csv
+            * LLM narrative wrapper
+            * Response validation
+        - STORY chapters:
+            * Full LLM generation
+            * Three choices per chapter
+    - Outcome tracking in AdventureState
+    - Narrative continuity via prompts
 
 2. Testing Strategy (`tests/simulations/`)
    - Story simulation framework

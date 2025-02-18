@@ -9,9 +9,7 @@ from app.models.story import (
 )
 from app.services.llm import LLMService
 from app.services.chapter_manager import ChapterManager
-from app.services.adventure_state_manager import (
-    AdventureStateManager,
-)  # Import the new class
+from app.services.adventure_state_manager import AdventureStateManager
 from app.init_data import sample_question
 import yaml
 import pandas as pd
