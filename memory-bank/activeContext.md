@@ -58,11 +58,23 @@ The project is implementing core Learning Odyssey features:
   * Error recovery improvements
   * Client-server state consistency
 
-### WebSocket Router (`app/routers/websocket.py`)
-- Decoupled state management from the WebSocket handler.
-- Now uses `AdventureStateManager` to handle state initialization, updates, and access.
-- Fixed "N/A" values in "Story Configuration" debug logs by using the correct variables (`story_category`, `lesson_topic`) from the function signature instead of `validated_state`.
-- Removed duplicate call to `initialize_adventure_state` in `story_websocket` to prevent redundant state initialization.
+### WebSocket Architecture Refactoring
+- Split WebSocket handling into two components:
+  * **`app/routers/websocket_router.py`**:
+    - Focused on routing and connection management
+    - Handles WebSocket lifecycle (accept/disconnect)
+    - Manages initial state setup and updates
+    - Routes messages to appropriate service functions
+  * **`app/services/websocket_service.py`**:
+    - Contains core business logic
+    - Processes user choices
+    - Generates chapter content
+    - Manages streaming and message sending
+- Benefits of this separation:
+  * Clearer separation of concerns
+  * More maintainable codebase
+  * Easier testing and debugging
+  * Better error handling isolation
 
 ### Chapter Management (`app/services/chapter_manager.py`)
 - Enhanced state initialization:

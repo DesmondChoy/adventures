@@ -3,8 +3,9 @@
 ## Architecture Overview
 ```mermaid
 graph TD
-    Client[Web Client] <--> WS[WebSocket Router]
-    WS <--> ASM[Adventure State Manager]
+    Client[Web Client] <--> WSR[WebSocket Router]
+    WSR <--> WSS[WebSocket Service]
+    WSS <--> ASM[Adventure State Manager]
     ASM <--> AS[AdventureState]
     ASM <--> CM[Chapter Manager]
     CM <--> LLM[LLM Service]
@@ -15,9 +16,14 @@ graph TD
     end
 
     subgraph Services
+        WSS
         ASM
         CM
         LLM
+    end
+
+    subgraph Routing
+        WSR
     end
 
     subgraph Content Sources
@@ -36,11 +42,35 @@ graph TD
 - Question and answer tracking
 - Narrative continuity enforcement
 
-### 2. WebSocket Router (`app/routers/websocket.py`)
-- WebSocket communication and event handling.
-- Receives client requests (e.g., topic selection, choices).
-- Interacts with `AdventureStateManager` to manage state.
-- Sends updates to the client (e.g., new chapter content, choices).
+### 2. WebSocket Components
+#### WebSocket Router (`app/routers/websocket_router.py`)
+- Core routing and connection management:
+  * Handles WebSocket endpoint definition
+  * Manages connection lifecycle (accept/disconnect)
+  * Receives and validates client messages
+  * Coordinates with WebSocket Service for processing
+- State initialization and updates:
+  * Works with AdventureStateManager for state handling
+  * Validates state during initialization
+  * Ensures state consistency across updates
+  * Handles error recovery for state issues
+
+#### WebSocket Service (`app/services/websocket_service.py`)
+- Core business logic implementation:
+  * Processes user choices and generates responses
+  * Manages chapter content generation
+  * Handles streaming of content to client
+  * Coordinates state updates with AdventureStateManager
+- Message handling:
+  * Processes choice data
+  * Generates chapter content
+  * Manages streaming optimization
+  * Formats and sends responses
+- Error handling:
+  * Manages content generation errors
+  * Handles state transition issues
+  * Provides fallback responses
+  * Maintains connection stability
 
 ### 3. Adventure State Manager (`app/services/adventure_state_manager.py`)
 - Centralized management of `AdventureState`.

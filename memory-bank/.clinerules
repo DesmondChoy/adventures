@@ -13,7 +13,9 @@
 1. Core application code:
    - State management: `models/story.py`
    - LLM integration: `services/llm/`
-   - WebSocket handling: `routers/websocket.py`
+   - WebSocket components:
+     * Routing: `routers/websocket_router.py`
+     * Business logic: `services/websocket_service.py`
    - Chapter management: `services/chapter_manager.py`
 2. Content sources:
    - Lesson database: `data/lessons.csv`
@@ -59,7 +61,8 @@
 ### Testing Requirements
 1. Run story simulation on changes to:
    - app/services/llm/*
-   - app/routers/websocket.py
+   - app/routers/websocket_router.py
+   - app/services/websocket_service.py
    - app/services/chapter_manager.py
    - app/models/story.py
    - app/init_data.py
@@ -144,14 +147,35 @@
 8. Monitor error patterns
 
 ### WebSocket Errors
-1. Handle connection drops
-2. Implement reconnection
-3. Maintain state consistency
-4. Log connection events
-5. Handle question errors
-6. Recover from failures
-7. Ensure data integrity
-8. Monitor error patterns
+1. Router-Level Errors:
+   - Handle connection drops
+   - Manage reconnection attempts
+   - Log connection lifecycle events
+   - Validate incoming messages
+   - Coordinate error recovery with service
+   - Monitor connection health
+   - Handle client disconnects gracefully
+   - Maintain connection state
+
+2. Service-Level Errors:
+   - Handle content generation failures
+   - Manage state transitions
+   - Process choice errors
+   - Handle streaming issues
+   - Validate message formats
+   - Provide fallback responses
+   - Maintain data consistency
+   - Monitor processing health
+
+3. Cross-Component Errors:
+   - Coordinate error recovery
+   - Maintain state synchronization
+   - Handle timing issues
+   - Log error chains
+   - Implement retry strategies
+   - Ensure message ordering
+   - Preserve transaction integrity
+   - Monitor system boundaries
 
 ### Prompt Errors
 1. Log complete prompt content

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from app.routers import web, websocket
+from app.routers import web, websocket_router
 from app.utils.logging_config import setup_logging
 from app.middleware import get_middleware_stack
 from dotenv import load_dotenv
@@ -40,7 +40,7 @@ async def favicon():
 
 
 app.include_router(web.router)
-app.include_router(websocket.router)
+app.include_router(websocket_router.router)
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,3 +1,23 @@
+"""
+Story simulation for testing WebSocket router and service integration.
+
+This simulation tests both:
+1. WebSocket Router (`app/routers/websocket_router.py`):
+   - Connection management
+   - Message routing
+   - State initialization
+   - Error handling at transport level
+
+2. WebSocket Service (`app/services/websocket_service.py`):
+   - Business logic processing
+   - Content generation
+   - State management
+   - Error handling at application level
+
+The simulation generates random adventures and validates the entire
+story generation pipeline, including router-service interaction.
+"""
+
 import asyncio
 import websockets
 import json
@@ -8,6 +28,23 @@ import logging
 import urllib.parse
 import signal
 import time
+from enum import Enum
+
+
+# Custom error types for router vs service errors
+class SimulationErrorType(Enum):
+    ROUTER = "router"
+    SERVICE = "service"
+    STATE = "state"
+    CONTENT = "content"
+
+
+class SimulationError(Exception):
+    def __init__(self, error_type: SimulationErrorType, message: str):
+        self.error_type = error_type
+        self.message = message
+        super().__init__(f"{error_type.value.upper()}: {message}")
+
 
 # Configure Logging
 logging.basicConfig(
