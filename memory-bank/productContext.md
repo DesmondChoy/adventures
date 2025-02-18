@@ -13,7 +13,7 @@ Traditional educational platforms often lack:
 Learning Odyssey solves these challenges through:
 1. Pre-defined educational content (lessons.csv) with dynamic narrative delivery
 2. User-selected topics and adventure length
-3. LLM-generated narrative choices
+3. LLM-generated narrative choices and resolutions
 4. Real-time state synchronization
 
 ## User Experience Flow
@@ -22,11 +22,15 @@ Learning Odyssey solves these challenges through:
    - Topic selection at landing page
    - Adventure length selection
    - ChapterManager determines sequence
-   - First chapter enforced as LESSON type
-   - Last chapter enforced as LESSON type
+   - First two chapters: Always STORY for world-building
+   - Last chapter: Always CONCLUSION for resolution
 
 2. Adventure Progression (`app/services/chapter_manager.py`)
-   - Chapter types follow MAX_LESSON_RATIO (40%)
+   - Chapter types follow new sequencing:
+     - First two chapters: STORY (setting/character development)
+     - Second-to-last chapter: STORY (pivotal choices)
+     - Last chapter: CONCLUSION (satisfying resolution)
+     - Remaining chapters: 50% LESSON (subject to available questions)
    - LESSON chapters:
      - Questions from lessons.csv
      - LLM narrative wrapper
@@ -35,6 +39,11 @@ Learning Odyssey solves these challenges through:
      - Full LLM generation
      - Three narrative choices
      - Choice consequences
+   - CONCLUSION chapter:
+     - Full LLM generation
+     - No choices required
+     - Resolves all plot threads
+     - Return to Landing Page option
 
 3. State Management
    - Real-time state synchronization
@@ -52,8 +61,11 @@ Learning Odyssey solves these challenges through:
    - Consequence system
 
 2. Chapter Structure (`app/services/chapter_manager.py`)
-   - First/last chapters: LESSON type
-   - Middle chapters: MAX_LESSON_RATIO (40%)
+   - Optimized for engagement and learning:
+     * Strong opening with two STORY chapters
+     * Balanced LESSON distribution
+     * Climactic choice near the end
+     * Satisfying CONCLUSION
    - Narrative continuity
    - Choice impact system
 

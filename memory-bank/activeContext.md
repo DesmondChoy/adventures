@@ -5,10 +5,11 @@ The project is implementing core Learning Odyssey features:
 
 1. Adventure Flow Implementation
    - Landing page topic and length selection
-   - **`app/services/chapter_manager.py`**: ChapterType determination (LESSON/STORY)
+   - **`app/services/chapter_manager.py`**: ChapterType determination (LESSON/STORY/CONCLUSION)
    - **`app/services/llm/prompt_engineering.py`**: Content source integration:
      - LESSON chapters: lessons.csv + LLM narrative wrapper
-     - STORY chapters: Full LLM generation
+     - STORY chapters: Full LLM generation with choices
+     - CONCLUSION chapters: Full LLM generation without choices
    - Narrative continuity via prompt engineering
 
 2. Content Management (`app/data/`)
@@ -18,6 +19,25 @@ The project is implementing core Learning Odyssey features:
    - History tracking in AdventureState
 
 ## Recent Changes
+
+### Chapter Logic Refactor
+- Implemented new chapter sequencing:
+  * First two chapters: Always STORY (for setting/character development)
+  * Second-to-last chapter: Always STORY (for pivotal choices)
+  * Last chapter: Always CONCLUSION (for story resolution)
+  * Remaining chapters: 50% LESSON (subject to available questions)
+- Added CONCLUSION chapter type:
+  * No choices presented
+  * Provides satisfying story resolution
+  * Return to Landing Page button
+- Enhanced prompt engineering:
+  * Added CONCLUSION-specific prompts
+  * Improved narrative resolution
+  * Better story arc completion
+- Fixed random.sample error:
+  * Added validation for available questions
+  * Improved error handling
+  * Better logging for debugging
 
 ### Progress Tracking (`app/templates/index.html`)
 - Implemented visual progress tracking:
@@ -114,9 +134,11 @@ The project is implementing core Learning Odyssey features:
 ### Architecture
 1. Content Flow
     - **`app/services/chapter_manager.py`**:
-        - Determines ChapterType (LESSON/STORY)
-        - Enforces first/last chapter LESSON type
-        - Enforces MAX_LESSON_RATIO (40%) for middle chapters
+        - Determines ChapterType (LESSON/STORY/CONCLUSION)
+        - First two chapters: Always STORY
+        - Second-to-last chapter: Always STORY
+        - Last chapter: Always CONCLUSION
+        - 50% of remaining chapters: LESSON (subject to available questions)
     - **`app/services/llm/prompt_engineering.py`**:
         - LESSON chapters:
             * Questions from lessons.csv
@@ -125,6 +147,10 @@ The project is implementing core Learning Odyssey features:
         - STORY chapters:
             * Full LLM generation
             * Three choices per chapter
+        - CONCLUSION chapters:
+            * Full LLM generation
+            * No choices
+            * Story resolution
     - Outcome tracking in AdventureState
     - Narrative continuity via prompts
 
@@ -143,10 +169,10 @@ The project is implementing core Learning Odyssey features:
    - Progress tracking visualization
 
 2. Flow Control (`app/services/chapter_manager.py`)
-   - LESSON type enforcement for first/last chapters
-   - MAX_LESSON_RATIO (40%) for middle chapters
+   - New chapter type sequencing
    - Dynamic content sampling
    - Error recovery mechanisms
+   - Question availability validation
 
 ## Current Considerations
 
@@ -209,14 +235,6 @@ The project is implementing core Learning Odyssey features:
    - State sync refinement
    - Progress tracking refinements
 
-### Bug Fixes
-- Fixed incorrect chapter type determination in `ChapterManager.initialize_adventure_state` by passing the question count instead of the topic string.
-- Fixed incorrect chapter type determination in `story_websocket` by using `state.planned_chapter_types` instead of `story_config["chapter_types"]`.
-- Fixed duplication of "Chapter X:" prefix by removing it from the generated content in `generate_chapter` using a regular expression.
-- Resolved `TypeError` caused by incorrect chapter type logic.
-- Fixed "N/A" values in "Story Configuration" debug logs by using the correct variables.
-- Removed duplicate call to `initialize_adventure_state` in `story_websocket`.
-
 ### Short Term
 1. Features
    - Enhanced topic selection
@@ -249,5 +267,8 @@ The project is implementing core Learning Odyssey features:
    - Error handling coverage
    - Progress tracking accuracy
 
-#### Bug Fixes
-- Thorough testing, including story simulations, is required to verify the recent fixes and ensure no regressions were introduced.
+#### Testing Requirements
+- Thorough testing of new chapter logic
+- Validation of CONCLUSION chapter handling
+- Error scenario coverage for question sampling
+- End-to-end flow testing with new sequencing

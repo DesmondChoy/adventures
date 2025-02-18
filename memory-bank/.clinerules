@@ -3,9 +3,10 @@
 ## Core Concepts
 
 ### Naming Conventions
-1. Chapter: Unit of progression in ChapterType enum (LESSON or STORY)
+1. Chapter: Unit of progression in ChapterType enum (LESSON, STORY, or CONCLUSION)
    - LESSON: Educational content from lessons.csv with LLM narrative wrapper
    - STORY: Fully LLM-generated narrative content with choices
+   - CONCLUSION: Final chapter with no choices, providing story resolution
 2. State: Complete application state in AdventureState class
 3. Adventure: Overall user journey tracked in AdventureState
 
@@ -35,9 +36,10 @@
    - State changes must be logged
 
 2. Chapter Requirements:
-   - First chapter MUST be LESSON type
-   - Last chapter MUST be LESSON type
-   - Middle chapters follow MAX_LESSON_RATIO (40%)
+   - First two chapters MUST be STORY type (for setting/character development)
+   - Second-to-last chapter MUST be STORY type (for pivotal choices)
+   - Last chapter MUST be CONCLUSION type (for story resolution)
+   - 50% of remaining chapters MUST be LESSON type (subject to available questions)
    - No question repetition in session
    - Answer options MUST be shuffled
    - Immediate feedback required
@@ -69,8 +71,12 @@
    - app/data/stories.yaml
    - app/data/lessons.csv
 
-### Note: 2025-02-17
-   - Story simulations should be run due to recent changes to app/routers/websocket.py and app/services/chapter_manager.py to fix chapter type and content issues.
+### Note: 2025-02-18
+   - Story simulations should be run due to recent changes:
+     * New chapter logic implementation (CONCLUSION type, updated sequencing)
+     * Fixed random.sample error in chapter_manager.py when no questions available
+     * Updated UI to handle CONCLUSION chapters
+     * Enhanced prompt engineering for CONCLUSION narrative
 
 ### Debugging Process
 1. Verify question sampling

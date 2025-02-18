@@ -23,15 +23,25 @@
 - [x] Error handling framework
 
 ### Content Management
-- [x] Correct chapter type determination and transitions
+- [x] New chapter logic implementation:
+  * Added CONCLUSION chapter type
+  * Updated chapter sequencing
+  * Enhanced narrative flow
+  * Fixed random.sample error
+- [x] UI updates for CONCLUSION chapters
+- [x] Enhanced prompt engineering for story resolution
 
-### Bug Fixes
-- [x] Fixed incorrect chapter type determination in `ChapterManager.initialize_adventure_state`.
-- [x] Fixed incorrect chapter type determination in `story_websocket`.
-- [x] Fixed duplication of "Chapter X:" prefix in generated content.
-- [x] Resolved `TypeError` caused by incorrect chapter type logic.
-- [x] Fixed "N/A" values in "Story Configuration" debug logs.
-- [x] Removed duplicate call to `initialize_adventure_state` in `story_websocket`.
+### Recent Completions
+- [x] Added CONCLUSION chapter type to ChapterType enum
+- [x] Implemented new chapter sequencing logic:
+  * First two chapters: STORY
+  * Second-to-last chapter: STORY
+  * Last chapter: CONCLUSION
+  * 50% of remaining chapters: LESSON
+- [x] Fixed random.sample error in chapter_manager.py
+- [x] Added Return to Landing Page button for CONCLUSION chapters
+- [x] Enhanced prompt engineering for CONCLUSION narrative
+- [x] Updated validation for available questions
 
 ## In Progress
 
@@ -69,8 +79,8 @@
 
 ### Content Flow (`app/services/chapter_manager.py`)
 1. Question sampling optimization needed
-3. State persistence refinement
-4. Error recovery enhancement
+2. State persistence refinement
+3. Error recovery enhancement
 
 ## Next Milestones
 
@@ -117,7 +127,7 @@
 
 3. Content Management (`app/services/chapter_manager.py`)
    - ChapterType handling implemented
-   - LESSON/STORY flow working
+   - New chapter sequencing working
    - Content sampling functional
    - Error recovery in progress
 
