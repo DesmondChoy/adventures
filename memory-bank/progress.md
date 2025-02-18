@@ -42,6 +42,9 @@
 - [x] Added Return to Landing Page button for CONCLUSION chapters
 - [x] Enhanced prompt engineering for CONCLUSION narrative
 - [x] Updated validation for available questions
+- [x] Updated story length options and constraints (5-10 chapters)
+- [x] Fixed issue with missing choices in the first two chapters
+- [x] Implemented comprehensive fix for "Chapter X:" prefixes in generated content
 
 ## In Progress
 

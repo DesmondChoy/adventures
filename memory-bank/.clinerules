@@ -31,7 +31,7 @@
    - Use planned_chapter_types for chapter progression
    - Base logic on state properties, not assumptions
    - Complete state serialization required
-   - Dynamic story length via state.story_length
+   - Dynamic story length via state.story_length (between 5 and 10 chapters)
    - Type hints required for all state properties
    - State changes must be logged
 
@@ -71,12 +71,39 @@
    - app/data/stories.yaml
    - app/data/lessons.csv
 
+### Testing Requirements
+1. Run story simulation on changes to:
+   - app/services/llm/*
+   - app/routers/websocket_router.py
+   - app/services/websocket_service.py
+   - app/services/chapter_manager.py
+   - app/models/story.py
+   - app/init_data.py
+   - app/data/stories.yaml
+   - app/data/lessons.csv
+
 ### Note: 2025-02-18
    - Story simulations should be run due to recent changes:
-     * New chapter logic implementation (CONCLUSION type, updated sequencing)
-     * Fixed random.sample error in chapter_manager.py when no questions available
-     * Updated UI to handle CONCLUSION chapters
-     * Enhanced prompt engineering for CONCLUSION narrative
+      * New chapter logic implementation (CONCLUSION type, updated sequencing)
+      * Fixed random.sample error in chapter_manager.py when no questions available
+      * Updated UI to handle CONCLUSION chapters
+      * Enhanced prompt engineering for CONCLUSION narrative
+   - Additional changes:
+      * Updated story length options and constraints (5-10 chapters)
+      * Fixed issue with missing choices in the first two chapters
+      * Implemented comprehensive fix for "Chapter X:" prefixes in generated content
+
+### Testing Requirements
+1. Run story simulation on changes to:
+   - app/services/llm/*
+   - app/routers/websocket_router.py
+   - app/services/websocket_service.py
+   - app/services/chapter_manager.py
+   - app/models/story.py
+   - app/init_data.py
+   - app/data/stories.yaml
+   - app/data/lessons.csv
+   - app/templates/index.html
 
 ### Debugging Process
 1. Verify question sampling

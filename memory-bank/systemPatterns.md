@@ -117,6 +117,7 @@ graph TD
   * Complete state serialization
   * Pre-determined chapter sequence via planned_chapter_types
   * Question data persistence
+  * Story length constraints (5-10 chapters)
   * Recovery mechanisms
 
 - Navigation State Pattern:

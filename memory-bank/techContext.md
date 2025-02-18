@@ -138,6 +138,7 @@ pytest-asyncio==0.21.1
 
 - Real-time WebSocket synchronization
 - Complete state serialization
+- Story length constraints (5-10 chapters)
 - Error recovery system
 
 ### LLM Integration (`app/services/llm/`)

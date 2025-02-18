@@ -109,7 +109,9 @@ Your task is to generate engaging story chapters that:
 1. Maintain narrative consistency with previous choices
 2. Create meaningful consequences for user decisions
 3. Seamlessly integrate lesson elements when provided
-4. Use multiple paragraphs separated by blank lines to ensure readability"""
+4. Use multiple paragraphs separated by blank lines to ensure readability
+
+CRITICAL: Never start your generated content with 'Chapter' followed by a number or any similar chapter heading. Begin the narrative directly to maintain story immersion and continuity."""
 
     return base_prompt + choice_rules
 
@@ -199,7 +201,6 @@ def _build_chapter_prompt(
     consequences_guidance: str = "",
     num_previous_lessons: int = 0,
     previous_lessons: Optional[List[LessonResponse]] = None,
-    is_opening: bool = False,
 ) -> str:
     """Builds the appropriate prompt based on chapter type and state.
 
@@ -211,38 +212,7 @@ def _build_chapter_prompt(
         consequences_guidance: Guidance based on previous lesson outcomes
         num_previous_lessons: Number of previous lesson chapters
         previous_lessons: History of previous lesson responses
-        is_opening: Whether this is the opening chapter
     """
-    # Handle opening chapter special case
-    if is_opening:
-        chapter_count = base_prompt.split("of ")[1].split("\n")[0]
-        if chapter_type == ChapterType.LESSON:
-            return f"""{base_prompt}
-
-Generate the opening scene of the story, introducing the setting and main character. 
-The scene should establish the world and protagonist while naturally leading to this lesson question:
-{lesson_question["question"]}
-
-Remember this is the beginning of a {chapter_count}-chapter journey.
-
-CRITICAL INSTRUCTIONS:
-1. Create an immersive fantasy world that subtly connects to {lesson_question["topic"]}, including but not limited to {lesson_question["subtopic"]}
-2. The question should emerge naturally from the story events or character interactions
-3. DO NOT include any story-based choices or decisions
-4. DO NOT use bullet points, numbered lists, or dashes
-5. DO NOT end with "What should X do?" or similar prompts
-6. The question should feel like a natural part of the character's discovery
-
-{_format_lesson_answers(lesson_question)}"""
-        else:
-            return f"""{base_prompt}
-
-Generate the opening scene of the story, introducing the setting and main character. 
-The scene should establish the world and protagonist while building towards a natural lesson moment.
-Remember this is the beginning of a {chapter_count}-chapter journey.
-
-IMPORTANT: Do not include any story choices or decision points in this scene."""
-
     # Handle lesson chapters
     if chapter_type == ChapterType.LESSON:
         continuation_text = ""
@@ -351,11 +321,10 @@ def build_user_prompt(
                 last_lesson.is_correct,
                 last_lesson.question,
                 last_lesson.chosen_answer,
-                state.current_chapter_number,  # Pass current chapter number
+                state.current_chapter_number,
             )
 
     # Determine chapter properties
-    is_opening = state.current_chapter_number == 1
     current_chapter_type = state.planned_chapter_types[state.current_chapter_number - 1]
     chapter_type = ChapterType.LESSON if lesson_question else current_chapter_type
 
@@ -368,7 +337,6 @@ def build_user_prompt(
         consequences_guidance=consequences_guidance,
         num_previous_lessons=num_previous_lessons,
         previous_lessons=previous_lessons,
-        is_opening=is_opening,
     )
 
 

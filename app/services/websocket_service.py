@@ -108,7 +108,9 @@ async def process_choice(
 
         new_chapter = ChapterData(
             chapter_number=len(state.chapters) + 1,
-            content=chapter_content.content,
+            content=re.sub(
+                r"^Chapter\s+\d+:\s*", "", chapter_content.content, flags=re.MULTILINE
+            ).strip(),
             chapter_type=chapter_type,
             response=None,
             chapter_content=chapter_content,
@@ -134,7 +136,7 @@ async def process_choice(
 async def stream_and_send_chapter(
     websocket: WebSocket,
     chapter_content: ChapterContent,
-    sampled_question: Optional[dict],
+    sampled_question: Optional[Dict[str, Any]],
     state: AdventureState,
 ) -> None:
     """Stream chapter content and send chapter data to the client.
@@ -145,8 +147,20 @@ async def stream_and_send_chapter(
         sampled_question: The question data (if any)
         state: The current state
     """
+    # DEBUG: Log chapter content to help diagnose chapter prefix issues
+    logger.debug(
+        f"=== DEBUG: Chapter Content ===\n"
+        f"Chapter Number: {state.current_chapter_number}\n"
+        f"Raw Content:\n{chapter_content.content}\n"
+        f"==========================="
+    )
+
+    # Remove any "Chapter X:" prefix before streaming
+    content_to_stream = re.sub(
+        r"^Chapter\s+\d+:\s*", "", chapter_content.content, flags=re.MULTILINE
+    ).strip()
     # Split content into paragraphs and stream
-    paragraphs = [p.strip() for p in chapter_content.content.split("\n\n") if p.strip()]
+    paragraphs = [p.strip() for p in content_to_stream.split("\n\n") if p.strip()]
     for paragraph in paragraphs:
         words = paragraph.split()
         for i in range(0, len(words), WORD_BATCH_SIZE):
@@ -170,7 +184,7 @@ async def stream_and_send_chapter(
                 "current_chapter_id": state.current_chapter_id,
                 "current_chapter": {
                     "chapter_number": current_chapter_number,
-                    "content": chapter_content.content,
+                    "content": content_to_stream,
                     "chapter_type": chapter_type.value,
                     "chapter_content": chapter_content.dict(),
                     "question": sampled_question,
@@ -335,7 +349,10 @@ async def generate_chapter(
 
             choices_text = story_content[choices_start:choices_end].strip()
             story_content = story_content[:choices_start].strip()
-            story_content = re.sub(r"^Chapter \d+:\s*", "", story_content).strip()
+            # Remove any "Chapter X:" prefix, including any whitespace after it
+            story_content = re.sub(
+                r"^Chapter\s+\d+:\s*", "", story_content, flags=re.MULTILINE
+            ).strip()
 
             choice_pattern = r"Choice ([ABC]): (.+)$"
             choices = []

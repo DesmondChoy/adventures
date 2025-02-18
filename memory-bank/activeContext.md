@@ -73,10 +73,6 @@ The project is implementing core Learning Odyssey features:
   * Maintains complete state serialization
 
 - Current focus areas:
-  * State synchronization optimization
-  * Navigation path validation
-  * Error recovery improvements
-  * Client-server state consistency
 
 ### WebSocket Architecture Refactoring
 - Split WebSocket handling into two components:
@@ -114,20 +110,35 @@ The project is implementing core Learning Odyssey features:
 
 ### Prompt Engineering (`app/services/llm/prompt_engineering.py`)
 - Enhanced world-building system:
-  * Uses topic/subtopic for thematic world creation
-  * Improved data structures in LessonQuestion
-  * Better narrative coherence through subject connections
-  * More meaningful fantasy world generation
+    * Uses topic/subtopic for thematic world creation
+    * Improved data structures in LessonQuestion
+    * Better narrative coherence through subject connections
+    * More meaningful fantasy world generation
 - Improved narrative continuity:
-  * Use planned_chapter_types for accurate chapter type info
-  * Removed hard-coded chapter type assumptions
-  * Enhanced state-driven progression
-  * Better state consistency in prompts
+    * Use planned_chapter_types for accurate chapter type info
+    * Removed hard-coded chapter type assumptions
+    * Enhanced state-driven progression
+    * Better state consistency in prompts
 - Simplified process_consequences():
-  * Removed hardcoded chapter number checks
-  * Logic now based purely on is_correct state
-  * Maintains high-quality narrative guidance
-  * Follows state-driven pattern
+    * Removed hardcoded chapter number checks
+    * Logic now based purely on is_correct state
+    * Maintains high-quality narrative guidance
+    * Follows state-driven pattern
+
+### Story Length Fixes
+- Updated `index.html` to offer story lengths of 5, 8, and 10 chapters.
+- Modified `app/models/story.py` to allow story lengths up to 10 chapters (changed `story_length` field constraint).
+
+### Chapter 1 Choices Fix
+- Removed the `is_opening` special case in `app/services/llm/prompt_engineering.py` to ensure the first two chapters (STORY type) include choices.
+
+### "Chapter X:" Prefix Fix
+- Added an instruction to the system prompt (`app/services/llm/prompt_engineering.py`) to prevent the LLM from generating chapter prefixes.
+- Added debug logging to `app/services/websocket_service.py` to track chapter content.
+- Improved the regex in `app/services/websocket_service.py` to reliably remove any "Chapter X:" prefixes.
+- Ensured the stripped content is used consistently for streaming, state updates, and storing chapter data.
+- Fixed duplicate parameter and docstring issues in `app/services/websocket_service.py`.
+
 
 ## Active Decisions
 
@@ -217,58 +228,3 @@ The project is implementing core Learning Odyssey features:
    - Choice meaningfulness
    - Learning progression
    - Progress feedback effectiveness
-
-## Next Steps
-
-### Immediate (`tests/simulations/`)
-1. Testing Framework
-   - Story simulation expansion
-   - Performance benchmarking
-   - Error scenario coverage
-   - State transition validation
-   - Progress tracking validation
-
-2. Implementation
-   - WebSocket stability improvements
-   - LLM response optimization
-   - Error recovery enhancement
-   - State sync refinement
-   - Progress tracking refinements
-
-### Short Term
-1. Features
-   - Enhanced topic selection
-   - Improved narrative generation
-   - Better error feedback
-   - Faster state recovery
-   - Enhanced progress visualization
-
-2. Testing
-   - Load testing framework
-   - Cross-provider validation
-   - Error simulation
-   - Performance profiling
-   - Progress tracking stress tests
-
-### Current Considerations
-
-#### Technical
-1. Performance
-   - LLM response times
-   - WebSocket latency
-   - State synchronization speed
-   - Error recovery time
-   - Progress updates smoothness
-
-2. Reliability
-   - WebSocket connection stability
-   - LLM service availability
-   - State consistency
-   - Error handling coverage
-   - Progress tracking accuracy
-
-#### Testing Requirements
-- Thorough testing of new chapter logic
-- Validation of CONCLUSION chapter handling
-- Error scenario coverage for question sampling
-- End-to-end flow testing with new sequencing
