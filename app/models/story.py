@@ -8,6 +8,7 @@ class ChapterType(str, Enum):
 
     LESSON = "lesson"
     STORY = "story"
+    CONCLUSION = "conclusion"
 
 
 class StoryChoice(BaseModel):
@@ -33,8 +34,10 @@ class ChapterContent(BaseModel):
     @field_validator("choices", mode="after")
     @classmethod
     def validate_choices(
-        cls, v, _
-    ) -> List[StoryChoice]:  # renamed values to _ since unused
+        cls, v: List[StoryChoice], info: ValidationInfo
+    ) -> List[StoryChoice]:
+        if info.data.get("chapter_type") == ChapterType.CONCLUSION:
+            return v
         if not v:
             raise ValueError("Must have at least one choice")
         return v
@@ -74,6 +77,8 @@ class ChapterData(BaseModel):
 
         if chapter_type == ChapterType.STORY and len(v.choices) != 3:
             raise ValueError("Story chapters must have exactly 3 choices")
+        if chapter_type == ChapterType.CONCLUSION and len(v.choices) != 0:
+            raise ValueError("Conclusion chapters must have exactly 0 choices")
         return v
 
 

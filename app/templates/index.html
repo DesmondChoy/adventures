@@ -310,6 +310,17 @@
             const choicesContainer = document.getElementById('choicesContainer');
             choicesContainer.innerHTML = ''; // Clear existing choices
             
+            // Special case: If choices is empty array, this is a CONCLUSION chapter
+            if (Array.isArray(choices) && choices.length === 0) {
+                const button = document.createElement('button');
+                button.className = 'w-full p-4 mb-3 text-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500';
+                button.textContent = 'Return to Landing Page';
+                button.onclick = resetApplicationState;
+                choicesContainer.appendChild(button);
+                return;
+            }
+            
+            // Regular story choices
             choices.forEach(choice => {
                 const button = document.createElement('button');
                 button.className = 'w-full p-4 mb-3 text-left border rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500';

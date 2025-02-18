@@ -273,7 +273,7 @@ CRITICAL INSTRUCTIONS:
 {_format_lesson_answers(lesson_question)}"""
 
     # Handle story chapters
-    else:
+    elif chapter_type == ChapterType.STORY:
         continuation_text = ""
         if num_previous_lessons > 0:
             continuation_text = f"""Continue the story based on the character's previous lesson{" and earlier lessons" if num_previous_lessons > 1 else ""}.
@@ -302,6 +302,35 @@ IMPORTANT:
 
 {CHOICE_FORMAT_INSTRUCTIONS}"""
 
+    # Handle conclusion chapters
+    else:  # chapter_type == ChapterType.CONCLUSION
+        continuation_text = ""
+        if num_previous_lessons > 0:
+            continuation_text = f"""Continue the story, incorporating the wisdom gained from the previous lesson{" and earlier lessons" if num_previous_lessons > 1 else ""}.
+
+{consequences_guidance}
+
+"""
+            if previous_lessons:
+                continuation_text += f"Previous lesson history:\n{format_lesson_history(previous_lessons)}\n\n"
+
+        return f"""{base_prompt}
+
+{continuation_text}{_get_phase_guidance(story_phase)}
+
+Write the conclusion of the story by:
+1. Following directly from the pivotal choice made in the previous chapter
+2. Resolving all remaining plot threads and character arcs
+3. Showing how the character's journey and choices have led to this moment
+4. Providing a satisfying ending that reflects the consequences of their decisions
+5. Incorporating the wisdom gained from their educational journey
+
+IMPORTANT:
+1. This is the final chapter - provide a complete and satisfying resolution
+2. {"Demonstrate how the lessons learned have contributed to the character's growth" if num_previous_lessons > 0 else "Focus on the character's personal growth through their journey"}
+3. DO NOT include any choices or decision points
+4. End with a sense of closure while highlighting the character's transformation"""
+
 
 def build_user_prompt(
     state: AdventureState,
@@ -327,7 +356,8 @@ def build_user_prompt(
 
     # Determine chapter properties
     is_opening = state.current_chapter_number == 1
-    chapter_type = ChapterType.LESSON if lesson_question else ChapterType.STORY
+    current_chapter_type = state.planned_chapter_types[state.current_chapter_number - 1]
+    chapter_type = ChapterType.LESSON if lesson_question else current_chapter_type
 
     # Build the chapter prompt
     return _build_chapter_prompt(
