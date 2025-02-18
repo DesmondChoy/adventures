@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional, List, Literal, TypedDict, cast
+import math
 from app.models.story import (
     AdventureState,
     ChapterType,
@@ -58,26 +59,37 @@ def _format_lesson_answers(lesson_question: LessonQuestion) -> str:
 
 
 def _get_phase_guidance(story_phase: str) -> str:
-    """Get the appropriate guidance based on story phase."""
+    """Get the appropriate guidance based on the Journey Quest story phase."""
     return {
-        "EARLY": (
+        "Exposition": (
             "Phase Guidance:\n"
-            "- Introduce lesson elements that help establish the world\n"
-            "- Connect learning moments to character discovery\n"
-            "- Set up future lesson themes"
+            "- Focus: Introduction, setting the scene, establishing the character's ordinary world, and the inciting incident that disrupts it.\n"
+            "- Narrative Goals: Introduce the main character, the setting (based on chosen story category), and the initial problem or quest. Spark curiosity and hook the reader.\n"
+            "- Emotional Tone: Intriguing, inviting, a sense of normalcy being disrupted, hinting at adventure."
         ),
-        "MIDDLE": (
+        "Rising": (
             "Phase Guidance:\n"
-            "- Deepen the lesson significance to the plot\n"
-            "- Connect learning to rising stakes\n"
-            "- Use knowledge as a tool for overcoming challenges"
+            "- Focus: The character sets out on their journey, encountering initial challenges, making new discoveries, and starting to learn new skills or gain knowledge related to the lesson topic.\n"
+            "- Narrative Goals: Develop the plot, introduce supporting characters (if any), present early obstacles, show the character's initial steps on their quest, and weave in some initial learning moments.\n"
+            "- Emotional Tone: Excitement, anticipation, a sense of progress, building momentum, hints of challenges ahead."
         ),
-        "FINAL": (
+        "Trials": (
             "Phase Guidance:\n"
-            "- Bring lesson themes full circle\n"
-            "- Show how knowledge has transformed the character\n"
-            "- Create satisfying connections to previous learning moments\n"
-            "- Prepare for a satisfying conclusion"
+            "- Focus: The character faces more significant obstacles, tests their abilities, and encounters setbacks. Stakes are raised, and tension builds towards the climax. Lessons become more critical for overcoming challenges.\n"
+            "- Narrative Goals: Introduce major conflicts, test the character's resolve, increase the stakes, deepen the learning curve, and build suspense leading to the climax.\n"
+            "- Emotional Tone: Tension, suspense, determination, challenges, moments of doubt, building towards a peak."
+        ),
+        "Climax": (
+            "Phase Guidance:\n"
+            "- Focus: The climax of the quest where the character confronts the main conflict. Followed by the resolution, the immediate aftermath, and a sense of return or a 'new normal.'\n"
+            "- Narrative Goals: Deliver the most exciting and challenging part of the story (the climax), resolve the main conflict, show the consequences of the character's actions and learning, provide closure, and hint at transformation or lasting change.\n"
+            "- Emotional Tone: Intense excitement, high stakes, relief (after climax), satisfaction, reflection, a sense of completion and transformation."
+        ),
+        "Return": (
+            "Phase Guidance:\n"
+            "- Focus: The character returns to their original world, or establishes a new equilibrium, demonstrably different due to their journey. They integrate the lessons learned and show evidence of personal growth. The lasting impact of the adventure is revealed.\n"
+            "- Narrative Goals: Illustrate the character's transformation, showcase how they apply their new knowledge or skills, tie up any loose ends, and offer a sense of finality while possibly hinting at future possibilities (sequel potential, ongoing journey). Reinforce the overall theme or message.\n"
+            "- Emotional Tone: Reflective, peaceful (though potentially bittersweet), a sense of accomplishment, wisdom, and closure. The feeling of a journey completed, but also a new beginning having been forged. A sense of hopeful maturity or understanding."
         ),
     }.get(story_phase, "")
 
@@ -159,25 +171,8 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
         if len(state.chapters) > 1 and chapter != state.chapters[-1]:
             chapter_history.append("---\n")
 
-    # Calculate story phase based on story progression percentage
-    total_chapters = state.story_length
-    current_chapter = state.current_chapter_number
-    progress_percentage = (current_chapter / total_chapters) * 100
-
-    # Educational context: Story phases help maintain narrative pacing
-    # EARLY: First chapter (introduction, world-building)
-    # MIDDLE: Core chapters (rising action, character development)
-    # LATE: Final quarter (building to climax)
-    # FINAL: Last chapter (resolution)
-    story_phase = (
-        "EARLY"
-        if current_chapter == 1
-        else "FINAL"
-        if current_chapter == total_chapters
-        else "LATE"
-        if progress_percentage >= 75  # Last quarter of the story
-        else "MIDDLE"
-    )
+    # Get story phase from state
+    story_phase = state.current_storytelling_phase
 
     # Build the base prompt with complete history
     base_prompt = (

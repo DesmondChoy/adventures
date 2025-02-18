@@ -91,6 +91,9 @@ class AdventureState(BaseModel):
     planned_chapter_types: List[
         ChapterType
     ] = []  # Pre-determined sequence of chapter types
+    current_storytelling_phase: str = (
+        "Exposition"  # Current phase in the Journey Quest structure
+    )
 
     @property
     def current_chapter_number(self) -> int:

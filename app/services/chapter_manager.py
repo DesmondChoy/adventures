@@ -1,6 +1,7 @@
 from typing import List
 import random
 import logging
+import math
 from app.models.story import ChapterType, AdventureState
 from app.init_data import sample_question
 
@@ -9,6 +10,33 @@ logger = logging.getLogger("story_app")
 
 class ChapterManager:
     """Service class for managing chapter progression and type determination."""
+
+    @staticmethod
+    def determine_story_phase(current_chapter_number: int, story_length: int) -> str:
+        """Determine the current story phase (Journey Quest) based on chapter number and story length.
+
+        Args:
+            current_chapter_number: The current chapter number (1-based)
+            story_length: Total number of chapters in the story
+
+        Returns:
+            str: One of "Exposition", "Rising", "Trials", "Climax", or "Return"
+        """
+        if current_chapter_number == 1:
+            return "Exposition"
+        elif current_chapter_number == story_length:
+            return "Return"
+        else:
+            middle_chapters = story_length - 2
+            rising_chapters = math.ceil(middle_chapters * 0.25)
+            climax_chapters = math.ceil(middle_chapters * 0.25)
+
+            if current_chapter_number <= 1 + rising_chapters:
+                return "Rising"
+            elif current_chapter_number > story_length - 1 - climax_chapters:
+                return "Climax"
+            else:
+                return "Trials"
 
     @staticmethod
     def determine_chapter_types(
@@ -179,4 +207,5 @@ class ChapterManager:
             story_length=total_chapters,
             chapters=[],
             planned_chapter_types=chapter_types,
+            current_storytelling_phase="Exposition",  # Initial phase is always Exposition
         )

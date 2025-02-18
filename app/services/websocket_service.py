@@ -102,9 +102,15 @@ async def process_choice(
 
     # Create and append new chapter
     try:
-        chapter_type = state.planned_chapter_types[len(state.chapters)]
+        new_chapter_number = len(state.chapters) + 1
+        chapter_type = state.planned_chapter_types[new_chapter_number - 1]
         if not isinstance(chapter_type, ChapterType):
             chapter_type = ChapterType(chapter_type)
+
+        # Update the storytelling phase based on the new chapter number
+        state.current_storytelling_phase = ChapterManager.determine_story_phase(
+            new_chapter_number, state.story_length
+        )
 
         new_chapter = ChapterData(
             chapter_number=len(state.chapters) + 1,
