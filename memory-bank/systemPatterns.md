@@ -4,16 +4,18 @@
 ```mermaid
 graph TD
     Client[Web Client] <--> WS[WebSocket Router]
-    WS <--> AS[AdventureState]
-    AS <--> CM[Chapter Manager]
+    WS <--> ASM[Adventure State Manager]
+    ASM <--> AS[AdventureState]
+    ASM <--> CM[Chapter Manager]
     CM <--> LLM[LLM Service]
     CM <--> DB[(Database)]
-    
+
     subgraph Core State
         AS
     end
-    
+
     subgraph Services
+        ASM
         CM
         LLM
     end
@@ -35,20 +37,24 @@ graph TD
 - Narrative continuity enforcement
 
 ### 2. WebSocket Router (`app/routers/websocket.py`)
-- State synchronization
-- Initial topic and length selection
-- Question sampling coordination
-- Answer validation
-- Choice processing
+- WebSocket communication and event handling.
+- Receives client requests (e.g., topic selection, choices).
+- Interacts with `AdventureStateManager` to manage state.
+- Sends updates to the client (e.g., new chapter content, choices).
 
-### 3. Chapter Manager (`app/services/chapter_manager.py`)
+### 3. Adventure State Manager (`app/services/adventure_state_manager.py`)
+- Centralized management of `AdventureState`.
+- Handles initialization, updates, and retrieval of the adventure state.
+- Encapsulates state manipulation logic, decoupling it from the WebSocket router.
+
+### 4. Chapter Manager (`app/services/chapter_manager.py`)
 - Chapter type determination (MAX_LESSON_RATIO: 40%)
 - First/last chapter lesson enforcement
 - Question sampling from lessons.csv
 - LLM narrative generation
 - Adventure flow control
 
-### 4. LLM Integration (`app/services/llm/`)
+### 5. LLM Integration (`app/services/llm/`)
 - Provider-agnostic implementation
 - Narrative generation for both chapter types
 - Story choice generation

@@ -59,6 +59,8 @@ The project is implementing core Learning Odyssey features:
   * Client-server state consistency
 
 ### WebSocket Router (`app/routers/websocket.py`)
+- Decoupled state management from the WebSocket handler.
+- Now uses `AdventureStateManager` to handle state initialization, updates, and access.
 - Fixed "N/A" values in "Story Configuration" debug logs by using the correct variables (`story_category`, `lesson_topic`) from the function signature instead of `validated_state`.
 - Removed duplicate call to `initialize_adventure_state` in `story_websocket` to prevent redundant state initialization.
 
@@ -68,6 +70,15 @@ The project is implementing core Learning Odyssey features:
   * Maintain sequence through entire adventure
   * Improved state consistency
   * Better error handling
+
+### State Management (`app/services/adventure_state_manager.py`)
+- Created `AdventureStateManager` class to encapsulate state management logic.
+- Implemented methods for:
+    - Initializing state (`initialize_state`)
+    - Retrieving current state (`get_current_state`)
+    - Updating state from client data (`update_state_from_client`)
+    - Appending new chapters (`append_new_chapter`)
+- Refactored state management logic from `websocket.py` into `AdventureStateManager`.
 
 ### Prompt Engineering (`app/services/llm/prompt_engineering.py`)
 - Enhanced world-building system:
