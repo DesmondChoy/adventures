@@ -95,6 +95,17 @@ async def process_choice(
 
         state.current_chapter_id = chosen_path
 
+    # Calculate new chapter number and update story phase
+    new_chapter_number = len(state.chapters) + 1
+    chapter_type = state.planned_chapter_types[new_chapter_number - 1]
+    if not isinstance(chapter_type, ChapterType):
+        chapter_type = ChapterType(chapter_type)
+
+    # Update the storytelling phase based on the new chapter number
+    state.current_storytelling_phase = ChapterManager.determine_story_phase(
+        new_chapter_number, state.story_length
+    )
+
     # Generate new chapter content
     chapter_content, sampled_question = await generate_chapter(
         story_category, lesson_topic, state
@@ -102,16 +113,6 @@ async def process_choice(
 
     # Create and append new chapter
     try:
-        new_chapter_number = len(state.chapters) + 1
-        chapter_type = state.planned_chapter_types[new_chapter_number - 1]
-        if not isinstance(chapter_type, ChapterType):
-            chapter_type = ChapterType(chapter_type)
-
-        # Update the storytelling phase based on the new chapter number
-        state.current_storytelling_phase = ChapterManager.determine_story_phase(
-            new_chapter_number, state.story_length
-        )
-
         new_chapter = ChapterData(
             chapter_number=len(state.chapters) + 1,
             content=re.sub(

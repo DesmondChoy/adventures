@@ -27,13 +27,12 @@ class ChapterManager:
         elif current_chapter_number == story_length:
             return "Return"
         else:
-            middle_chapters = story_length - 2
-            rising_chapters = math.ceil(middle_chapters * 0.25)
-            climax_chapters = math.ceil(middle_chapters * 0.25)
+            rising_end = math.ceil(story_length * 0.25)
+            climax_start = story_length - math.floor(story_length * 0.25)
 
-            if current_chapter_number <= 1 + rising_chapters:
+            if current_chapter_number <= rising_end:
                 return "Rising"
-            elif current_chapter_number > story_length - 1 - climax_chapters:
+            elif current_chapter_number >= climax_start:
                 return "Climax"
             else:
                 return "Trials"

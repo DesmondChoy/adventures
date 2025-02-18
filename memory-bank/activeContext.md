@@ -20,6 +20,24 @@ The project is implementing core Learning Odyssey features:
 
 ## Recent Changes
 
+### Journey Quest Implementation
+- Initial implementation of Journey Quest pacing:
+  * Added `current_storytelling_phase` to `AdventureState` to track phases
+  * Added `determine_story_phase` static method to `ChapterManager`
+  * Updated `initialize_adventure_state` with initial "Exposition" phase
+  * Modified `websocket_service.py` for phase updates
+  * Enhanced `_get_phase_guidance` with detailed phase-specific guidance
+  * Updated `_build_base_prompt` to use state-based phase
+  * Added required math imports
+
+### Story Phase Timing Fix
+- Fixed incorrect story phase progression:
+  * Moved phase update before chapter generation in `websocket_service.py`
+  * Ensures correct phase (e.g., "Rising" for Chapter 2)
+  * Maintains proper Journey Quest structure (Exposition -> Rising -> Trials -> Climax -> Return)
+  * Improves narrative coherence by using correct phase guidance in prompts
+  * Fixed timing issue where LLM was seeing old phase value
+
 ### Chapter Logic Refactor
 - Implemented new chapter sequencing:
   * First two chapters: Always STORY (for setting/character development)
@@ -71,8 +89,6 @@ The project is implementing core Learning Odyssey features:
   * Stored during state initialization
   * Single source of truth for chapter progression
   * Maintains complete state serialization
-
-- Current focus areas:
 
 ### WebSocket Architecture Refactoring
 - Split WebSocket handling into two components:
@@ -138,7 +154,6 @@ The project is implementing core Learning Odyssey features:
 - Improved the regex in `app/services/websocket_service.py` to reliably remove any "Chapter X:" prefixes.
 - Ensured the stripped content is used consistently for streaming, state updates, and storing chapter data.
 - Fixed duplicate parameter and docstring issues in `app/services/websocket_service.py`.
-
 
 ## Active Decisions
 

@@ -45,6 +45,15 @@
 - [x] Updated story length options and constraints (5-10 chapters)
 - [x] Fixed issue with missing choices in the first two chapters
 - [x] Implemented comprehensive fix for "Chapter X:" prefixes in generated content
+- [x] Implemented Journey Quest pacing:
+  * Added `current_storytelling_phase` to track story phases
+  * Added `determine_story_phase` calculation method
+  * Updated phase guidance in prompts
+  * Integrated with AdventureState
+- [x] Fixed story phase timing issue:
+  * Moved phase update before chapter generation
+  * Ensures correct phase progression
+  * Fixed "Exposition" showing for Chapter 2
 
 ## In Progress
 
