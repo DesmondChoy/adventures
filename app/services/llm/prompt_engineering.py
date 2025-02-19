@@ -201,7 +201,7 @@ def _build_chapter_prompt(
 
     Args:
         base_prompt: Base story state and history
-        story_phase: Current phase of the story (EARLY, MIDDLE, FINAL)
+        story_phase: Current phase of the story (Exposition, Rising, Trials, Climax, Return)
         chapter_type: Type of chapter to generate (LESSON or STORY)
         lesson_question: Question data for lesson chapters
         consequences_guidance: Guidance based on previous lesson outcomes
