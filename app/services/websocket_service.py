@@ -346,7 +346,7 @@ async def generate_chapter(
                     else f"wrong{len(story_choices) + 1}",
                 )
             )
-    else:
+    elif chapter_type == ChapterType.STORY:
         try:
             choices_start = story_content.find("<CHOICES>")
             choices_end = story_content.find("</CHOICES>")
@@ -388,6 +388,8 @@ async def generate_chapter(
                 )
                 for i in range(3)
             ]
+    else:  # CONCLUSION chapter
+        story_choices = []  # No choices for conclusion chapters
 
     # Debug output for choices
     logger.debug("\n=== DEBUG: Story Choices ===")

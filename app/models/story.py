@@ -31,17 +31,6 @@ class ChapterContent(BaseModel):
     content: str
     choices: List[StoryChoice]
 
-    @field_validator("choices", mode="after")
-    @classmethod
-    def validate_choices(
-        cls, v: List[StoryChoice], info: ValidationInfo
-    ) -> List[StoryChoice]:
-        if info.data.get("chapter_type") == ChapterType.CONCLUSION:
-            return v
-        if not v:
-            raise ValueError("Must have at least one choice")
-        return v
-
 
 class LessonResponse(BaseModel):
     """User's response to a lesson chapter's question."""
