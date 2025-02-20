@@ -59,6 +59,12 @@
   * Updated frontend to handle streamed content
   * Separated content streaming from stats display
   * Ensured consistent streaming experience throughout story
+- [x] Improved choice format handling and validation:
+  * Added two-stage choice parsing for multi/single-line formats in websocket_service.py
+  * Enhanced choice format instructions with explicit examples in prompt_engineering.py
+  * Added negative examples showing incorrect formats
+  * Improved handling of period-separated choices on single lines
+  * Enhanced error messages for choice parsing failures
 
 ## In Progress
 

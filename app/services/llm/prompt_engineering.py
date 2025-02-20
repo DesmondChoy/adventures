@@ -23,10 +23,38 @@ The choices section MUST:
 1. Start with <CHOICES> on its own line with NO indentation
 2. Have exactly three choices, each on its own line with NO indentation
 3. Each choice MUST start with "Choice [A/B/C]: " followed by the choice text
-4. Each choice MUST be on a single line (NO line breaks within choices)
+4. Each choice MUST be on a single line:
+   - NO line breaks (pressing Enter/Return) within a choice
+   - NO word wrapping or splitting choices across lines
+   - NO periods followed by "Choice" within a choice
 5. End with </CHOICES> on its own line with NO indentation
 6. Each choice should be meaningful and distinct
 7. All choices must advance the plot in interesting ways
+8. There must be NO text before or after the <CHOICES> and </CHOICES> tags
+
+Correct Example:
+
+<CHOICES>
+Choice A: Explore the dark forest.
+Choice B: Return to the village for help.
+Choice C: Attempt to climb the tall tree.
+</CHOICES>
+
+Incorrect Examples:
+
+Example 1 - Wrong formatting and extra text:
+Here are some choices:
+<CHOICES>
+Choice A: Explore the
+dark forest.
+Choice B: Return to the village.
+  Choice C: Climb tree.
+</CHOICES>
+Extra text.
+
+Example 2 - All choices on one line:
+<CHOICES>
+Choice A: Explore the dark forest. Choice B: Return to the village for help. Choice C: Attempt to climb the tall tree.
 </CHOICES>"""
 
 

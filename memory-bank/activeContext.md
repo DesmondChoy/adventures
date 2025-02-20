@@ -20,6 +20,20 @@ The project is implementing core Learning Odyssey features:
 
 ## Recent Changes
 
+### Choice Format Handling Improvements
+- Enhanced choice parsing in `websocket_service.py`:
+  * Implemented two-stage parsing strategy:
+    - First attempts multi-line format
+    - Falls back to single-line format if needed
+  * Added flexible regex patterns for both formats
+  * Improved error handling and logging
+  * Better recovery from parsing failures
+- Updated choice format instructions in `prompt_engineering.py`:
+  * Added explicit examples showing correct format
+  * Added negative examples showing incorrect formats
+  * Enhanced clarity about line breaks and formatting
+  * Added specific warnings about common mistakes
+
 ### Final Chapter Streaming Fix
 - Enhanced final chapter rendering and streaming:
   * Modified `send_story_complete` in `websocket_service.py`:

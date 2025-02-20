@@ -350,29 +350,61 @@ async def generate_chapter(
             )
     elif chapter_type == ChapterType.STORY:
         try:
-            choices_start = story_content.find("<CHOICES>")
-            choices_end = story_content.find("</CHOICES>")
+            # Use regex to find choice markers, allowing for whitespace variations
+            choices_match = re.search(
+                r"<CHOICES>\s*(.*?)\s*</CHOICES>",
+                story_content,
+                re.DOTALL | re.IGNORECASE,
+            )
 
-            if choices_start == -1 or choices_end == -1:
+            if not choices_match:
+                logger.error(
+                    "Could not find choice markers in story content. Raw content:"
+                )
+                logger.error(story_content)
                 raise ValueError("Could not find choice markers in story content")
 
-            choices_text = story_content[choices_start:choices_end].strip()
-            story_content = story_content[:choices_start].strip()
+            choices_text = choices_match.group(1).strip()
+            story_content = story_content[: choices_match.start()].strip()
             # Remove any "Chapter X:" prefix, including any whitespace after it
             story_content = re.sub(
                 r"^Chapter\s+\d+:\s*", "", story_content, flags=re.MULTILINE
             ).strip()
 
-            choice_pattern = r"Choice ([ABC]): (.+)$"
+            # First try to parse choices that are on separate lines
+            choice_pattern = r"Choice\s*([ABC])\s*:\s*([^.\n]+(?:\.[^.\n]+)*)"
             choices = []
 
-            for line in choices_text.split("\n"):
-                match = re.search(choice_pattern, line.strip())
-                if match:
-                    choices.append(match.group(2).strip())
+            # Try multi-line format first
+            matches = re.finditer(
+                choice_pattern, choices_text, re.IGNORECASE | re.MULTILINE
+            )
+            for match in matches:
+                choices.append(match.group(2).strip())
+
+            # If no matches found, try single-line format (choices separated by periods)
+            if not choices and "." in choices_text:
+                # Split by periods, but only if followed by "Choice" or end of string
+                single_line_pattern = r"Choice\s*[ABC]\s*:\s*([^.]+(?:\.[^.C][^.]*)*)"
+                matches = re.finditer(single_line_pattern, choices_text, re.IGNORECASE)
+                for match in matches:
+                    choices.append(match.group(1).strip())
+
+            if not choices:
+                logger.error(f"No choices found in choices text. Raw choices text:")
+                logger.error(choices_text)
+                raise ValueError("No choices found in story content")
 
             if len(choices) != 3:
-                raise ValueError("Must have exactly 3 story choices")
+                logger.warning(
+                    f"Expected 3 choices but found {len(choices)}. Raw choices text:"
+                )
+                logger.warning(choices_text)
+                # If we found at least one choice, use what we have rather than failing
+                if choices:
+                    logger.info("Proceeding with available choices")
+                else:
+                    raise ValueError("Must have at least one valid choice")
 
             story_choices = [
                 StoryChoice(
