@@ -193,7 +193,7 @@ async def stream_and_send_chapter(
                     "chapter_number": current_chapter_number,
                     "content": content_to_stream,
                     "chapter_type": chapter_type.value,
-                    "chapter_content": chapter_content.dict(),
+                    "chapter_content": chapter_content.content,
                     "question": sampled_question,
                 },
             },
@@ -222,25 +222,27 @@ async def send_story_complete(
         websocket: The WebSocket connection
         state: The current state
     """
+    # Get the final chapter (which should be CONCLUSION type)
+    final_chapter = state.chapters[-1]
+
+    # Stream the content first
+    content_to_stream = final_chapter.content
+    paragraphs = [p.strip() for p in content_to_stream.split("\n\n") if p.strip()]
+    for paragraph in paragraphs:
+        words = paragraph.split()
+        for i in range(0, len(words), WORD_BATCH_SIZE):
+            batch = " ".join(words[i : i + WORD_BATCH_SIZE])
+            await websocket.send_text(batch + " ")
+            await asyncio.sleep(WORD_DELAY)
+        await websocket.send_text("\n\n")
+        await asyncio.sleep(PARAGRAPH_DELAY)
+
+    # Then send the completion message with stats
     await websocket.send_json(
         {
             "type": "story_complete",
             "state": {
                 "current_chapter_id": state.current_chapter_id,
-                "chapters": [
-                    {
-                        "chapter_number": ch.chapter_number,
-                        "content": ch.content,
-                        "chapter_type": ch.chapter_type.value,
-                        "response": ch.response.dict() if ch.response else None,
-                        "chapter_content": ch.chapter_content.dict()
-                        if ch.chapter_content
-                        else None,
-                        "question": ch.question,
-                    }
-                    for ch in state.chapters
-                ],
-                "story_length": state.story_length,
                 "stats": {
                     "total_lessons": state.total_lessons,
                     "correct_lesson_answers": state.correct_lesson_answers,

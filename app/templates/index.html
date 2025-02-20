@@ -214,22 +214,21 @@
                 try {
                     // Try to parse as JSON (for choices)
                     const data = JSON.parse(event.data);
+                    hideLoader();
+                    
                     if (data.type === 'choices') {
-                        hideLoader();
                         displayChoices(data.choices);
                     } else if (data.type === 'story') {
-                        hideLoader();
                         appendStoryText(data.content);
                     } else if (data.type === 'story_complete') {
-                        hideLoader();
-                        displayStats(data);
+                        // Only handle the stats - content is streamed separately
+                        displayStats(data.state);
                     }
+                    return; // Exit early after handling JSON data
                 } catch (e) {
-                    // If not JSON, treat as raw story text
-                    const textDecoder = new TextDecoder('utf-8');
-                    const decodedText = typeof event.data === 'string' ? event.data : textDecoder.decode(event.data);
+                    // Only append raw text if it's not JSON
                     hideLoader();
-                    appendStoryText(decodedText);
+                    appendStoryText(event.data);
                 }
             };
             
@@ -420,14 +419,14 @@
         }
 
         // Update the stats display
-        function displayStats(data) {
+        function displayStats(state) {
             const statsHtml = `
                 <div class="text-center p-4">
                     <h3 class="text-lg font-semibold text-green-800 mb-2">Journey Complete!</h3>
                     <div class="text-sm text-green-700">
-                        <p>Total Lessons: ${data.stats.total_lessons}</p>
-                        <p>Correct Answers: ${data.stats.correct_lesson_answers}</p>
-                        <p>Success Rate: ${data.stats.completion_percentage}%</p>
+                        <p>Total Lessons: ${state.stats.total_lessons}</p>
+                        <p>Correct Answers: ${state.stats.correct_lesson_answers}</p>
+                        <p>Success Rate: ${state.stats.completion_percentage}%</p>
                     </div>
                     <button onclick="resetApplicationState()" 
                             class="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">

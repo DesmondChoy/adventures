@@ -54,6 +54,11 @@
   * Moved phase update before chapter generation
   * Ensures correct phase progression
   * Fixed "Exposition" showing for Chapter 2
+- [x] Fixed final chapter rendering and streaming:
+  * Modified `send_story_complete` to stream content word by word
+  * Updated frontend to handle streamed content
+  * Separated content streaming from stats display
+  * Ensured consistent streaming experience throughout story
 
 ## In Progress
 
