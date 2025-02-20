@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional, List, Literal, TypedDict, cast
+import math
 from app.models.story import (
     AdventureState,
     ChapterType,
@@ -22,10 +23,38 @@ The choices section MUST:
 1. Start with <CHOICES> on its own line with NO indentation
 2. Have exactly three choices, each on its own line with NO indentation
 3. Each choice MUST start with "Choice [A/B/C]: " followed by the choice text
-4. Each choice MUST be on a single line (NO line breaks within choices)
+4. Each choice MUST be on a single line:
+   - NO line breaks (pressing Enter/Return) within a choice
+   - NO word wrapping or splitting choices across lines
+   - NO periods followed by "Choice" within a choice
 5. End with </CHOICES> on its own line with NO indentation
 6. Each choice should be meaningful and distinct
 7. All choices must advance the plot in interesting ways
+8. There must be NO text before or after the <CHOICES> and </CHOICES> tags
+
+Correct Example:
+
+<CHOICES>
+Choice A: Explore the dark forest.
+Choice B: Return to the village for help.
+Choice C: Attempt to climb the tall tree.
+</CHOICES>
+
+Incorrect Examples:
+
+Example 1 - Wrong formatting and extra text:
+Here are some choices:
+<CHOICES>
+Choice A: Explore the
+dark forest.
+Choice B: Return to the village.
+  Choice C: Climb tree.
+</CHOICES>
+Extra text.
+
+Example 2 - All choices on one line:
+<CHOICES>
+Choice A: Explore the dark forest. Choice B: Return to the village for help. Choice C: Attempt to climb the tall tree.
 </CHOICES>"""
 
 
@@ -58,26 +87,37 @@ def _format_lesson_answers(lesson_question: LessonQuestion) -> str:
 
 
 def _get_phase_guidance(story_phase: str) -> str:
-    """Get the appropriate guidance based on story phase."""
+    """Get the appropriate guidance based on the Journey Quest story phase."""
     return {
-        "EARLY": (
+        "Exposition": (
             "Phase Guidance:\n"
-            "- Introduce lesson elements that help establish the world\n"
-            "- Connect learning moments to character discovery\n"
-            "- Set up future lesson themes"
+            "- Focus: Introduction, setting the scene, establishing the character's ordinary world, and the inciting incident that disrupts it.\n"
+            "- Narrative Goals: Introduce the main character, the setting (based on chosen story category), and the initial problem or quest. Spark curiosity and hook the reader.\n"
+            "- Emotional Tone: Intriguing, inviting, a sense of normalcy being disrupted, hinting at adventure."
         ),
-        "MIDDLE": (
+        "Rising": (
             "Phase Guidance:\n"
-            "- Deepen the lesson significance to the plot\n"
-            "- Connect learning to rising stakes\n"
-            "- Use knowledge as a tool for overcoming challenges"
+            "- Focus: The character sets out on their journey, encountering initial challenges, making new discoveries, and starting to learn new skills or gain knowledge related to the lesson topic.\n"
+            "- Narrative Goals: Develop the plot, introduce supporting characters (if any), present early obstacles, show the character's initial steps on their quest, and weave in some initial learning moments.\n"
+            "- Emotional Tone: Excitement, anticipation, a sense of progress, building momentum, hints of challenges ahead."
         ),
-        "FINAL": (
+        "Trials": (
             "Phase Guidance:\n"
-            "- Bring lesson themes full circle\n"
-            "- Show how knowledge has transformed the character\n"
-            "- Create satisfying connections to previous learning moments\n"
-            "- Prepare for a satisfying conclusion"
+            "- Focus: The character faces more significant obstacles, tests their abilities, and encounters setbacks. Stakes are raised, and tension builds towards the climax. Lessons become more critical for overcoming challenges.\n"
+            "- Narrative Goals: Introduce major conflicts, test the character's resolve, increase the stakes, deepen the learning curve, and build suspense leading to the climax.\n"
+            "- Emotional Tone: Tension, suspense, determination, challenges, moments of doubt, building towards a peak."
+        ),
+        "Climax": (
+            "Phase Guidance:\n"
+            "- Focus: The climax of the quest where the character confronts the main conflict. Followed by the resolution, the immediate aftermath, and a sense of return or a 'new normal.'\n"
+            "- Narrative Goals: Deliver the most exciting and challenging part of the story (the climax), resolve the main conflict, show the consequences of the character's actions and learning, provide closure, and hint at transformation or lasting change.\n"
+            "- Emotional Tone: Intense excitement, high stakes, relief (after climax), satisfaction, reflection, a sense of completion and transformation."
+        ),
+        "Return": (
+            "Phase Guidance:\n"
+            "- Focus: The character returns to their original world, or establishes a new equilibrium, demonstrably different due to their journey. They integrate the lessons learned and show evidence of personal growth. The lasting impact of the adventure is revealed.\n"
+            "- Narrative Goals: Illustrate the character's transformation, showcase how they apply their new knowledge or skills, tie up any loose ends, and offer a sense of finality while possibly hinting at future possibilities (sequel potential, ongoing journey). Reinforce the overall theme or message.\n"
+            "- Emotional Tone: Reflective, peaceful (though potentially bittersweet), a sense of accomplishment, wisdom, and closure. The feeling of a journey completed, but also a new beginning having been forged. A sense of hopeful maturity or understanding."
         ),
     }.get(story_phase, "")
 
@@ -109,7 +149,9 @@ Your task is to generate engaging story chapters that:
 1. Maintain narrative consistency with previous choices
 2. Create meaningful consequences for user decisions
 3. Seamlessly integrate lesson elements when provided
-4. Use multiple paragraphs separated by blank lines to ensure readability"""
+4. Use multiple paragraphs separated by blank lines to ensure readability
+
+CRITICAL: Never start your generated content with 'Chapter' followed by a number or any similar chapter heading. Begin the narrative directly to maintain story immersion and continuity."""
 
     return base_prompt + choice_rules
 
@@ -157,25 +199,8 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
         if len(state.chapters) > 1 and chapter != state.chapters[-1]:
             chapter_history.append("---\n")
 
-    # Calculate story phase based on story progression percentage
-    total_chapters = state.story_length
-    current_chapter = state.current_chapter_number
-    progress_percentage = (current_chapter / total_chapters) * 100
-
-    # Educational context: Story phases help maintain narrative pacing
-    # EARLY: First chapter (introduction, world-building)
-    # MIDDLE: Core chapters (rising action, character development)
-    # LATE: Final quarter (building to climax)
-    # FINAL: Last chapter (resolution)
-    story_phase = (
-        "EARLY"
-        if current_chapter == 1
-        else "FINAL"
-        if current_chapter == total_chapters
-        else "LATE"
-        if progress_percentage >= 75  # Last quarter of the story
-        else "MIDDLE"
-    )
+    # Get story phase from state
+    story_phase = state.current_storytelling_phase
 
     # Build the base prompt with complete history
     base_prompt = (
@@ -199,50 +224,18 @@ def _build_chapter_prompt(
     consequences_guidance: str = "",
     num_previous_lessons: int = 0,
     previous_lessons: Optional[List[LessonResponse]] = None,
-    is_opening: bool = False,
 ) -> str:
     """Builds the appropriate prompt based on chapter type and state.
 
     Args:
         base_prompt: Base story state and history
-        story_phase: Current phase of the story (EARLY, MIDDLE, FINAL)
+        story_phase: Current phase of the story (Exposition, Rising, Trials, Climax, Return)
         chapter_type: Type of chapter to generate (LESSON or STORY)
         lesson_question: Question data for lesson chapters
         consequences_guidance: Guidance based on previous lesson outcomes
         num_previous_lessons: Number of previous lesson chapters
         previous_lessons: History of previous lesson responses
-        is_opening: Whether this is the opening chapter
     """
-    # Handle opening chapter special case
-    if is_opening:
-        chapter_count = base_prompt.split("of ")[1].split("\n")[0]
-        if chapter_type == ChapterType.LESSON:
-            return f"""{base_prompt}
-
-Generate the opening scene of the story, introducing the setting and main character. 
-The scene should establish the world and protagonist while naturally leading to this lesson question:
-{lesson_question["question"]}
-
-Remember this is the beginning of a {chapter_count}-chapter journey.
-
-CRITICAL INSTRUCTIONS:
-1. Create an immersive fantasy world that subtly connects to {lesson_question["topic"]}, including but not limited to {lesson_question["subtopic"]}
-2. The question should emerge naturally from the story events or character interactions
-3. DO NOT include any story-based choices or decisions
-4. DO NOT use bullet points, numbered lists, or dashes
-5. DO NOT end with "What should X do?" or similar prompts
-6. The question should feel like a natural part of the character's discovery
-
-{_format_lesson_answers(lesson_question)}"""
-        else:
-            return f"""{base_prompt}
-
-Generate the opening scene of the story, introducing the setting and main character. 
-The scene should establish the world and protagonist while building towards a natural lesson moment.
-Remember this is the beginning of a {chapter_count}-chapter journey.
-
-IMPORTANT: Do not include any story choices or decision points in this scene."""
-
     # Handle lesson chapters
     if chapter_type == ChapterType.LESSON:
         continuation_text = ""
@@ -273,7 +266,7 @@ CRITICAL INSTRUCTIONS:
 {_format_lesson_answers(lesson_question)}"""
 
     # Handle story chapters
-    else:
+    elif chapter_type == ChapterType.STORY:
         continuation_text = ""
         if num_previous_lessons > 0:
             continuation_text = f"""Continue the story based on the character's previous lesson{" and earlier lessons" if num_previous_lessons > 1 else ""}.
@@ -302,6 +295,35 @@ IMPORTANT:
 
 {CHOICE_FORMAT_INSTRUCTIONS}"""
 
+    # Handle conclusion chapters
+    else:  # chapter_type == ChapterType.CONCLUSION
+        continuation_text = ""
+        if num_previous_lessons > 0:
+            continuation_text = f"""Continue the story, incorporating the wisdom gained from the previous lesson{" and earlier lessons" if num_previous_lessons > 1 else ""}.
+
+{consequences_guidance}
+
+"""
+            if previous_lessons:
+                continuation_text += f"Previous lesson history:\n{format_lesson_history(previous_lessons)}\n\n"
+
+        return f"""{base_prompt}
+
+{continuation_text}{_get_phase_guidance(story_phase)}
+
+Write the conclusion of the story by:
+1. Following directly from the pivotal choice made in the previous chapter
+2. Resolving all remaining plot threads and character arcs
+3. Showing how the character's journey and choices have led to this moment
+4. Providing a satisfying ending that reflects the consequences of their decisions
+5. Incorporating the wisdom gained from their educational journey
+
+IMPORTANT:
+1. This is the final chapter - provide a complete and satisfying resolution
+2. {"Demonstrate how the lessons learned have contributed to the character's growth" if num_previous_lessons > 0 else "Focus on the character's personal growth through their journey"}
+3. DO NOT include any choices or decision points
+4. End with a sense of closure while highlighting the character's transformation"""
+
 
 def build_user_prompt(
     state: AdventureState,
@@ -322,12 +344,12 @@ def build_user_prompt(
                 last_lesson.is_correct,
                 last_lesson.question,
                 last_lesson.chosen_answer,
-                state.current_chapter_number,  # Pass current chapter number
+                state.current_chapter_number,
             )
 
     # Determine chapter properties
-    is_opening = state.current_chapter_number == 1
-    chapter_type = ChapterType.LESSON if lesson_question else ChapterType.STORY
+    current_chapter_type = state.planned_chapter_types[state.current_chapter_number - 1]
+    chapter_type = ChapterType.LESSON if lesson_question else current_chapter_type
 
     # Build the chapter prompt
     return _build_chapter_prompt(
@@ -338,7 +360,6 @@ def build_user_prompt(
         consequences_guidance=consequences_guidance,
         num_previous_lessons=num_previous_lessons,
         previous_lessons=previous_lessons,
-        is_opening=is_opening,
     )
 
 

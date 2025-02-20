@@ -95,6 +95,17 @@ async def process_choice(
 
         state.current_chapter_id = chosen_path
 
+    # Calculate new chapter number and update story phase
+    new_chapter_number = len(state.chapters) + 1
+    chapter_type = state.planned_chapter_types[new_chapter_number - 1]
+    if not isinstance(chapter_type, ChapterType):
+        chapter_type = ChapterType(chapter_type)
+
+    # Update the storytelling phase based on the new chapter number
+    state.current_storytelling_phase = ChapterManager.determine_story_phase(
+        new_chapter_number, state.story_length
+    )
+
     # Generate new chapter content
     chapter_content, sampled_question = await generate_chapter(
         story_category, lesson_topic, state
@@ -102,13 +113,11 @@ async def process_choice(
 
     # Create and append new chapter
     try:
-        chapter_type = state.planned_chapter_types[len(state.chapters)]
-        if not isinstance(chapter_type, ChapterType):
-            chapter_type = ChapterType(chapter_type)
-
         new_chapter = ChapterData(
             chapter_number=len(state.chapters) + 1,
-            content=chapter_content.content,
+            content=re.sub(
+                r"^Chapter\s+\d+:\s*", "", chapter_content.content, flags=re.MULTILINE
+            ).strip(),
             chapter_type=chapter_type,
             response=None,
             chapter_content=chapter_content,
@@ -134,7 +143,7 @@ async def process_choice(
 async def stream_and_send_chapter(
     websocket: WebSocket,
     chapter_content: ChapterContent,
-    sampled_question: Optional[dict],
+    sampled_question: Optional[Dict[str, Any]],
     state: AdventureState,
 ) -> None:
     """Stream chapter content and send chapter data to the client.
@@ -145,8 +154,20 @@ async def stream_and_send_chapter(
         sampled_question: The question data (if any)
         state: The current state
     """
+    # DEBUG: Log chapter content to help diagnose chapter prefix issues
+    logger.debug(
+        f"=== DEBUG: Chapter Content ===\n"
+        f"Chapter Number: {state.current_chapter_number}\n"
+        f"Raw Content:\n{chapter_content.content}\n"
+        f"==========================="
+    )
+
+    # Remove any "Chapter X:" prefix before streaming
+    content_to_stream = re.sub(
+        r"^Chapter\s+\d+:\s*", "", chapter_content.content, flags=re.MULTILINE
+    ).strip()
     # Split content into paragraphs and stream
-    paragraphs = [p.strip() for p in chapter_content.content.split("\n\n") if p.strip()]
+    paragraphs = [p.strip() for p in content_to_stream.split("\n\n") if p.strip()]
     for paragraph in paragraphs:
         words = paragraph.split()
         for i in range(0, len(words), WORD_BATCH_SIZE):
@@ -170,9 +191,9 @@ async def stream_and_send_chapter(
                 "current_chapter_id": state.current_chapter_id,
                 "current_chapter": {
                     "chapter_number": current_chapter_number,
-                    "content": chapter_content.content,
+                    "content": content_to_stream,
                     "chapter_type": chapter_type.value,
-                    "chapter_content": chapter_content.dict(),
+                    "chapter_content": chapter_content.content,
                     "question": sampled_question,
                 },
             },
@@ -201,25 +222,27 @@ async def send_story_complete(
         websocket: The WebSocket connection
         state: The current state
     """
+    # Get the final chapter (which should be CONCLUSION type)
+    final_chapter = state.chapters[-1]
+
+    # Stream the content first
+    content_to_stream = final_chapter.content
+    paragraphs = [p.strip() for p in content_to_stream.split("\n\n") if p.strip()]
+    for paragraph in paragraphs:
+        words = paragraph.split()
+        for i in range(0, len(words), WORD_BATCH_SIZE):
+            batch = " ".join(words[i : i + WORD_BATCH_SIZE])
+            await websocket.send_text(batch + " ")
+            await asyncio.sleep(WORD_DELAY)
+        await websocket.send_text("\n\n")
+        await asyncio.sleep(PARAGRAPH_DELAY)
+
+    # Then send the completion message with stats
     await websocket.send_json(
         {
             "type": "story_complete",
             "state": {
                 "current_chapter_id": state.current_chapter_id,
-                "chapters": [
-                    {
-                        "chapter_number": ch.chapter_number,
-                        "content": ch.content,
-                        "chapter_type": ch.chapter_type.value,
-                        "response": ch.response.dict() if ch.response else None,
-                        "chapter_content": ch.chapter_content.dict()
-                        if ch.chapter_content
-                        else None,
-                        "question": ch.question,
-                    }
-                    for ch in state.chapters
-                ],
-                "story_length": state.story_length,
                 "stats": {
                     "total_lessons": state.total_lessons,
                     "correct_lesson_answers": state.correct_lesson_answers,
@@ -325,28 +348,63 @@ async def generate_chapter(
                     else f"wrong{len(story_choices) + 1}",
                 )
             )
-    else:
+    elif chapter_type == ChapterType.STORY:
         try:
-            choices_start = story_content.find("<CHOICES>")
-            choices_end = story_content.find("</CHOICES>")
+            # Use regex to find choice markers, allowing for whitespace variations
+            choices_match = re.search(
+                r"<CHOICES>\s*(.*?)\s*</CHOICES>",
+                story_content,
+                re.DOTALL | re.IGNORECASE,
+            )
 
-            if choices_start == -1 or choices_end == -1:
+            if not choices_match:
+                logger.error(
+                    "Could not find choice markers in story content. Raw content:"
+                )
+                logger.error(story_content)
                 raise ValueError("Could not find choice markers in story content")
 
-            choices_text = story_content[choices_start:choices_end].strip()
-            story_content = story_content[:choices_start].strip()
-            story_content = re.sub(r"^Chapter \d+:\s*", "", story_content).strip()
+            choices_text = choices_match.group(1).strip()
+            story_content = story_content[: choices_match.start()].strip()
+            # Remove any "Chapter X:" prefix, including any whitespace after it
+            story_content = re.sub(
+                r"^Chapter\s+\d+:\s*", "", story_content, flags=re.MULTILINE
+            ).strip()
 
-            choice_pattern = r"Choice ([ABC]): (.+)$"
+            # First try to parse choices that are on separate lines
+            choice_pattern = r"Choice\s*([ABC])\s*:\s*([^.\n]+(?:\.[^.\n]+)*)"
             choices = []
 
-            for line in choices_text.split("\n"):
-                match = re.search(choice_pattern, line.strip())
-                if match:
-                    choices.append(match.group(2).strip())
+            # Try multi-line format first
+            matches = re.finditer(
+                choice_pattern, choices_text, re.IGNORECASE | re.MULTILINE
+            )
+            for match in matches:
+                choices.append(match.group(2).strip())
+
+            # If no matches found, try single-line format (choices separated by periods)
+            if not choices and "." in choices_text:
+                # Split by periods, but only if followed by "Choice" or end of string
+                single_line_pattern = r"Choice\s*[ABC]\s*:\s*([^.]+(?:\.[^.C][^.]*)*)"
+                matches = re.finditer(single_line_pattern, choices_text, re.IGNORECASE)
+                for match in matches:
+                    choices.append(match.group(1).strip())
+
+            if not choices:
+                logger.error(f"No choices found in choices text. Raw choices text:")
+                logger.error(choices_text)
+                raise ValueError("No choices found in story content")
 
             if len(choices) != 3:
-                raise ValueError("Must have exactly 3 story choices")
+                logger.warning(
+                    f"Expected 3 choices but found {len(choices)}. Raw choices text:"
+                )
+                logger.warning(choices_text)
+                # If we found at least one choice, use what we have rather than failing
+                if choices:
+                    logger.info("Proceeding with available choices")
+                else:
+                    raise ValueError("Must have at least one valid choice")
 
             story_choices = [
                 StoryChoice(
@@ -364,6 +422,8 @@ async def generate_chapter(
                 )
                 for i in range(3)
             ]
+    else:  # CONCLUSION chapter
+        story_choices = []  # No choices for conclusion chapters
 
     # Debug output for choices
     logger.debug("\n=== DEBUG: Story Choices ===")

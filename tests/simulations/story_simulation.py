@@ -133,7 +133,7 @@ def get_random_lesson_topic(lesson_df):
 
 def get_random_story_length():
     """Randomly select a story length."""
-    story_lengths = [5, 5, 5]  # Mirror available options in index.html
+    story_lengths = [5, 8, 10]  # Mirror available options in index.html
     return random.choice(story_lengths)
 
 

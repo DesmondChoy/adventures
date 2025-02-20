@@ -1,6 +1,7 @@
 from typing import List
 import random
 import logging
+import math
 from app.models.story import ChapterType, AdventureState
 from app.init_data import sample_question
 
@@ -10,15 +11,37 @@ logger = logging.getLogger("story_app")
 class ChapterManager:
     """Service class for managing chapter progression and type determination."""
 
-    # Maximum ratio of lessons to total chapters (excluding mandatory first/last lessons)
-    # For example, 0.4 means at most 40% of middle chapters can be lessons
-    MAX_LESSON_RATIO = 0.4
+    @staticmethod
+    def determine_story_phase(current_chapter_number: int, story_length: int) -> str:
+        """Determine the current story phase (Journey Quest) based on chapter number and story length.
+
+        Args:
+            current_chapter_number: The current chapter number (1-based)
+            story_length: Total number of chapters in the story
+
+        Returns:
+            str: One of "Exposition", "Rising", "Trials", "Climax", or "Return"
+        """
+        if current_chapter_number == 1:
+            return "Exposition"
+        elif current_chapter_number == story_length:
+            return "Return"
+        else:
+            rising_end = math.ceil(story_length * 0.25)
+            climax_start = story_length - math.floor(story_length * 0.25)
+
+            if current_chapter_number <= rising_end:
+                return "Rising"
+            elif current_chapter_number >= climax_start:
+                return "Climax"
+            else:
+                return "Trials"
 
     @staticmethod
     def determine_chapter_types(
         total_chapters: int, available_questions: int
     ) -> List[ChapterType]:
-        """Determine the sequence of chapter types for the entire adventure up front.
+        """Determine the sequence of chapter types for the entire adventure.
 
         Args:
             total_chapters: Total number of chapters in the adventure
@@ -30,71 +53,78 @@ class ChapterManager:
         Raises:
             ValueError: If there aren't enough questions for the required lessons
         """
+        if total_chapters < 4:
+            raise ValueError(
+                "Total chapters must be at least 4 to accommodate the required chapter types"
+            )
+
         logger.info(
             "Starting chapter type determination",
             extra={
                 "total_chapters": total_chapters,
                 "available_questions": available_questions,
-                "max_lesson_ratio": ChapterManager.MAX_LESSON_RATIO,
             },
         )
-
-        # First and last chapters must be lessons, so we need at least 2 questions
-        if available_questions < 2:
-            error_msg = (
-                f"Need at least 2 questions, but only have {available_questions}"
-            )
-            logger.error(error_msg, extra={"error_type": "insufficient_questions"})
-            raise ValueError(error_msg)
 
         # Initialize with all chapters as STORY type
         chapter_types = [ChapterType.STORY] * total_chapters
 
-        # First and last chapters are always lessons
-        chapter_types[0] = ChapterType.LESSON
-        chapter_types[-1] = ChapterType.LESSON
+        # First two chapters are always STORY
+        chapter_types[0] = ChapterType.STORY
+        chapter_types[1] = ChapterType.STORY
+
+        # Second-to-last chapter is always STORY
+        chapter_types[-2] = ChapterType.STORY
+
+        # Last chapter is always CONCLUSION
+        chapter_types[-1] = ChapterType.CONCLUSION
 
         logger.debug(
-            "Set mandatory lesson chapters",
+            "Set mandatory chapter types",
             extra={
-                "first_chapter": "LESSON",
-                "last_chapter": "LESSON",
+                "first_chapter": "STORY",
+                "second_chapter": "STORY",
+                "second_to_last": "STORY",
+                "last_chapter": "CONCLUSION",
                 "initial_state": [ct.value for ct in chapter_types],
             },
         )
 
-        # Calculate maximum allowed lessons for middle chapters based on ratio
-        middle_chapters = total_chapters - 2  # subtract first and last chapters
-        max_middle_lessons = int(middle_chapters * ChapterManager.MAX_LESSON_RATIO)
+        # Calculate required number of LESSON chapters (50% of non-conclusion chapters)
+        required_lessons = (total_chapters - 1) // 2
+        possible_lessons = min(required_lessons, available_questions)
 
-        # Calculate how many more lesson chapters we can actually add
-        remaining_questions = available_questions - 2  # subtract first and last lessons
-        possible_additional_lessons = min(remaining_questions, max_middle_lessons)
+        if possible_lessons < 0:
+            error_msg = f"Need at least {required_lessons} questions, but only have {available_questions}"
+            logger.error(error_msg, extra={"error_type": "insufficient_questions"})
+            raise ValueError(error_msg)
 
         logger.info(
             "Calculated lesson allocation constraints",
             extra={
-                "middle_chapters": middle_chapters,
-                "max_middle_lessons": max_middle_lessons,
-                "remaining_questions": remaining_questions,
-                "possible_additional_lessons": possible_additional_lessons,
+                "required_lessons": required_lessons,
+                "available_questions": available_questions,
+                "possible_lessons": possible_lessons,
             },
         )
 
-        if possible_additional_lessons > 0:
-            # Get positions for potential additional lessons (excluding first and last positions)
-            available_positions = list(range(1, total_chapters - 1))
-            # Randomly select positions for additional lessons, limited by ratio
-            lesson_positions = random.sample(
-                available_positions, possible_additional_lessons
-            )
+        # Get available positions for lessons (excluding first two, second-to-last, and last chapters)
+        available_positions = list(range(2, total_chapters - 2))
+
+        # Only attempt to select lesson positions if we have both possible lessons and available positions
+        if possible_lessons > 0 and available_positions:
+            # Ensure we don't try to sample more positions than are available
+            possible_lessons = min(possible_lessons, len(available_positions))
+
+            # Randomly select positions for lessons
+            lesson_positions = random.sample(available_positions, possible_lessons)
 
             # Set selected positions to LESSON type
             for pos in lesson_positions:
                 chapter_types[pos] = ChapterType.LESSON
 
             logger.info(
-                "Selected additional lesson positions",
+                "Selected lesson positions",
                 extra={
                     "available_positions": available_positions,
                     "selected_positions": lesson_positions,
@@ -103,9 +133,13 @@ class ChapterManager:
             )
         else:
             logger.info(
-                "No additional lesson positions selected",
+                "No lesson positions selected",
                 extra={
-                    "reason": "no_additional_lessons_possible",
+                    "reason": "no_lessons_possible"
+                    if possible_lessons == 0
+                    else "no_available_positions",
+                    "possible_lessons": possible_lessons,
+                    "available_positions_count": len(available_positions),
                     "final_chapter_sequence": [ct.value for ct in chapter_types],
                 },
             )
@@ -172,4 +206,5 @@ class ChapterManager:
             story_length=total_chapters,
             chapters=[],
             planned_chapter_types=chapter_types,
+            current_storytelling_phase="Exposition",  # Initial phase is always Exposition
         )

@@ -8,6 +8,7 @@ class ChapterType(str, Enum):
 
     LESSON = "lesson"
     STORY = "story"
+    CONCLUSION = "conclusion"
 
 
 class StoryChoice(BaseModel):
@@ -29,15 +30,6 @@ class ChapterContent(BaseModel):
 
     content: str
     choices: List[StoryChoice]
-
-    @field_validator("choices", mode="after")
-    @classmethod
-    def validate_choices(
-        cls, v, _
-    ) -> List[StoryChoice]:  # renamed values to _ since unused
-        if not v:
-            raise ValueError("Must have at least one choice")
-        return v
 
 
 class LessonResponse(BaseModel):
@@ -74,6 +66,8 @@ class ChapterData(BaseModel):
 
         if chapter_type == ChapterType.STORY and len(v.choices) != 3:
             raise ValueError("Story chapters must have exactly 3 choices")
+        if chapter_type == ChapterType.CONCLUSION and len(v.choices) != 0:
+            raise ValueError("Conclusion chapters must have exactly 0 choices")
         return v
 
 
@@ -82,10 +76,13 @@ class AdventureState(BaseModel):
 
     current_chapter_id: str
     chapters: List[ChapterData] = []
-    story_length: int = Field(default=3, ge=3, le=7)
+    story_length: int = Field(default=5, ge=5, le=10)
     planned_chapter_types: List[
         ChapterType
     ] = []  # Pre-determined sequence of chapter types
+    current_storytelling_phase: str = (
+        "Exposition"  # Current phase in the Journey Quest structure
+    )
 
     @property
     def current_chapter_number(self) -> int:

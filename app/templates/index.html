@@ -41,9 +41,9 @@
                     <select id="storyLength" name="storyLength" required
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                         <option value="">Select journey length...</option>
-                        <option value="3">Quick Quest (3 chapters)</option>
-                        <option value="5">Epic Tale (5 chapters)</option>
-                        <option value="7">Legendary Saga (7 chapters)</option>
+                        <option value="5">Lightning Quest (5 chapters)</option>
+                        <option value="8">Epic Tale (8 chapters)</option>
+                        <option value="10">Legendary Saga (10 chapters)</option>
                     </select>
                 </div>
 
@@ -214,22 +214,21 @@
                 try {
                     // Try to parse as JSON (for choices)
                     const data = JSON.parse(event.data);
+                    hideLoader();
+                    
                     if (data.type === 'choices') {
-                        hideLoader();
                         displayChoices(data.choices);
                     } else if (data.type === 'story') {
-                        hideLoader();
                         appendStoryText(data.content);
                     } else if (data.type === 'story_complete') {
-                        hideLoader();
-                        displayStats(data);
+                        // Only handle the stats - content is streamed separately
+                        displayStats(data.state);
                     }
+                    return; // Exit early after handling JSON data
                 } catch (e) {
-                    // If not JSON, treat as raw story text
-                    const textDecoder = new TextDecoder('utf-8');
-                    const decodedText = typeof event.data === 'string' ? event.data : textDecoder.decode(event.data);
+                    // Only append raw text if it's not JSON
                     hideLoader();
-                    appendStoryText(decodedText);
+                    appendStoryText(event.data);
                 }
             };
             
@@ -310,6 +309,17 @@
             const choicesContainer = document.getElementById('choicesContainer');
             choicesContainer.innerHTML = ''; // Clear existing choices
             
+            // Special case: If choices is empty array, this is a CONCLUSION chapter
+            if (Array.isArray(choices) && choices.length === 0) {
+                const button = document.createElement('button');
+                button.className = 'w-full p-4 mb-3 text-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500';
+                button.textContent = 'Return to Landing Page';
+                button.onclick = resetApplicationState;
+                choicesContainer.appendChild(button);
+                return;
+            }
+            
+            // Regular story choices
             choices.forEach(choice => {
                 const button = document.createElement('button');
                 button.className = 'w-full p-4 mb-3 text-left border rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500';
@@ -409,14 +419,14 @@
         }
 
         // Update the stats display
-        function displayStats(data) {
+        function displayStats(state) {
             const statsHtml = `
                 <div class="text-center p-4">
                     <h3 class="text-lg font-semibold text-green-800 mb-2">Journey Complete!</h3>
                     <div class="text-sm text-green-700">
-                        <p>Total Lessons: ${data.stats.total_lessons}</p>
-                        <p>Correct Answers: ${data.stats.correct_lesson_answers}</p>
-                        <p>Success Rate: ${data.stats.completion_percentage}%</p>
+                        <p>Total Lessons: ${state.stats.total_lessons}</p>
+                        <p>Correct Answers: ${state.stats.correct_lesson_answers}</p>
+                        <p>Success Rate: ${state.stats.completion_percentage}%</p>
                     </div>
                     <button onclick="resetApplicationState()" 
                             class="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">

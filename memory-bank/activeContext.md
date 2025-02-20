@@ -5,10 +5,11 @@ The project is implementing core Learning Odyssey features:
 
 1. Adventure Flow Implementation
    - Landing page topic and length selection
-   - **`app/services/chapter_manager.py`**: ChapterType determination (LESSON/STORY)
+   - **`app/services/chapter_manager.py`**: ChapterType determination (LESSON/STORY/CONCLUSION)
    - **`app/services/llm/prompt_engineering.py`**: Content source integration:
      - LESSON chapters: lessons.csv + LLM narrative wrapper
-     - STORY chapters: Full LLM generation
+     - STORY chapters: Full LLM generation with choices
+     - CONCLUSION chapters: Full LLM generation without choices
    - Narrative continuity via prompt engineering
 
 2. Content Management (`app/data/`)
@@ -18,6 +19,74 @@ The project is implementing core Learning Odyssey features:
    - History tracking in AdventureState
 
 ## Recent Changes
+
+### Choice Format Handling Improvements
+- Enhanced choice parsing in `websocket_service.py`:
+  * Implemented two-stage parsing strategy:
+    - First attempts multi-line format
+    - Falls back to single-line format if needed
+  * Added flexible regex patterns for both formats
+  * Improved error handling and logging
+  * Better recovery from parsing failures
+- Updated choice format instructions in `prompt_engineering.py`:
+  * Added explicit examples showing correct format
+  * Added negative examples showing incorrect formats
+  * Enhanced clarity about line breaks and formatting
+  * Added specific warnings about common mistakes
+
+### Final Chapter Streaming Fix
+- Enhanced final chapter rendering and streaming:
+  * Modified `send_story_complete` in `websocket_service.py`:
+    - Streams content word by word using same mechanism as other chapters
+    - Uses existing WORD_BATCH_SIZE and delay constants
+    - Sends stats separately after content finishes streaming
+    - Removed content from story_complete message
+  * Updated frontend in `app/templates/index.html`:
+    - Removed content clearing in story_complete handler
+    - Uses regular text streaming mechanism for content
+    - Only handles stats in story_complete message
+  * Benefits:
+    - Consistent streaming experience throughout story
+    - Smooth transition from content to stats
+    - Maintains narrative immersion
+    - Better user experience
+
+### Journey Quest Implementation
+- Initial implementation of Journey Quest pacing:
+  * Added `current_storytelling_phase` to `AdventureState` to track phases
+  * Added `determine_story_phase` static method to `ChapterManager`
+  * Updated `initialize_adventure_state` with initial "Exposition" phase
+  * Modified `websocket_service.py` for phase updates
+  * Enhanced `_get_phase_guidance` with detailed phase-specific guidance
+  * Updated `_build_base_prompt` to use state-based phase
+  * Added required math imports
+
+### Story Phase Timing Fix
+- Fixed incorrect story phase progression:
+  * Moved phase update before chapter generation in `websocket_service.py`
+  * Ensures correct phase (e.g., "Rising" for Chapter 2)
+  * Maintains proper Journey Quest structure (Exposition -> Rising -> Trials -> Climax -> Return)
+  * Improves narrative coherence by using correct phase guidance in prompts
+  * Fixed timing issue where LLM was seeing old phase value
+
+### Chapter Logic Refactor
+- Implemented new chapter sequencing:
+  * First two chapters: Always STORY (for setting/character development)
+  * Second-to-last chapter: Always STORY (for pivotal choices)
+  * Last chapter: Always CONCLUSION (for story resolution)
+  * Remaining chapters: 50% LESSON (subject to available questions)
+- Added CONCLUSION chapter type:
+  * No choices presented
+  * Provides satisfying story resolution
+  * Return to Landing Page button
+- Enhanced prompt engineering:
+  * Added CONCLUSION-specific prompts
+  * Improved narrative resolution
+  * Better story arc completion
+- Fixed random.sample error:
+  * Added validation for available questions
+  * Improved error handling
+  * Better logging for debugging
 
 ### Progress Tracking (`app/templates/index.html`)
 - Implemented visual progress tracking:
@@ -51,12 +120,6 @@ The project is implementing core Learning Odyssey features:
   * Stored during state initialization
   * Single source of truth for chapter progression
   * Maintains complete state serialization
-
-- Current focus areas:
-  * State synchronization optimization
-  * Navigation path validation
-  * Error recovery improvements
-  * Client-server state consistency
 
 ### WebSocket Architecture Refactoring
 - Split WebSocket handling into two components:
@@ -94,29 +157,45 @@ The project is implementing core Learning Odyssey features:
 
 ### Prompt Engineering (`app/services/llm/prompt_engineering.py`)
 - Enhanced world-building system:
-  * Uses topic/subtopic for thematic world creation
-  * Improved data structures in LessonQuestion
-  * Better narrative coherence through subject connections
-  * More meaningful fantasy world generation
+    * Uses topic/subtopic for thematic world creation
+    * Improved data structures in LessonQuestion
+    * Better narrative coherence through subject connections
+    * More meaningful fantasy world generation
 - Improved narrative continuity:
-  * Use planned_chapter_types for accurate chapter type info
-  * Removed hard-coded chapter type assumptions
-  * Enhanced state-driven progression
-  * Better state consistency in prompts
+    * Use planned_chapter_types for accurate chapter type info
+    * Removed hard-coded chapter type assumptions
+    * Enhanced state-driven progression
+    * Better state consistency in prompts
 - Simplified process_consequences():
-  * Removed hardcoded chapter number checks
-  * Logic now based purely on is_correct state
-  * Maintains high-quality narrative guidance
-  * Follows state-driven pattern
+    * Removed hardcoded chapter number checks
+    * Logic now based purely on is_correct state
+    * Maintains high-quality narrative guidance
+    * Follows state-driven pattern
+
+### Story Length Fixes
+- Updated `index.html` to offer story lengths of 5, 8, and 10 chapters.
+- Modified `app/models/story.py` to allow story lengths up to 10 chapters (changed `story_length` field constraint).
+
+### Chapter 1 Choices Fix
+- Removed the `is_opening` special case in `app/services/llm/prompt_engineering.py` to ensure the first two chapters (STORY type) include choices.
+
+### "Chapter X:" Prefix Fix
+- Added an instruction to the system prompt (`app/services/llm/prompt_engineering.py`) to prevent the LLM from generating chapter prefixes.
+- Added debug logging to `app/services/websocket_service.py` to track chapter content.
+- Improved the regex in `app/services/websocket_service.py` to reliably remove any "Chapter X:" prefixes.
+- Ensured the stripped content is used consistently for streaming, state updates, and storing chapter data.
+- Fixed duplicate parameter and docstring issues in `app/services/websocket_service.py`.
 
 ## Active Decisions
 
 ### Architecture
 1. Content Flow
     - **`app/services/chapter_manager.py`**:
-        - Determines ChapterType (LESSON/STORY)
-        - Enforces first/last chapter LESSON type
-        - Enforces MAX_LESSON_RATIO (40%) for middle chapters
+        - Determines ChapterType (LESSON/STORY/CONCLUSION)
+        - First two chapters: Always STORY
+        - Second-to-last chapter: Always STORY
+        - Last chapter: Always CONCLUSION
+        - 50% of remaining chapters: LESSON (subject to available questions)
     - **`app/services/llm/prompt_engineering.py`**:
         - LESSON chapters:
             * Questions from lessons.csv
@@ -125,6 +204,10 @@ The project is implementing core Learning Odyssey features:
         - STORY chapters:
             * Full LLM generation
             * Three choices per chapter
+        - CONCLUSION chapters:
+            * Full LLM generation
+            * No choices
+            * Story resolution
     - Outcome tracking in AdventureState
     - Narrative continuity via prompts
 
@@ -143,10 +226,10 @@ The project is implementing core Learning Odyssey features:
    - Progress tracking visualization
 
 2. Flow Control (`app/services/chapter_manager.py`)
-   - LESSON type enforcement for first/last chapters
-   - MAX_LESSON_RATIO (40%) for middle chapters
+   - New chapter type sequencing
    - Dynamic content sampling
    - Error recovery mechanisms
+   - Question availability validation
 
 ## Current Considerations
 
@@ -191,63 +274,3 @@ The project is implementing core Learning Odyssey features:
    - Choice meaningfulness
    - Learning progression
    - Progress feedback effectiveness
-
-## Next Steps
-
-### Immediate (`tests/simulations/`)
-1. Testing Framework
-   - Story simulation expansion
-   - Performance benchmarking
-   - Error scenario coverage
-   - State transition validation
-   - Progress tracking validation
-
-2. Implementation
-   - WebSocket stability improvements
-   - LLM response optimization
-   - Error recovery enhancement
-   - State sync refinement
-   - Progress tracking refinements
-
-### Bug Fixes
-- Fixed incorrect chapter type determination in `ChapterManager.initialize_adventure_state` by passing the question count instead of the topic string.
-- Fixed incorrect chapter type determination in `story_websocket` by using `state.planned_chapter_types` instead of `story_config["chapter_types"]`.
-- Fixed duplication of "Chapter X:" prefix by removing it from the generated content in `generate_chapter` using a regular expression.
-- Resolved `TypeError` caused by incorrect chapter type logic.
-- Fixed "N/A" values in "Story Configuration" debug logs by using the correct variables.
-- Removed duplicate call to `initialize_adventure_state` in `story_websocket`.
-
-### Short Term
-1. Features
-   - Enhanced topic selection
-   - Improved narrative generation
-   - Better error feedback
-   - Faster state recovery
-   - Enhanced progress visualization
-
-2. Testing
-   - Load testing framework
-   - Cross-provider validation
-   - Error simulation
-   - Performance profiling
-   - Progress tracking stress tests
-
-### Current Considerations
-
-#### Technical
-1. Performance
-   - LLM response times
-   - WebSocket latency
-   - State synchronization speed
-   - Error recovery time
-   - Progress updates smoothness
-
-2. Reliability
-   - WebSocket connection stability
-   - LLM service availability
-   - State consistency
-   - Error handling coverage
-   - Progress tracking accuracy
-
-#### Bug Fixes
-- Thorough testing, including story simulations, is required to verify the recent fixes and ensure no regressions were introduced.

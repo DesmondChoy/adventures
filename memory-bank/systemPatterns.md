@@ -38,7 +38,7 @@ graph TD
 - Centralized adventure state management
 - Chapter progression tracking
 - Adventure length handling
-- ChapterType enum management
+- ChapterType enum management (LESSON/STORY/CONCLUSION)
 - Question and answer tracking
 - Narrative continuity enforcement
 
@@ -73,18 +73,26 @@ graph TD
   * Maintains connection stability
 
 ### 3. Adventure State Manager (`app/services/adventure_state_manager.py`)
-- Centralized management of `AdventureState`.
-- Handles initialization, updates, and retrieval of the adventure state.
-- Encapsulates state manipulation logic, decoupling it from the WebSocket router.
+- Centralized management of `AdventureState`
+- Handles initialization, updates, and retrieval of the adventure state
+- Encapsulates state manipulation logic, decoupling it from the WebSocket router
 
 ### 4. Chapter Manager (`app/services/chapter_manager.py`)
-- Chapter type determination (MAX_LESSON_RATIO: 40%)
-- First/last chapter lesson enforcement
+- New chapter type determination:
+  * First two chapters: STORY
+  * Second-to-last chapter: STORY
+  * Last chapter: CONCLUSION
+  * 50% of remaining chapters: LESSON
 - Adventure flow control
+- Question availability validation
+- Error recovery mechanisms
 
 ### 5. LLM Integration (`app/services/llm/`)
 - Provider-agnostic implementation
-- **Narrative generation for both chapter types (using prompts in `app/services/llm/prompt_engineering.py`)**
+- **Narrative generation for all chapter types (using prompts in `app/services/llm/prompt_engineering.py`)**:
+  * LESSON: Question-based narrative with educational focus
+  * STORY: Choice-driven narrative with three options
+  * CONCLUSION: Resolution narrative without choices
 - Story choice generation
 - Narrative continuity management
 - Response processing
@@ -93,12 +101,15 @@ graph TD
 
 ### 1. Chapter Type Pattern (`app/services/chapter_manager.py`)
 - Adventure length selection at landing page
-- Chapter sequence determined by ChapterManager
-- First/last chapters always LESSON type
-- Middle chapters follow MAX_LESSON_RATIO (40%)
+- Chapter sequence determined by ChapterManager:
+  * First two chapters: STORY (for setting/character development)
+  * Second-to-last chapter: STORY (for pivotal choices)
+  * Last chapter: CONCLUSION (for story resolution)
+  * 50% of remaining chapters: LESSON (subject to available questions)
 - LESSON chapters limited by available questions in lessons.csv
-- STORY chapters use full LLM generation
-- The chapter type for each chapter during the adventure is determined using `state.planned_chapter_types`.
+- STORY chapters use full LLM generation with choices
+- CONCLUSION chapters use full LLM generation without choices
+- The chapter type for each chapter during the adventure is determined using `state.planned_chapter_types`
 
 ### 2. State Management Pattern
 - Centralized AdventureState:
@@ -106,6 +117,7 @@ graph TD
   * Complete state serialization
   * Pre-determined chapter sequence via planned_chapter_types
   * Question data persistence
+  * Story length constraints (5-10 chapters)
   * Recovery mechanisms
 
 - Navigation State Pattern:
@@ -181,7 +193,7 @@ graph TD
   * Used consistently across all components
   * No hard-coded assumptions about chapter types
   * Maintains state integrity throughout adventure
-  * The chapter type for each chapter is determined using `state.planned_chapter_types`.
+  * The chapter type for each chapter is determined using `state.planned_chapter_types`
 
 ### 3. Question Handling Pattern
 - Question Lifecycle:
@@ -204,6 +216,7 @@ graph TD
 - Lesson questions from lessons.csv
 - LLM-generated narratives (via `app/services/llm/prompt_engineering.py`)
 - LLM-generated story choices (via `app/services/llm/prompt_engineering.py`)
+- LLM-generated conclusions (via `app/services/llm/prompt_engineering.py`)
 - Narrative continuity enforcement
 - Consequence handling
 
@@ -238,6 +251,11 @@ graph TD
      - Show consequences of decision
      - Maintain consistent world state
      - CRITICAL: Include full choice context in state
+
+  4. After CONCLUSION Chapter:
+     - No further narrative needed
+     - Return to Landing Page option
+     - CRITICAL: No state updates needed
 
 - Continuity Enforcement:
   1. LLM Prompt Engineering:
@@ -293,16 +311,20 @@ graph TD
 
 ### Initial Flow
 1. User selects topic and length at landing
-2. ChapterManager determines chapter sequence
-3. First chapter (lesson) begins
-4. Question sampled from lessons.csv (by `ChapterManager`)
-5. LLM generates narrative (using prompts from `app/services/llm/prompt_engineering.py`)
-6. State tracks progression
+2. ChapterManager determines chapter sequence:
+   - First two chapters: STORY
+   - Second-to-last chapter: STORY
+   - Last chapter: CONCLUSION
+   - 50% of remaining chapters: LESSON
+3. First chapter (STORY) begins
+4. LLM generates narrative with choices
+5. State tracks progression
 
 ### Chapter Progression
 1. Content source varies by chapter type:
-   - Lesson: lessons.csv + LLM narrative (prompted by `app/services/llm/prompt_engineering.py`)
-   - Story: Full LLM generation (prompted by `app/services/llm/prompt_engineering.py`)
+   - Lesson: lessons.csv + LLM narrative
+   - Story: Full LLM generation with choices
+   - Conclusion: Full LLM generation without choices
 2. Narrative continuity maintained
 3. Previous chapter consequences reflected
 4. No repeat questions in session
