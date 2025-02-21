@@ -256,12 +256,24 @@ Continue the story, leading to a situation where the following lesson question n
 {lesson_question["question"]}
 
 CRITICAL INSTRUCTIONS:
-1. {"First address the consequences of the previous lesson" if num_previous_lessons > 0 else "The story should flow naturally towards the lesson question"}
-2. Then naturally transition to a situation where the new question arises
-3. The question should emerge from the story events or character interactions
-4. DO NOT include any story-based choices or decisions
-5. DO NOT use bullet points, numbered lists, or dashes
-6. The question should feel like a natural part of the character's journey
+1. {"First address the consequences of the previous lesson" if num_previous_lessons > 0 else "The story should flow naturally towards the lesson topic"}
+2. Have the topic emerge naturally through dialogue, thoughts, or observations
+3. End the narrative at the moment when the topic is introduced
+4. DO NOT include "Lesson Question:" or repeat the question after the narrative
+5. The system will handle the question presentation separately
+
+Example of correct formats:
+
+[Question format]
+"Which makes me wonder," Alex pondered, "if they wanted to maximize the breakdown of the pumpkin, wouldn't they want to mimic the longest part of the digestive system?"
+
+[Statement format]
+Maya studied the diagram intently. The small intestine seemed too short for such a complex process - there had to be a longer section of the digestive system where most of the breakdown occurred.
+
+Example of incorrect format:
+[Narrative introduces topic]
+[Additional unnecessary content]
+Lesson Question: [Repeating the question]
 
 {_format_lesson_answers(lesson_question)}"""
 

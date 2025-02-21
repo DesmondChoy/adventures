@@ -155,12 +155,12 @@ async def stream_and_send_chapter(
         state: The current state
     """
     # DEBUG: Log chapter content to help diagnose chapter prefix issues
-    logger.debug(
-        f"=== DEBUG: Chapter Content ===\n"
-        f"Chapter Number: {state.current_chapter_number}\n"
-        f"Raw Content:\n{chapter_content.content}\n"
-        f"==========================="
-    )
+    # logger.debug(
+    #     f"=== DEBUG: Chapter Content ===\n"
+    #     f"Chapter Number: {state.current_chapter_number}\n"
+    #     f"Raw Content:\n{chapter_content.content}\n"
+    #     f"==========================="
+    # )
 
     # Remove any "Chapter X:" prefix before streaming
     content_to_stream = re.sub(
@@ -350,7 +350,7 @@ async def generate_chapter(
             )
     elif chapter_type == ChapterType.STORY:
         try:
-            # Use regex to find choice markers, allowing for whitespace variations
+            # First extract the choices section
             choices_match = re.search(
                 r"<CHOICES>\s*(.*?)\s*</CHOICES>",
                 story_content,
@@ -364,6 +364,7 @@ async def generate_chapter(
                 logger.error(story_content)
                 raise ValueError("Could not find choice markers in story content")
 
+            # Extract choices text and clean up story content
             choices_text = choices_match.group(1).strip()
             story_content = story_content[: choices_match.start()].strip()
             # Remove any "Chapter X:" prefix, including any whitespace after it
@@ -371,21 +372,22 @@ async def generate_chapter(
                 r"^Chapter\s+\d+:\s*", "", story_content, flags=re.MULTILINE
             ).strip()
 
-            # First try to parse choices that are on separate lines
-            choice_pattern = r"Choice\s*([ABC])\s*:\s*([^.\n]+(?:\.[^.\n]+)*)"
+            # Initialize choices array
             choices = []
 
-            # Try multi-line format first
+            # Try multi-line format first (within choices section)
+            choice_pattern = r"Choice\s*([ABC])\s*:\s*([^\n]+)"
             matches = re.finditer(
                 choice_pattern, choices_text, re.IGNORECASE | re.MULTILINE
             )
             for match in matches:
                 choices.append(match.group(2).strip())
 
-            # If no matches found, try single-line format (choices separated by periods)
-            if not choices and "." in choices_text:
-                # Split by periods, but only if followed by "Choice" or end of string
-                single_line_pattern = r"Choice\s*[ABC]\s*:\s*([^.]+(?:\.[^.C][^.]*)*)"
+            # If no matches found, try single-line format (still within choices section)
+            if not choices:
+                single_line_pattern = (
+                    r"Choice\s*[ABC]\s*:\s*([^.]+(?:\.\s*(?=Choice\s*[ABC]\s*:|$))?)"
+                )
                 matches = re.finditer(single_line_pattern, choices_text, re.IGNORECASE)
                 for match in matches:
                     choices.append(match.group(1).strip())

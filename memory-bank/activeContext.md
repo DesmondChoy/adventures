@@ -20,13 +20,35 @@ The project is implementing core Learning Odyssey features:
 
 ## Recent Changes
 
+### Lesson Topic Introduction Improvements
+- Enhanced LESSON chapter prompt engineering in `prompt_engineering.py`:
+  * Prevented redundant "Lesson Question:" text after narrative
+  * Added support for both question and statement formats:
+    - Questions through character dialogue ("Which makes me wonder...")
+    - Statements through observations and thoughts
+    - More natural narrative flow
+  * Updated CRITICAL INSTRUCTIONS:
+    - Shifted focus from "question" to "topic"
+    - Made topic introduction more flexible
+    - Added clear examples of both formats
+    - Maintained narrative immersion
+  * Benefits:
+    - More varied and engaging narrative
+    - Better integration of educational content
+    - Cleaner narrative endings
+    - Prevented redundant question text
+
 ### Choice Format Handling Improvements
 - Enhanced choice parsing in `websocket_service.py`:
-  * Implemented two-stage parsing strategy:
+  * Implemented strict choice section extraction:
+    - First extracts content between <CHOICES> tags
+    - Separates story content from choices section
+    - Only parses choices within extracted section
+  * Two-stage parsing strategy within choices section:
     - First attempts multi-line format
     - Falls back to single-line format if needed
-  * Added flexible regex patterns for both formats
-  * Improved error handling and logging
+  * Improved regex patterns to prevent story content interference
+  * Enhanced error handling and logging
   * Better recovery from parsing failures
 - Updated choice format instructions in `prompt_engineering.py`:
   * Added explicit examples showing correct format
