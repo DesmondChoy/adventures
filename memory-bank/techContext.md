@@ -10,7 +10,7 @@
   - Automated testing integration
 
 - **State Management**: AdventureState
-  - Centralized in models/story.py
+  - Centralized in `models/story.py`
   - Complete state tracking
   - Question data persistence
   - WebSocket synchronization
@@ -60,7 +60,7 @@ pytest-asyncio==0.21.1
    ```
 
 ### Testing Environment (`tests/simulations/`)
-- Story simulation framework (story_simulation.py):
+- Story simulation framework (`story_simulation.py`):
   * Primary purpose: Generate test data and logs
   * Random adventure progression
   * Comprehensive DEBUG level logging
@@ -84,68 +84,9 @@ pytest-asyncio==0.21.1
   * Error recovery
   * Performance metrics
 
-## Technical Constraints
-
-### State Management (`app/models/story.py`)
-- AdventureState Implementation:
-  * Component Separation:
-    - ChapterManager:
-      * Uses chapter_number
-      * Handles progression
-      * Manages chapter types
-      * Controls story flow
-    - WebSocket Router:
-      * Uses current_chapter_id
-      * Manages client state
-      * Handles navigation
-      * Controls branching
-
-  * Educational Features:
-    - Progress Tracking:
-      * Sequential progression
-      * Learning path analysis
-      * Decision point tracking
-      * Performance assessment
-    - Personalization:
-      * Branching narratives
-      * Adaptive learning
-      * Choice consequences
-      * Learning style analysis
-
-  * Technical Advantages:
-    - System Integrity:
-      * Independent state validation
-      * Clear data ownership
-      * Simplified testing
-      * Robust error handling
-    - Maintainability:
-      * Modular components
-      * Clear responsibilities
-      * Easy debugging
-      * Future extensibility
-
-  * State Synchronization:
-    - WebSocket Protocol:
-      * Sends current_chapter_id for client updates
-      * Validates chapter_number for progression
-      * Maintains bidirectional state sync
-      * Handles connection recovery
-    - Error Recovery:
-      * State reconstruction from either tracker
-      * Connection interruption handling
-      * Client state restoration
-      * Integrity validation
-
-- Real-time WebSocket synchronization
-- Complete state serialization
-- Story length constraints (5-10 chapters)
-- Error recovery system
-
-### LLM Integration (`app/services/llm/`)
-- Provider abstraction layer
-- Response standardization
-- Rate limiting implementation
-- Error handling system
+## Technical Considerations
+- **State Management (`app/models/story.py`):** Real-time WebSocket synchronization, complete state serialization, story length constraints (5-10 chapters), and error recovery system. The `story_category` and `lesson_topic` are passed as URL parameters to the WebSocket endpoint and are not included in the `validated_state`.
+- **LLM Integration (`app/services/llm/`):** Provider abstraction layer, response standardization, rate limiting implementation, and error handling system.
 
 ## External Dependencies
 
@@ -191,37 +132,6 @@ pytest-asyncio==0.21.1
 - SQLite browser
 - API testing tools
 - Logging tools
-
-## Debugging Tools
-
-### Story Flow (`app/services/chapter_manager.py`)
-- ChapterType validation
-- Content source verification
-- Narrative continuity checks
-- State transition logging
-
-### State Management (`app/models/story.py`)
-- WebSocket monitoring
-- State serialization checks
-- Recovery validation
-- Error tracking
-
-### Content Flow (`app/services/chapter_manager.py`)
-- LESSON/STORY validation
-- Content sampling verification
-- Response validation
-- Performance monitoring
-
-### LLM Integration (`app/services/llm/`)
-- Provider response logging
-- Prompt verification
-- Error tracking
-- Performance metrics
-
-### Debugging WebSocket Issues (`app/routers/websocket.py`)
-- Validate initial state parameters (`story_category`, `lesson_topic`, `story_length`) are correctly passed from the client.
-- Verify that `initialize_adventure_state` is only called once per adventure.
-- Use debug logging to track the flow of data and identify the source of incorrect values.
 
 ## Monitoring
 

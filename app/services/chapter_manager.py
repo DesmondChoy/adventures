@@ -3,7 +3,6 @@ import random
 import logging
 import math
 from app.models.story import ChapterType, AdventureState
-from app.init_data import sample_question
 
 logger = logging.getLogger("story_app")
 

@@ -32,50 +32,20 @@
 - [x] Enhanced prompt engineering for story resolution
 
 ### Recent Completions
-- [x] Fixed choice parsing to prevent story content truncation:
-  * Improved choice parsing to only operate within <CHOICES> tags
-  * Prevented periods in story content from being parsed as choice separators
-  * Enhanced regex patterns for both multi-line and single-line formats
-  * Fixed issue with text like "Beware." being truncated
-  * Maintained flexible choice parsing while protecting narrative content
-- [x] Added CONCLUSION chapter type to ChapterType enum
-- [x] Implemented new chapter sequencing logic:
-  * First two chapters: STORY
-  * Second-to-last chapter: STORY
-  * Last chapter: CONCLUSION
-  * 50% of remaining chapters: LESSON
-- [x] Fixed random.sample error in chapter_manager.py
-- [x] Added Return to Landing Page button for CONCLUSION chapters
-- [x] Enhanced prompt engineering for CONCLUSION narrative
-- [x] Updated validation for available questions
-- [x] Updated story length options and constraints (5-10 chapters)
-- [x] Fixed issue with missing choices in the first two chapters
-- [x] Implemented comprehensive fix for "Chapter X:" prefixes in generated content
-- [x] Enhanced LESSON chapter prompt engineering:
-  * Prevented redundant "Lesson Question:" text after narrative
-  * Added support for both question and statement formats
-  * Improved examples showing correct/incorrect formats
-  * Made topic introduction more flexible and natural
-- [x] Implemented Journey Quest pacing:
-  * Added `current_storytelling_phase` to track story phases
-  * Added `determine_story_phase` calculation method
-  * Updated phase guidance in prompts
-  * Integrated with AdventureState
-- [x] Fixed story phase timing issue:
-  * Moved phase update before chapter generation
-  * Ensures correct phase progression
-  * Fixed "Exposition" showing for Chapter 2
-- [x] Fixed final chapter rendering and streaming:
-  * Modified `send_story_complete` to stream content word by word
-  * Updated frontend to handle streamed content
-  * Separated content streaming from stats display
-  * Ensured consistent streaming experience throughout story
-- [x] Improved choice format handling and validation:
-  * Added two-stage choice parsing for multi/single-line formats in websocket_service.py
-  * Enhanced choice format instructions with explicit examples in prompt_engineering.py
-  * Added negative examples showing incorrect formats
-  * Improved handling of period-separated choices on single lines
-  * Enhanced error messages for choice parsing failures
+- [x] Fixed choice parsing to prevent story content truncation.
+- [x] Added CONCLUSION chapter type and implemented new chapter sequencing logic.
+- [x] Fixed `random.sample` error in `chapter_manager.py`.
+- [x] Added Return to Landing Page button for CONCLUSION chapters.
+- [x] Enhanced prompt engineering for CONCLUSION narrative.
+- [x] Updated validation for available questions.
+- [x] Updated story length options and constraints (5-10 chapters).
+- [x] Fixed issue with missing choices in the first two chapters.
+- [x] Implemented comprehensive fix for "Chapter X:" prefixes in generated content.
+- [x] Enhanced LESSON chapter prompt engineering.
+- [x] Implemented Journey Quest pacing.
+- [x] Fixed story phase timing issue.
+- [x] Fixed final chapter rendering and streaming.
+- [x] Improved choice format handling and validation.
 
 ## In Progress
 
@@ -139,12 +109,7 @@
 ## Implementation Status
 
 ### Testing Framework (`tests/simulations/`)
-- Story simulation fully functional:
-  * Random adventure progression
-  * Comprehensive logging at DEBUG level
-  * WebSocket communication handling
-  * Error handling and retry logic
-  * Test data generation for validation
+- Story simulation fully functional.
 
 ### Core Systems
 1. State Management (`app/models/story.py`)
@@ -164,9 +129,3 @@
    - New chapter sequencing working
    - Content sampling functional
    - Error recovery in progress
-
-4. Testing Framework (`tests/simulations/`)
-   - Basic structure implemented
-   - Story simulation pending
-   - State validation needed
-   - Error scenarios incomplete

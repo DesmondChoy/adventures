@@ -32,15 +32,15 @@ graph TD
     end
 ```
 
-## Core Components
+## Component Architecture
 
 ### 1. AdventureState (`app/models/story.py`)
-- Centralized adventure state management
-- Chapter progression tracking
-- Adventure length handling
-- ChapterType enum management (LESSON/STORY/CONCLUSION)
-- Question and answer tracking
-- Narrative continuity enforcement
+- Centralized adventure state management.
+- Chapter progression tracking.
+- Adventure length handling.
+- ChapterType enum management (LESSON/STORY/CONCLUSION).
+- Question and answer tracking.
+- Narrative continuity enforcement.
 
 ### 2. WebSocket Components
 #### WebSocket Router (`app/routers/websocket_router.py`)
@@ -73,61 +73,53 @@ graph TD
   * Maintains connection stability
 
 ### 3. Adventure State Manager (`app/services/adventure_state_manager.py`)
-- Centralized management of `AdventureState`
-- Handles initialization, updates, and retrieval of the adventure state
-- Encapsulates state manipulation logic, decoupling it from the WebSocket router
+- Centralized management of `AdventureState`.
+- Handles initialization, updates, and retrieval of the adventure state.
+- Encapsulates state manipulation logic, decoupling it from the WebSocket router.
 
 ### 4. Chapter Manager (`app/services/chapter_manager.py`)
-- New chapter type determination:
-  * First two chapters: STORY
-  * Second-to-last chapter: STORY
-  * Last chapter: CONCLUSION
-  * 50% of remaining chapters: LESSON
-- Adventure flow control
-- Question availability validation
-- Error recovery mechanisms
+- **Chapter Type Pattern:**
+  - Adventure length selection at landing page.
+  - Chapter sequence determined by ChapterManager:
+    * First two chapters: STORY (for setting/character development)
+    * Second-to-last chapter: STORY (for pivotal choices)
+    * Last chapter: CONCLUSION (for story resolution)
+    * 50% of remaining chapters: LESSON (subject to available questions)
+  - LESSON chapters limited by available questions in `lessons.csv`.
+  - STORY chapters use full LLM generation with choices.
+  - CONCLUSION chapters use full LLM generation without choices.
+  - The chapter type for each chapter during the adventure is determined using `state.planned_chapter_types`.
+- Adventure flow control.
+- Question availability validation.
+- Error recovery mechanisms.
 
 ### 5. LLM Integration (`app/services/llm/`)
-- Provider-agnostic implementation
+- Provider-agnostic implementation.
 - **Narrative generation for all chapter types (using prompts in `app/services/llm/prompt_engineering.py`)**:
   * LESSON: Question-based narrative with educational focus
   * STORY: Choice-driven narrative with three options
   * CONCLUSION: Resolution narrative without choices
-- Story choice generation
-- Narrative continuity management
-- Response processing
+- Story choice generation.
+- Narrative continuity management.
+- Response processing.
 
-## Design Patterns
-
-### 1. Chapter Type Pattern (`app/services/chapter_manager.py`)
-- Adventure length selection at landing page
-- Chapter sequence determined by ChapterManager:
-  * First two chapters: STORY (for setting/character development)
-  * Second-to-last chapter: STORY (for pivotal choices)
-  * Last chapter: CONCLUSION (for story resolution)
-  * 50% of remaining chapters: LESSON (subject to available questions)
-- LESSON chapters limited by available questions in lessons.csv
-- STORY chapters use full LLM generation with choices
-- CONCLUSION chapters use full LLM generation without choices
-- The chapter type for each chapter during the adventure is determined using `state.planned_chapter_types`
-
-### 2. State Management Pattern
+### 6. State Management Pattern
 - Centralized AdventureState:
   * Single source of truth for all state
   * Complete state serialization
-  * Pre-determined chapter sequence via planned_chapter_types
+  * Pre-determined chapter sequence via `planned_chapter_types`
   * Question data persistence
   * Story length constraints (5-10 chapters)
   * Recovery mechanisms
 
-- Navigation State Pattern:
+- **Navigation State Pattern:**
   * Separation of Concerns:
-    - Sequential Tracking (chapter_number):
+    - Sequential Tracking (`chapter_number`):
       * ChapterManager's domain
       * Handles progression logic
       * Manages chapter sequencing
       * Controls story length
-    - Navigation Tracking (current_chapter_id):
+    - Navigation Tracking (`current_chapter_id`):
       * WebSocket router's domain
       * Manages routing/navigation
       * Handles state restoration
@@ -135,8 +127,8 @@ graph TD
 
   * Educational Benefits:
     - Comprehensive Progress Tracking:
-      * Linear progress via chapter_number
-      * Learning paths via current_chapter_id
+      * Linear progress via `chapter_number`
+      * Learning paths via `current_chapter_id`
       * Student decision analysis
       * Personalized narrative branches
     - Learning Assessment:
@@ -159,13 +151,13 @@ graph TD
 
   * Implementation Details:
     - Sequential Tracking:
-      * chapter_number (integer): Linear progression (1, 2, 3...)
+      * `chapter_number` (integer): Linear progression (1, 2, 3...)
       * Used by ChapterManager for sequence validation
       * Ensures proper chapter ordering
       * Critical for chapter type determination
     
     - Navigation Tracking:
-      * current_chapter_id (string): User's path through content
+      * `current_chapter_id` (string): User's path through content
       * Values:
         - "start": Initial state
         - "correct"/"wrongX": Lesson responses
@@ -175,8 +167,8 @@ graph TD
 
   * State Synchronization:
     - WebSocket Updates:
-      * Sends current_chapter_id for client updates
-      * Validates chapter_number for progression
+      * Sends `current_chapter_id` for client updates
+      * Validates `chapter_number` for progression
       * Maintains bidirectional state sync
       * Handles connection recovery
     - Error Recovery:
@@ -189,15 +181,15 @@ graph TD
 
 - Chapter Type Management:
   * Sequence determined upfront by ChapterManager
-  * Stored in AdventureState.planned_chapter_types
+  * Stored in `AdventureState.planned_chapter_types`
   * Used consistently across all components
   * No hard-coded assumptions about chapter types
   * Maintains state integrity throughout adventure
   * The chapter type for each chapter is determined using `state.planned_chapter_types`
 
-### 3. Question Handling Pattern
+### 7. Question Handling Pattern
 - Question Lifecycle:
-  1. Sample question from lessons.csv (handled by `ChapterManager`)
+  1. Sample question from `lessons.csv` (handled by `ChapterManager`)
   2. Store with chapter data
   3. Use for response creation
   4. Persist through state updates
@@ -212,15 +204,15 @@ graph TD
   3. Recover from errors
   4. Maintain state consistency
 
-### 4. Content Management Pattern
-- Lesson questions from lessons.csv
-- LLM-generated narratives (via `app/services/llm/prompt_engineering.py`)
-- LLM-generated story choices (via `app/services/llm/prompt_engineering.py`)
-- LLM-generated conclusions (via `app/services/llm/prompt_engineering.py`)
-- Narrative continuity enforcement
-- Consequence handling
+### 8. Content Management Pattern
+- Lesson questions from `lessons.csv`.
+- LLM-generated narratives (via `app/services/llm/prompt_engineering.py`).
+- LLM-generated story choices (via `app/services/llm/prompt_engineering.py`).
+- LLM-generated conclusions (via `app/services/llm/prompt_engineering.py`).
+- Narrative continuity enforcement.
+- Consequence handling.
 
-### 5. Narrative Continuity Pattern (`app/services/llm/prompt_engineering.py`)
+## Narrative Continuity Pattern (`app/services/llm/prompt_engineering.py`)
 - Previous Chapter Impact:
   1. After LESSON Chapter (Correct Answer):
      - Acknowledge understanding of the concept
@@ -301,90 +293,29 @@ graph TD
      * Log recovery attempts
      * Maintain error boundaries
 
-### 6. Testing Pattern
-- Automated adventure simulation
-- Question sampling validation
-- Choice generation verification
-- State validation
-
 ## Component Relationships
 
 ### Initial Flow
-1. User selects topic and length at landing
-2. ChapterManager determines chapter sequence:
+1. User selects topic and length at landing.
+2. `ChapterManager` determines chapter sequence:
    - First two chapters: STORY
    - Second-to-last chapter: STORY
    - Last chapter: CONCLUSION
    - 50% of remaining chapters: LESSON
-3. First chapter (STORY) begins
-4. LLM generates narrative with choices
-5. State tracks progression
+3. First chapter (STORY) begins.
+4. LLM generates narrative with choices.
+5. State tracks progression.
 
 ### Chapter Progression
 1. Content source varies by chapter type:
-   - Lesson: lessons.csv + LLM narrative
+   - Lesson: `lessons.csv` + LLM narrative
    - Story: Full LLM generation with choices
    - Conclusion: Full LLM generation without choices
-2. Narrative continuity maintained
-3. Previous chapter consequences reflected
-4. No repeat questions in session
+2. Narrative continuity maintained.
+3. Previous chapter consequences reflected.
+4. No repeat questions in session.
 
-## Technical Decisions
-
-### 1. Question Handling
-- Dynamic sampling system
-- Answer shuffling algorithm
-- Duplicate prevention
-- Topic management
-
-### 2. State Management
-- Complete state tracking
-- Question history
-- Answer selections
-- Performance metrics
-
-### 3. Testing Automation
-- Question sampling tests
-- Answer shuffling validation
-- Flow verification
-- State consistency
-
-## Debugging Patterns
-
-### 1. Question Flow Debugging
-- Topic selection validation
-- Sampling verification
-- Shuffle confirmation
-- Response tracking
-
-### 2. State Debugging
-- Question history tracking
-- Answer selection validation
-- Progress monitoring
-- Error handling
-
-### 3. Response Debugging
-- Question format validation
-- Answer order verification
-- Feedback accuracy
-- State updates
-
-## Testing Strategy
-
-### 1. Question Testing
-- Topic selection
-- Sampling validation
-- Shuffle verification
-- History tracking
-
-### 2. State Validation
-- Question progression
-- Answer tracking
-- Performance metrics
-- Error scenarios
-
-### 3. Integration Testing
-- End-to-end flows
-- Question cycles
-- Answer interactions
-- State consistency
+## Technical Details and Testing
+- **Question Handling:** Dynamic sampling, answer shuffling, duplicate prevention, topic management.
+- **State Management:** Complete state tracking, question history, answer selections, performance metrics.
+- **Testing Automation:** Question sampling tests, answer shuffling validation, flow verification, state consistency.

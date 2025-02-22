@@ -4,11 +4,11 @@
 
 ### Naming Conventions
 1. Chapter: Unit of progression in ChapterType enum (LESSON, STORY, or CONCLUSION)
-   - LESSON: Educational content from lessons.csv with LLM narrative wrapper
+   - LESSON: Educational content from `lessons.csv` with LLM narrative wrapper
    - STORY: Fully LLM-generated narrative content with choices
    - CONCLUSION: Final chapter with no choices, providing story resolution
-2. State: Complete application state in AdventureState class
-3. Adventure: Overall user journey tracked in AdventureState
+2. State: Complete application state in `AdventureState` class
+3. Adventure: Overall user journey tracked in `AdventureState`
 
 ### File Organization (`app/`)
 1. Core application code:
@@ -26,12 +26,12 @@
 
 ### Critical Implementation Rules
 1. State Management:
-   - AdventureState MUST be single source of truth
+   - `AdventureState` MUST be single source of truth
    - NEVER hardcode chapter numbers (app logic may change)
-   - Use planned_chapter_types for chapter progression
+   - Use `planned_chapter_types` for chapter progression
    - Implement logic on state properties, not assumptions
    - Complete state serialization required
-   - Dynamic story length via state.story_length (between 5 and 10 chapters)
+   - Dynamic story length via `state.story_length` (between 5 and 10 chapters)
    - Type hints required for all state properties
    - State changes must be logged
 
@@ -45,13 +45,6 @@
    - Immediate feedback required
    - Error recovery for failed state updates
 
-3. Documentation Requirements:
-   - Type hints required for all functions
-   - Docstrings mandatory for all classes/functions
-   - Complex logic must be commented
-   - Error handling must be documented
-   - State changes must be logged
-
 ## Development Workflow
 
 ### Code Changes
@@ -63,7 +56,7 @@
 ### Note: 2025-02-18
    - Story simulations should be run due to recent changes:
       * New chapter logic implementation (CONCLUSION type, updated sequencing)
-      * Fixed random.sample error in chapter_manager.py when no questions available
+      * Fixed `random.sample` error in `chapter_manager.py` when no questions available
       * Updated UI to handle CONCLUSION chapters
       * Enhanced prompt engineering for CONCLUSION narrative
    - Additional changes:
@@ -72,202 +65,128 @@
       * Implemented comprehensive fix for "Chapter X:" prefixes in generated content
 
 ### Testing Requirements
-1. Run story simulation on changes to:
-   - app/services/llm/*
-   - app/routers/websocket_router.py
-   - app/services/websocket_service.py
-   - app/services/chapter_manager.py
-   - app/models/story.py
-   - app/init_data.py
-   - app/data/stories.yaml
-   - app/data/lessons.csv
-   - app/templates/index.html
+Run story simulation on changes to:
+   - `app/services/llm/*`
+   - `app/routers/websocket_router.py`
+   - `app/services/websocket_service.py`
+   - `app/services/chapter_manager.py`
+   - `app/models/story.py`
+   - `app/init_data.py`
+   - `app/data/stories.yaml`
+   - `app/data/lessons.csv`
+   - `app/templates/index.html`
 
-### Debugging Process
-1. Verify question sampling
-2. Check answer shuffling
-3. Validate state updates
-4. Analyze error cases
+## Testing and Debugging
 
-## Critical Paths
-
-### Question Flow Debugging
-1. Verify topic selection
-2. Check sampling logic
-3. Confirm shuffle implementation
-4. Validate answer tracking
-5. Verify question persistence
-6. Test response creation
-7. Check state consistency
-8. Monitor error handling
+### Question Flow
+1. Verify topic selection in `websocket_router.py`.
+2. Check sampling logic in `chapter_manager.py`.
+3. Confirm shuffle implementation in `chapter_manager.py`.
+4. Validate answer tracking in `websocket_service.py`.
+5. Verify question persistence in `adventure_state_manager.py`.
+6. Test response creation in `websocket_service.py`.
+7. Check state consistency in `adventure_state_manager.py`.
+8. Monitor error handling.
 
 ### State Validation
-1. Check question history
-2. Verify answer selections
-3. Validate chapter types
-4. Confirm state transitions
-5. Test question persistence
-6. Verify response handling
-7. Check error recovery
-8. Monitor state consistency
+1. Check question history in `AdventureState`.
+2. Verify answer selections in `AdventureState`.
+3. Validate chapter types in `AdventureState`.
+4. Confirm state transitions in `adventure_state_manager.py`.
+5. Test question persistence in `adventure_state_manager.py`.
+6. Verify response handling in `websocket_service.py`.
+7. Check error recovery in `adventure_state_manager.py`.
+8. Monitor state consistency.
 
 ### Response Chain
-1. Verify question format
-2. Check answer order
-3. Validate feedback
-4. Confirm state updates
-5. Test question handling
-6. Verify response creation
-7. Check error handling
-8. Monitor state consistency
+1. Verify question format in `websocket_service.py`.
+2. Check answer order in `websocket_service.py`.
+3. Validate feedback in `websocket_service.py`.
+4. Confirm state updates in `adventure_state_manager.py`.
+5. Test question handling in `websocket_service.py`.
+6. Verify response creation in `websocket_service.py`.
+7. Check error handling.
+8. Monitor state consistency.
 
 ### Prompt Debugging
 1. Verify State Passing:
-   - Check what properties are available in state
-   - Confirm they're being passed to prompt builder
-   - Verify they appear in final prompt
+   - Check what properties are available in `AdventureState`.
+   - Confirm they're being passed to prompt builder in `prompt_engineering.py`.
+   - Verify they appear in final prompt.
 2. Check Data Flow:
-   - Trace data from state to prompt
-   - Look for optional parameters
-   - Verify history inclusion
+   - Trace data from state to prompt.
+   - Look for optional parameters.
+   - Verify history inclusion.
 3. Analyze Prompt Content:
-   - Review complete prompt output
-   - Check for missing context
-   - Verify continuity elements
+   - Review complete prompt output.
+   - Check for missing context.
+   - Verify continuity elements.
 
 ## Error Handling
 
 ### Question Errors
-1. Handle sampling failures
-2. Manage shuffle errors
-3. Track invalid answers
-4. Log question issues
-5. Handle missing questions
-6. Recover from errors
-7. Maintain state consistency
-8. Log error details
+- Handle sampling failures in `chapter_manager.py`.
+- Manage shuffle errors in `chapter_manager.py`.
+- Track invalid answers in `websocket_service.py`.
+- Log question issues in `chapter_manager.py`.
+- Handle missing questions in `chapter_manager.py`.
+- Recover from errors in `chapter_manager.py`.
+- Maintain state consistency in `adventure_state_manager.py`.
+- Log error details.
 
 ### State Errors
-1. Handle synchronization failures
-2. Implement recovery mechanisms
-3. Maintain error boundaries
-4. Log state transitions
-5. Handle question errors
-6. Recover from failures
-7. Ensure data consistency
-8. Monitor error patterns
+- Handle synchronization failures in `adventure_state_manager.py`.
+- Implement recovery mechanisms in `adventure_state_manager.py`.
+- Maintain error boundaries in `adventure_state_manager.py`.
+- Log state transitions in `adventure_state_manager.py`.
+- Handle question errors in `adventure_state_manager.py`.
+- Recover from failures in `adventure_state_manager.py`.
+- Ensure data consistency in `adventure_state_manager.py`.
+- Monitor error patterns.
 
 ### WebSocket Errors
-1. Router-Level Errors:
-   - Handle connection drops
-   - Manage reconnection attempts
-   - Log connection lifecycle events
-   - Validate incoming messages
-   - Coordinate error recovery with service
-   - Monitor connection health
-   - Handle client disconnects gracefully
-   - Maintain connection state
+#### Router-Level Errors (`websocket_router.py`)
+- Handle connection drops.
+- Manage reconnection attempts.
+- Log connection lifecycle events.
+- Validate incoming messages.
+- Coordinate error recovery with service.
+- Monitor connection health.
+- Handle client disconnects gracefully.
+- Maintain connection state.
 
-2. Service-Level Errors:
-   - Handle content generation failures
-   - Manage state transitions
-   - Process choice errors
-   - Handle streaming issues
-   - Validate message formats
-   - Provide fallback responses
-   - Maintain data consistency
-   - Monitor processing health
+#### Service-Level Errors (`websocket_service.py`)
+- Handle content generation failures.
+- Manage state transitions.
+- Process choice errors.
+- Handle streaming issues.
+- Validate message formats.
+- Provide fallback responses.
+- Maintain data consistency.
+- Monitor processing health.
 
-3. Cross-Component Errors:
-   - Coordinate error recovery
-   - Maintain state synchronization
-   - Handle timing issues
-   - Log error chains
-   - Implement retry strategies
-   - Ensure message ordering
-   - Preserve transaction integrity
-   - Monitor system boundaries
+#### Cross-Component Errors
+- Coordinate error recovery between `websocket_router.py` and `websocket_service.py`.
+- Maintain state synchronization.
+- Handle timing issues.
+- Log error chains.
+- Implement retry strategies.
+- Ensure message ordering.
+- Preserve transaction integrity.
+- Monitor system boundaries.
 
 ### Prompt Errors
-1. Log complete prompt content
-2. Track missing state data
-3. Monitor continuity breaks
-4. Validate data flow
-5. Handle question errors
-6. Recover from failures
-7. Ensure consistency
-8. Monitor error patterns
+- Log complete prompt content in `prompt_engineering.py`.
+- Track missing state data in `prompt_engineering.py`.
+- Monitor continuity breaks in `prompt_engineering.py`.
+- Validate data flow in `prompt_engineering.py`.
+- Handle question errors.
+- Recover from failures.
+- Ensure consistency.
+- Monitor error patterns.
 
-## Testing Strategy
+## Documentation
 
-### Question Testing
-1. Verify sampling logic
-2. Test shuffle algorithm
-3. Validate answer tracking
-4. Check duplicate prevention
-5. Test question persistence
-6. Verify response creation
-7. Check error handling
-8. Monitor state consistency
-
-### State Testing
-1. Verify synchronization
-2. Test recovery mechanisms
-3. Validate error handling
-4. Check performance
-5. Test question handling
-6. Verify response creation
-7. Check state consistency
-8. Monitor error patterns
-
-### Integration Testing
-1. Test full user flow
-2. Verify question cycles
-3. Validate answer interactions
-4. Check state consistency
-5. Test question handling
-6. Verify response creation
-7. Check error recovery
-8. Monitor system health
-
-### Prompt Testing
-1. Verify state inclusion
-2. Test history passing
-3. Validate continuity
-4. Check data flow
-5. Test question handling
-6. Verify response creation
-7. Check error handling
-8. Monitor consistency
-
-## Documentation Standards
-
-### Code Documentation
-1. Type hints required
-2. Function docstrings mandatory
-3. Complex logic needs comments
-4. State changes must be logged
-5. Question handling documented
-6. Response creation explained
-7. Error handling detailed
-8. State flow documented
-
-### System Documentation
-1. Question flow documentation
-2. State management flows
-3. Testing procedures
-4. Error handling strategies
-5. Question handling patterns
-6. Response creation flows
-7. State consistency rules
-8. Error recovery procedures
-
-### Prompt Documentation
-1. Document required state
-2. List critical data points
-3. Explain continuity requirements
-4. Detail debugging steps
-5. Document question handling
-6. Explain response creation
-7. Detail error handling
-8. Describe state management
+- Type hints are required for all functions.
+- Docstrings are mandatory for all classes and functions.
+- State changes must be logged.
