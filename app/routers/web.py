@@ -14,11 +14,21 @@ logger = logging.getLogger("story_app")
 def load_story_data() -> Dict[str, Any]:
     """Load story data with error handling."""
     try:
-        with open("app/data/stories.yaml", "r") as f:
-            return yaml.safe_load(f)
+        with open("app/data/new_stories.yaml", "r") as f:
+            data = yaml.safe_load(f)
+            logger.info(
+                "Loaded story data",
+                extra={
+                    "categories": list(data.keys()),
+                    "elements_per_category": {
+                        cat: list(details.keys()) for cat, details in data.items()
+                    },
+                },
+            )
+            return data
     except Exception as e:
         logger.error("Failed to load story data", extra={"error": str(e)})
-        return {"story_categories": {}}  # Provide default value
+        return {}  # Provide empty default value
 
 
 def load_lesson_data() -> pd.DataFrame:
@@ -55,11 +65,23 @@ async def root(request: Request):
         story_data = load_story_data()
         lesson_data = load_lesson_data()
 
+        # Format story categories for display
+        story_categories = {key: value["name"] for key, value in story_data.items()}
+
+        logger.info(
+            "Preparing landing page data",
+            extra={
+                **context,
+                "available_categories": list(story_categories.keys()),
+                "available_topics": list(lesson_data["topic"].unique()),
+            },
+        )
+
         return templates.TemplateResponse(
             "index.html",
             {
                 "request": request,
-                "story_categories": story_data["story_categories"].keys(),
+                "story_categories": story_categories,  # Pass dict of id:name pairs
                 "lesson_topics": lesson_data["topic"].unique(),
                 **context,  # Pass session context to template
             },

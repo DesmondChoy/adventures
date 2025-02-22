@@ -1,10 +1,89 @@
-from typing import List
+from typing import List, Dict, Any
 import random
 import logging
 import math
+import yaml
 from app.models.story import ChapterType, AdventureState
 
 logger = logging.getLogger("story_app")
+
+
+def load_story_data() -> Dict[str, Any]:
+    """Load story data from new_stories.yaml."""
+    try:
+        with open("app/data/new_stories.yaml", "r") as f:
+            return yaml.safe_load(f)
+    except Exception as e:
+        logger.error("Failed to load story data", extra={"error": str(e)})
+        raise ValueError(f"Failed to load story data: {str(e)}")
+
+
+def select_random_elements(
+    story_data: Dict[str, Any], story_category: str
+) -> Dict[str, Any]:
+    """Select random elements from each category for the story.
+
+    Args:
+        story_data: The loaded story data
+        story_category: The selected story category
+
+    Returns:
+        Dict containing randomly selected elements for each category
+    """
+    if story_category not in story_data:
+        raise ValueError(f"Invalid story category: {story_category}")
+
+    category_data = story_data[story_category]
+
+    logger.info(
+        "Selecting random story elements",
+        extra={
+            "story_category": story_category,
+            "available_categories": list(category_data.keys()),
+        },
+    )
+
+    # Select one random element from each narrative_elements subcategory
+    narrative_elements = {
+        key: random.choice(values)
+        for key, values in category_data["narrative_elements"].items()
+        if isinstance(values, list)
+    }
+
+    # Select one random element from each sensory_details subcategory
+    sensory_details = {
+        key: random.choice(values)
+        for key, values in category_data["sensory_details"].items()
+        if isinstance(values, list)
+    }
+
+    # Select one random theme and moral lesson
+    selected_theme = random.choice(category_data["narrative_elements"]["themes"])
+    selected_moral_lesson = random.choice(
+        category_data["narrative_elements"]["moral_lessons"]
+    )
+    selected_plot_twist = random.choice(
+        category_data["narrative_elements"]["plot_twists"]
+    )
+
+    logger.debug(
+        "Selected story elements",
+        extra={
+            "narrative_elements": narrative_elements,
+            "sensory_details": sensory_details,
+            "theme": selected_theme,
+            "moral_lesson": selected_moral_lesson,
+            "plot_twist": selected_plot_twist,
+        },
+    )
+
+    return {
+        "selected_narrative_elements": narrative_elements,
+        "selected_sensory_details": sensory_details,
+        "selected_theme": selected_theme,
+        "selected_moral_lesson": selected_moral_lesson,
+        "selected_plot_twist": selected_plot_twist,
+    }
 
 
 class ChapterManager:
@@ -178,32 +257,63 @@ class ChapterManager:
 
     @staticmethod
     def initialize_adventure_state(
-        total_chapters: int, lesson_topic: str
+        total_chapters: int, lesson_topic: str, story_category: str
     ) -> AdventureState:
-        """Initialize a new adventure state with the determined chapter types.
+        """Initialize a new adventure state with the determined chapter types and story elements.
 
         Args:
             total_chapters: Total number of chapters in the adventure
             lesson_topic: The topic of the lessons
+            story_category: The selected story category
 
         Returns:
             Initialized AdventureState object
+
+        Raises:
+            ValueError: If story category is invalid or story data cannot be loaded
         """
         logger.info(
             "Initializing adventure state",
             extra={
                 "total_chapters": total_chapters,
                 "lesson_topic": lesson_topic,
+                "story_category": story_category,
             },
         )
+
+        # Load story data and select random elements
+        story_data = load_story_data()
+        selected_elements = select_random_elements(story_data, story_category)
+
+        # Initialize chapter types
         available_questions = ChapterManager.count_available_questions(lesson_topic)
         chapter_types = ChapterManager.determine_chapter_types(
             total_chapters, available_questions
         )
-        return AdventureState(
+
+        # Create and return the adventure state with all selected elements
+        state = AdventureState(
             current_chapter_id="start",
             story_length=total_chapters,
             chapters=[],
             planned_chapter_types=chapter_types,
             current_storytelling_phase="Exposition",  # Initial phase is always Exposition
+            selected_narrative_elements=selected_elements[
+                "selected_narrative_elements"
+            ],
+            selected_sensory_details=selected_elements["selected_sensory_details"],
+            selected_theme=selected_elements["selected_theme"],
+            selected_moral_lesson=selected_elements["selected_moral_lesson"],
+            selected_plot_twist=selected_elements["selected_plot_twist"],
         )
+
+        logger.info(
+            "Adventure state initialized with story elements",
+            extra={
+                "story_category": story_category,
+                "selected_elements": selected_elements,
+                "chapter_types": [ct.value for ct in chapter_types],
+            },
+        )
+
+        return state

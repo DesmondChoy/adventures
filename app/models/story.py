@@ -84,6 +84,55 @@ class AdventureState(BaseModel):
         "Exposition"  # Current phase in the Journey Quest structure
     )
 
+    # Story elements selected at initialization and maintained throughout the adventure
+    selected_narrative_elements: Dict[str, str] = Field(
+        default_factory=dict,
+        description="One randomly selected element from each narrative_elements category",
+    )
+    selected_sensory_details: Dict[str, str] = Field(
+        default_factory=dict,
+        description="One randomly selected element from each sensory_details category",
+    )
+    selected_theme: str = Field(
+        default="",
+        description="The selected theme for the adventure",
+    )
+    selected_moral_lesson: str = Field(
+        default="",
+        description="The selected moral lesson for the adventure",
+    )
+    selected_plot_twist: str = Field(
+        default="",
+        description="The selected plot twist that will develop throughout the adventure",
+    )
+
+    @field_validator("selected_narrative_elements")
+    @classmethod
+    def validate_narrative_elements(cls, v: Dict[str, str]) -> Dict[str, str]:
+        required_categories = {"setting_types", "character_archetypes", "story_rules"}
+        if not all(category in v for category in required_categories):
+            raise ValueError(
+                f"Missing required narrative elements: {required_categories - v.keys()}"
+            )
+        return v
+
+    @field_validator("selected_sensory_details")
+    @classmethod
+    def validate_sensory_details(cls, v: Dict[str, str]) -> Dict[str, str]:
+        required_categories = {"visuals", "sounds", "smells"}
+        if not all(category in v for category in required_categories):
+            raise ValueError(
+                f"Missing required sensory details: {required_categories - v.keys()}"
+            )
+        return v
+
+    @field_validator("selected_theme", "selected_moral_lesson", "selected_plot_twist")
+    @classmethod
+    def validate_non_empty_string(cls, v: str) -> str:
+        if not v:
+            raise ValueError("Field cannot be empty")
+        return v
+
     @property
     def current_chapter_number(self) -> int:
         """Current chapter number (1-based indexing)"""

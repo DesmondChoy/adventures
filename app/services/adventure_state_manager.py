@@ -20,13 +20,15 @@ class AdventureStateManager:
         self.state: AdventureState | None = None
         self.chapter_manager = ChapterManager()  # Instantiate ChapterManager
 
-    def initialize_state(self, story_length: int, lesson_topic: str) -> AdventureState:
+    def initialize_state(
+        self, story_length: int, lesson_topic: str, story_category: str
+    ) -> AdventureState:
         """Initializes and returns a new AdventureState."""
         logger.debug(
-            f"Initializing AdventureState with story_length: {story_length}, lesson_topic: {lesson_topic}"
+            f"Initializing AdventureState with story_length: {story_length}, lesson_topic: {lesson_topic}, story_category: {story_category}"
         )
         self.state = self.chapter_manager.initialize_adventure_state(
-            story_length, lesson_topic
+            story_length, lesson_topic, story_category
         )
         return self.state
 

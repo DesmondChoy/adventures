@@ -40,35 +40,50 @@ The project is focused on implementing core Learning Odyssey features, including
 
 ## Recent Changes
 
-### Lesson Topic Introduction Improvements
-Enhanced LESSON chapter prompt engineering in `prompt_engineering.py`:
-  * Prevented redundant "Lesson Question:" text.
-  * Added support for both question and statement formats.
-  * Updated CRITICAL INSTRUCTIONS.
+### New Story Configuration System Implementation
+1. Story Elements Enhancement:
+   - Added new dimensions in `new_stories.yaml`:
+     * Sensory details (visuals, sounds, smells)
+     * Plot twists with phase-based progression
+     * Themes and moral lessons
+   - Implemented random sampling of one element per category
+   - Added state tracking for selected elements
 
-### Choice Format Handling Improvements
-- Enhanced choice parsing in `websocket_service.py`:
-  * Implemented strict choice section extraction.
-  * Two-stage parsing strategy (multi-line then single-line).
-  * Improved regex patterns and error handling.
-- Updated choice format instructions in `prompt_engineering.py`.
+2. Database Updates:
+   - Updated StoryCategory model in `database.py`:
+     * Added display_name field
+     * Consolidated story elements into story_config JSON field
+   - Modified init_data.py to handle new structure
+   - Enhanced logging for story initialization
 
-### Final Chapter Streaming Fix
-- Enhanced final chapter rendering and streaming in `websocket_service.py` and `app/templates/index.html`.
+3. Prompt Engineering Improvements:
+   - Enhanced system prompt with new elements
+   - Implemented phase-based plot twist progression:
+     * Rising: Subtle introduction
+     * Trials: Gradual build-up
+     * Climax: Full revelation
+   - Added sensory details integration
+   - Updated phase guidance
 
-### Journey Quest Implementation
-- Initial implementation of Journey Quest pacing in `AdventureState`, `ChapterManager`, `websocket_service.py`, and `prompt_engineering.py`.
+4. State Management Updates:
+   - Modified AdventureState to track new elements
+   - Updated initialization process with story_category
+   - Enhanced validation for required categories
+   - Improved error handling and logging
 
-### Story Phase Timing Fix
-- Fixed incorrect story phase progression in `websocket_service.py`.
+5. WebSocket Handling:
+   - Updated websocket_router.py for new elements
+   - Enhanced state initialization and validation
+   - Improved error handling and connection management
+   - Added comprehensive logging
 
-### Chapter Logic Refactor
-- Implemented new chapter sequencing in `chapter_manager.py`.
-- Added CONCLUSION chapter type.
-- Enhanced prompt engineering.
-- Fixed `random.sample` error.
+6. UI Updates:
+   - Modified story category dropdown to use display names
+   - Updated story selection interface
+   - Enhanced error messaging
+   - Improved state synchronization
 
-### Client-Side Refactoring (`app/templates/index.html`)
+### Previous Updates
 - Modularized JavaScript code into logical sections:
   * Utility functions (loaders, progress tracking)
   * WebSocket handling (initialization, message processing)

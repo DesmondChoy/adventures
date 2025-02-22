@@ -212,42 +212,85 @@ graph TD
 - Narrative continuity enforcement.
 - Consequence handling.
 
-## Narrative Continuity Pattern (`app/services/llm/prompt_engineering.py`)
-- Previous Chapter Impact:
-  1. After LESSON Chapter (Correct Answer):
-     - Acknowledge understanding of the concept
-     - Show practical application of knowledge
-     - Build confidence for future challenges
-     - Connect learning to current situation
-     - CRITICAL: Include specific answer in state
-  
-  2. After LESSON Chapter (Incorrect Answer):
-     - Chapter 2 (Immediate Response):
-       * Address the misunderstanding directly
-       * Provide correct information naturally
-       * Create growth opportunity
-       * Show learning from mistakes
-       * Connect correction to current events
-       * CRITICAL: Include both incorrect and correct answers in state
-     - Later Chapters:
-       * Build upon previous learning
-       * Show evolved understanding
-       * Connect growth to current challenges
-       * Avoid redundant explanations
-       * Focus on character development
-       * CRITICAL: Reference previous corrections naturally
-  
-  3. After STORY Chapter:
-     - Direct continuation from chosen path
-     - Reference specific choice details
-     - Show consequences of decision
-     - Maintain consistent world state
-     - CRITICAL: Include full choice context in state
+## Story Elements Pattern
+1. Element Selection:
+   - Random sampling at state initialization:
+     * One element from each narrative_elements category
+     * One element from each sensory_details category
+     * One theme and moral lesson
+     * One plot twist for the entire adventure
+   - CRITICAL: Selected elements stored in AdventureState
+   - CRITICAL: Elements must remain consistent throughout adventure
 
-  4. After CONCLUSION Chapter:
-     - No further narrative needed
-     - Return to Landing Page option
-     - CRITICAL: No state updates needed
+2. Plot Twist Progression:
+   - Phase-based development:
+     * Rising: Subtle introduction and hints
+     * Trials: Build tension and connections
+     * Climax: Full revelation and impact
+   - CRITICAL: Plot twist must evolve naturally
+   - CRITICAL: Previous hints must connect logically
+
+3. Sensory Integration:
+   - Visual elements for scene setting
+   - Sound elements for atmosphere
+   - Smell elements for immersion
+   - CRITICAL: Weave naturally into narrative
+   - CRITICAL: Support current story phase
+
+## Narrative Continuity Pattern (`app/services/llm/prompt_engineering.py`)
+1. Story Elements Consistency:
+   - Maintain selected setting throughout
+   - Keep character archetypes consistent
+   - Follow selected story rules
+   - Develop chosen theme
+   - Reinforce moral lesson
+   - CRITICAL: Reference established elements
+
+2. Previous Chapter Impact:
+   - After LESSON Chapter (Correct Answer):
+     * Acknowledge understanding
+     * Apply knowledge practically
+     * Build confidence
+     * Connect to situation
+     * CRITICAL: Include answer in state
+   
+   - After LESSON Chapter (Incorrect Answer):
+     * Address misunderstanding
+     * Provide natural correction
+     * Create growth opportunity
+     * Show learning process
+     * CRITICAL: Include both answers in state
+   
+   - After STORY Chapter:
+     * Continue from chosen path
+     * Reference choice details
+     * Show consequences
+     * Maintain world state
+     * CRITICAL: Include choice context
+   
+   - After CONCLUSION Chapter:
+     * No further narrative
+     * Return to Landing Page
+     * CRITICAL: No state updates
+
+3. Plot Twist Development:
+   - Rising Phase:
+     * Plant subtle hints
+     * Create background elements
+     * Maintain subtlety
+     * CRITICAL: Don't reveal too much
+   
+   - Trials Phase:
+     * Connect previous hints
+     * Build tension
+     * Increase visibility
+     * CRITICAL: Maintain mystery
+   
+   - Climax Phase:
+     * Reveal full twist
+     * Connect all hints
+     * Show impact
+     * CRITICAL: Satisfying resolution
 
 - Continuity Enforcement:
   1. LLM Prompt Engineering:
