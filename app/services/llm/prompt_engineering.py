@@ -267,6 +267,7 @@ def _build_chapter_prompt(
     base_prompt: str,
     story_phase: str,
     chapter_type: ChapterType,
+    state: AdventureState,
     lesson_question: Optional[LessonQuestion] = None,
     consequences_guidance: str = "",
     num_previous_lessons: int = 0,
@@ -297,7 +298,7 @@ def _build_chapter_prompt(
 
         return f"""{base_prompt}
 
-{continuation_text}{_get_phase_guidance(story_phase)}
+{continuation_text}{_get_phase_guidance(story_phase, state)}
 
 Continue the story, leading to a situation where the following lesson question naturally arises: 
 {lesson_question["question"]}
@@ -338,7 +339,7 @@ Lesson Question: [Repeating the question]
 
         return f"""{base_prompt}
 
-{continuation_text}{_get_phase_guidance(story_phase)}
+{continuation_text}{_get_phase_guidance(story_phase, state)}
 
 Continue the story by:
 1. Following directly from the previous chapter content
@@ -368,7 +369,7 @@ IMPORTANT:
 
         return f"""{base_prompt}
 
-{continuation_text}{_get_phase_guidance(story_phase)}
+{continuation_text}{_get_phase_guidance(story_phase, state)}
 
 Write the conclusion of the story by:
 1. Following directly from the pivotal choice made in the previous chapter
