@@ -89,9 +89,41 @@ pytest-asyncio==0.21.1
   * Performance metrics
 
 ## Technical Considerations
-- **State Management (`app/models/story.py`):** Real-time WebSocket synchronization, complete state serialization, story length constraints (5-10 chapters), and error recovery system. The `story_category` and `lesson_topic` are passed as URL parameters to the WebSocket endpoint and are not included in the `validated_state`. New metadata field tracks element consistency and plot twist development throughout the adventure.
-- **LLM Integration (`app/services/llm/`):** Provider abstraction layer, response standardization, rate limiting implementation, and error handling system. Enhanced with phase-specific plot twist guidance and element consistency validation.
-- **Story Elements (`app/services/chapter_manager.py`):** Comprehensive element selection and validation, metadata tracking for consistency, phase-specific plot twist guidance, and enhanced error handling with proper recovery mechanisms.
+- **State Management (`app/models/story.py`):** 
+  * Real-time WebSocket synchronization
+  * Complete state serialization
+  * Story length constraints (5-10 chapters)
+  * Error recovery system
+  * Critical state preservation during client updates:
+    - Narrative elements (setting, characters, rules)
+    - Sensory details (visuals, sounds, smells)
+    - Theme and moral lesson
+    - Plot twist and phase guidance
+    - Metadata for consistency tracking
+  * URL parameters handling:
+    - `story_category` and `lesson_topic` passed via URL
+    - Not included in `validated_state`
+    - Used for initial state setup only
+
+- **LLM Integration (`app/services/llm/`):** 
+  * Provider abstraction layer
+  * Response standardization
+  * Rate limiting implementation
+  * Error handling system
+  * State handling requirements:
+    - Must pass complete AdventureState to build_system_prompt
+    - Direct attribute access for prompt construction
+    - Story config used only for initial setup
+  * Enhanced features:
+    - Phase-specific plot twist guidance
+    - Element consistency validation
+    - Narrative continuity enforcement
+
+- **Story Elements (`app/services/chapter_manager.py`):** 
+  * Comprehensive element selection and validation
+  * Metadata tracking for consistency
+  * Phase-specific plot twist guidance
+  * Enhanced error handling with proper recovery mechanisms
 
 ## External Dependencies
 

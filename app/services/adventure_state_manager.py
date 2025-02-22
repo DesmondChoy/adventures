@@ -41,6 +41,19 @@ class AdventureStateManager:
         if self.state is None:
             raise ValueError("State not initialized.")
 
+        # Store critical state properties that need to be preserved
+        preserved_state = {
+            "selected_narrative_elements": self.state.selected_narrative_elements,
+            "selected_sensory_details": self.state.selected_sensory_details,
+            "selected_theme": self.state.selected_theme,
+            "selected_moral_lesson": self.state.selected_moral_lesson,
+            "selected_plot_twist": self.state.selected_plot_twist,
+            "metadata": self.state.metadata,
+            "planned_chapter_types": self.state.planned_chapter_types,
+            "story_length": self.state.story_length,
+            "current_storytelling_phase": self.state.current_storytelling_phase,
+        }
+
         if "chapters" in validated_state:
             logger.debug("Updating chapters from client state.")
             chapters = []
@@ -86,6 +99,12 @@ class AdventureStateManager:
                 f"Updating current_chapter_id to: {validated_state['current_chapter_id']}"
             )
             self.state.current_chapter_id = validated_state["current_chapter_id"]
+
+        # Restore preserved state properties
+        for key, value in preserved_state.items():
+            setattr(self.state, key, value)
+
+        logger.debug("Preserved critical state properties during update")
 
     def append_new_chapter(self, chapter_data: ChapterData) -> None:
         """Appends a new chapter to the AdventureState."""

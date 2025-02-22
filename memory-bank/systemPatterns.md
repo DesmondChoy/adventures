@@ -103,6 +103,11 @@ graph TD
 - Story choice generation.
 - Narrative continuity management.
 - Response processing.
+- **Critical State Handling**:
+  * Providers MUST pass complete AdventureState object to build_system_prompt
+  * State object contains all necessary narrative elements and context
+  * Direct attribute access required for prompt construction
+  * Story configuration used only for initial state setup
 
 ### 6. State Management Pattern
 - Centralized AdventureState:
@@ -113,6 +118,16 @@ graph TD
   * Story length constraints (5-10 chapters)
   * Recovery mechanisms
   * Metadata tracking for element consistency
+  * Critical state preservation during updates:
+    - selected_narrative_elements
+    - selected_sensory_details
+    - selected_theme
+    - selected_moral_lesson
+    - selected_plot_twist
+    - metadata
+    - planned_chapter_types
+    - story_length
+    - current_storytelling_phase
 
 - **Navigation State Pattern:**
   * Separation of Concerns:

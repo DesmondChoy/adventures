@@ -30,7 +30,7 @@ class OpenAIService(BaseLLMService):
     ) -> AsyncGenerator[str, None]:
         """Generate the chapter content (story or lesson) as a stream of chunks."""
         # Build prompts using the shared prompt engineering module
-        system_prompt = build_system_prompt(story_config)
+        system_prompt = build_system_prompt(state)  # Pass state instead of story_config
         user_prompt = build_user_prompt(state, question, previous_questions)
 
         # Log the prompts
@@ -101,7 +101,7 @@ class GeminiService(BaseLLMService):
     ) -> AsyncGenerator[str, None]:
         """Generate the chapter content (story or lesson) as a stream of chunks."""
         # Build prompts using the shared prompt engineering module
-        system_prompt = build_system_prompt(story_config)
+        system_prompt = build_system_prompt(state)  # Pass state instead of story_config
         user_prompt = build_user_prompt(state, question, previous_questions)
 
         print("\n=== DEBUG: LLM Prompt Request ===")

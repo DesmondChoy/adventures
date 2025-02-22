@@ -94,12 +94,27 @@
 2. Performance bottlenecks identified
 3. Error scenario coverage gaps
 4. Edge case handling needed
+5. ~~State preservation during client updates~~ (Fixed)
+6. ~~Critical state property tracking~~ (Fixed)
 
 ### LLM Integration (`app/services/llm/`)
+1. ~~State object passing to build_system_prompt~~ (Fixed)
 2. OpenAI/Gemini cross-testing needed
 3. Response format standardization pending
 4. Rate limiting implementation required
 5. Error recovery improvements needed
+
+### Recent Fixes
+- [x] Fixed state preservation during client updates in AdventureStateManager:
+  * Added preservation of critical state properties
+  * Maintained narrative elements consistency
+  * Protected story configuration data
+  * Enhanced error handling for state updates
+- [x] Corrected LLM prompt engineering:
+  * Fixed state object passing to build_system_prompt
+  * Ensured proper attribute access for prompt construction
+  * Maintained story configuration separation
+  * Improved error handling for missing state properties
 
 ### Content Flow (`app/services/chapter_manager.py`)
 1. Question sampling optimization needed
