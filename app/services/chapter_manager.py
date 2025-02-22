@@ -90,7 +90,7 @@ def select_random_elements(
     # 4. Select theme, moral teaching, and plot twist with validation
     try:
         themes = category_data["narrative_elements"]["themes"]
-        moral_teachings = category_data["narrative_elements"]["moral_lessons"]
+        moral_teachings = category_data["narrative_elements"]["moral_teachings"]
         plot_twists = category_data["narrative_elements"]["plot_twists"]
 
         if not all(

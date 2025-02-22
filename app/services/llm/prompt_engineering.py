@@ -287,28 +287,22 @@ def _build_chapter_prompt(
 
 {continuation_text}{_get_phase_guidance(story_phase, state)}
 
-Continue the story, leading to a situation where the following lesson question naturally arises: 
+Continue the story naturally, weaving in a situation or moment that raises this core question:
 {lesson_question["question"]}
 
 CRITICAL INSTRUCTIONS:
-1. {"First address the consequences of the previous lesson" if num_previous_lessons > 0 else "The story should flow naturally towards the lesson topic"}
-2. Have the topic emerge naturally through dialogue, thoughts, or observations
-3. End the narrative at the moment when the topic is introduced
-4. DO NOT include "Lesson Question:" or repeat the question after the narrative
-5. The system will handle the question presentation separately
+1. {"Build on the consequences of the previous lesson, showing how it connects to this new challenge" if num_previous_lessons > 0 else "Let the story flow organically towards this new challenge"}
+2. Create a narrative moment where the question emerges through:
+   - Character's internal thoughts or observations
+   - Natural dialogue between characters
+   - A challenge or obstacle that needs to be overcome
+   - An important decision that needs to be made
+3. The question should feel like a natural part of the character's journey, not an artificial insert
+4. Ensure the context makes it clear why answering this question matters to the story
+5. End at a moment that makes the user want to engage with the question
+6. The system will handle the formal presentation of the question separately
 
-Example of correct formats:
-
-[Question format]
-"Which makes me wonder," Alex pondered, "if they wanted to maximize the breakdown of the pumpkin, wouldn't they want to mimic the longest part of the digestive system?"
-
-[Statement format]
-Maya studied the diagram intently. The small intestine seemed too short for such a complex process - there had to be a longer section of the digestive system where most of the breakdown occurred.
-
-Example of incorrect format:
-[Narrative introduces topic]
-[Additional unnecessary content]
-Lesson Question: [Repeating the question]
+Remember: The goal is to make the question feel like an organic part of the character's journey rather than an educational insert.
 
 {_format_lesson_answers(lesson_question)}"""
 
