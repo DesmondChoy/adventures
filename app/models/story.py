@@ -106,6 +106,12 @@ class AdventureState(BaseModel):
         description="The selected plot twist that will develop throughout the adventure",
     )
 
+    # Metadata for element consistency and plot development
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata for tracking element consistency and plot development",
+    )
+
     @field_validator("selected_narrative_elements")
     @classmethod
     def validate_narrative_elements(cls, v: Dict[str, str]) -> Dict[str, str]:

@@ -16,16 +16,22 @@ def load_story_data() -> Dict[str, Any]:
     try:
         with open("app/data/new_stories.yaml", "r") as f:
             data = yaml.safe_load(f)
+            # Extract the story_categories from the loaded data
+            story_categories = data.get("story_categories", {})
             logger.info(
                 "Loaded story data",
                 extra={
-                    "categories": list(data.keys()),
+                    "categories": list(story_categories.keys()),
                     "elements_per_category": {
-                        cat: list(details.keys()) for cat, details in data.items()
+                        cat: list(details.keys())
+                        for cat, details in story_categories.items()
                     },
+                    "raw_data_keys": list(
+                        data.keys()
+                    ),  # Debug log to see top-level structure
                 },
             )
-            return data
+            return story_categories
     except Exception as e:
         logger.error("Failed to load story data", extra={"error": str(e)})
         return {}  # Provide empty default value

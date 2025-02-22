@@ -41,6 +41,7 @@ graph TD
 - ChapterType enum management (LESSON/STORY/CONCLUSION).
 - Question and answer tracking.
 - Narrative continuity enforcement.
+- Metadata tracking for element consistency.
 
 ### 2. WebSocket Components
 #### WebSocket Router (`app/routers/websocket_router.py`)
@@ -111,6 +112,7 @@ graph TD
   * Question data persistence
   * Story length constraints (5-10 chapters)
   * Recovery mechanisms
+  * Metadata tracking for element consistency
 
 - **Navigation State Pattern:**
   * Separation of Concerns:
@@ -213,29 +215,53 @@ graph TD
 - Consequence handling.
 
 ## Story Elements Pattern
-1. Element Selection:
-   - Random sampling at state initialization:
-     * One element from each narrative_elements category
-     * One element from each sensory_details category
-     * One theme and moral lesson
-     * One plot twist for the entire adventure
+1. Element Selection from `new_stories.yaml`:
+   - Random sampling happens once at state initialization:
+     * One element from each `narrative_elements` category
+     * One element from each `sensory_details` category
+   - Non-random elements (`name`, `description`, `tone`) are extracted and validated separately
    - CRITICAL: Selected elements stored in AdventureState
-   - CRITICAL: Elements must remain consistent throughout adventure
+   - CRITICAL: All elements must remain consistent throughout adventure
+   - CRITICAL: Validation ensures all required elements are present
 
-2. Plot Twist Progression:
-   - Phase-based development:
-     * Rising: Subtle introduction and hints
-     * Trials: Build tension and connections
-     * Climax: Full revelation and impact
+2. Plot Twist Integration:
+   - Phase-specific guidance via get_plot_twist_guidance():
+     * Exposition: Subtle hints and background elements only
+     * Rising: Begin connecting previous hints, maintain mystery
+     * Trials: Build tension and increase visibility of hints
+     * Climax: Full revelation and impact of the twist
+     * Return: Show aftermath and consequences
    - CRITICAL: Plot twist must evolve naturally
    - CRITICAL: Previous hints must connect logically
+   - CRITICAL: Guidance stored in state metadata
 
-3. Sensory Integration:
+3. Element Consistency Management:
+   - Metadata field in AdventureState tracks:
+     * Non-random elements
+     * Plot twist guidance
+     * Element consistency
+     * Initialization timestamp
+   - CRITICAL: All elements validated during initialization
+   - CRITICAL: Metadata provides consistency checks throughout adventure
+   - CRITICAL: Error recovery maintains element consistency
+
+4. Error Handling and Validation:
+   - Comprehensive validation in select_random_elements:
+     * Required categories checked
+     * Element types validated
+     * Non-empty values ensured
+   - Detailed error messages and logging
+   - Proper error propagation
+   - Recovery mechanisms maintain consistency
+   - CRITICAL: Validation failures prevent state corruption
+
+5. `sensory_details` integration into build_system_prompt():
    - Visual elements for scene setting
    - Sound elements for atmosphere
    - Smell elements for immersion
    - CRITICAL: Weave naturally into narrative
    - CRITICAL: Support current story phase
+   - CRITICAL: Consistent with metadata tracking
 
 ## Narrative Continuity Pattern (`app/services/llm/prompt_engineering.py`)
 1. Story Elements Consistency:
