@@ -15,16 +15,17 @@ def load_story_data():
     try:
         with open("app/data/new_stories.yaml", "r") as f:
             data = yaml.safe_load(f)
+            categories = data.get("story_categories", {})
             logger.info(
                 "Loaded story data",
                 extra={
-                    "categories": list(data.keys()),
+                    "categories": list(categories.keys()),
                     "elements_per_category": {
-                        cat: list(details.keys()) for cat, details in data.items()
+                        cat: list(details.keys()) for cat, details in categories.items()
                     },
                 },
             )
-            return data
+            return categories
     except Exception as e:
         logger.error("Failed to load story data", extra={"error": str(e)})
         return {}  # Provide empty default value
@@ -78,7 +79,9 @@ def sample_question(topic: str, exclude_questions: list = None) -> dict:
 def init_story_categories(db, story_data):
     """Initialize story categories in the database."""
     try:
+        print("Story data:", story_data)  # Debug print
         for key, category in story_data.items():
+            print(f"Processing category: {key}")  # Debug print
             # Create a complete story configuration object
             story_config = {
                 "narrative_elements": category["narrative_elements"],
@@ -95,6 +98,7 @@ def init_story_categories(db, story_data):
                 tone=category["tone"],
                 story_config=json.dumps(story_config),
             )
+            print(f"Created category object: {db_category.name}")  # Debug print
             db.add(db_category)
 
             logger.info(

@@ -1,188 +1,189 @@
-festival_of_lights_and_colors:
-  name: "Festival of Lights & Colors"
-  description: "A radiant celebration where every moment shimmers with laughter and bright spectacle. Lanterns, parades, and vibrant costumes invite endless wonder."
-  tone: "vibrant and magical"
+story_categories: 
+  festival_of_lights_and_colors:
+    name: "Festival of Lights & Colors"
+    description: "A radiant celebration where every moment shimmers with laughter and bright spectacle. Lanterns, parades, and vibrant costumes invite endless wonder."
+    tone: "vibrant and magical"
 
-  narrative_elements:
-    setting_types:
-      - "Glowing rainbow streets decorated with floating paper lanterns"
-      - "Gigantic kaleidoscope tents where colors shift with each step"
-      - "Illuminated bridges arched over canals of sparkling water"
-      - "Hidden garden paths lit by luminescent flowers and tiny fireflies"
-      - "Grand fireworks arena with a sky full of dancing lights"
-    character_archetypes:
-      - "Eager lantern-makers crafting brilliant displays for the parade"
-      - "Curious color-collectors on a quest to find the rarest hue"
-      - "Friendly festival guardians who ensure laughter and harmony"
-      - "Daring drummers leading the nightly procession under starry skies"
-      - "Mystical light-wielders who conjure living murals in midair"
-    story_rules:
-      - "Kindness and cooperation amplify the festival’s shimmering magic"
-      - "Each day brings new color challenges that spark creativity"
-      - "Selfish acts cause lanterns to dim and colors to fade"
-      - "Only those who share joy can unlock hidden festival secrets"
-      - "Friendship glows brightest when facing nighttime surprises"
-    themes:
-      - "Celebrating diversity through the brilliant spectrum of colors"
-      - "Uniting communities by sharing stories and music"
-      - "Finding beauty in unexpected places and little details"
-      - "Overcoming fears by seeking light in the darkest corners"
-      - "Believing in the power of wonder and imagination"
-    moral_lessons:
-      - "Sharing light with others illuminates everyone’s path"
-      - "Honesty can brighten the dimmest lantern"
-      - "Courage helps us step into the unknown without losing hope"
-      - "Teamwork colors the world in ways we cannot achieve alone"
-      - "Respect for each person’s creativity keeps the festival alive"
-    plot_twists:
-      - "A mysterious shadow threatens to extinguish lanterns one by one"
-      - "An ancient color thought lost suddenly appears in someone’s artwork"
-      - "A colorful parade float comes to life, revealing a hidden realm"
-      - "A secret tunnel leads to a forgotten chamber of glowing crystals"
-      - "The festival’s grand finale is disrupted by a swirl of vanishing hues"
+    narrative_elements:
+      setting_types:
+        - "Glowing rainbow streets decorated with floating paper lanterns"
+        - "Gigantic kaleidoscope tents where colors shift with each step"
+        - "Illuminated bridges arched over canals of sparkling water"
+        - "Hidden garden paths lit by luminescent flowers and tiny fireflies"
+        - "Grand fireworks arena with a sky full of dancing lights"
+      character_archetypes:
+        - "Eager lantern-makers crafting brilliant displays for the parade"
+        - "Curious color-collectors on a quest to find the rarest hue"
+        - "Friendly festival guardians who ensure laughter and harmony"
+        - "Daring drummers leading the nightly procession under starry skies"
+        - "Mystical light-wielders who conjure living murals in midair"
+      story_rules:
+        - "Kindness and cooperation amplify the festival’s shimmering magic"
+        - "Each day brings new color challenges that spark creativity"
+        - "Selfish acts cause lanterns to dim and colors to fade"
+        - "Only those who share joy can unlock hidden festival secrets"
+        - "Friendship glows brightest when facing nighttime surprises"
+      themes:
+        - "Celebrating diversity through the brilliant spectrum of colors"
+        - "Uniting communities by sharing stories and music"
+        - "Finding beauty in unexpected places and little details"
+        - "Overcoming fears by seeking light in the darkest corners"
+        - "Believing in the power of wonder and imagination"
+      moral_lessons:
+        - "Sharing light with others illuminates everyone’s path"
+        - "Honesty can brighten the dimmest lantern"
+        - "Courage helps us step into the unknown without losing hope"
+        - "Teamwork colors the world in ways we cannot achieve alone"
+        - "Respect for each person’s creativity keeps the festival alive"
+      plot_twists:
+        - "A mysterious shadow threatens to extinguish lanterns one by one"
+        - "An ancient color thought lost suddenly appears in someone’s artwork"
+        - "A colorful parade float comes to life, revealing a hidden realm"
+        - "A secret tunnel leads to a forgotten chamber of glowing crystals"
+        - "The festival’s grand finale is disrupted by a swirl of vanishing hues"
 
-  sensory_details:
-    visuals:
-      - "Sparkling confetti bursts that shower the crowds in glittery rainbows"
-      - "Enormous lanterns shaped like mythical creatures roaming the streets"
-      - "Luminescent paint swirling in patterns on the festival grounds"
-      - "Multicolored streamers cascading from rooftops and balconies"
-      - "Reflective ribbons dancing in the breeze under starlit skies"
-    sounds:
-      - "Melodic chimes ringing with each lantern lit"
-      - "Steady beat of drums guiding the nightly color parade"
-      - "Excited giggles and exclamations echoing across the festival paths"
-      - "Gentle humming of glowing insects drawn to the colorful lights"
-      - "Trumpeting fanfare announcing the arrival of the grand fireworks"
-    smells:
-      - "Sweet aroma of sugar-dusted pastries fresh from festival stalls"
-      - "Flowery perfume drifting from blossoming lantern bouquets"
-      - "Subtle whiff of sparklers and sizzling fireworks in the distance"
-      - "Fruity scents of color-themed sorbets melting under lantern glow"
-      - "Warm fragrance of toasted nuts and honey filling the night air"
+    sensory_details:
+      visuals:
+        - "Sparkling confetti bursts that shower the crowds in glittery rainbows"
+        - "Enormous lanterns shaped like mythical creatures roaming the streets"
+        - "Luminescent paint swirling in patterns on the festival grounds"
+        - "Multicolored streamers cascading from rooftops and balconies"
+        - "Reflective ribbons dancing in the breeze under starlit skies"
+      sounds:
+        - "Melodic chimes ringing with each lantern lit"
+        - "Steady beat of drums guiding the nightly color parade"
+        - "Excited giggles and exclamations echoing across the festival paths"
+        - "Gentle humming of glowing insects drawn to the colorful lights"
+        - "Trumpeting fanfare announcing the arrival of the grand fireworks"
+      smells:
+        - "Sweet aroma of sugar-dusted pastries fresh from festival stalls"
+        - "Flowery perfume drifting from blossoming lantern bouquets"
+        - "Subtle whiff of sparklers and sizzling fireworks in the distance"
+        - "Fruity scents of color-themed sorbets melting under lantern glow"
+        - "Warm fragrance of toasted nuts and honey filling the night air"
 
-circus_and_carnival_capers:
-  name: "Circus & Carnival Capers"
-  description: "A dazzling realm of acrobats, clowns, and magical wonders. Children can explore whimsical rides and hidden secrets amid colorful tents."
-  tone: "playful and vibrant"
+  circus_and_carnival_capers:
+    name: "Circus & Carnival Capers"
+    description: "A dazzling realm of acrobats, clowns, and magical wonders. Children can explore whimsical rides and hidden secrets amid colorful tents."
+    tone: "playful and vibrant"
 
-  narrative_elements:
-    setting_types:
-      - "grand big top tent glowing with rainbow spotlights"
-      - "mysterious fortune teller’s wagon filled with crystal trinkets"
-      - "enchanted carousel where painted creatures come to life at night"
-      - "hidden backstage corridors bustling with secret rehearsals"
-      - "towering Ferris wheel offering breathtaking starry views"
-    character_archetypes:
-      - "energetic clown who brightens every corner with joyful pranks"
-      - "timid juggler striving to overcome stage fright"
-      - "kind-hearted ringmaster guiding all performers with gentle authority"
-      - "inventive acrobat who loves defying gravity with new stunts"
-      - "wise ticket vendor who seems to know every carnival legend"
-    story_rules:
-      - "Helping a friend in need always unlocks a new attraction or clue"
-      - "Honesty during challenges can earn magical carnival tickets"
-      - "Kindness towards animals ensures you gain their playful cooperation"
-      - "Teamwork amplifies the fun and thwarts hidden mischief"
-      - "Every ride holds a lesson for those brave enough to explore"
-    themes:
-      - "Overcoming fears through friendship and creative thinking"
-      - "Discovering hidden talents by embracing curiosity"
-      - "Celebrating diversity in a place where everyone has a unique role"
-      - "Finding magic in everyday moments and ordinary objects"
-      - "Learning respect for one’s own limits and those of others"
-    moral_lessons:
-      - "Courage grows when we trust our friends"
-      - "Being true to yourself lights the path for others"
-      - "Hard work can turn impossible tricks into dazzling feats"
-      - "Small acts of kindness make the greatest impact"
-      - "Admitting mistakes leads to stronger bonds"
-    plot_twists:
-      - "A mischievous clown’s prank reveals a hidden tunnel beneath the Ferris wheel"
-      - "The carousel animals come to life and guide the heroes to a secret show"
-      - "A lost costume trunk holds clues to a fabled disappearing act"
-      - "An unexpected storm transforms the carnival rides into surprising adventures"
-      - "The fortune teller’s cryptic vision warns of a prankster’s grand finale"
+    narrative_elements:
+      setting_types:
+        - "grand big top tent glowing with rainbow spotlights"
+        - "mysterious fortune teller’s wagon filled with crystal trinkets"
+        - "enchanted carousel where painted creatures come to life at night"
+        - "hidden backstage corridors bustling with secret rehearsals"
+        - "towering Ferris wheel offering breathtaking starry views"
+      character_archetypes:
+        - "energetic clown who brightens every corner with joyful pranks"
+        - "timid juggler striving to overcome stage fright"
+        - "kind-hearted ringmaster guiding all performers with gentle authority"
+        - "inventive acrobat who loves defying gravity with new stunts"
+        - "wise ticket vendor who seems to know every carnival legend"
+      story_rules:
+        - "Helping a friend in need always unlocks a new attraction or clue"
+        - "Honesty during challenges can earn magical carnival tickets"
+        - "Kindness towards animals ensures you gain their playful cooperation"
+        - "Teamwork amplifies the fun and thwarts hidden mischief"
+        - "Every ride holds a lesson for those brave enough to explore"
+      themes:
+        - "Overcoming fears through friendship and creative thinking"
+        - "Discovering hidden talents by embracing curiosity"
+        - "Celebrating diversity in a place where everyone has a unique role"
+        - "Finding magic in everyday moments and ordinary objects"
+        - "Learning respect for one’s own limits and those of others"
+      moral_lessons:
+        - "Courage grows when we trust our friends"
+        - "Being true to yourself lights the path for others"
+        - "Hard work can turn impossible tricks into dazzling feats"
+        - "Small acts of kindness make the greatest impact"
+        - "Admitting mistakes leads to stronger bonds"
+      plot_twists:
+        - "A mischievous clown’s prank reveals a hidden tunnel beneath the Ferris wheel"
+        - "The carousel animals come to life and guide the heroes to a secret show"
+        - "A lost costume trunk holds clues to a fabled disappearing act"
+        - "An unexpected storm transforms the carnival rides into surprising adventures"
+        - "The fortune teller’s cryptic vision warns of a prankster’s grand finale"
 
-  sensory_details:
-    visuals:
-      - "Streamers of glitter confetti raining down from trapeze wires"
-      - "Blazing torches lighting the entrance at twilight"
-      - "Mirrored funhouse corridors reflecting laughter and movement"
-      - "Brightly painted wagons showcasing vivid carnival murals"
-      - "Sparkling fireworks bursting above the tent every evening"
-    sounds:
-      - "Cheerful carousel music echoing across the fairground"
-      - "Lively drumrolls introducing each breathtaking performance"
-      - "Gentle hum of distant chatter and playful giggles"
-      - "Loud pop of balloons during games and prize giveaways"
-      - "Excited gasps from the audience as acrobats soar overhead"
-    smells:
-      - "Sweet scent of cotton candy drifting through the air"
-      - "Buttery aroma from freshly popped carnival popcorn"
-      - "Slight smoky hint of torches and fire-breathing stunts"
-      - "Sugary tang of caramel apples and funnel cakes"
-      - "Refreshing burst of lemonade near the parade entrance"
+    sensory_details:
+      visuals:
+        - "Streamers of glitter confetti raining down from trapeze wires"
+        - "Blazing torches lighting the entrance at twilight"
+        - "Mirrored funhouse corridors reflecting laughter and movement"
+        - "Brightly painted wagons showcasing vivid carnival murals"
+        - "Sparkling fireworks bursting above the tent every evening"
+      sounds:
+        - "Cheerful carousel music echoing across the fairground"
+        - "Lively drumrolls introducing each breathtaking performance"
+        - "Gentle hum of distant chatter and playful giggles"
+        - "Loud pop of balloons during games and prize giveaways"
+        - "Excited gasps from the audience as acrobats soar overhead"
+      smells:
+        - "Sweet scent of cotton candy drifting through the air"
+        - "Buttery aroma from freshly popped carnival popcorn"
+        - "Slight smoky hint of torches and fire-breathing stunts"
+        - "Sugary tang of caramel apples and funnel cakes"
+        - "Refreshing burst of lemonade near the parade entrance"
 
-enchanted_forest_tales:
-  name: "Enchanted Forest Tales"
-  description: "A realm where ancient trees whisper secrets and magical creatures wander unseen. It's a place of wonder, courage, and hidden surprises."
-  tone: "dreamy and adventurous"
+  enchanted_forest_tales:
+    name: "Enchanted Forest Tales"
+    description: "A realm where ancient trees whisper secrets and magical creatures wander unseen. It's a place of wonder, courage, and hidden surprises."
+    tone: "dreamy and adventurous"
 
-  narrative_elements:
-    setting_types:
-      - "towering mushroom groves that glow at night"
-      - "crystal-clear fairy ponds shimmering with moonbeams"
-      - "enchanted tree villages hidden in twisting branches"
-      - "glittering cobblestone paths that shift underfoot"
-      - "sunlit clearings where gentle woodland creatures gather"
-    character_archetypes:
-      - "curious elf children who befriend forest spirits"
-      - "mischievous pixies with hearts of gold"
-      - "benevolent old wizards guarding ancient lore"
-      - "courageous rangers skilled in herbal remedies"
-      - "kind-hearted talking animals offering playful guidance"
-    story_rules:
-      - "Every visitor must treat nature with respect and care"
-      - "Random acts of kindness can unlock hidden paths or rewards"
-      - "Magic flows from harmony and disappears when misused"
-      - "Sharing knowledge strengthens the entire woodland community"
-      - "An unbreakable pledge binds true friends across time"
-    themes:
-      - "Friendship formed through shared adventures"
-      - "Personal growth discovered by overcoming fears"
-      - "The power of teamwork in solving forest mysteries"
-      - "Respect for all living things fosters unity"
-      - "Small deeds can have extraordinary consequences"
-    moral_lessons:
-      - "Bravery means standing up for what is right"
-      - "Loyalty is proven by helping others in need"
-      - "Generosity brings unexpected blessings"
-      - "Listening to elders can lead to invaluable wisdom"
-      - "Truth shines brighter than the darkest lie"
-    plot_twists:
-      - "A trusted guide suddenly reveals a hidden royal heritage"
-      - "A mischievous forest sprite steals a crucial magical artifact"
-      - "Ancient runes on a tree trunk unlock a forbidden portal"
-      - "A long-lost friend reappears in a surprising new form"
-      - "A once-humble acorn transforms into a legendary symbol of hope"
+    narrative_elements:
+      setting_types:
+        - "towering mushroom groves that glow at night"
+        - "crystal-clear fairy ponds shimmering with moonbeams"
+        - "enchanted tree villages hidden in twisting branches"
+        - "glittering cobblestone paths that shift underfoot"
+        - "sunlit clearings where gentle woodland creatures gather"
+      character_archetypes:
+        - "curious elf children who befriend forest spirits"
+        - "mischievous pixies with hearts of gold"
+        - "benevolent old wizards guarding ancient lore"
+        - "courageous rangers skilled in herbal remedies"
+        - "kind-hearted talking animals offering playful guidance"
+      story_rules:
+        - "Every visitor must treat nature with respect and care"
+        - "Random acts of kindness can unlock hidden paths or rewards"
+        - "Magic flows from harmony and disappears when misused"
+        - "Sharing knowledge strengthens the entire woodland community"
+        - "An unbreakable pledge binds true friends across time"
+      themes:
+        - "Friendship formed through shared adventures"
+        - "Personal growth discovered by overcoming fears"
+        - "The power of teamwork in solving forest mysteries"
+        - "Respect for all living things fosters unity"
+        - "Small deeds can have extraordinary consequences"
+      moral_lessons:
+        - "Bravery means standing up for what is right"
+        - "Loyalty is proven by helping others in need"
+        - "Generosity brings unexpected blessings"
+        - "Listening to elders can lead to invaluable wisdom"
+        - "Truth shines brighter than the darkest lie"
+      plot_twists:
+        - "A trusted guide suddenly reveals a hidden royal heritage"
+        - "A mischievous forest sprite steals a crucial magical artifact"
+        - "Ancient runes on a tree trunk unlock a forbidden portal"
+        - "A long-lost friend reappears in a surprising new form"
+        - "A once-humble acorn transforms into a legendary symbol of hope"
 
-  sensory_details:
-    visuals:
-      - "Glistening dew droplets reflecting tiny rainbows at dawn"
-      - "Ribbons of colored light dancing between the treetops"
-      - "Otherworldly fireflies illuminating hidden pathways"
-      - "Towering mossy trunks swirling with faint glowing patterns"
-      - "Fairy lanterns twinkling like stars in hollow tree nooks"
-    sounds:
-      - "Rustling leaves that whisper forest secrets"
-      - "Gentle chirping of magical birds at sunrise"
-      - "Soft hum of distant waterfalls echoing through the trees"
-      - "Enthralling flute melodies played by unseen forest dwellers"
-      - "Occasional giggles of mischievous sprites fluttering by"
-    smells:
-      - "Sweet aroma of blooming moonflowers after dusk"
-      - "Rich scent of damp earth and fresh pine"
-      - "Delicate fragrance of honey drizzling from wild beehives"
-      - "Warm, comforting whiff of spiced berry tea from a ranger’s kettle"
-      - "Lingering musk of ancient tree bark steeped in magic"
+    sensory_details:
+      visuals:
+        - "Glistening dew droplets reflecting tiny rainbows at dawn"
+        - "Ribbons of colored light dancing between the treetops"
+        - "Otherworldly fireflies illuminating hidden pathways"
+        - "Towering mossy trunks swirling with faint glowing patterns"
+        - "Fairy lanterns twinkling like stars in hollow tree nooks"
+      sounds:
+        - "Rustling leaves that whisper forest secrets"
+        - "Gentle chirping of magical birds at sunrise"
+        - "Soft hum of distant waterfalls echoing through the trees"
+        - "Enthralling flute melodies played by unseen forest dwellers"
+        - "Occasional giggles of mischievous sprites fluttering by"
+      smells:
+        - "Sweet aroma of blooming moonflowers after dusk"
+        - "Rich scent of damp earth and fresh pine"
+        - "Delicate fragrance of honey drizzling from wild beehives"
+        - "Warm, comforting whiff of spiced berry tea from a ranger’s kettle"
+        - "Lingering musk of ancient tree bark steeped in magic"

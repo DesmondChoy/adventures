@@ -30,10 +30,11 @@ def select_random_elements(
     Returns:
         Dict containing randomly selected elements for each category
     """
-    if story_category not in story_data:
+    categories = story_data.get("story_categories", {})
+    if story_category not in categories:
         raise ValueError(f"Invalid story category: {story_category}")
 
-    category_data = story_data[story_category]
+    category_data = categories[story_category]
 
     logger.info(
         "Selecting random story elements",

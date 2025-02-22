@@ -15,7 +15,7 @@ The project is focused on implementing core Learning Odyssey features, including
 
 2.  **Content Management (`app/data/`):**
     *   `lessons.csv` integration for LESSON chapters.
-    *   `stories.yaml` templates for STORY chapters.
+    *   `new_stories.yaml` templates for STORY chapters.
     *   LLM response validation.
     *   History tracking in `AdventureState`.
 

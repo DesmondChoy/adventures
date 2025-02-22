@@ -46,7 +46,7 @@ Learning Odyssey solves these challenges through:
 
 3.  **Content Management (`app/data/`):**
     *   Utilizes a lesson database (`lessons.csv`).
-    *   Uses story templates (`stories.yaml`).
+    *   Uses story templates (`new_stories.yaml`).
     *   Generates narratives using LLM.
     *   Ensures no question repetition.
     *   Implements a consequence system.
