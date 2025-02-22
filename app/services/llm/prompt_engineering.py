@@ -19,20 +19,13 @@ Choice B: [Second choice description]
 Choice C: [Third choice description]
 </CHOICES>
 
-The choices section MUST:
-1. Start with <CHOICES> on its own line with NO indentation
-2. Have exactly three choices, each on its own line with NO indentation
-3. Each choice MUST start with "Choice [A/B/C]: " followed by the choice text
-4. Each choice MUST be on a single line:
-   - NO line breaks (pressing Enter/Return) within a choice
-   - NO word wrapping or splitting choices across lines
-   - NO periods followed by "Choice" within a choice
-5. End with </CHOICES> on its own line with NO indentation
-6. Each choice should be meaningful and distinct
-7. All choices must advance the plot in interesting ways
-8. There must be NO text before or after the <CHOICES> and </CHOICES> tags
+The choices section MUST follow these 5 rules:
+1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices. No extra text, indentation, line breaks, or periods followed by "Choice" within choices
+2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
+3. Content: Make each choice meaningful, distinct, and advance the plot in interesting ways
+4. Plot Twist: Choices should relate to the unfolding plot twist, from subtle hints to direct connections as the story progresses
 
-Correct Example:
+Correct Example: 
 
 <CHOICES>
 Choice A: Explore the dark forest.
@@ -166,12 +159,6 @@ def build_system_prompt(state: AdventureState) -> str:
     Args:
         state: The current adventure state containing selected story elements
     """
-    # Add choice formatting rules to the system prompt
-    choice_rules = """
-IMPORTANT: When writing choices, ensure each choice is COMPLETELY contained on a single line.
-DO NOT use any line breaks or word wrapping within choices.
-"""
-
     base_prompt = f"""You are a master storyteller crafting an interactive educational story.
 
 Core Story Elements:
@@ -181,7 +168,7 @@ Core Story Elements:
 - Theme: {state.selected_theme}
 - Moral Lesson: {state.selected_moral_lesson}
 
-Sensory Details to Incorporate:
+Available Sensory Details:
 - Visual Elements: {state.selected_sensory_details["visuals"]}
 - Sound Elements: {state.selected_sensory_details["sounds"]}
 - Scent Elements: {state.selected_sensory_details["smells"]}
@@ -191,16 +178,16 @@ Your task is to generate engaging story chapters that:
 2. Create meaningful consequences for user decisions
 3. Seamlessly integrate lesson elements when provided
 4. Use multiple paragraphs separated by blank lines to ensure readability
-5. Incorporate sensory details to enhance immersion
+5. Consider incorporating sensory details where appropriate to enhance immersion
 6. Develop the theme and moral lesson naturally through the narrative
 
 CRITICAL INSTRUCTIONS:
 1. Never start your generated content with 'Chapter' followed by a number
 2. Begin the narrative directly to maintain story immersion
-3. Weave sensory details naturally into the narrative
+3. Consider using sensory details where they enhance the narrative
 4. Keep the selected theme and moral lesson as guiding principles"""
 
-    return base_prompt + choice_rules
+    return base_prompt
 
 
 def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
