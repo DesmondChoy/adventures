@@ -102,6 +102,21 @@
 
     <script>
         let storyWebSocket;
+
+        // --- Utility Functions ---
+        function showLoader() {
+            const overlay = document.getElementById('loaderOverlay');
+            overlay.classList.remove('hidden');
+            // Use setTimeout to ensure the transition works
+            setTimeout(() => overlay.classList.add('active'), 0);
+        }
+
+        function hideLoader() {
+            const overlay = document.getElementById('loaderOverlay');
+            overlay.classList.remove('active');
+            // Wait for transition to complete before hiding
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+        }
         
         // Function to update progress display
         function updateProgress(currentChapter, totalChapters) {
@@ -109,6 +124,268 @@
             document.getElementById('total-chapters').textContent = totalChapters;
             const progressPercentage = (currentChapter / totalChapters) * 100;
             document.getElementById('progress-bar').style.width = `${progressPercentage}%`;
+        }
+
+        // --- WebSocket Functions ---
+
+        function initWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const storyCategory = document.getElementById('storyCategory').value;
+            const lessonTopic = document.getElementById('lessonTopic').value;
+            const wsUrl = `${protocol}//${window.location.host}/ws/story/${storyCategory}/${lessonTopic}`;
+
+            storyWebSocket = new WebSocket(wsUrl);
+
+            storyWebSocket.onopen = function() {
+                // First send the stored state if it exists
+                const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
+                const selectedStoryLength = parseInt(document.getElementById('storyLength').value);
+
+                if (Object.keys(storyState).length > 0) {
+                    const currentChapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
+                    updateProgress(currentChapter + 1, storyState.storyLength || selectedStoryLength);
+
+                    sendMessage({
+                        state: {
+                            current_chapter_id: storyState.choice?.chosen_path || 'start',
+                            current_chapter_number: parseInt(sessionStorage.getItem('storyChapter') || '0'),
+                            story_choices: storyState.story_choices || [],
+                            correct_lesson_answers: storyState.correct_lesson_answers || 0,
+                            total_lessons: storyState.total_lessons || 0,
+                            previous_chapter_content: storyState.previous_chapter_content,
+                            story_length: storyState.storyLength || selectedStoryLength
+                        }
+                    });
+                } else {
+                    // Always send initial state with story length
+                   sendMessage({
+                        state: {
+                            current_chapter_id: 'start',
+                            current_chapter_number: 0,
+                            story_choices: [],
+                            correct_lesson_answers: 0,
+                            total_lessons: 0,
+                            previous_chapter_content: '',
+                            story_length: selectedStoryLength
+                        }
+                    });
+                }
+
+                // Then send the choice to continue the story
+                if (storyState.choice) {
+                    sendMessage({
+                        choice: {
+                            chosen_path: storyState.choice.chosen_path,
+                            choice_text: storyState.choice.choice_text
+                        }
+                    });
+                } else {
+                    sendMessage({
+                        choice: 'start'
+                    });
+                }
+            };
+
+            storyWebSocket.onmessage = handleMessage;
+            storyWebSocket.onerror = function(error) {
+                console.error('WebSocket Error:', error);
+                hideLoader();
+                appendStoryText('\n\nConnection error occurred. Please refresh the page to try again.');
+            };
+            storyWebSocket.onclose = function(event) {
+                hideLoader();
+                if (!event.wasClean) {
+                    console.error('WebSocket connection died');
+                    appendStoryText('\n\nConnection lost. Please refresh the page to continue the story.');
+                }
+            };
+        }
+
+        function handleMessage(event) {
+            try {
+                const data = JSON.parse(event.data);
+                hideLoader();
+
+                if (data.type === 'choices') {
+                    displayChoices(data.choices);
+                } else if (data.type === 'story') {
+                    appendStoryText(data.content);
+                } else if (data.type === 'story_complete') {
+                    displayStats(data.state);
+                }
+            } catch (e) {
+                // Assume it's plain text if JSON parsing fails
+                hideLoader();
+                appendStoryText(event.data);
+            }
+        }
+
+        function sendMessage(message) {
+            if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
+                storyWebSocket.send(JSON.stringify(message));
+            } else {
+                console.error('WebSocket is not open. Message not sent:', message);
+            }
+        }
+
+        // --- UI Update Functions ---
+
+        function appendStoryText(text) {
+            const storyContent = document.getElementById('storyContent');
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = text;
+            const decodedText = tempDiv.textContent;
+            const normalizedText = decodedText
+                .replace(/[\u2018\u2019]/g, "'")
+                .replace(/[\u201C\u201D]/g, '"')
+                .replace(/\u2014/g, '--')
+                .replace(/\u2013/g, '-')
+                .replace(/\u2026/g, '...');
+
+            storyContent.textContent += normalizedText;
+            storyContent.scrollTop = storyContent.scrollHeight;
+        }
+
+        function displayChoices(choices) {
+            const choicesContainer = document.getElementById('choicesContainer');
+            choicesContainer.innerHTML = ''; // Clear existing choices
+
+            if (Array.isArray(choices) && choices.length === 0) {
+                const button = document.createElement('button');
+                button.className = 'w-full p-4 mb-3 text-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500';
+                button.textContent = 'Return to Landing Page';
+                button.onclick = resetApplicationState;
+                choicesContainer.appendChild(button);
+                return;
+            }
+
+            choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.className = 'w-full p-4 mb-3 text-left border rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500';
+                button.textContent = choice.text;
+                button.onclick = (e) => {
+                    const allButtons = choicesContainer.querySelectorAll('button');
+                    allButtons.forEach(btn => {
+                        btn.disabled = true;
+                        btn.classList.remove('bg-indigo-600', 'text-white', 'hover:bg-indigo-700');
+                        btn.classList.add('opacity-50');
+                    });
+
+                    e.target.classList.remove('opacity-50');
+                    e.target.classList.add('bg-indigo-600', 'text-white');
+
+                    setTimeout(() => makeChoice(choice.id, choice.text), 500);
+                };
+                choicesContainer.appendChild(button);
+            });
+        }
+        
+        function displayStats(state) {
+            const statsHtml = `
+                <div class="text-center p-4">
+                    <h3 class="text-lg font-semibold text-green-800 mb-2">Journey Complete!</h3>
+                    <div class="text-sm text-green-700">
+                        <p>Total Lessons: ${state.stats.total_lessons}</p>
+                        <p>Correct Answers: ${state.stats.correct_lesson_answers}</p>
+                        <p>Success Rate: ${state.stats.completion_percentage}%</p>
+                    </div>
+                    <button onclick="resetApplicationState()" 
+                            class="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                        Start New Journey
+                    </button>
+                </div>`;
+            document.getElementById('choicesContainer').innerHTML = statsHtml;
+        }
+
+
+        // --- State Management Functions ---
+        // Placeholder for now, will be expanded in the next step
+        function manageState(action, data) {
+          // Placeholder
+        }
+
+
+        // --- Event Handlers ---
+
+        function handleSubmit(e) {
+            e.preventDefault();
+
+            const storyCategory = document.getElementById('storyCategory').value;
+            const lessonTopic = document.getElementById('lessonTopic').value;
+            const storyLength = parseInt(document.getElementById('storyLength').value);
+
+            updateProgress(1, storyLength);
+
+            document.getElementById('formContainer').classList.add('hidden');
+            document.getElementById('introText').classList.add('hidden');
+            document.getElementById('storyContainer').classList.remove('hidden');
+
+            showLoader();
+            initWebSocket();
+        }
+
+        function makeChoice(choiceId, choiceText) {
+            if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
+                showLoader();
+
+                const existingState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
+                const currentChapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
+                const history = existingState.story_choices || [];
+                history.push({
+                    chosen_path: choiceId,
+                    choice_text: choiceText
+                });
+
+                const currentState = {
+                    storyCategory: existingState.storyCategory || document.getElementById('storyCategory').value,
+                    lessonTopic: existingState.lessonTopic || document.getElementById('lessonTopic').value,
+                    storyLength: existingState.storyLength || parseInt(document.getElementById('storyLength').value),
+                    choice: {
+                        chosen_path: choiceId,
+                        choice_text: choiceText
+                    },
+                    current_chapter_number: currentChapter + 1,
+                    story_choices: history,
+                    correct_lesson_answers: existingState.correct_lesson_answers || 0,
+                    total_lessons: existingState.total_lessons || 0,
+                    previous_chapter_content: document.getElementById('storyContent').textContent,
+                    all_previous_content: existingState.all_previous_content || [],
+                    lesson_responses: existingState.lesson_responses || []
+                };
+
+                if (currentState.previous_chapter_content && currentState.previous_chapter_content.trim()) {
+                    currentState.all_previous_content.push(currentState.previous_chapter_content);
+                }
+
+                sessionStorage.setItem('storyState', JSON.stringify(currentState));
+                sessionStorage.setItem('storyChapter', currentState.current_chapter_number.toString());
+
+                updateProgress(currentState.current_chapter_number + 1, currentState.storyLength);
+
+                sendMessage({
+                    state: {
+                        current_chapter_id: currentState.choice?.chosen_path || 'start',
+                        current_chapter_number: currentState.current_chapter_number,
+                        story_choices: currentState.story_choices || [],
+                        correct_lesson_answers: currentState.correct_lesson_answers || 0,
+                        total_lessons: currentState.total_lessons || 0,
+                        previous_chapter_content: currentState.previous_chapter_content,
+                        all_previous_content: currentState.all_previous_content,
+                        lesson_responses: currentState.lesson_responses || [],
+                        story_length: currentState.storyLength
+                    }
+                });
+
+                sendMessage({
+                    choice: {
+                        chosen_path: choiceId,
+                        choice_text: choiceText
+                    }
+                });
+
+                document.getElementById('storyContent').textContent = '';
+                document.getElementById('choicesContainer').innerHTML = '';
+            }
         }
         
         // Function to reset application state
@@ -144,387 +421,33 @@
             document.getElementById('storyLength').value = '';
         }
 
+        // --- Initialization ---
+
+        document.getElementById('storyForm').addEventListener('submit', handleSubmit);
+
         // Add click handler to banner
         document.querySelector('h1 a').addEventListener('click', function(e) {
             e.preventDefault();
             resetApplicationState();
         });
-        
-        // Loader utility functions
-        function showLoader() {
-            const overlay = document.getElementById('loaderOverlay');
-            overlay.classList.remove('hidden');
-            // Use setTimeout to ensure the transition works
-            setTimeout(() => overlay.classList.add('active'), 0);
-        }
-
-        function hideLoader() {
-            const overlay = document.getElementById('loaderOverlay');
-            overlay.classList.remove('active');
-            // Wait for transition to complete before hiding
-            setTimeout(() => overlay.classList.add('hidden'), 300);
-        }
-        
-        document.getElementById('storyForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const storyCategory = document.getElementById('storyCategory').value;
-            const lessonTopic = document.getElementById('lessonTopic').value;
-            const storyLength = parseInt(document.getElementById('storyLength').value);
-            
-            // Initialize progress tracking
-            updateProgress(1, storyLength);
-            
-            // Hide the form container and intro text, and show the story container
-            document.getElementById('formContainer').classList.add('hidden');
-            document.getElementById('introText').classList.add('hidden');
-            document.getElementById('storyContainer').classList.remove('hidden');
-            
-            // Show loader before establishing WebSocket connection
-            showLoader();
-            
-            // Initialize WebSocket connection with proper protocol
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws/story/${storyCategory}/${lessonTopic}`;
-            
-            // Clear and show the story container before initializing WebSocket
-            const storyContent = document.getElementById('storyContent');
-            storyContent.textContent = '';
-            document.getElementById('storyContainer').classList.remove('hidden');
-            
-            storyWebSocket = new WebSocket(wsUrl);
-            
-            // Add error handling
-            storyWebSocket.onerror = function(error) {
-                console.error('WebSocket Error:', error);
-                hideLoader();
-                document.getElementById('storyContent').textContent += '\n\nConnection error occurred. Please refresh the page to try again.';
-            };
-
-            storyWebSocket.onclose = function(event) {
-                hideLoader();
-                if (!event.wasClean) {
-                    console.error('WebSocket connection died');
-                    document.getElementById('storyContent').textContent += '\n\nConnection lost. Please refresh the page to continue the story.';
-                }
-            };
-            
-            // Handle incoming messages
-            storyWebSocket.onmessage = function(event) {
-                try {
-                    // Try to parse as JSON (for choices)
-                    const data = JSON.parse(event.data);
-                    hideLoader();
-                    
-                    if (data.type === 'choices') {
-                        displayChoices(data.choices);
-                    } else if (data.type === 'story') {
-                        appendStoryText(data.content);
-                    } else if (data.type === 'story_complete') {
-                        // Only handle the stats - content is streamed separately
-                        displayStats(data.state);
-                    }
-                    return; // Exit early after handling JSON data
-                } catch (e) {
-                    // Only append raw text if it's not JSON
-                    hideLoader();
-                    appendStoryText(event.data);
-                }
-            };
-            
-            // Start the story
-            storyWebSocket.onopen = function() {
-                // First send the stored state if it exists
-                const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
-                const selectedStoryLength = parseInt(document.getElementById('storyLength').value);
-                
-                if (Object.keys(storyState).length > 0) {
-                    const currentChapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
-                    updateProgress(currentChapter + 1, storyState.storyLength || selectedStoryLength);
-                    
-                    storyWebSocket.send(JSON.stringify({
-                        state: {
-                            current_chapter_id: storyState.choice?.chosen_path || 'start',
-                            current_chapter_number: parseInt(sessionStorage.getItem('storyChapter') || '0'),
-                            story_choices: storyState.story_choices || [],
-                            correct_lesson_answers: storyState.correct_lesson_answers || 0,
-                            total_lessons: storyState.total_lessons || 0,
-                            previous_chapter_content: storyState.previous_chapter_content,
-                            story_length: storyState.storyLength || selectedStoryLength
-                        }
-                    }));
-                } else {
-                    // Always send initial state with story length
-                    storyWebSocket.send(JSON.stringify({
-                        state: {
-                            current_chapter_id: 'start',
-                            current_chapter_number: 0,
-                            story_choices: [],
-                            correct_lesson_answers: 0,
-                            total_lessons: 0,
-                            previous_chapter_content: '',
-                            story_length: selectedStoryLength
-                        }
-                    }));
-                }
-                
-                // Then send the choice to continue the story
-                if (storyState.choice) {
-                    storyWebSocket.send(JSON.stringify({
-                        choice: {
-                            chosen_path: storyState.choice.chosen_path,
-                            choice_text: storyState.choice.choice_text
-                        }
-                    }));
-                } else {
-                    storyWebSocket.send(JSON.stringify({
-                        choice: 'start'
-                    }));
-                }
-            };
-        });
-
-        function appendStoryText(text) {
-            const storyContent = document.getElementById('storyContent');
-            
-            // Create a temporary div to safely decode HTML entities
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = text;
-            const decodedText = tempDiv.textContent;
-            
-            // Ensure proper text encoding and preserve all characters
-            const normalizedText = decodedText
-                .replace(/[\u2018\u2019]/g, "'")   // Smart quotes (single)
-                .replace(/[\u201C\u201D]/g, '"')   // Smart quotes (double)
-                .replace(/\u2014/g, '--')          // Em dash
-                .replace(/\u2013/g, '-')           // En dash
-                .replace(/\u2026/g, '...');        // Ellipsis
-            
-            storyContent.textContent += normalizedText;
-            // Auto-scroll to keep up with the story
-            storyContent.scrollTop = storyContent.scrollHeight;
-        }
-
-        function displayChoices(choices) {
-            const choicesContainer = document.getElementById('choicesContainer');
-            choicesContainer.innerHTML = ''; // Clear existing choices
-            
-            // Special case: If choices is empty array, this is a CONCLUSION chapter
-            if (Array.isArray(choices) && choices.length === 0) {
-                const button = document.createElement('button');
-                button.className = 'w-full p-4 mb-3 text-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500';
-                button.textContent = 'Return to Landing Page';
-                button.onclick = resetApplicationState;
-                choicesContainer.appendChild(button);
-                return;
-            }
-            
-            // Regular story choices
-            choices.forEach(choice => {
-                const button = document.createElement('button');
-                button.className = 'w-full p-4 mb-3 text-left border rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500';
-                button.textContent = choice.text;
-                button.onclick = (e) => {
-                    // Disable all buttons and highlight selected one
-                    const allButtons = choicesContainer.querySelectorAll('button');
-                    allButtons.forEach(btn => {
-                        btn.disabled = true;
-                        btn.classList.remove('bg-indigo-600', 'text-white', 'hover:bg-indigo-700');
-                        btn.classList.add('opacity-50');
-                    });
-                    
-                    // Highlight selected button
-                    e.target.classList.remove('opacity-50');
-                    e.target.classList.add('bg-indigo-600', 'text-white');
-                    
-                    // Make the choice after a short delay to show the selection
-                    setTimeout(() => makeChoice(choice.id, choice.text), 500);
-                };
-                choicesContainer.appendChild(button);
-            });
-        }
-
-        function makeChoice(choiceId, choiceText) {
-            if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
-                // Show loader before sending choice
-                showLoader();
-                
-                // Get existing state or initialize new one
-                const existingState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
-                const currentChapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
-                
-                // Update history with the new choice including both chosen_path and choice_text
-                const history = existingState.story_choices || [];
-                history.push({
-                    chosen_path: choiceId,
-                    choice_text: choiceText
-                });
-                
-                // Store the current state in sessionStorage with ALL necessary fields
-                const currentState = {
-                    storyCategory: existingState.storyCategory || document.getElementById('storyCategory').value,
-                    lessonTopic: existingState.lessonTopic || document.getElementById('lessonTopic').value,
-                    storyLength: existingState.storyLength || parseInt(document.getElementById('storyLength').value),
-                    choice: {
-                        chosen_path: choiceId,
-                        choice_text: choiceText
-                    },
-                    current_chapter_number: currentChapter + 1,
-                    story_choices: history,
-                    correct_lesson_answers: existingState.correct_lesson_answers || 0,
-                    total_lessons: existingState.total_lessons || 0,
-                    previous_chapter_content: document.getElementById('storyContent').textContent,
-                    all_previous_content: existingState.all_previous_content || [],
-                    lesson_responses: existingState.lesson_responses || []
-                };
-             
-                // If we have previous content, add it to the history before clearing
-                if (currentState.previous_chapter_content && currentState.previous_chapter_content.trim()) {
-                    currentState.all_previous_content.push(currentState.previous_chapter_content);
-                }
-
-                sessionStorage.setItem('storyState', JSON.stringify(currentState));
-                sessionStorage.setItem('storyChapter', currentState.current_chapter_number.toString());
-                
-                // Update progress display
-                updateProgress(currentState.current_chapter_number + 1, currentState.storyLength);
-
-                // First send the state update
-                storyWebSocket.send(JSON.stringify({
-                    state: {
-                        current_chapter_id: currentState.choice?.chosen_path || 'start',
-                        current_chapter_number: currentState.current_chapter_number,
-                        story_choices: currentState.story_choices || [],
-                        correct_lesson_answers: currentState.correct_lesson_answers || 0,
-                        total_lessons: currentState.total_lessons || 0,
-                        previous_chapter_content: currentState.previous_chapter_content,
-                        all_previous_content: currentState.all_previous_content,
-                        lesson_responses: currentState.lesson_responses || [],
-                        story_length: currentState.storyLength
-                    }
-                }));
-
-                // Then send the choice message
-                storyWebSocket.send(JSON.stringify({
-                    choice: {
-                        chosen_path: choiceId,
-                        choice_text: choiceText
-                    }
-                }));
-                
-                // Clear the story content and choices to prepare for next chapter
-                document.getElementById('storyContent').textContent = '';
-                document.getElementById('choicesContainer').innerHTML = '';
-            }
-        }
-
-        // Update the stats display
-        function displayStats(state) {
-            const statsHtml = `
-                <div class="text-center p-4">
-                    <h3 class="text-lg font-semibold text-green-800 mb-2">Journey Complete!</h3>
-                    <div class="text-sm text-green-700">
-                        <p>Total Lessons: ${state.stats.total_lessons}</p>
-                        <p>Correct Answers: ${state.stats.correct_lesson_answers}</p>
-                        <p>Success Rate: ${state.stats.completion_percentage}%</p>
-                    </div>
-                    <button onclick="resetApplicationState()" 
-                            class="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
-                        Start New Journey
-                    </button>
-                </div>`;
-            document.getElementById('choicesContainer').innerHTML = statsHtml;
-        }
 
         // On page load, check if we're continuing a story
         window.onload = function() {
             const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
             const chapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
-            
+
             if (chapter > 0 && storyState && storyState.storyCategory && storyState.lessonTopic && storyState.storyLength) {
-                // Show loader during session restoration
                 showLoader();
-                
-                // Update progress display
                 updateProgress(chapter + 1, storyState.storyLength);
-                
-                // Hide the form and intro text, and show story container
                 document.getElementById('formContainer').classList.add('hidden');
                 document.getElementById('introText').classList.add('hidden');
                 document.getElementById('storyContainer').classList.remove('hidden');
-                
-                // Connect to WebSocket with stored state using proper protocol
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const wsUrl = `${protocol}//${window.location.host}/ws/story/${storyState.storyCategory}/${storyState.lessonTopic}`;
-                storyWebSocket = new WebSocket(wsUrl);
-                
-                // Set up message handling
-                storyWebSocket.onmessage = function(event) {
-                    try {
-                        const data = JSON.parse(event.data);
-                        if (data.type === 'choices') {
-                            hideLoader();
-                            displayChoices(data.choices);
-                        } else {
-                            hideLoader();
-                            appendStoryText(event.data);
-                        }
-                    } catch (e) {
-                        hideLoader();
-                        appendStoryText(event.data);
-                    }
-                };
 
-                // Add error handling
-                storyWebSocket.onerror = function(error) {
-                    console.error('WebSocket Error:', error);
-                    hideLoader();
-                    appendStoryText('\n\nConnection error occurred. Please refresh the page to try again.');
-                };
-
-                storyWebSocket.onclose = function(event) {
-                    hideLoader();
-                    if (!event.wasClean) {
-                        console.error('WebSocket connection died');
-                        appendStoryText('\n\nConnection lost. Please refresh the page to continue the story.');
-                    }
-                };
-                
-                // When connection opens, send the stored state
-                storyWebSocket.onopen = function() {
-                    // First send the stored state
-                    storyWebSocket.send(JSON.stringify({
-                        state: {
-                            current_chapter_id: storyState.choice?.chosen_path || 'start',
-                            current_chapter_number: chapter,
-                            story_choices: storyState.story_choices || [],
-                            correct_lesson_answers: storyState.correct_lesson_answers || 0,
-                            total_lessons: storyState.total_lessons || 0,
-                            previous_chapter_content: storyState.previous_chapter_content,
-                            story_length: storyState.storyLength
-                        }
-                    }));
-                    
-                    // Then send the choice to continue the story
-                    if (storyState.choice) {
-                        storyWebSocket.send(JSON.stringify({
-                            choice: {
-                                chosen_path: storyState.choice.chosen_path,
-                                choice_text: storyState.choice.choice_text
-                            }
-                        }));
-                    } else {
-                        storyWebSocket.send(JSON.stringify({
-                            choice: 'start'
-                        }));
-                    }
-                };
+                initWebSocket();
             } else if (chapter > 0) {
-                // If we have a chapter but missing required state, reset to beginning
                 sessionStorage.clear();
                 window.location.href = '/';
             } else {
-                // Make sure loader is hidden on fresh page load
                 hideLoader();
             }
         };

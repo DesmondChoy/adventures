@@ -46,6 +46,11 @@
 - [x] Fixed story phase timing issue.
 - [x] Fixed final chapter rendering and streaming.
 - [x] Improved choice format handling and validation.
+- [x] Refactored `index.html` JavaScript:
+  * Modularized code into logical sections (Utility, WebSocket, UI, State)
+  * Enhanced WebSocket handling and error management
+  * Improved UI updates and interaction handling
+  * Added comprehensive code documentation
 
 ## In Progress
 
