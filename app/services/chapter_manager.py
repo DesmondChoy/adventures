@@ -87,21 +87,21 @@ def select_random_elements(
     except Exception as e:
         raise ValueError(f"Error selecting sensory details: {str(e)}")
 
-    # 4. Select theme, moral lesson, and plot twist with validation
+    # 4. Select theme, moral teaching, and plot twist with validation
     try:
         themes = category_data["narrative_elements"]["themes"]
-        moral_lessons = category_data["narrative_elements"]["moral_lessons"]
+        moral_teachings = category_data["narrative_elements"]["moral_lessons"]
         plot_twists = category_data["narrative_elements"]["plot_twists"]
 
         if not all(
-            isinstance(x, list) and x for x in [themes, moral_lessons, plot_twists]
+            isinstance(x, list) and x for x in [themes, moral_teachings, plot_twists]
         ):
             raise ValueError(
-                "themes, moral_lessons, and plot_twists must be non-empty lists"
+                "themes, moral_teachings, and plot_twists must be non-empty lists"
             )
 
         selected_theme = random.choice(themes)
-        selected_moral_lesson = random.choice(moral_lessons)
+        selected_moral_teaching = random.choice(moral_teachings)
         selected_plot_twist = random.choice(plot_twists)
     except Exception as e:
         raise ValueError(f"Error selecting theme/moral/twist: {str(e)}")
@@ -113,7 +113,7 @@ def select_random_elements(
             "narrative_elements": narrative_elements,
             "sensory_details": sensory_details,
             "theme": selected_theme,
-            "moral_lesson": selected_moral_lesson,
+            "moral_teaching": selected_moral_teaching,
             "plot_twist": selected_plot_twist,
         },
     )
@@ -124,7 +124,7 @@ def select_random_elements(
         "selected_narrative_elements": narrative_elements,
         "selected_sensory_details": sensory_details,
         "selected_theme": selected_theme,
-        "selected_moral_lesson": selected_moral_lesson,
+        "selected_moral_teaching": selected_moral_teaching,
         "selected_plot_twist": selected_plot_twist,
     }
 
@@ -382,7 +382,7 @@ class ChapterManager:
                 ],
                 selected_sensory_details=selected_elements["selected_sensory_details"],
                 selected_theme=selected_elements["selected_theme"],
-                selected_moral_lesson=selected_elements["selected_moral_lesson"],
+                selected_moral_teaching=selected_elements["selected_moral_teaching"],
                 selected_plot_twist=selected_elements["selected_plot_twist"],
             )
 
@@ -394,7 +394,7 @@ class ChapterManager:
                 "initialization_time": datetime.now().isoformat(),
                 "element_consistency": {
                     "theme": selected_elements["selected_theme"],
-                    "moral_lesson": selected_elements["selected_moral_lesson"],
+                    "moral_teaching": selected_elements["selected_moral_teaching"],
                     "plot_twist": selected_elements["selected_plot_twist"],
                     "narrative_elements": selected_elements[
                         "selected_narrative_elements"

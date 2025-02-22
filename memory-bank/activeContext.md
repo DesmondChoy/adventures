@@ -77,7 +77,7 @@ The project is focused on implementing core Learning Odyssey features, including
    - Added new dimensions in `new_stories.yaml`:
      * Sensory details (visuals, sounds, smells)
      * Plot twists with phase-based progression
-     * Themes and moral lessons
+     * Themes and moral teachings
    - Implemented random sampling of one element per category
    - Added state tracking for selected elements
 

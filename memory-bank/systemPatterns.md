@@ -122,7 +122,7 @@ graph TD
     - selected_narrative_elements
     - selected_sensory_details
     - selected_theme
-    - selected_moral_lesson
+    - selected_moral_teaching
     - selected_plot_twist
     - metadata
     - planned_chapter_types
@@ -284,7 +284,7 @@ graph TD
    - Keep character archetypes consistent
    - Follow selected story rules
    - Develop chosen theme
-   - Reinforce moral lesson
+   - Reinforce moral teaching
    - CRITICAL: Reference established elements
 
 2. Previous Chapter Impact:

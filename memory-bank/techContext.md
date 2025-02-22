@@ -97,7 +97,7 @@ pytest-asyncio==0.21.1
   * Critical state preservation during client updates:
     - Narrative elements (setting, characters, rules)
     - Sensory details (visuals, sounds, smells)
-    - Theme and moral lesson
+    - Theme and moral teaching
     - Plot twist and phase guidance
     - Metadata for consistency tracking
   * URL parameters handling:

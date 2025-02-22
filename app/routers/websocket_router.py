@@ -24,7 +24,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
     try:
         while True:
             data = await websocket.receive_json()
-            logger.debug(f"Received data: {data}")
+            # logger.debug(f"Received data: {data}")
 
             if "state" in data:
                 validated_state = data["state"]

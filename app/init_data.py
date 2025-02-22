@@ -87,7 +87,7 @@ def init_story_categories(db, story_data):
                 "narrative_elements": category["narrative_elements"],
                 "sensory_details": category["sensory_details"],
                 "themes": category["narrative_elements"]["themes"],
-                "moral_lessons": category["narrative_elements"]["moral_lessons"],
+                "moral_teachings": category["narrative_elements"]["moral_teachings"],
                 "plot_twists": category["narrative_elements"]["plot_twists"],
             }
 

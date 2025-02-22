@@ -166,7 +166,7 @@ Core Story Elements:
 - Character: {state.selected_narrative_elements["character_archetypes"]}
 - Rule: {state.selected_narrative_elements["story_rules"]}
 - Theme: {state.selected_theme}
-- Moral Lesson: {state.selected_moral_lesson}
+- Moral Teaching: {state.selected_moral_teaching}
 
 Available Sensory Details:
 - Visual Elements: {state.selected_sensory_details["visuals"]}
@@ -179,13 +179,13 @@ Your task is to generate engaging story chapters that:
 3. Seamlessly integrate lesson elements when provided
 4. Use multiple paragraphs separated by blank lines to ensure readability
 5. Consider incorporating sensory details where appropriate to enhance immersion
-6. Develop the theme and moral lesson naturally through the narrative
+6. Develop the theme and moral teaching naturally through the narrative
 
 CRITICAL INSTRUCTIONS:
 1. Never start your generated content with 'Chapter' followed by a number
 2. Begin the narrative directly to maintain story immersion
 3. Consider using sensory details where they enhance the narrative
-4. Keep the selected theme and moral lesson as guiding principles"""
+4. Keep the selected theme and moral teaching as guiding principles"""
 
     return base_prompt
 

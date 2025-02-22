@@ -5,7 +5,7 @@
 ### Naming Conventions
 1. Chapter: Unit of progression in ChapterType enum (LESSON, STORY, or CONCLUSION)
    - LESSON: Educational content from `lessons.csv` with LLM narrative wrapper
-   - STORY: Fully LLM-generated narrative content with choices
+   - STORY: Fully LLM-generated narrative content, guided by story elements from `new_stories.yaml`, with choices
    - CONCLUSION: Final chapter with no choices, providing story resolution
 2. State: Complete application state in `AdventureState` class
 3. Adventure: Overall user journey tracked in `AdventureState`

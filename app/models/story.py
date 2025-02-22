@@ -97,9 +97,9 @@ class AdventureState(BaseModel):
         default="",
         description="The selected theme for the adventure",
     )
-    selected_moral_lesson: str = Field(
+    selected_moral_teaching: str = Field(
         default="",
-        description="The selected moral lesson for the adventure",
+        description="The selected moral teaching for the adventure",
     )
     selected_plot_twist: str = Field(
         default="",
@@ -132,7 +132,7 @@ class AdventureState(BaseModel):
             )
         return v
 
-    @field_validator("selected_theme", "selected_moral_lesson", "selected_plot_twist")
+    @field_validator("selected_theme", "selected_moral_teaching", "selected_plot_twist")
     @classmethod
     def validate_non_empty_string(cls, v: str) -> str:
         if not v:

@@ -46,7 +46,7 @@ class AdventureStateManager:
             "selected_narrative_elements": self.state.selected_narrative_elements,
             "selected_sensory_details": self.state.selected_sensory_details,
             "selected_theme": self.state.selected_theme,
-            "selected_moral_lesson": self.state.selected_moral_lesson,
+            "selected_moral_teaching": self.state.selected_moral_teaching,
             "selected_plot_twist": self.state.selected_plot_twist,
             "metadata": self.state.metadata,
             "planned_chapter_types": self.state.planned_chapter_types,
