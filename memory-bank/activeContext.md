@@ -15,9 +15,10 @@ The project is focused on implementing core Learning Odyssey features, including
 
 2.  **Content Management (`app/data/`):**
     *   `lessons.csv` integration for LESSON chapters.
-    *   `stories.yaml` templates for STORY chapters.
+    *   `new_stories.yaml` templates for STORY chapters.
     *   LLM response validation.
     *   History tracking in `AdventureState`.
+    *   Element consistency tracking via metadata.
 
 3.  **Chapter Sequencing (`app/services/chapter_manager.py`):**
     *   First two chapters: Always STORY.
@@ -30,45 +31,91 @@ The project is focused on implementing core Learning Odyssey features, including
     *   Response validation.
     *   State verification.
     *   Error handling coverage.
+    *   Element consistency validation.
 
 5. **User Experience (`app/routers/web.py`):**
     * Topic selection interface.
     * Adventure length selection.
     * Real-time feedback system.
     * WebSocket state updates.
-    * Progress tracking visualization
+    * Progress tracking visualization.
 
 ## Recent Changes
 
-### Lesson Topic Introduction Improvements
-Enhanced LESSON chapter prompt engineering in `prompt_engineering.py`:
-  * Prevented redundant "Lesson Question:" text.
-  * Added support for both question and statement formats.
-  * Updated CRITICAL INSTRUCTIONS.
+### Story Elements Pattern Enhancement
+1. Element Selection and Validation:
+   - Separated non-random elements (name, description, tone)
+   - Added validation for required narrative and sensory elements
+   - Enhanced error handling with detailed messages
+   - Improved element consistency tracking
 
-### Choice Format Handling Improvements
-- Enhanced choice parsing in `websocket_service.py`:
-  * Implemented strict choice section extraction.
-  * Two-stage parsing strategy (multi-line then single-line).
-  * Improved regex patterns and error handling.
-- Updated choice format instructions in `prompt_engineering.py`.
+2. Plot Twist Integration:
+   - Added get_plot_twist_guidance() function
+   - Implemented phase-specific guidance:
+     * Exposition: Subtle hints only
+     * Rising: Connect previous hints
+     * Trials: Build tension
+     * Climax: Full revelation
+     * Return: Show aftermath
+   - Enhanced plot twist development tracking
 
-### Final Chapter Streaming Fix
-- Enhanced final chapter rendering and streaming in `websocket_service.py` and `app/templates/index.html`.
+3. Metadata Management:
+   - Added metadata field to AdventureState
+   - Tracks non-random elements
+   - Stores plot twist guidance
+   - Maintains element consistency
+   - Records initialization details
 
-### Journey Quest Implementation
-- Initial implementation of Journey Quest pacing in `AdventureState`, `ChapterManager`, `websocket_service.py`, and `prompt_engineering.py`.
+4. Error Handling:
+   - Added comprehensive validation
+   - Enhanced error messages
+   - Improved recovery mechanisms
+   - Added consistency checks
 
-### Story Phase Timing Fix
-- Fixed incorrect story phase progression in `websocket_service.py`.
+### New Story Configuration System Implementation
+1. Story Elements Enhancement:
+   - Added new dimensions in `new_stories.yaml`:
+     * Sensory details (visuals, sounds, smells)
+     * Plot twists with phase-based progression
+     * Themes and moral teachings
+   - Implemented random sampling of one element per category
+   - Added state tracking for selected elements
 
-### Chapter Logic Refactor
-- Implemented new chapter sequencing in `chapter_manager.py`.
-- Added CONCLUSION chapter type.
-- Enhanced prompt engineering.
-- Fixed `random.sample` error.
+2. Database Updates:
+   - Updated StoryCategory model in `database.py`:
+     * Added display_name field
+     * Consolidated story elements into story_config JSON field
+   - Modified init_data.py to handle new structure
+   - Enhanced logging for story initialization
 
-### Client-Side Refactoring (`app/templates/index.html`)
+3. Prompt Engineering Improvements:
+   - Enhanced system prompt with new elements
+   - Implemented phase-based plot twist progression:
+     * Rising: Subtle introduction
+     * Trials: Gradual build-up
+     * Climax: Full revelation
+   - Added sensory details integration
+   - Updated phase guidance
+
+4. State Management Updates:
+   - Modified AdventureState to track new elements
+   - Updated initialization process with story_category
+   - Enhanced validation for required categories
+   - Improved error handling and logging
+
+5. WebSocket Handling:
+   - Updated websocket_router.py for new elements
+   - Enhanced state initialization and validation
+   - Improved error handling and connection management
+   - Added comprehensive logging
+
+6. UI Updates:
+   - Modified story category dropdown to use display names
+   - Updated story selection interface
+   - Enhanced error messaging
+   - Improved state synchronization
+
+### Previous Updates
 - Modularized JavaScript code into logical sections:
   * Utility functions (loaders, progress tracking)
   * WebSocket handling (initialization, message processing)
@@ -90,12 +137,15 @@ Enhanced LESSON chapter prompt engineering in `prompt_engineering.py`:
 ### State Management (`app/models/story.py`)
 - Enhanced state tracking system.
 - Added `planned_chapter_types` to `AdventureState`.
+- Added metadata field for consistency tracking.
 
 ### WebSocket Architecture Refactoring
 - Split WebSocket handling into `app/routers/websocket_router.py` and `app/services/websocket_service.py`.
 
 ### Chapter Management (`app/services/chapter_manager.py`)
 - Enhanced state initialization.
+- Added plot twist guidance.
+- Improved element validation.
 
 ### State Management (`app/services/adventure_state_manager.py`)
 - Created `AdventureStateManager` class.
@@ -106,6 +156,7 @@ Enhanced LESSON chapter prompt engineering in `prompt_engineering.py`:
 - Enhanced world-building system.
 - Improved narrative continuity.
 - Simplified `process_consequences()`.
+- Added plot twist phase guidance.
 
 ### Story Length Fixes
 - Updated `index.html` and `app/models/story.py` for story lengths of 5, 8, and 10 chapters.
@@ -124,12 +175,16 @@ Enhanced LESSON chapter prompt engineering in `prompt_engineering.py`:
   * Generate test data through random adventure progression
   * Provide comprehensive logs for test validation
   * Support testing requirements when core components change
+  * Validate element consistency
+  * Test plot twist progression
 - Current status:
   * Successfully generates required DEBUG level logs
   * Captures all state changes and responses
   * Maintains WebSocket communication
   * Implements robust error handling
   * Functions as intended for test data generation
+  * Validates element consistency
+  * Tracks plot twist development
 
 ### Technical
 1. Performance
@@ -138,6 +193,7 @@ Enhanced LESSON chapter prompt engineering in `prompt_engineering.py`:
    - State synchronization speed
    - Error recovery time
    - Progress updates smoothness
+   - Metadata tracking overhead
 
 2. Reliability
    - WebSocket connection stability
@@ -145,6 +201,7 @@ Enhanced LESSON chapter prompt engineering in `prompt_engineering.py`:
    - State consistency
    - Error handling coverage
    - Progress tracking accuracy
+   - Element consistency validation
 
 ### Product
 1. User Experience
@@ -153,6 +210,8 @@ Enhanced LESSON chapter prompt engineering in `prompt_engineering.py`:
    - Learning effectiveness
    - Error feedback clarity
    - Progress visualization clarity
+   - Plot twist development
+   - Element consistency impact
 
 2. Content Quality
    - Question appropriateness
@@ -160,3 +219,5 @@ Enhanced LESSON chapter prompt engineering in `prompt_engineering.py`:
    - Choice meaningfulness
    - Learning progression
    - Progress feedback effectiveness
+   - Plot twist integration
+   - Element consistency maintenance

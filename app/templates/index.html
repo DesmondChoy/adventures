@@ -28,8 +28,8 @@
                     <select id="storyCategory" name="storyCategory" required
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                         <option value="">Select a category...</option>
-                        {% for category in story_categories %}
-                        <option value="{{ category }}">{{ category | replace('_', ' ') | title }}</option>
+                        {% for category_id, category_name in story_categories.items() %}
+                        <option value="{{ category_id }}">{{ category_name }}</option>
                         {% endfor %}
                     </select>
                 </div>

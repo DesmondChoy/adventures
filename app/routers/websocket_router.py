@@ -24,7 +24,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
     try:
         while True:
             data = await websocket.receive_json()
-            logger.debug(f"Received data: {data}")
+            # logger.debug(f"Received data: {data}")
 
             if "state" in data:
                 validated_state = data["state"]
@@ -34,19 +34,27 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                         f"Initializing state with total_chapters: {total_chapters}"
                     )
                     try:
-                        state_manager.initialize_state(total_chapters, lesson_topic)
+                        # Initialize state with story category
+                        state_manager.initialize_state(
+                            total_chapters, lesson_topic, story_category
+                        )
                         state = state_manager.get_current_state()
 
-                        logger.debug("=== Story Configuration ===")
-                        logger.debug(f"Category: {story_category}")
-                        logger.debug(f"Topic: {lesson_topic}")
-                        logger.debug(f"Length: {total_chapters} chapters")
-                        logger.debug("=============================")
+                        logger.info(
+                            "Initialized adventure state",
+                            extra={
+                                "story_category": story_category,
+                                "lesson_topic": lesson_topic,
+                                "total_chapters": total_chapters,
+                            },
+                        )
 
                     except ValueError as e:
-                        logger.error(f"Error initializing state: {e}")
-                        await websocket.send_text(str(e))
-                        break
+                        error_message = f"Error initializing state: {e}"
+                        logger.error(error_message)
+                        await websocket.send_text(error_message)
+                        await websocket.close(code=1001)
+                        return  # Exit to prevent further processing
                 else:
                     logger.debug("Updating existing state from client.")
                     state_manager.update_state_from_client(validated_state)

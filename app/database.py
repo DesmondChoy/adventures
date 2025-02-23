@@ -22,12 +22,11 @@ class StoryCategory(Base):
     __tablename__ = "story_categories"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
+    name = Column(String, unique=True, index=True)  # Internal name (key)
+    display_name = Column(String)  # User-friendly name
     description = Column(Text)
     tone = Column(String)
-    narrative_elements = Column(Text)  # Store as JSON
-    story_rules = Column(Text)  # Store as JSON
-    vocabulary_level = Column(String)
+    story_config = Column(Text)  # Store entire config as JSON
 
 
 class LessonTopic(Base):

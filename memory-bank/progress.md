@@ -1,136 +1,28 @@
-# Progress Tracking
+# Progress Log
 
-## Completed Components
+## 2/22/2025 11:30 PM - Prompt Engineering Improvements
 
-### Core Architecture
-- [x] Project structure setup
-- [x] FastAPI server configuration
-- [x] WebSocket integration
-- [x] Database initialization
-- [x] Basic logging setup
+Made several improvements to the prompt engineering in `app/services/llm/prompt_engineering.py`:
 
-### State Management
-- [x] AdventureState model definition
-- [x] ChapterType enum implementation
-- [x] Story length handling
-- [x] Basic state synchronization
-- [x] Chapter type sequence tracking
+1. **Sensory Details**: Made sensory details more flexible and optional
+   - Changed "Sensory Details to Incorporate" to "Available Sensory Details"
+   - Modified task instruction to "Consider incorporating sensory details where appropriate"
+   - Updated critical instruction to "Consider using sensory details where they enhance the narrative"
 
-### LLM Integration
-- [x] Provider abstraction layer
-- [x] Basic prompt engineering
-- [x] Response processing
-- [x] Error handling framework
+2. **Choice Format Instructions**: Made them more concise and clearer
+   - Consolidated 9 rules into 5 comprehensive points:
+     1. Format: Basic structure with CHOICES tags and three choices
+     2. Each choice: Line and prefix requirements
+     3. Content: Quality and plot advancement
+     4. Plot Twist: Progressive integration with story phases
+     5. Clean Format: Technical formatting requirements
+   - Removed redundant "Correct Example" since format is shown in template
+   - Kept "Incorrect Examples" to demonstrate what to avoid
+   - Added explicit instruction for plot twist integration in choices
 
-### Content Management
-- [x] New chapter logic implementation:
-  * Added CONCLUSION chapter type
-  * Updated chapter sequencing
-  * Enhanced narrative flow
-  * Fixed random.sample error
-- [x] UI updates for CONCLUSION chapters
-- [x] Enhanced prompt engineering for story resolution
+3. **Plot Twist Integration**: Enhanced plot twist development
+   - Added guidance for choices to relate to the unfolding plot twist
+   - Progression from subtle hints to direct connections as story advances
+   - Aligns with existing phase-specific plot twist guidance
 
-### Recent Completions
-- [x] Fixed choice parsing to prevent story content truncation.
-- [x] Added CONCLUSION chapter type and implemented new chapter sequencing logic.
-- [x] Fixed `random.sample` error in `chapter_manager.py`.
-- [x] Added Return to Landing Page button for CONCLUSION chapters.
-- [x] Enhanced prompt engineering for CONCLUSION narrative.
-- [x] Updated validation for available questions.
-- [x] Updated story length options and constraints (5-10 chapters).
-- [x] Fixed issue with missing choices in the first two chapters.
-- [x] Implemented comprehensive fix for "Chapter X:" prefixes in generated content.
-- [x] Enhanced LESSON chapter prompt engineering.
-- [x] Implemented Journey Quest pacing.
-- [x] Fixed story phase timing issue.
-- [x] Fixed final chapter rendering and streaming.
-- [x] Improved choice format handling and validation.
-- [x] Refactored `index.html` JavaScript:
-  * Modularized code into logical sections (Utility, WebSocket, UI, State)
-  * Enhanced WebSocket handling and error management
-  * Improved UI updates and interaction handling
-  * Added comprehensive code documentation
-
-## In Progress
-
-### State Implementation
-- [ ] Complete state synchronization
-- [ ] Recovery mechanisms
-- [ ] Error boundaries
-- [ ] Performance optimization
-
-### Story Flow
-- [ ] Dynamic question sampling
-- [ ] Answer shuffling
-- [ ] Choice progression
-- [ ] Narrative preservation
-
-### Testing Framework
-- [x] Story simulation setup - Generates test data through random progression
-- [ ] State validation tools
-- [ ] Provider compatibility tests
-- [ ] Error scenario coverage
-
-## Known Issues
-
-### State Management (`app/models/story.py`)
-1. Recovery mechanisms incomplete
-2. Performance bottlenecks identified
-3. Error scenario coverage gaps
-4. Edge case handling needed
-
-### LLM Integration (`app/services/llm/`)
-2. OpenAI/Gemini cross-testing needed
-3. Response format standardization pending
-4. Rate limiting implementation required
-5. Error recovery improvements needed
-
-### Content Flow (`app/services/chapter_manager.py`)
-1. Question sampling optimization needed
-2. State persistence refinement
-3. Error recovery enhancement
-
-## Next Milestones
-
-### Short Term
-1. State recovery implementation (`app/models/story.py`)
-2. Performance optimization (`app/routers/websocket.py`)
-3. Error handling enhancement (`app/services/llm/`)
-4. Content flow improvements (`app/services/chapter_manager.py`)
-
-### Medium Term
-1. Advanced error recovery system
-2. LLM provider abstraction layer
-3. Story simulation framework (`tests/simulations/`)
-4. Content management optimization
-
-### Long Term
-1. Advanced chapter flow control
-2. Multi-provider LLM support
-3. Comprehensive testing suite
-4. System scaling architecture
-
-## Implementation Status
-
-### Testing Framework (`tests/simulations/`)
-- Story simulation fully functional.
-
-### Core Systems
-1. State Management (`app/models/story.py`)
-   - AdventureState model complete
-   - WebSocket synchronization active
-   - Question persistence working
-   - Basic error handling implemented
-
-2. LLM Integration (`app/services/llm/`)
-   - Provider abstraction layer ready
-   - Response processing working
-   - Error handling functional
-   - Cross-provider testing pending
-
-3. Content Management (`app/services/chapter_manager.py`)
-   - ChapterType handling implemented
-   - New chapter sequencing working
-   - Content sampling functional
-   - Error recovery in progress
+These changes make the prompts more efficient while maintaining or improving their effectiveness in guiding the LLM's story generation.

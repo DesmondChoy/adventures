@@ -19,20 +19,13 @@ Choice B: [Second choice description]
 Choice C: [Third choice description]
 </CHOICES>
 
-The choices section MUST:
-1. Start with <CHOICES> on its own line with NO indentation
-2. Have exactly three choices, each on its own line with NO indentation
-3. Each choice MUST start with "Choice [A/B/C]: " followed by the choice text
-4. Each choice MUST be on a single line:
-   - NO line breaks (pressing Enter/Return) within a choice
-   - NO word wrapping or splitting choices across lines
-   - NO periods followed by "Choice" within a choice
-5. End with </CHOICES> on its own line with NO indentation
-6. Each choice should be meaningful and distinct
-7. All choices must advance the plot in interesting ways
-8. There must be NO text before or after the <CHOICES> and </CHOICES> tags
+The choices section MUST follow these 5 rules:
+1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices. No extra text, indentation, line breaks, or periods followed by "Choice" within choices
+2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
+3. Content: Make each choice meaningful, distinct, and advance the plot in interesting ways
+4. Plot Twist: Choices should relate to the unfolding plot twist, from subtle hints to direct connections as the story progresses
 
-Correct Example:
+Correct Example: 
 
 <CHOICES>
 Choice A: Explore the dark forest.
@@ -86,74 +79,115 @@ def _format_lesson_answers(lesson_question: LessonQuestion) -> str:
 - {answers[2]}"""
 
 
-def _get_phase_guidance(story_phase: str) -> str:
-    """Get the appropriate guidance based on the Journey Quest story phase."""
-    return {
+def _get_phase_guidance(story_phase: str, state: AdventureState) -> str:
+    """Get the appropriate guidance based on the Journey Quest story phase.
+
+    Args:
+        story_phase: Current phase of the story
+        state: Current adventure state containing story elements
+    """
+    # Plot twist progression based on story phase
+    plot_twist_guidance = {
+        "Rising": (
+            "Plot Twist Development:\n"
+            f"- Subtly introduce elements that hint at: {state.selected_plot_twist}\n"
+            "- Plant small, seemingly insignificant details that will become important\n"
+            "- Keep the hints subtle and in the background"
+        ),
+        "Trials": (
+            "Plot Twist Development:\n"
+            f"- Build tension around the emerging plot twist: {state.selected_plot_twist}\n"
+            "- Make the hints more noticeable but still mysterious\n"
+            "- Connect previously planted details to current events"
+        ),
+        "Climax": (
+            "Plot Twist Development:\n"
+            f"- Bring the plot twist to its full revelation: {state.selected_plot_twist}\n"
+            "- Connect all the previously planted hints\n"
+            "- Show how this revelation changes everything"
+        ),
+    }
+
+    # Base phase guidance
+    base_guidance = {
         "Exposition": (
             "Phase Guidance:\n"
-            "- Focus: Introduction, setting the scene, establishing the character's ordinary world, and the inciting incident that disrupts it.\n"
-            "- Narrative Goals: Introduce the main character, the setting (based on chosen story category), and the initial problem or quest. Spark curiosity and hook the reader.\n"
-            "- Emotional Tone: Intriguing, inviting, a sense of normalcy being disrupted, hinting at adventure."
+            "- Focus: Introduction, setting the scene, establishing the character's ordinary world.\n"
+            "- Narrative Goals: Introduce the main character, the setting, and the initial situation.\n"
+            "- Emotional Tone: Intriguing, inviting, a sense of normalcy that will soon be disrupted.\n"
+            "- Sensory Integration: Establish the world through vivid sensory details."
         ),
         "Rising": (
             "Phase Guidance:\n"
-            "- Focus: The character sets out on their journey, encountering initial challenges, making new discoveries, and starting to learn new skills or gain knowledge related to the lesson topic.\n"
-            "- Narrative Goals: Develop the plot, introduce supporting characters (if any), present early obstacles, show the character's initial steps on their quest, and weave in some initial learning moments.\n"
-            "- Emotional Tone: Excitement, anticipation, a sense of progress, building momentum, hints of challenges ahead."
+            "- Focus: Character begins their journey, facing initial challenges.\n"
+            "- Narrative Goals: Develop the plot and introduce early obstacles.\n"
+            "- Emotional Tone: Excitement, anticipation, building momentum.\n"
+            "- Sensory Integration: Use sensory details to highlight new experiences.\n"
+            f"\n{plot_twist_guidance.get('Rising', '')}"
         ),
         "Trials": (
             "Phase Guidance:\n"
-            "- Focus: The character faces more significant obstacles, tests their abilities, and encounters setbacks. Stakes are raised, and tension builds towards the climax. Lessons become more critical for overcoming challenges.\n"
-            "- Narrative Goals: Introduce major conflicts, test the character's resolve, increase the stakes, deepen the learning curve, and build suspense leading to the climax.\n"
-            "- Emotional Tone: Tension, suspense, determination, challenges, moments of doubt, building towards a peak."
+            "- Focus: Character faces significant challenges and setbacks.\n"
+            "- Narrative Goals: Test resolve, increase stakes, deepen learning.\n"
+            "- Emotional Tone: Tension, determination, growing uncertainty.\n"
+            "- Sensory Integration: Intensify sensory details during key moments.\n"
+            f"\n{plot_twist_guidance.get('Trials', '')}"
         ),
         "Climax": (
             "Phase Guidance:\n"
-            "- Focus: The climax of the quest where the character confronts the main conflict. Followed by the resolution, the immediate aftermath, and a sense of return or a 'new normal.'\n"
-            "- Narrative Goals: Deliver the most exciting and challenging part of the story (the climax), resolve the main conflict, show the consequences of the character's actions and learning, provide closure, and hint at transformation or lasting change.\n"
-            "- Emotional Tone: Intense excitement, high stakes, relief (after climax), satisfaction, reflection, a sense of completion and transformation."
+            "- Focus: Character confronts the main conflict and revelations.\n"
+            "- Narrative Goals: Deliver exciting resolution and transformation.\n"
+            "- Emotional Tone: Intense excitement, high stakes, breakthrough moments.\n"
+            "- Sensory Integration: Peak sensory experience during crucial scenes.\n"
+            f"\n{plot_twist_guidance.get('Climax', '')}"
         ),
         "Return": (
             "Phase Guidance:\n"
-            "- Focus: The character returns to their original world, or establishes a new equilibrium, demonstrably different due to their journey. They integrate the lessons learned and show evidence of personal growth. The lasting impact of the adventure is revealed.\n"
-            "- Narrative Goals: Illustrate the character's transformation, showcase how they apply their new knowledge or skills, tie up any loose ends, and offer a sense of finality while possibly hinting at future possibilities (sequel potential, ongoing journey). Reinforce the overall theme or message.\n"
-            "- Emotional Tone: Reflective, peaceful (though potentially bittersweet), a sense of accomplishment, wisdom, and closure. The feeling of a journey completed, but also a new beginning having been forged. A sense of hopeful maturity or understanding."
+            "- Focus: Character integrates their experiences and growth.\n"
+            "- Narrative Goals: Show transformation and provide closure.\n"
+            "- Emotional Tone: Reflective, peaceful, sense of completion.\n"
+            "- Sensory Integration: Use sensory details to highlight the character's new perspective."
         ),
-    }.get(story_phase, "")
+    }
+
+    return base_guidance.get(story_phase, "")
 
 
-def build_system_prompt(story_config: Dict[str, Any]) -> str:
+def build_system_prompt(state: AdventureState) -> str:
     """Create a system prompt that establishes the storytelling framework.
 
     Args:
-        story_config: Configuration for the story
+        state: The current adventure state containing selected story elements
     """
-    # Add choice formatting rules to the system prompt
-    choice_rules = """
-IMPORTANT: When writing choices, ensure each choice is COMPLETELY contained on a single line.
-DO NOT use any line breaks or word wrapping within choices.
-"""
-
     base_prompt = f"""You are a master storyteller crafting an interactive educational story.
 
-Writing Style:
-- Maintain a {story_config["tone"]} tone throughout the narrative
-- Use vocabulary appropriate for {story_config["vocabulary_level"]}
-- Follow these story rules: {", ".join(story_config["story_rules"])}
+Core Story Elements:
+- Setting: {state.selected_narrative_elements["setting_types"]}
+- Character: {state.selected_narrative_elements["character_archetypes"]}
+- Rule: {state.selected_narrative_elements["story_rules"]}
+- Theme: {state.selected_theme}
+- Moral Teaching: {state.selected_moral_teaching}
 
-Story Elements to Include:
-- Setting types: {", ".join(story_config["narrative_elements"]["setting_types"])}
-- Character archetypes: {", ".join(story_config["narrative_elements"]["character_archetypes"])}
+Available Sensory Details:
+- Visual Elements: {state.selected_sensory_details["visuals"]}
+- Sound Elements: {state.selected_sensory_details["sounds"]}
+- Scent Elements: {state.selected_sensory_details["smells"]}
 
 Your task is to generate engaging story chapters that:
 1. Maintain narrative consistency with previous choices
 2. Create meaningful consequences for user decisions
 3. Seamlessly integrate lesson elements when provided
 4. Use multiple paragraphs separated by blank lines to ensure readability
+5. Consider incorporating sensory details where appropriate to enhance immersion
+6. Develop the theme and moral teaching naturally through the narrative
 
-CRITICAL: Never start your generated content with 'Chapter' followed by a number or any similar chapter heading. Begin the narrative directly to maintain story immersion and continuity."""
+CRITICAL INSTRUCTIONS:
+1. Never start your generated content with 'Chapter' followed by a number
+2. Begin the narrative directly to maintain story immersion
+3. Consider using sensory details where they enhance the narrative
+4. Keep the selected theme and moral teaching as guiding principles"""
 
-    return base_prompt + choice_rules
+    return base_prompt
 
 
 def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
@@ -220,6 +254,7 @@ def _build_chapter_prompt(
     base_prompt: str,
     story_phase: str,
     chapter_type: ChapterType,
+    state: AdventureState,
     lesson_question: Optional[LessonQuestion] = None,
     consequences_guidance: str = "",
     num_previous_lessons: int = 0,
@@ -250,30 +285,24 @@ def _build_chapter_prompt(
 
         return f"""{base_prompt}
 
-{continuation_text}{_get_phase_guidance(story_phase)}
+{continuation_text}{_get_phase_guidance(story_phase, state)}
 
-Continue the story, leading to a situation where the following lesson question naturally arises: 
+Continue the story naturally, weaving in a situation or moment that raises this core question:
 {lesson_question["question"]}
 
 CRITICAL INSTRUCTIONS:
-1. {"First address the consequences of the previous lesson" if num_previous_lessons > 0 else "The story should flow naturally towards the lesson topic"}
-2. Have the topic emerge naturally through dialogue, thoughts, or observations
-3. End the narrative at the moment when the topic is introduced
-4. DO NOT include "Lesson Question:" or repeat the question after the narrative
-5. The system will handle the question presentation separately
+1. {"Build on the consequences of the previous lesson, showing how it connects to this new challenge" if num_previous_lessons > 0 else "Let the story flow organically towards this new challenge"}
+2. Create a narrative moment where the question emerges through:
+   - Character's internal thoughts or observations
+   - Natural dialogue between characters
+   - A challenge or obstacle that needs to be overcome
+   - An important decision that needs to be made
+3. The question should feel like a natural part of the character's journey, not an artificial insert
+4. Ensure the context makes it clear why answering this question matters to the story
+5. End at a moment that makes the user want to engage with the question
+6. The system will handle the formal presentation of the question separately
 
-Example of correct formats:
-
-[Question format]
-"Which makes me wonder," Alex pondered, "if they wanted to maximize the breakdown of the pumpkin, wouldn't they want to mimic the longest part of the digestive system?"
-
-[Statement format]
-Maya studied the diagram intently. The small intestine seemed too short for such a complex process - there had to be a longer section of the digestive system where most of the breakdown occurred.
-
-Example of incorrect format:
-[Narrative introduces topic]
-[Additional unnecessary content]
-Lesson Question: [Repeating the question]
+Remember: The goal is to make the question feel like an organic part of the character's journey rather than an educational insert.
 
 {_format_lesson_answers(lesson_question)}"""
 
@@ -291,7 +320,7 @@ Lesson Question: [Repeating the question]
 
         return f"""{base_prompt}
 
-{continuation_text}{_get_phase_guidance(story_phase)}
+{continuation_text}{_get_phase_guidance(story_phase, state)}
 
 Continue the story by:
 1. Following directly from the previous chapter content
@@ -321,7 +350,7 @@ IMPORTANT:
 
         return f"""{base_prompt}
 
-{continuation_text}{_get_phase_guidance(story_phase)}
+{continuation_text}{_get_phase_guidance(story_phase, state)}
 
 Write the conclusion of the story by:
 1. Following directly from the pivotal choice made in the previous chapter
@@ -368,6 +397,7 @@ def build_user_prompt(
         base_prompt=base_prompt,
         story_phase=story_phase,
         chapter_type=chapter_type,
+        state=state,
         lesson_question=lesson_question,
         consequences_guidance=consequences_guidance,
         num_previous_lessons=num_previous_lessons,

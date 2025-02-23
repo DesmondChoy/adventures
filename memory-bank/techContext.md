@@ -17,6 +17,8 @@
   - ChapterType enum support
   - Response handling
   - Error recovery
+  - Metadata tracking for element consistency
+  - Plot twist phase guidance
 
 - **Language**: Python 3.x
   - Type hints throughout
@@ -73,6 +75,8 @@ pytest-asyncio==0.21.1
   * Recovery mechanism testing
   * Error boundary validation
   * Comprehensive log generation
+  * Element consistency validation
+  * Plot twist progression testing
 - LLM provider compatibility:
   * OpenAI/Gemini cross-testing
   * Response format validation
@@ -85,8 +89,41 @@ pytest-asyncio==0.21.1
   * Performance metrics
 
 ## Technical Considerations
-- **State Management (`app/models/story.py`):** Real-time WebSocket synchronization, complete state serialization, story length constraints (5-10 chapters), and error recovery system. The `story_category` and `lesson_topic` are passed as URL parameters to the WebSocket endpoint and are not included in the `validated_state`.
-- **LLM Integration (`app/services/llm/`):** Provider abstraction layer, response standardization, rate limiting implementation, and error handling system.
+- **State Management (`app/models/story.py`):** 
+  * Real-time WebSocket synchronization
+  * Complete state serialization
+  * Story length constraints (5-10 chapters)
+  * Error recovery system
+  * Critical state preservation during client updates:
+    - Narrative elements (setting, characters, rules)
+    - Sensory details (visuals, sounds, smells)
+    - Theme and moral teaching
+    - Plot twist and phase guidance
+    - Metadata for consistency tracking
+  * URL parameters handling:
+    - `story_category` and `lesson_topic` passed via URL
+    - Not included in `validated_state`
+    - Used for initial state setup only
+
+- **LLM Integration (`app/services/llm/`):** 
+  * Provider abstraction layer
+  * Response standardization
+  * Rate limiting implementation
+  * Error handling system
+  * State handling requirements:
+    - Must pass complete AdventureState to build_system_prompt
+    - Direct attribute access for prompt construction
+    - Story config used only for initial setup
+  * Enhanced features:
+    - Phase-specific plot twist guidance
+    - Element consistency validation
+    - Narrative continuity enforcement
+
+- **Story Elements (`app/services/chapter_manager.py`):** 
+  * Comprehensive element selection and validation
+  * Metadata tracking for consistency
+  * Phase-specific plot twist guidance
+  * Enhanced error handling with proper recovery mechanisms
 
 ## External Dependencies
 
@@ -102,6 +139,7 @@ pytest-asyncio==0.21.1
   * Mocked dependencies
   * Error scenarios
   * Edge cases
+  * Element consistency validation
 - pytest-asyncio (async):
   * WebSocket operations
   * LLM service calls
@@ -112,11 +150,14 @@ pytest-asyncio==0.21.1
   * Adventure progression
   * Content validation
   * Error recovery
+  * Plot twist progression validation
 - State validation:
   * Serialization
   * Persistence
   * Recovery
   * Consistency
+  * Element tracking
+  * Metadata validation
 
 ## Development Tools
 
@@ -140,15 +181,19 @@ pytest-asyncio==0.21.1
 - State synchronization
 - LLM availability
 - Error frequency
+- Element consistency
 
 ### Performance Metrics
 - Response latency
 - State update speed
 - Content generation time
 - Error recovery time
+- Metadata tracking overhead
 
 ### Testing Coverage
 - Story simulations
 - State transitions
 - Provider compatibility
 - Error scenarios
+- Element consistency
+- Plot twist progression

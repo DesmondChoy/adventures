@@ -273,7 +273,7 @@ async def generate_chapter(
         Tuple of (ChapterContent, Optional[dict])
     """
     # Load story configuration
-    with open("app/data/stories.yaml", "r") as f:
+    with open("app/data/new_stories.yaml", "r") as f:
         story_data = yaml.safe_load(f)
     story_config = story_data["story_categories"][story_category]
 

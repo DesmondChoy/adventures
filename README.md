@@ -76,7 +76,7 @@ app/
 │   └── llm/           # LLM integration services
 ├── data/              
 │   ├── lessons.csv    # Educational content
-│   └── stories.yaml   # Story templates
+│   └── new_stories.yaml   # Story templates
 ├── middleware/         # Custom middleware components
 ├── templates/          # HTML templates
 ├── static/            # Static assets (CSS, JS)

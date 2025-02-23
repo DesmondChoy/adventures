@@ -2,16 +2,33 @@
 import yaml
 import pandas as pd
 import json
+import random
+import logging
 from app.database import SessionLocal, init_db
 from app.database import StoryCategory, LessonTopic
-import random
+
+logger = logging.getLogger("story_app")
 
 
 def load_story_data():
     """Load and process story categories from YAML file."""
-    with open("app/data/stories.yaml", "r") as f:
-        data = yaml.safe_load(f)
-    return data["story_categories"]
+    try:
+        with open("app/data/new_stories.yaml", "r") as f:
+            data = yaml.safe_load(f)
+            categories = data.get("story_categories", {})
+            logger.info(
+                "Loaded story data",
+                extra={
+                    "categories": list(categories.keys()),
+                    "elements_per_category": {
+                        cat: list(details.keys()) for cat, details in categories.items()
+                    },
+                },
+            )
+            return categories
+    except Exception as e:
+        logger.error("Failed to load story data", extra={"error": str(e)})
+        return {}  # Provide empty default value
 
 
 def load_lesson_data():
@@ -61,17 +78,50 @@ def sample_question(topic: str, exclude_questions: list = None) -> dict:
 
 def init_story_categories(db, story_data):
     """Initialize story categories in the database."""
-    for key, category in story_data.items():
-        db_category = StoryCategory(
-            name=key,
-            description=category["description"],
-            tone=category["tone"],
-            narrative_elements=json.dumps(category["narrative_elements"]),
-            story_rules=json.dumps(category["story_rules"]),
-            vocabulary_level=category["vocabulary_level"],
+    try:
+        print("Story data:", story_data)  # Debug print
+        for key, category in story_data.items():
+            print(f"Processing category: {key}")  # Debug print
+            # Create a complete story configuration object
+            story_config = {
+                "narrative_elements": category["narrative_elements"],
+                "sensory_details": category["sensory_details"],
+                "themes": category["narrative_elements"]["themes"],
+                "moral_teachings": category["narrative_elements"]["moral_teachings"],
+                "plot_twists": category["narrative_elements"]["plot_twists"],
+            }
+
+            db_category = StoryCategory(
+                name=key,
+                display_name=category["name"],
+                description=category["description"],
+                tone=category["tone"],
+                story_config=json.dumps(story_config),
+            )
+            print(f"Created category object: {db_category.name}")  # Debug print
+            db.add(db_category)
+
+            logger.info(
+                f"Initialized story category: {key}",
+                extra={
+                    "category": key,
+                    "display_name": category["name"],
+                    "elements": list(story_config.keys()),
+                },
+            )
+
+        db.commit()
+        logger.info(
+            "Successfully initialized all story categories",
+            extra={"total_categories": len(story_data)},
         )
-        db.add(db_category)
-    db.commit()
+    except Exception as e:
+        logger.error(
+            "Error initializing story categories",
+            extra={"error": str(e)},
+            exc_info=True,
+        )
+        raise
 
 
 def init_lesson_topics(db, lesson_data):

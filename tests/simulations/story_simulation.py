@@ -103,7 +103,7 @@ def print_separator(title=""):
 def load_story_data():
     """Load story data from YAML file."""
     try:
-        with open("app/data/stories.yaml", "r") as f:
+        with open("app/data/newstories.yaml", "r") as f:
             return yaml.safe_load(f)
     except Exception as e:
         simulation_logger.error(f"Failed to load story data: {e}")

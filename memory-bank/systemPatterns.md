@@ -41,6 +41,7 @@ graph TD
 - ChapterType enum management (LESSON/STORY/CONCLUSION).
 - Question and answer tracking.
 - Narrative continuity enforcement.
+- Metadata tracking for element consistency.
 
 ### 2. WebSocket Components
 #### WebSocket Router (`app/routers/websocket_router.py`)
@@ -102,6 +103,11 @@ graph TD
 - Story choice generation.
 - Narrative continuity management.
 - Response processing.
+- **Critical State Handling**:
+  * Providers MUST pass complete AdventureState object to build_system_prompt
+  * State object contains all necessary narrative elements and context
+  * Direct attribute access required for prompt construction
+  * Story configuration used only for initial state setup
 
 ### 6. State Management Pattern
 - Centralized AdventureState:
@@ -111,6 +117,17 @@ graph TD
   * Question data persistence
   * Story length constraints (5-10 chapters)
   * Recovery mechanisms
+  * Metadata tracking for element consistency
+  * Critical state preservation during updates:
+    - selected_narrative_elements
+    - selected_sensory_details
+    - selected_theme
+    - selected_moral_teaching
+    - selected_plot_twist
+    - metadata
+    - planned_chapter_types
+    - story_length
+    - current_storytelling_phase
 
 - **Navigation State Pattern:**
   * Separation of Concerns:
@@ -212,42 +229,109 @@ graph TD
 - Narrative continuity enforcement.
 - Consequence handling.
 
-## Narrative Continuity Pattern (`app/services/llm/prompt_engineering.py`)
-- Previous Chapter Impact:
-  1. After LESSON Chapter (Correct Answer):
-     - Acknowledge understanding of the concept
-     - Show practical application of knowledge
-     - Build confidence for future challenges
-     - Connect learning to current situation
-     - CRITICAL: Include specific answer in state
-  
-  2. After LESSON Chapter (Incorrect Answer):
-     - Chapter 2 (Immediate Response):
-       * Address the misunderstanding directly
-       * Provide correct information naturally
-       * Create growth opportunity
-       * Show learning from mistakes
-       * Connect correction to current events
-       * CRITICAL: Include both incorrect and correct answers in state
-     - Later Chapters:
-       * Build upon previous learning
-       * Show evolved understanding
-       * Connect growth to current challenges
-       * Avoid redundant explanations
-       * Focus on character development
-       * CRITICAL: Reference previous corrections naturally
-  
-  3. After STORY Chapter:
-     - Direct continuation from chosen path
-     - Reference specific choice details
-     - Show consequences of decision
-     - Maintain consistent world state
-     - CRITICAL: Include full choice context in state
+## Story Elements Pattern
+1. Element Selection from `new_stories.yaml`:
+   - Random sampling happens once at state initialization:
+     * One element from each `narrative_elements` category
+     * One element from each `sensory_details` category
+   - Non-random elements (`name`, `description`, `tone`) are extracted and validated separately
+   - CRITICAL: Selected elements stored in AdventureState
+   - CRITICAL: All elements must remain consistent throughout adventure
+   - CRITICAL: Validation ensures all required elements are present
 
-  4. After CONCLUSION Chapter:
-     - No further narrative needed
-     - Return to Landing Page option
-     - CRITICAL: No state updates needed
+2. Plot Twist Integration:
+   - Phase-specific guidance via get_plot_twist_guidance():
+     * Exposition: Subtle hints and background elements only
+     * Rising: Begin connecting previous hints, maintain mystery
+     * Trials: Build tension and increase visibility of hints
+     * Climax: Full revelation and impact of the twist
+     * Return: Show aftermath and consequences
+   - CRITICAL: Plot twist must evolve naturally
+   - CRITICAL: Previous hints must connect logically
+   - CRITICAL: Guidance stored in state metadata
+
+3. Element Consistency Management:
+   - Metadata field in AdventureState tracks:
+     * Non-random elements
+     * Plot twist guidance
+     * Element consistency
+     * Initialization timestamp
+   - CRITICAL: All elements validated during initialization
+   - CRITICAL: Metadata provides consistency checks throughout adventure
+   - CRITICAL: Error recovery maintains element consistency
+
+4. Error Handling and Validation:
+   - Comprehensive validation in select_random_elements:
+     * Required categories checked
+     * Element types validated
+     * Non-empty values ensured
+   - Detailed error messages and logging
+   - Proper error propagation
+   - Recovery mechanisms maintain consistency
+   - CRITICAL: Validation failures prevent state corruption
+
+5. `sensory_details` integration into build_system_prompt():
+   - Visual elements for scene setting
+   - Sound elements for atmosphere
+   - Smell elements for immersion
+   - CRITICAL: Weave naturally into narrative
+   - CRITICAL: Support current story phase
+   - CRITICAL: Consistent with metadata tracking
+
+## Narrative Continuity Pattern (`app/services/llm/prompt_engineering.py`)
+1. Story Elements Consistency:
+   - Maintain selected setting throughout
+   - Keep character archetypes consistent
+   - Follow selected story rules
+   - Develop chosen theme
+   - Reinforce moral teaching
+   - CRITICAL: Reference established elements
+
+2. Previous Chapter Impact:
+   - After LESSON Chapter (Correct Answer):
+     * Acknowledge understanding
+     * Apply knowledge practically
+     * Build confidence
+     * Connect to situation
+     * CRITICAL: Include answer in state
+   
+   - After LESSON Chapter (Incorrect Answer):
+     * Address misunderstanding
+     * Provide natural correction
+     * Create growth opportunity
+     * Show learning process
+     * CRITICAL: Include both answers in state
+   
+   - After STORY Chapter:
+     * Continue from chosen path
+     * Reference choice details
+     * Show consequences
+     * Maintain world state
+     * CRITICAL: Include choice context
+   
+   - After CONCLUSION Chapter:
+     * No further narrative
+     * Return to Landing Page
+     * CRITICAL: No state updates
+
+3. Plot Twist Development:
+   - Rising Phase:
+     * Plant subtle hints
+     * Create background elements
+     * Maintain subtlety
+     * CRITICAL: Don't reveal too much
+   
+   - Trials Phase:
+     * Connect previous hints
+     * Build tension
+     * Increase visibility
+     * CRITICAL: Maintain mystery
+   
+   - Climax Phase:
+     * Reveal full twist
+     * Connect all hints
+     * Show impact
+     * CRITICAL: Satisfying resolution
 
 - Continuity Enforcement:
   1. LLM Prompt Engineering:

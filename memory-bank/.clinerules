@@ -5,7 +5,7 @@
 ### Naming Conventions
 1. Chapter: Unit of progression in ChapterType enum (LESSON, STORY, or CONCLUSION)
    - LESSON: Educational content from `lessons.csv` with LLM narrative wrapper
-   - STORY: Fully LLM-generated narrative content with choices
+   - STORY: Fully LLM-generated narrative content, guided by story elements from `new_stories.yaml`, with choices
    - CONCLUSION: Final chapter with no choices, providing story resolution
 2. State: Complete application state in `AdventureState` class
 3. Adventure: Overall user journey tracked in `AdventureState`
@@ -20,7 +20,7 @@
    - Chapter management: `services/chapter_manager.py`
 2. Content sources:
    - Lesson database: `data/lessons.csv`
-   - Story templates: `data/stories.yaml`
+   - Story templates: `data/new_stories.yaml`
 3. Tests: `tests/` directory
    - Story simulations: `tests/simulations/story_simulation.py`
 
@@ -72,7 +72,7 @@ Run story simulation on changes to:
    - `app/services/chapter_manager.py`
    - `app/models/story.py`
    - `app/init_data.py`
-   - `app/data/stories.yaml`
+   - `app/data/new_stories.yaml`
    - `app/data/lessons.csv`
    - `app/templates/index.html`
 
