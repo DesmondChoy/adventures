@@ -200,6 +200,29 @@ pytest-asyncio==0.21.1
 
 ## Text Rendering and Streaming
 
+### Typography System (`app/static/css/typography.css`)
+- Modular typography system using CSS variables
+- Primary font: Andika (optimized for educational content)
+- Standardized font sizes and weights:
+  * Content text: 1.2rem
+  * Small text: 0.875rem
+  * Base: 1rem
+  * Large: 1.125rem
+  * Extra large: 1.25rem
+  * 2XL: 1.5rem
+  * 4XL: 2.25rem
+- Consistent typography across:
+  * Streaming content
+  * Choice buttons
+  * Form elements
+  * Headers
+  * Stats display
+- Educational considerations:
+  * Enhanced readability with 1.7 line height
+  * Medium font weight (500) for clarity
+  * Subtle letter spacing (0.01em)
+  * Optimized contrast with carefully selected colors
+
 ### Markdown Support
 - Implementation using marked.js library
 - Real-time markdown parsing during streaming

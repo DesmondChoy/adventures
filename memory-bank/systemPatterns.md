@@ -411,21 +411,44 @@ graph TD
    - Paragraph breaks with longer pauses (0.1s)
    - CRITICAL: Maintain reading rhythm
 
-2. Markdown Processing:
+2. Typography Pattern (`app/static/css/typography.css`):
+   - CRITICAL: Consistent typography between streaming text and choices
+   - Base Settings:
+     * Font: Andika (optimized for education)
+     * Size: 1.2rem for main content
+     * Line height: 1.7 for readability
+     * Weight: 500 for clarity
+   - CSS Variables for Maintainability:
+     * --font-primary
+     * --font-code
+     * --color-text-primary
+     * --color-text-dark
+     * --line-height-content
+     * --font-size-content (and other size variants)
+   - Standardized Application:
+     * Streaming content matches choice buttons exactly
+     * Consistent styling across UI elements
+     * Educational focus in typography choices
+   - Error Prevention:
+     * Global font family fallbacks
+     * Consistent text shadow application
+     * Proper whitespace preservation
+
+3. Markdown Processing:
    - Real-time parsing during stream
    - Buffer management for partial content
    - Emphasis handling (*italic*, **bold**)
    - Code block formatting
    - CRITICAL: Preserve streaming experience
 
-3. Error Handling:
+4. Error Handling:
    - Graceful fallback to plain text
    - Maintain stream on parse errors
    - Clear error logging
    - State recovery
    - CRITICAL: Never break narrative flow
 
-4. State Management:
+5. State Management:
    - Clean buffer between chapters
    - Proper cleanup on reset
    - Memory management
