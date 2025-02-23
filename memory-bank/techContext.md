@@ -333,26 +333,37 @@ const baseClasses = [
 
 ### Carousel Component
 - **Location**: `app/static/css/carousel.css`
-- **Description**: A reusable 3D carousel component with smooth transitions and animations
+- **Description**: A reusable 3D carousel component with smooth transitions, animations, and card flipping functionality
 - **Features**:
   - 3D perspective rotation
   - Active card expansion (340px width vs 300px base)
   - Infinite glowing animation on active cards
-  - Selection animation with scale and Z-axis transform
+  - Card flip animation on selection
+  - Portrait orientation (3:4 aspect ratio)
   - Responsive navigation controls
   - Smooth transitions using cubic-bezier timing
 - **States**:
-  - Default: 300px width, 0.3 opacity
-  - Active: 340px width, glowing animation, full opacity
-  - Selected: Indigo border, shadow effect
-  - Selecting: Scale and Z-axis animation
+  - Default: 300x400px, 0.3 opacity
+  - Active: 340x453px, glowing animation, full opacity
+  - Selected: Triggers card flip animation
+  - Front face: Full-width image display
+  - Back face: Title and description content
 - **Customization**:
   - Uses theme colors (indigo-600)
   - Configurable card dimensions
   - Modular structure for reuse
+  - Image handling with object-fit
 - **Technical Details**:
   - Uses CSS transform-style: preserve-3d
   - Hardware-accelerated animations
   - Will-change optimization for performance
   - Backdrop-filter for glass effect
   - Backface visibility hidden for 3D rendering
+  - Two-sided card implementation
+- **Image Requirements**:
+  - Location: `app/static/images/categories/`
+  - Naming: Matches category IDs (e.g., `festival_of_lights_and_colors.jpg`)
+  - Aspect ratio: 3:4 (portrait)
+  - Min resolution: 680x906px
+  - Format: JPG/WebP
+  - Content: Theme-appropriate and child-friendly

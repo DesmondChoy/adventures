@@ -82,6 +82,24 @@ These changes make the prompts more efficient while maintaining or improving the
 
 ## UI Improvements
 
+### Carousel Component Enhancements (2024-02-23)
+- Added card flip animation functionality
+  * Front face displays category image
+  * Back face shows title and description
+  * Smooth transition between faces on selection
+- Updated card dimensions to 3:4 aspect ratio
+  * Base size: 300x400px
+  * Active size: 340x453px
+  * Optimized for mobile portrait view
+- Enhanced content display
+  * Increased description area (8 lines)
+  * Better vertical content alignment
+  * Improved readability with adjusted padding
+- Defined image requirements
+  * Created categories directory structure
+  * Specified naming conventions
+  * Set resolution and format standards
+
 ### Carousel Component Modularization (2024-02-23)
 - Extracted carousel styles into dedicated `app/static/css/carousel.css`
 - Enhanced maintainability and reusability of the carousel component

@@ -37,8 +37,13 @@
                         <div class="carousel" id="categoryCarousel">
                             {% for category_id, category_data in story_categories.items() %}
                             <div class="carousel-card" data-category="{{ category_id }}" onclick="selectCategory('{{ category_id }}')">
-                                <div class="carousel-title">{{ category_data.name }}</div>
-                                <div class="carousel-description">{{ category_data.description }}</div>
+                                <div class="card-face card-front">
+                                    <img src="/static/images/categories/{{ category_id }}.jpg" alt="{{ category_data.name }}" class="card-image">
+                                </div>
+                                <div class="card-face card-back">
+                                    <div class="carousel-title">{{ category_data.name }}</div>
+                                    <div class="carousel-description">{{ category_data.description }}</div>
+                                </div>
                             </div>
                             {% endfor %}
                         </div>

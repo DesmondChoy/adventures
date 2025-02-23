@@ -3,14 +3,14 @@
     perspective: 2000px;
     margin: 40px auto;
     width: 400px;
-    height: 320px;
+    height: 420px;
     position: relative;
     transform-style: preserve-3d;
 }
 
 .carousel {
     width: 100%;
-    height: 200px;
+    height: 400px;
     position: absolute;
     transform-style: preserve-3d;
     transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
@@ -24,7 +24,7 @@
 .carousel-card {
     position: absolute;
     width: 300px;
-    height: 200px;
+    height: 400px;
     left: 50%;
     margin-left: -150px;
     background: white;
@@ -35,7 +35,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding: 24px;
+    padding: 0;
     transform-origin: center;
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -46,24 +46,57 @@
     backface-visibility: hidden;
     will-change: transform, opacity, width, margin-left;
     transform-style: preserve-3d;
+    perspective: 1000px;
+}
+
+.carousel-card .card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.carousel-card .card-front {
+    transform: rotateY(0deg);
+}
+
+.carousel-card .card-back {
+    transform: rotateY(180deg);
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.carousel-card.selected .card-front {
+    transform: rotateY(-180deg);
+}
+
+.carousel-card.selected .card-back {
+    transform: rotateY(0deg);
+}
+
+.card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
 }
 
 .carousel-card.active {
     opacity: 1;
     width: 340px;
+    height: 453px;
     margin-left: -170px;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     border: 2px solid rgba(79, 70, 229, 0.4);
     background: white;
     z-index: 1;
     animation: cardGlow 3s ease-in-out infinite;
-}
-
-.carousel-card.selected {
-    border: 2px solid rgb(79, 70, 229);
-    box-shadow: 0 0 15px rgba(79, 70, 229, 0.3);
-    opacity: 1;
-    background: white;
 }
 
 /* Card Content Styles */
@@ -84,10 +117,10 @@
     text-align: center;
     overflow: hidden;
     display: -webkit-box;
-    -webkit-line-clamp: 4;
+    -webkit-line-clamp: 8;
     -webkit-box-orient: vertical;
     line-height: 1.6;
-    max-height: 120px;
+    max-height: 240px;
     width: 100%;
     padding: 0 12px;
 }
@@ -152,9 +185,15 @@
 }
 
 @keyframes selectCard {
-    0% { transform: scale(1) translateZ(0); }
-    50% { transform: scale(1.1) translateZ(50px); }
-    100% { transform: scale(1) translateZ(0); }
+    0% { 
+        transform: scale(1) translateZ(0) rotateY(0deg);
+    }
+    50% { 
+        transform: scale(1.1) translateZ(50px) rotateY(0deg);
+    }
+    100% { 
+        transform: scale(1) translateZ(0) rotateY(0deg);
+    }
 }
 
 .carousel-card.selecting {
