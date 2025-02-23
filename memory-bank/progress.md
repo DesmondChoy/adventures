@@ -79,3 +79,12 @@ These changes make the prompts more efficient while maintaining or improving the
 - [ ] Add theme switching capability
 - [ ] Enhance mobile responsiveness
 - [ ] Add animation preferences support
+
+## UI Improvements
+
+### Carousel Component Modularization (2024-02-23)
+- Extracted carousel styles into dedicated `app/static/css/carousel.css`
+- Enhanced maintainability and reusability of the carousel component
+- Added active card expansion (340px) with glowing animation
+- Prepared component for reuse in lesson topic selection
+- Improved performance with CSS optimizations (will-change, transform-style)

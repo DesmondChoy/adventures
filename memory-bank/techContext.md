@@ -328,3 +328,31 @@ const baseClasses = [
     color: var(--color-text-light);
 }
 ```
+
+## UI Components
+
+### Carousel Component
+- **Location**: `app/static/css/carousel.css`
+- **Description**: A reusable 3D carousel component with smooth transitions and animations
+- **Features**:
+  - 3D perspective rotation
+  - Active card expansion (340px width vs 300px base)
+  - Infinite glowing animation on active cards
+  - Selection animation with scale and Z-axis transform
+  - Responsive navigation controls
+  - Smooth transitions using cubic-bezier timing
+- **States**:
+  - Default: 300px width, 0.3 opacity
+  - Active: 340px width, glowing animation, full opacity
+  - Selected: Indigo border, shadow effect
+  - Selecting: Scale and Z-axis animation
+- **Customization**:
+  - Uses theme colors (indigo-600)
+  - Configurable card dimensions
+  - Modular structure for reuse
+- **Technical Details**:
+  - Uses CSS transform-style: preserve-3d
+  - Hardware-accelerated animations
+  - Will-change optimization for performance
+  - Backdrop-filter for glass effect
+  - Backface visibility hidden for 3D rendering
