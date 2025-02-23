@@ -403,3 +403,31 @@ graph TD
 - **Question Handling:** Dynamic sampling, answer shuffling, duplicate prevention, topic management.
 - **State Management:** Complete state tracking, question history, answer selections, performance metrics.
 - **Testing Automation:** Question sampling tests, answer shuffling validation, flow verification, state consistency.
+
+## Text Streaming Pattern
+1. Content Delivery:
+   - Word-by-word streaming for natural flow
+   - Consistent timing between words (0.02s)
+   - Paragraph breaks with longer pauses (0.1s)
+   - CRITICAL: Maintain reading rhythm
+
+2. Markdown Processing:
+   - Real-time parsing during stream
+   - Buffer management for partial content
+   - Emphasis handling (*italic*, **bold**)
+   - Code block formatting
+   - CRITICAL: Preserve streaming experience
+
+3. Error Handling:
+   - Graceful fallback to plain text
+   - Maintain stream on parse errors
+   - Clear error logging
+   - State recovery
+   - CRITICAL: Never break narrative flow
+
+4. State Management:
+   - Clean buffer between chapters
+   - Proper cleanup on reset
+   - Memory management
+   - WebSocket stability
+   - CRITICAL: Prevent content overlap

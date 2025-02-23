@@ -4,9 +4,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Learning Odyssey</title>
+    <title>Interactive Story Adventure</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/static/css/loader.css">
+    <style>
+        /* ... existing styles ... */
+        
+        /* Add styles for markdown content */
+        .markdown-content {
+            font-family: system-ui, -apple-system, sans-serif;
+            white-space: pre-wrap;  /* Add this to preserve whitespace */
+            word-wrap: break-word;  /* Ensure long words don't overflow */
+        }
+        .markdown-content p {
+            margin-bottom: 1em;
+            white-space: pre-wrap;  /* Ensure paragraphs also preserve whitespace */
+        }
+        .markdown-content em {
+            font-style: italic;
+            color: inherit;
+        }
+        .markdown-content strong {
+            font-weight: bold;
+            color: inherit;
+        }
+        .markdown-content code {
+            background-color: #f0f0f0;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .markdown-content pre code {
+            display: block;
+            padding: 1em;
+            overflow-x: auto;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
@@ -91,7 +125,7 @@
                 <div id="loader" class="loader-container hidden">
                     <div class="loader loader-primary loader-md"></div>
                 </div>
-                <div id="storyContent" class="prose max-w-none mb-6 whitespace-pre-wrap"></div>
+                <div id="storyContent" class="prose max-w-none mb-6 markdown-content whitespace-pre-wrap"></div>
                 
                 <div id="choicesContainer" class="flex flex-col gap-3 w-full">
                     <!-- Choices will be inserted here -->
@@ -102,6 +136,16 @@
 
     <script>
         let storyWebSocket;
+
+        // Initialize marked.js with custom options
+        marked.setOptions({
+            breaks: true,  // Enable line breaks
+            gfm: true,    // Enable GitHub Flavored Markdown
+            sanitize: false // Allow HTML in the markdown
+        });
+
+        let streamBuffer = '';  // Buffer for accumulating streamed text
+        let renderTimeout = null;  // Timeout for debounced rendering
 
         // --- Utility Functions ---
         function showLoader() {
@@ -235,6 +279,8 @@
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = text;
             const decodedText = tempDiv.textContent;
+            
+            // Normalize special characters
             const normalizedText = decodedText
                 .replace(/[\u2018\u2019]/g, "'")
                 .replace(/[\u201C\u201D]/g, '"')
@@ -242,7 +288,23 @@
                 .replace(/\u2013/g, '-')
                 .replace(/\u2026/g, '...');
 
-            storyContent.textContent += normalizedText;
+            // Add text to buffer and immediately display
+            streamBuffer += normalizedText;
+            
+            try {
+                // Convert the entire buffer to HTML while preserving line breaks
+                const htmlContent = marked.parse(streamBuffer, {
+                    breaks: true,
+                    gfm: true
+                });
+                storyContent.innerHTML = htmlContent;
+            } catch (error) {
+                console.error('Error parsing markdown:', error);
+                // Fallback to plain text if markdown parsing fails
+                storyContent.textContent = streamBuffer;
+            }
+            
+            // Always scroll to bottom as text streams in
             storyContent.scrollTop = storyContent.scrollHeight;
         }
 
@@ -327,6 +389,11 @@
         function makeChoice(choiceId, choiceText) {
             if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
                 showLoader();
+                // Clear the stream buffer when making a new choice
+                streamBuffer = '';
+                if (renderTimeout) {
+                    clearTimeout(renderTimeout);
+                }
 
                 const existingState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
                 const currentChapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
@@ -392,6 +459,12 @@
         function resetApplicationState() {
             // Clear session storage
             sessionStorage.clear();
+            
+            // Clear markdown buffer and timeout
+            streamBuffer = '';
+            if (renderTimeout) {
+                clearTimeout(renderTimeout);
+            }
             
             // Show the form and intro text
             document.getElementById('formContainer').classList.remove('hidden');

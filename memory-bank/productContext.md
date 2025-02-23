@@ -19,13 +19,31 @@ Learning Odyssey solves these challenges through:
 
 ## User Experience and Features
 
-1.  **Initial Setup (`app/routers/web.py`):**
-    *   Users select a topic and adventure length on the landing page.
-    *   `ChapterManager` determines the chapter sequence.
-    *   The first two chapters are always STORY type for world-building.
-    *   The last chapter is always CONCLUSION type for resolution.
+1. **Initial Setup (`app/routers/web.py`):**
+   - Users select a topic and adventure length on the landing page
+   - `ChapterManager` determines the chapter sequence
+   - The first two chapters are always STORY type for world-building
+   - The last chapter is always CONCLUSION type for resolution
 
-2.  **Adventure Progression (`app/services/chapter_manager.py`):**
+2. **Content Delivery (`app/services/websocket_service.py`):**
+   - Word-by-word streaming creates natural reading experience
+   - Markdown formatting enhances text presentation:
+     * Emphasis for important concepts
+     * Strong emphasis for key points
+     * Code blocks for technical content
+   - Controlled pacing through timing delays:
+     * Brief pauses between words
+     * Longer pauses between paragraphs
+   - Real-time rendering with proper formatting
+
+3. **Interactive Elements:**
+   - Dynamic choice presentation
+   - Real-time progress tracking
+   - Immediate feedback on selections
+   - Smooth transitions between chapters
+   - Clean state management
+
+4. **Adventure Progression (`app/services/chapter_manager.py`):**
     *   Chapter types follow a specific sequence:
         *   First two chapters: STORY (setting/character development)
         *   Second-to-last chapter: STORY (pivotal choices)
@@ -46,7 +64,7 @@ Learning Odyssey solves these challenges through:
         *   Resolves all plot threads.
         *   Provides a "Return to Landing Page" option.
 
-3.  **Content Management (`app/data/`):**
+5.  **Content Management (`app/data/`):**
     *   Utilizes a lesson database (`lessons.csv`).
     *   Uses story templates (`new_stories.yaml`).
     *   Generates narratives using LLM.
@@ -59,7 +77,7 @@ Learning Odyssey solves these challenges through:
         *   Element consistency tracking
         *   Enhanced error validation
 
-4.  **Chapter Structure (`app/services/chapter_manager.py`):**
+6.  **Chapter Structure (`app/services/chapter_manager.py`):**
     *   Optimized for engagement and learning:
         *   Strong opening with two STORY chapters.
         *   Balanced LESSON distribution.
@@ -72,7 +90,7 @@ Learning Odyssey solves these challenges through:
         *   Building tension in middle phases
         *   Full revelation in climax phase
 
-5.  **State Management (`app/models/story.py`):**
+7.  **State Management (`app/models/story.py`):**
     *   Centralized `AdventureState`.
     *   Real-time synchronization.
     *   Complete state tracking.

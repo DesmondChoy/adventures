@@ -197,3 +197,34 @@ pytest-asyncio==0.21.1
 - Error scenarios
 - Element consistency
 - Plot twist progression
+
+## Text Rendering and Streaming
+
+### Markdown Support
+- Implementation using marked.js library
+- Real-time markdown parsing during streaming
+- Support for:
+  * Emphasis (*italic*)
+  * Strong emphasis (**bold**)
+  * Code blocks (inline and multi-line)
+  * Line breaks and paragraphs
+- Fallback to plain text if parsing fails
+- Preserves streaming functionality while rendering markdown
+
+### Streaming Architecture
+- Word-by-word streaming for natural reading flow
+- WebSocket-based real-time delivery
+- Optimized timing:
+  * 0.02s delay between words
+  * 0.1s delay between paragraphs
+- Buffer management for markdown rendering
+- Smooth scrolling as content streams
+- Maintains proper whitespace and formatting
+
+### UX Considerations
+- Natural reading pace through controlled delays
+- Immediate visual feedback for markdown elements
+- Preserved line breaks and paragraph structure
+- Consistent formatting throughout streaming
+- Graceful fallback for parsing errors
+- Clean state management between chapters

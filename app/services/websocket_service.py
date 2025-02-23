@@ -19,9 +19,9 @@ from app.init_data import sample_question
 import yaml
 
 # Constants for streaming optimization
-WORD_BATCH_SIZE = 5  # Number of words to send at once
-WORD_DELAY = 0.02  # Reduced delay between word batches
-PARAGRAPH_DELAY = 0.1  # Reduced delay between paragraphs
+WORD_BATCH_SIZE = 1  # Reduced to stream word by word
+WORD_DELAY = 0.02  # Delay between words
+PARAGRAPH_DELAY = 0.1  # Delay between paragraphs
 
 logger = logging.getLogger("story_app")
 llm_service = LLMService()
@@ -154,25 +154,17 @@ async def stream_and_send_chapter(
         sampled_question: The question data (if any)
         state: The current state
     """
-    # DEBUG: Log chapter content to help diagnose chapter prefix issues
-    # logger.debug(
-    #     f"=== DEBUG: Chapter Content ===\n"
-    #     f"Chapter Number: {state.current_chapter_number}\n"
-    #     f"Raw Content:\n{chapter_content.content}\n"
-    #     f"==========================="
-    # )
-
     # Remove any "Chapter X:" prefix before streaming
     content_to_stream = re.sub(
         r"^Chapter\s+\d+:\s*", "", chapter_content.content, flags=re.MULTILINE
     ).strip()
+
     # Split content into paragraphs and stream
     paragraphs = [p.strip() for p in content_to_stream.split("\n\n") if p.strip()]
     for paragraph in paragraphs:
         words = paragraph.split()
-        for i in range(0, len(words), WORD_BATCH_SIZE):
-            batch = " ".join(words[i : i + WORD_BATCH_SIZE])
-            await websocket.send_text(batch + " ")
+        for word in words:
+            await websocket.send_text(word + " ")
             await asyncio.sleep(WORD_DELAY)
         await websocket.send_text("\n\n")
         await asyncio.sleep(PARAGRAPH_DELAY)
@@ -192,7 +184,6 @@ async def stream_and_send_chapter(
                 "current_chapter": {
                     "chapter_number": current_chapter_number,
                     "content": content_to_stream,
-                    "chapter_type": chapter_type.value,
                     "chapter_content": chapter_content.content,
                     "question": sampled_question,
                 },
