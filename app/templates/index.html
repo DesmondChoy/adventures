@@ -12,6 +12,149 @@
     <link rel="stylesheet" href="/static/css/theme.css">
     <style>
         /* Any remaining non-typography styles can stay here */
+        .carousel-container {
+            perspective: 2000px;
+            margin: 40px auto;
+            width: 400px;
+            height: 320px;
+            position: relative;
+            transform-style: preserve-3d;
+        }
+
+        .carousel {
+            width: 100%;
+            height: 200px;
+            position: absolute;
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            top: 50%;
+            left: 50%;
+            transform-origin: center;
+            transform: translate(-50%, -50%);
+        }
+
+        .carousel-card {
+            position: absolute;
+            width: 300px;
+            height: 200px;
+            left: 50%;
+            margin-left: -150px;
+            background: white;
+            border-radius: 12px;
+            border: 2px solid rgba(79, 70, 229, 0.2);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 24px;
+            transform-origin: center;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            opacity: 0.3;
+            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.95);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            will-change: transform, opacity;
+            transform-style: preserve-3d;
+        }
+
+        .carousel-card.active {
+            opacity: 1;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 2px solid rgba(79, 70, 229, 0.4);
+            background: white;
+            z-index: 1;
+        }
+
+        .carousel-card.selected {
+            border: 2px solid rgb(79, 70, 229);
+            box-shadow: 0 0 15px rgba(79, 70, 229, 0.3);
+            opacity: 1;
+            background: white;
+        }
+
+        .carousel-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: rgb(79, 70, 229);
+            margin-bottom: 16px;
+            text-align: center;
+            line-height: 1.4;
+            width: 100%;
+            padding: 0 12px;
+        }
+
+        .carousel-description {
+            font-size: 0.95rem;
+            color: #4B5563;
+            text-align: center;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            line-height: 1.6;
+            max-height: 120px;
+            width: 100%;
+            padding: 0 12px;
+        }
+
+        .carousel-nav {
+            position: absolute;
+            top: 50%;
+            left: -50px;
+            right: -50px;
+            transform: translateY(-50%);
+            display: flex;
+            justify-content: space-between;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .carousel-nav button {
+            background: rgba(79, 70, 229, 0.95);
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            pointer-events: auto;
+            backdrop-filter: blur(4px);
+        }
+
+        .carousel-nav button:hover {
+            background: rgb(67, 56, 202);
+            transform: scale(1.1);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .carousel-nav button:active {
+            transform: scale(0.95);
+        }
+
+        .carousel-nav button svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* Animation for card selection */
+        @keyframes selectCard {
+            0% { transform: scale(1) translateZ(0); }
+            50% { transform: scale(1.1) translateZ(50px); }
+            100% { transform: scale(1) translateZ(0); }
+        }
+
+        .carousel-card.selecting {
+            animation: selectCard 0.3s ease-in-out;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -28,16 +171,32 @@
         <div id="formContainer" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6">
             <form id="storyForm" class="space-y-6">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">
+                    <label class="block text-sm font-medium text-gray-700 mb-4">
                         Choose a Story Category
                     </label>
-                    <select id="storyCategory" name="storyCategory" required
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <option value="">Select a category...</option>
-                        {% for category_id, category_name in story_categories.items() %}
-                        <option value="{{ category_id }}">{{ category_name }}</option>
-                        {% endfor %}
-                    </select>
+                    <input type="hidden" id="storyCategory" name="storyCategory" required>
+                    <div class="carousel-container">
+                        <div class="carousel" id="categoryCarousel">
+                            {% for category_id, category_data in story_categories.items() %}
+                            <div class="carousel-card" data-category="{{ category_id }}" onclick="selectCategory('{{ category_id }}')">
+                                <div class="carousel-title">{{ category_data.name }}</div>
+                                <div class="carousel-description">{{ category_data.description }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="carousel-nav">
+                            <button type="button" onclick="rotateCarousel('prev')" aria-label="Previous">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                                </svg>
+                            </button>
+                            <button type="button" onclick="rotateCarousel('next')" aria-label="Next">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                                    <path d="M8.59 7.41L10 6l6 6-6 6-1.41-1.41L13.17 12z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div>
@@ -108,6 +267,88 @@
 
     <script>
         let storyWebSocket;
+        let currentRotation = 0;
+        let selectedCategory = '';
+        let currentIndex = 0;
+        const totalCategories = parseInt("{{ story_categories|length }}");
+        const rotationAngle = 360 / totalCategories;
+
+        function rotateCarousel(direction) {
+            if (direction === 'next') {
+                currentRotation -= rotationAngle;
+                currentIndex = (currentIndex + 1) % totalCategories;
+            } else {
+                currentRotation += rotationAngle;
+                currentIndex = (currentIndex - 1 + totalCategories) % totalCategories;
+            }
+            
+            const carousel = document.getElementById('categoryCarousel');
+            carousel.style.transform = `translate(-50%, -50%) rotateY(${currentRotation}deg)`;
+            
+            // Update active state
+            updateActiveCard();
+        }
+
+        function updateActiveCard() {
+            const cards = document.getElementsByClassName('carousel-card');
+            Array.from(cards).forEach((card, index) => {
+                card.classList.remove('active');
+                if (index === currentIndex) {
+                    card.classList.add('active');
+                }
+            });
+        }
+
+        function initializeCarousel() {
+            const carousel = document.getElementById('categoryCarousel');
+            const cards = carousel.getElementsByClassName('carousel-card');
+            
+            // Position cards in 3D space
+            for (let i = 0; i < cards.length; i++) {
+                const angle = (i * rotationAngle);
+                const radius = 400;
+                cards[i].style.transform = `rotateY(${angle}deg) translateZ(${radius}px)`;
+                cards[i].style.visibility = 'visible';
+            }
+
+            // Set initial active card
+            updateActiveCard();
+
+            // Add keyboard navigation
+            document.addEventListener('keydown', handleKeyPress);
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'ArrowLeft') {
+                rotateCarousel('prev');
+            } else if (event.key === 'ArrowRight') {
+                rotateCarousel('next');
+            } else if (event.key === 'Enter') {
+                const cards = document.getElementsByClassName('carousel-card');
+                const activeCard = cards[currentIndex];
+                if (activeCard) {
+                    selectCategory(activeCard.dataset.category);
+                }
+            }
+        }
+
+        function selectCategory(categoryId) {
+            selectedCategory = categoryId;
+            document.getElementById('storyCategory').value = categoryId;
+            
+            // Remove selected class from all cards and add to the chosen one
+            const cards = document.getElementsByClassName('carousel-card');
+            Array.from(cards).forEach(card => {
+                card.classList.remove('selected', 'selecting');
+                if (card.dataset.category === categoryId) {
+                    card.classList.add('selected', 'selecting');
+                    setTimeout(() => card.classList.remove('selecting'), 300);
+                }
+            });
+        }
+
+        // Initialize carousel on page load
+        window.addEventListener('load', initializeCarousel);
 
         // Initialize marked.js with custom options
         marked.setOptions({
@@ -370,179 +611,6 @@
                 </div>`;
             document.getElementById('choicesContainer').innerHTML = statsHtml;
         }
-
-
-        // --- State Management Functions ---
-        // Placeholder for now, will be expanded in the next step
-        function manageState(action, data) {
-          // Placeholder
-        }
-
-
-        // --- Event Handlers ---
-
-        function handleSubmit(e) {
-            e.preventDefault();
-
-            const storyCategory = document.getElementById('storyCategory').value;
-            const lessonTopic = document.getElementById('lessonTopic').value;
-            const storyLength = parseInt(document.getElementById('storyLength').value);
-
-            updateProgress(1, storyLength);
-
-            document.getElementById('formContainer').classList.add('hidden');
-            document.getElementById('introText').classList.add('hidden');
-            document.getElementById('storyContainer').classList.remove('hidden');
-
-            showLoader();
-            initWebSocket();
-        }
-
-        function makeChoice(choiceId, choiceText) {
-            if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
-                showLoader();
-                // Clear the stream buffer when making a new choice
-                streamBuffer = '';
-                if (renderTimeout) {
-                    clearTimeout(renderTimeout);
-                }
-
-                const existingState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
-                const currentChapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
-                const history = existingState.story_choices || [];
-                history.push({
-                    chosen_path: choiceId,
-                    choice_text: choiceText
-                });
-
-                const currentState = {
-                    storyCategory: existingState.storyCategory || document.getElementById('storyCategory').value,
-                    lessonTopic: existingState.lessonTopic || document.getElementById('lessonTopic').value,
-                    storyLength: existingState.storyLength || parseInt(document.getElementById('storyLength').value),
-                    choice: {
-                        chosen_path: choiceId,
-                        choice_text: choiceText
-                    },
-                    current_chapter_number: currentChapter + 1,
-                    story_choices: history,
-                    correct_lesson_answers: existingState.correct_lesson_answers || 0,
-                    total_lessons: existingState.total_lessons || 0,
-                    previous_chapter_content: document.getElementById('storyContent').textContent,
-                    all_previous_content: existingState.all_previous_content || [],
-                    lesson_responses: existingState.lesson_responses || []
-                };
-
-                if (currentState.previous_chapter_content && currentState.previous_chapter_content.trim()) {
-                    currentState.all_previous_content.push(currentState.previous_chapter_content);
-                }
-
-                sessionStorage.setItem('storyState', JSON.stringify(currentState));
-                sessionStorage.setItem('storyChapter', currentState.current_chapter_number.toString());
-
-                updateProgress(currentState.current_chapter_number + 1, currentState.storyLength);
-
-                sendMessage({
-                    state: {
-                        current_chapter_id: currentState.choice?.chosen_path || 'start',
-                        current_chapter_number: currentState.current_chapter_number,
-                        story_choices: currentState.story_choices || [],
-                        correct_lesson_answers: currentState.correct_lesson_answers || 0,
-                        total_lessons: currentState.total_lessons || 0,
-                        previous_chapter_content: currentState.previous_chapter_content,
-                        all_previous_content: currentState.all_previous_content,
-                        lesson_responses: currentState.lesson_responses || [],
-                        story_length: currentState.storyLength
-                    }
-                });
-
-                sendMessage({
-                    choice: {
-                        chosen_path: choiceId,
-                        choice_text: choiceText
-                    }
-                });
-
-                document.getElementById('storyContent').textContent = '';
-                document.getElementById('choicesContainer').innerHTML = '';
-            }
-        }
-        
-        // Function to reset application state
-        function resetApplicationState() {
-            // Clear session storage
-            sessionStorage.clear();
-            
-            // Clear markdown buffer and timeout
-            streamBuffer = '';
-            if (renderTimeout) {
-                clearTimeout(renderTimeout);
-            }
-            
-            // Show the form and intro text
-            document.getElementById('formContainer').classList.remove('hidden');
-            document.getElementById('introText').classList.remove('hidden');
-            
-            // Hide the story container and loaders
-            document.getElementById('storyContainer').classList.add('hidden');
-            document.getElementById('loaderOverlay').classList.remove('active');
-            document.getElementById('loaderOverlay').classList.add('hidden');
-            
-            // Clear story content and choices
-            document.getElementById('storyContent').textContent = '';
-            document.getElementById('choicesContainer').innerHTML = '';
-            
-            // Reset progress
-            updateProgress(1, '-');
-            
-            // Close WebSocket if it exists
-            if (storyWebSocket) {
-                storyWebSocket.close();
-                storyWebSocket = null;
-            }
-            
-            // Reset form selections
-            document.getElementById('storyCategory').value = '';
-            document.getElementById('lessonTopic').value = '';
-            document.getElementById('storyLength').value = '';
-        }
-
-        // --- Initialization ---
-
-        document.getElementById('storyForm').addEventListener('submit', handleSubmit);
-
-        // Add click handler to banner
-        document.querySelector('h1 a').addEventListener('click', function(e) {
-            e.preventDefault();
-            resetApplicationState();
-        });
-
-        // On page load, check if we're continuing a story
-        window.onload = function() {
-            const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
-            const chapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
-
-            if (chapter > 0 && storyState && storyState.storyCategory && storyState.lessonTopic && storyState.storyLength) {
-                showLoader();
-                updateProgress(chapter + 1, storyState.storyLength);
-                document.getElementById('formContainer').classList.add('hidden');
-                document.getElementById('introText').classList.add('hidden');
-                document.getElementById('storyContainer').classList.remove('hidden');
-
-                initWebSocket();
-            } else if (chapter > 0) {
-                sessionStorage.clear();
-                window.location.href = '/';
-            } else {
-                hideLoader();
-            }
-        };
-
-        // Clean up WebSocket when leaving the page
-        window.onbeforeunload = function() {
-            if (storyWebSocket) {
-                storyWebSocket.close();
-            }
-        };
     </script>
 </body>
 </html>

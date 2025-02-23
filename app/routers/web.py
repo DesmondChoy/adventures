@@ -71,8 +71,8 @@ async def root(request: Request):
         story_data = load_story_data()
         lesson_data = load_lesson_data()
 
-        # Format story categories for display
-        story_categories = {key: value["name"] for key, value in story_data.items()}
+        # Pass complete story data to template
+        story_categories = story_data  # story_data already contains the categories
 
         logger.info(
             "Preparing landing page data",
@@ -87,9 +87,9 @@ async def root(request: Request):
             "index.html",
             {
                 "request": request,
-                "story_categories": story_categories,  # Pass dict of id:name pairs
+                "story_categories": story_categories,  # This now contains the complete category data
                 "lesson_topics": lesson_data["topic"].unique(),
-                **context,  # Pass session context to template
+                **context,
             },
         )
     except Exception as e:
