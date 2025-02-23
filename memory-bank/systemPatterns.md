@@ -454,3 +454,48 @@ graph TD
    - Memory management
    - WebSocket stability
    - CRITICAL: Prevent content overlap
+
+## UI Component Patterns
+
+### Theme Management
+The application follows a systematic approach to theme management:
+
+1. **Variable Definition**
+   - CSS custom properties at root level
+   - Organized by purpose (primary, text, background, accents)
+   - Clear naming conventions
+
+2. **Component Styling**
+   - Base styles defined in theme.css
+   - Interactive states handled through classes
+   - Progressive enhancement pattern
+
+3. **State Management**
+   - Hover states use opacity for subtlety
+   - Selected states use full colors
+   - Disabled states maintain accessibility
+
+### Interactive Elements
+
+#### Choice Cards Pattern
+```javascript
+// Component Structure
+button (choice-card)
+└── div (content-wrapper)
+    └── p (text-element)
+
+// State Flow
+Initial -> Hover -> Selected -> Disabled
+
+// Visual Progression
+1. Default: Clean, white background
+2. Hover: Subtle indigo tint (0.1 opacity)
+3. Selected: Full indigo background
+4. Disabled: Reduced opacity
+```
+
+#### Accessibility Patterns
+- Focus states clearly visible
+- Color contrast meets WCAG standards
+- Interactive elements properly labeled
+- Keyboard navigation supported

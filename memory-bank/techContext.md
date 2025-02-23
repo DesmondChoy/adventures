@@ -251,3 +251,80 @@ pytest-asyncio==0.21.1
 - Consistent formatting throughout streaming
 - Graceful fallback for parsing errors
 - Clean state management between chapters
+
+## Frontend Architecture
+
+### CSS Organization
+The styling system is organized into three main layers:
+
+1. **Typography (`typography.css`)**
+   - Font definitions and text styles
+   - Root level CSS variables
+   - Color theme variables
+   - Base text components
+
+2. **Theme (`theme.css`)**
+   - Component-specific styles
+   - Interactive states
+   - Color applications
+   - Transitions and animations
+
+3. **Component Styles**
+   - Tailwind utility classes
+   - Component-specific modifications
+   - Dynamic style applications
+
+### Theme System
+```css
+/* Base Theme Variables */
+:root {
+    /* Colors - Primary Theme */
+    --color-primary: #4f46e5;
+    --color-primary-light: #6366f1;
+    --color-primary-lighter: #818cf8;
+    --color-primary-dark: #4338ca;
+    
+    /* Colors - Text */
+    --color-text-primary: #1a1a1a;
+    --color-text-dark: #0f172a;
+    --color-text-light: #ffffff;
+    
+    /* Colors - Background */
+    --color-bg-primary: #ffffff;
+    --color-bg-secondary: #f3f4f6;
+    
+    /* Colors - Accents */
+    --color-accent-light: rgba(79, 70, 229, 0.05);
+    --color-accent-medium: rgba(79, 70, 229, 0.1);
+    --color-accent-strong: rgba(79, 70, 229, 0.2);
+}
+```
+
+### Interactive Components
+
+#### Choice Cards
+- Implemented as button elements
+- Uses CSS custom properties for theming
+- Maintains accessibility standards
+- Progressive enhancement approach
+
+```javascript
+// Base structure
+const baseClasses = [
+    'choice-card',
+    'group',
+    'transition-all',
+    'duration-300',
+    'transform',
+    'hover:scale-[1.02]'
+];
+
+// Interactive states
+.choice-card:hover {
+    background-color: rgba(79, 70, 229, 0.1);
+}
+.choice-card.selected {
+    background-color: var(--color-primary);
+    color: var(--color-text-light);
+}
+```

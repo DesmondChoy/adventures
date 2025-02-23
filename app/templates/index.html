@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/static/css/loader.css">
     <link rel="stylesheet" href="/static/css/typography.css">
+    <link rel="stylesheet" href="/static/css/theme.css">
     <style>
         /* Any remaining non-typography styles can stay here */
     </style>
@@ -285,30 +286,70 @@
 
             if (Array.isArray(choices) && choices.length === 0) {
                 const button = document.createElement('button');
-                button.className = 'w-full p-4 mb-3 text-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500';
+                button.className = 'w-full p-6 mb-3 text-center bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all duration-300 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shadow-lg hover:shadow-xl backdrop-blur-sm';
                 button.textContent = 'Return to Landing Page';
                 button.onclick = resetApplicationState;
                 choicesContainer.appendChild(button);
                 return;
             }
 
-            choices.forEach(choice => {
+            const shadowIntensities = [
+                'shadow-lg',
+                'shadow-xl',
+                'shadow-2xl'
+            ];
+
+            choices.forEach((choice, index) => {
                 const button = document.createElement('button');
-                button.className = 'w-full p-4 mb-3 text-left border rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500';
-                button.textContent = choice.text;
+                // Base classes for the card-like button
+                const baseClasses = [
+                    'w-full',
+                    'p-6',
+                    'mb-4',
+                    'text-left',
+                    'rounded-xl',
+                    'transition-all',
+                    'duration-300',
+                    'transform',
+                    'hover:scale-[1.02]',
+                    'focus:outline-none',
+                    'focus:ring-2',
+                    'focus:ring-offset-2',
+                    shadowIntensities[index],
+                    'hover:shadow-2xl',
+                    'backdrop-blur-sm',
+                    'choice-card',
+                    'group'
+                ];
+                
+                button.className = baseClasses.join(' ');
+                
+                // Create inner content wrapper for better organization
+                const contentWrapper = document.createElement('div');
+                contentWrapper.className = 'relative z-10';
+                
+                // Add main choice text
+                const textElement = document.createElement('p');
+                textElement.className = 'text-gray-800 text-lg font-medium group-hover:text-gray-900 transition-colors duration-300';
+                textElement.textContent = choice.text;
+                
+                contentWrapper.appendChild(textElement);
+                button.appendChild(contentWrapper);
+
                 button.onclick = (e) => {
                     const allButtons = choicesContainer.querySelectorAll('button');
                     allButtons.forEach(btn => {
                         btn.disabled = true;
-                        btn.classList.remove('bg-indigo-600', 'text-white', 'hover:bg-indigo-700');
-                        btn.classList.add('opacity-50');
+                        btn.classList.add('choice-card', 'disabled');
                     });
 
-                    e.target.classList.remove('opacity-50');
-                    e.target.classList.add('bg-indigo-600', 'text-white');
+                    // Add selection effect to clicked button
+                    const selectedButton = e.target.closest('button');
+                    selectedButton.classList.add('selected');
 
                     setTimeout(() => makeChoice(choice.id, choice.text), 500);
                 };
+                
                 choicesContainer.appendChild(button);
             });
         }

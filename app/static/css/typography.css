@@ -3,12 +3,11 @@
 /* Import Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Andika:wght@400;500;700&display=swap');
 
-/* Base typography settings */
+/* Theme settings */
 :root {
+    /* Typography */
     --font-primary: 'Andika', system-ui, -apple-system, sans-serif;
     --font-code: monospace;
-    --color-text-primary: #1a1a1a;
-    --color-text-dark: #0f172a;
     --line-height-content: 1.7;
     --font-size-content: 1.2rem;
     --font-size-sm: 0.875rem;
@@ -17,6 +16,31 @@
     --font-size-xl: 1.25rem;
     --font-size-2xl: 1.5rem;
     --font-size-4xl: 2.25rem;
+
+    /* Colors - Primary Theme */
+    --color-primary: #4f46e5; /* indigo-600 */
+    --color-primary-light: #6366f1; /* indigo-500 */
+    --color-primary-lighter: #818cf8; /* indigo-400 */
+    --color-primary-dark: #4338ca; /* indigo-700 */
+    
+    /* Colors - Text */
+    --color-text-primary: #1a1a1a;
+    --color-text-dark: #0f172a;
+    --color-text-light: #ffffff;
+    
+    /* Colors - Background */
+    --color-bg-primary: #ffffff;
+    --color-bg-secondary: #f3f4f6; /* gray-100 */
+    
+    /* Colors - Accents */
+    --color-accent-light: rgba(79, 70, 229, 0.05); /* indigo-600/5 */
+    --color-accent-medium: rgba(79, 70, 229, 0.1); /* indigo-600/10 */
+    --color-accent-strong: rgba(79, 70, 229, 0.2); /* indigo-600/20 */
+    
+    /* Colors - States */
+    --color-hover: #4338ca; /* indigo-700 */
+    --color-focus: #6366f1; /* indigo-500 */
+    --color-disabled: rgba(0, 0, 0, 0.5);
 }
 
 /* Global font settings */

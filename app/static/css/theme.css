@@ -1,0 +1,64 @@
+/* Theme styles for Learning Odyssey */
+
+/* Primary buttons */
+.btn-primary {
+    background-color: var(--color-primary);
+    color: var(--color-text-light);
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--color-hover);
+}
+
+.btn-primary:focus {
+    outline: none;
+    ring: 2px;
+    ring-color: var(--color-focus);
+    ring-offset: 2px;
+}
+
+/* Choice cards */
+.choice-card {
+    background-color: var(--color-bg-primary);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.choice-card:hover {
+    border-color: var(--color-accent-light);
+    background-color: rgba(79, 70, 229, 0.1); /* Very subtle indigo tint */
+}
+
+.choice-card.selected {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary-dark);
+    color: var(--color-text-light);
+}
+
+.choice-card:disabled {
+    opacity: var(--color-disabled);
+    cursor: not-allowed;
+}
+
+/* Progress bar */
+.progress-bar {
+    background-color: var(--color-bg-secondary);
+}
+
+.progress-bar-fill {
+    background-color: var(--color-primary);
+}
+
+/* Gradients for choice cards */
+.gradient-primary-light {
+    background-image: linear-gradient(to bottom, var(--color-primary-lighter), var(--color-primary-light));
+}
+
+.gradient-primary-medium {
+    background-image: linear-gradient(to bottom, var(--color-primary-light), var(--color-primary));
+}
+
+.gradient-primary-dark {
+    background-image: linear-gradient(to bottom, var(--color-primary), var(--color-primary-dark));
+} 
