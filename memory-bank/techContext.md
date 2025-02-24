@@ -19,6 +19,7 @@
   - Error recovery
   - Metadata tracking for element consistency
   - Plot twist phase guidance
+  - Fixed story length (10 chapters)
 
 - **Language**: Python 3.x
   - Type hints throughout
@@ -89,114 +90,120 @@ pytest-asyncio==0.21.1
   * Performance metrics
 
 ## Technical Considerations
-- **State Management (`app/models/story.py`):** 
+
+### State Management System
+- **Client-Side State (`app/templates/index.html`)**
+  * Centralized manageState function:
+    - initialize: Sets up new story state
+    - update: Modifies existing state
+    - reset: Clears all state
+  * Session storage persistence
+  * Fixed story length (10 chapters)
+  * Screen state management
+  * Carousel selection tracking
+  * Progress monitoring
+  * WebSocket synchronization
+
+- **Server-Side State (`app/models/story.py`)**
   * Real-time WebSocket synchronization
   * Complete state serialization
-  * Story length constraints (5-10 chapters)
+  * Fixed story length (10 chapters)
   * Error recovery system
-  * Critical state preservation during client updates:
-    - Narrative elements (setting, characters, rules)
-    - Sensory details (visuals, sounds, smells)
+  * Critical state preservation:
+    - Narrative elements
+    - Sensory details
     - Theme and moral teaching
     - Plot twist and phase guidance
-    - Metadata for consistency tracking
+    - Metadata for consistency
   * URL parameters handling:
-    - `story_category` and `lesson_topic` passed via URL
-    - Not included in `validated_state`
+    - Story category and lesson topic via URL
+    - Not included in validated_state
     - Used for initial state setup only
 
-- **LLM Integration (`app/services/llm/`):** 
-  * Provider abstraction layer
-  * Response standardization
-  * Rate limiting implementation
-  * Error handling system
-  * State handling requirements:
-    - Must pass complete AdventureState to build_system_prompt
-    - Direct attribute access for prompt construction
-    - Story config used only for initial setup
-  * Enhanced features:
-    - Phase-specific plot twist guidance
-    - Element consistency validation
-    - Narrative continuity enforcement
+### LLM Integration (`app/services/llm/`)
+* Provider abstraction layer
+* Response standardization
+* Rate limiting implementation
+* Error handling system
+* State handling requirements:
+  - Must pass complete AdventureState
+  - Direct attribute access for prompts
+  - Story config used only for setup
+* Enhanced features:
+  - Phase-specific plot twist guidance
+  - Element consistency validation
+  - Narrative continuity enforcement
 
-- **Story Elements (`app/services/chapter_manager.py`):** 
-  * Comprehensive element selection and validation
-  * Metadata tracking for consistency
-  * Phase-specific plot twist guidance
-  * Enhanced error handling with proper recovery mechanisms
+### Story Elements (`app/services/chapter_manager.py`)
+* Comprehensive element selection
+* Metadata tracking for consistency
+* Phase-specific plot twist guidance
+* Enhanced error handling with recovery
 
-## External Dependencies
+## UI Components
 
-### LLM Providers (`app/services/llm/providers.py`)
-- OpenAI API client
-- Gemini API client
-- Provider interface
-- Response mapping
+### Carousel Component
+- **Location**: `app/static/css/carousel.css`
+- **Description**: A reusable 3D carousel component with smooth transitions, animations, and card flipping functionality
+- **Features**:
+  - 3D perspective rotation
+  - Active card expansion (340px width vs 300px base)
+  - Infinite glowing animation on active cards
+  - Card flip animation on selection
+  - Portrait orientation (3:4 aspect ratio)
+  - Responsive navigation controls
+  - Smooth transitions using cubic-bezier timing
+- **States**:
+  - Default: 300x400px, 0.3 opacity
+  - Active: 340x453px, glowing animation, full opacity
+  - Selected: Triggers card flip animation
+  - Front face: Full-width image display
+  - Back face: Title and description content
+- **Customization**:
+  - Uses theme colors (indigo-600)
+  - Configurable card dimensions
+  - Modular structure for reuse
+  - Image handling with object-fit
+- **Technical Details**:
+  - Uses CSS transform-style: preserve-3d
+  - Hardware-accelerated animations
+  - Will-change optimization for performance
+  - Backdrop-filter for glass effect
+  - Backface visibility hidden for 3D rendering
+  - Two-sided card implementation
+- **Image Requirements**:
+  - Location: `app/static/images/categories/`
+  - Naming: Matches category IDs
+  - Aspect ratio: 3:4 (portrait)
+  - Min resolution: 680x906px
+  - Format: JPG/WebP
+  - Content: Theme-appropriate and child-friendly
 
-### Testing Framework (`tests/`)
-- pytest (unit tests):
-  * Component isolation
-  * Mocked dependencies
-  * Error scenarios
-  * Edge cases
-  * Element consistency validation
-- pytest-asyncio (async):
-  * WebSocket operations
-  * LLM service calls
-  * State synchronization
-  * Timeout handling
-- story_simulation.py:
-  * End-to-end testing
-  * Adventure progression
-  * Content validation
-  * Error recovery
-  * Plot twist progression validation
-- State validation:
-  * Serialization
-  * Persistence
-  * Recovery
-  * Consistency
-  * Element tracking
-  * Metadata validation
-
-## Development Tools
-
-### Required
-- Python 3.x
-- pip package manager
-- Git version control
-- VS Code with extensions
-- LLM provider accounts
-
-### Recommended
-- WebSocket client
-- SQLite browser
-- API testing tools
-- Logging tools
-
-## Monitoring
-
-### System Health
-- WebSocket connections
-- State synchronization
-- LLM availability
-- Error frequency
-- Element consistency
-
-### Performance Metrics
-- Response latency
-- State update speed
-- Content generation time
-- Error recovery time
-- Metadata tracking overhead
-
-### Testing Coverage
-- Story simulations
-- State transitions
-- Provider compatibility
-- Error scenarios
-- Element consistency
-- Plot twist progression
+### Mobile Responsiveness (`app/static/css/carousel.css`)
+- Breakpoint: max-width 768px
+- Container dimensions:
+  * Desktop: 400px × 420px
+  * Mobile: 320px × 360px
+- Card dimensions:
+  * Desktop regular: 300px × 400px
+  * Desktop active: 340px × 453px
+  * Mobile regular: 200px × 267px
+  * Mobile active: 240px × 320px
+- Typography scaling:
+  * Desktop title: 1.25rem
+  * Desktop description: 0.95rem
+  * Mobile title: 0.85rem
+  * Mobile description: 0.75rem
+- Touch interaction:
+  * Swipe gesture navigation
+  * 50px swipe threshold
+  * Event prevention for smooth scrolling
+  * Hidden navigation arrows
+- Content optimization:
+  * Reduced padding (4px)
+  * Increased line clamp (10)
+  * Tighter line height (1.35)
+  * Maintained aspect ratios
 
 ## Text Rendering and Streaming
 
@@ -251,145 +258,3 @@ pytest-asyncio==0.21.1
 - Consistent formatting throughout streaming
 - Graceful fallback for parsing errors
 - Clean state management between chapters
-
-## Frontend Architecture
-
-### CSS Organization
-The styling system is organized into three main layers:
-
-1. **Typography (`typography.css`)**
-   - Font definitions and text styles
-   - Root level CSS variables
-   - Color theme variables
-   - Base text components
-
-2. **Theme (`theme.css`)**
-   - Component-specific styles
-   - Interactive states
-   - Color applications
-   - Transitions and animations
-
-3. **Component Styles**
-   - Tailwind utility classes
-   - Component-specific modifications
-   - Dynamic style applications
-
-### Theme System
-```css
-/* Base Theme Variables */
-:root {
-    /* Colors - Primary Theme */
-    --color-primary: #4f46e5;
-    --color-primary-light: #6366f1;
-    --color-primary-lighter: #818cf8;
-    --color-primary-dark: #4338ca;
-    
-    /* Colors - Text */
-    --color-text-primary: #1a1a1a;
-    --color-text-dark: #0f172a;
-    --color-text-light: #ffffff;
-    
-    /* Colors - Background */
-    --color-bg-primary: #ffffff;
-    --color-bg-secondary: #f3f4f6;
-    
-    /* Colors - Accents */
-    --color-accent-light: rgba(79, 70, 229, 0.05);
-    --color-accent-medium: rgba(79, 70, 229, 0.1);
-    --color-accent-strong: rgba(79, 70, 229, 0.2);
-}
-```
-
-### Interactive Components
-
-#### Choice Cards
-- Implemented as button elements
-- Uses CSS custom properties for theming
-- Maintains accessibility standards
-- Progressive enhancement approach
-
-```javascript
-// Base structure
-const baseClasses = [
-    'choice-card',
-    'group',
-    'transition-all',
-    'duration-300',
-    'transform',
-    'hover:scale-[1.02]'
-];
-
-// Interactive states
-.choice-card:hover {
-    background-color: rgba(79, 70, 229, 0.1);
-}
-.choice-card.selected {
-    background-color: var(--color-primary);
-    color: var(--color-text-light);
-}
-```
-
-## UI Components
-
-### Carousel Component
-- **Location**: `app/static/css/carousel.css`
-- **Description**: A reusable 3D carousel component with smooth transitions, animations, and card flipping functionality
-- **Features**:
-  - 3D perspective rotation
-  - Active card expansion (340px width vs 300px base)
-  - Infinite glowing animation on active cards
-  - Card flip animation on selection
-  - Portrait orientation (3:4 aspect ratio)
-  - Responsive navigation controls
-  - Smooth transitions using cubic-bezier timing
-- **States**:
-  - Default: 300x400px, 0.3 opacity
-  - Active: 340x453px, glowing animation, full opacity
-  - Selected: Triggers card flip animation
-  - Front face: Full-width image display
-  - Back face: Title and description content
-- **Customization**:
-  - Uses theme colors (indigo-600)
-  - Configurable card dimensions
-  - Modular structure for reuse
-  - Image handling with object-fit
-- **Technical Details**:
-  - Uses CSS transform-style: preserve-3d
-  - Hardware-accelerated animations
-  - Will-change optimization for performance
-  - Backdrop-filter for glass effect
-  - Backface visibility hidden for 3D rendering
-  - Two-sided card implementation
-- **Image Requirements**:
-  - Location: `app/static/images/categories/`
-  - Naming: Matches category IDs (e.g., `festival_of_lights_and_colors.jpg`)
-  - Aspect ratio: 3:4 (portrait)
-  - Min resolution: 680x906px
-  - Format: JPG/WebP
-  - Content: Theme-appropriate and child-friendly
-
-### Mobile Responsiveness (`app/static/css/carousel.css`)
-- Breakpoint: max-width 768px
-- Container dimensions:
-  * Desktop: 400px × 420px
-  * Mobile: 320px × 360px
-- Card dimensions:
-  * Desktop regular: 300px × 400px
-  * Desktop active: 340px × 453px
-  * Mobile regular: 200px × 267px
-  * Mobile active: 240px × 320px
-- Typography scaling:
-  * Desktop title: 1.25rem
-  * Desktop description: 0.95rem
-  * Mobile title: 0.85rem
-  * Mobile description: 0.75rem
-- Touch interaction:
-  * Swipe gesture navigation
-  * 50px swipe threshold
-  * Event prevention for smooth scrolling
-  * Hidden navigation arrows
-- Content optimization:
-  * Reduced padding (4px)
-  * Increased line clamp (10)
-  * Tighter line height (1.35)
-  * Maintained aspect ratios

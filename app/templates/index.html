@@ -514,6 +514,210 @@
             }
         }
 
+        // --- State Management Functions ---
+        function manageState(action, data) {
+            switch (action) {
+                case 'initialize':
+                    // Initialize state with selected category and lesson
+                    const initialState = {
+                        storyCategory: data.storyCategory,
+                        lessonTopic: data.lessonTopic,
+                        storyLength: 10, // Fixed at 10 chapters
+                        current_chapter_number: 0,
+                        story_choices: [],
+                        correct_lesson_answers: 0,
+                        total_lessons: 0,
+                        all_previous_content: [],
+                        lesson_responses: []
+                    };
+                    sessionStorage.setItem('storyState', JSON.stringify(initialState));
+                    sessionStorage.setItem('storyChapter', '0');
+                    return initialState;
+
+                case 'update':
+                    const existingState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
+                    const updatedState = { ...existingState, ...data };
+                    sessionStorage.setItem('storyState', JSON.stringify(updatedState));
+                    if (data.current_chapter_number !== undefined) {
+                        sessionStorage.setItem('storyChapter', data.current_chapter_number.toString());
+                    }
+                    return updatedState;
+
+                case 'reset':
+                    sessionStorage.clear();
+                    return null;
+
+                default:
+                    console.error('Unknown state action:', action);
+                    return null;
+            }
+        }
+
+        function makeChoice(choiceId, choiceText) {
+            if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
+                showLoader();
+                // Clear the stream buffer when making a new choice
+                streamBuffer = '';
+                if (renderTimeout) {
+                    clearTimeout(renderTimeout);
+                }
+
+                const existingState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
+                const currentChapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
+                const history = existingState.story_choices || [];
+                history.push({
+                    chosen_path: choiceId,
+                    choice_text: choiceText
+                });
+
+                const currentState = manageState('update', {
+                    choice: {
+                        chosen_path: choiceId,
+                        choice_text: choiceText
+                    },
+                    current_chapter_number: currentChapter + 1,
+                    story_choices: history,
+                    previous_chapter_content: document.getElementById('storyContent').textContent,
+                    all_previous_content: [...(existingState.all_previous_content || []), document.getElementById('storyContent').textContent]
+                });
+
+                updateProgress(currentState.current_chapter_number + 1, currentState.storyLength);
+
+                sendMessage({
+                    state: {
+                        current_chapter_id: currentState.choice?.chosen_path || 'start',
+                        current_chapter_number: currentState.current_chapter_number,
+                        story_choices: currentState.story_choices || [],
+                        correct_lesson_answers: currentState.correct_lesson_answers || 0,
+                        total_lessons: currentState.total_lessons || 0,
+                        previous_chapter_content: currentState.previous_chapter_content,
+                        all_previous_content: currentState.all_previous_content,
+                        lesson_responses: currentState.lesson_responses || [],
+                        story_length: currentState.storyLength
+                    }
+                });
+
+                sendMessage({
+                    choice: {
+                        chosen_path: choiceId,
+                        choice_text: choiceText
+                    }
+                });
+
+                document.getElementById('storyContent').textContent = '';
+                document.getElementById('choicesContainer').innerHTML = '';
+            }
+        }
+
+        // Function to reset application state
+        function resetApplicationState() {
+            // Clear state
+            manageState('reset');
+            
+            // Clear markdown buffer and timeout
+            streamBuffer = '';
+            if (renderTimeout) {
+                clearTimeout(renderTimeout);
+            }
+            
+            // Reset UI to initial state
+            document.getElementById('storyCategoryScreen').classList.remove('hidden');
+            document.getElementById('lessonTopicScreen').classList.add('hidden');
+            document.getElementById('storyContainer').classList.add('hidden');
+            document.getElementById('introText').classList.remove('hidden');
+            
+            // Hide loaders
+            document.getElementById('loaderOverlay').classList.remove('active');
+            document.getElementById('loaderOverlay').classList.add('hidden');
+            
+            // Clear content
+            document.getElementById('storyContent').textContent = '';
+            document.getElementById('choicesContainer').innerHTML = '';
+            
+            // Reset progress
+            updateProgress(1, '-');
+            
+            // Close WebSocket if it exists
+            if (storyWebSocket) {
+                storyWebSocket.close();
+                storyWebSocket = null;
+            }
+            
+            // Reset selections
+            document.getElementById('storyCategory').value = '';
+            document.getElementById('lessonTopic').value = '';
+            
+            // Reset carousel selections
+            const cards = document.getElementsByClassName('carousel-card');
+            Array.from(cards).forEach(card => {
+                card.classList.remove('selected', 'selecting');
+            });
+        }
+
+        // --- Event Handlers ---
+        function startAdventure() {
+            if (!selectedCategory || !selectedLessonTopic) {
+                console.error('Both story category and lesson topic must be selected');
+                return;
+            }
+
+            // Initialize state with selected options
+            manageState('initialize', {
+                storyCategory: selectedCategory,
+                lessonTopic: selectedLessonTopic
+            });
+
+            document.getElementById('lessonTopicScreen').classList.add('hidden');
+            document.getElementById('storyContainer').classList.remove('hidden');
+            document.getElementById('introText').classList.add('hidden');
+
+            showLoader();
+            initWebSocket();
+        }
+
+        // --- Initialization ---
+
+        // Add click handler to banner for reset
+        document.querySelector('h1 a').addEventListener('click', function(e) {
+            e.preventDefault();
+            resetApplicationState();
+        });
+
+        // On page load, check if we're continuing a story
+        window.onload = function() {
+            const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
+            const chapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
+
+            if (chapter > 0 && storyState && storyState.storyCategory && storyState.lessonTopic) {
+                showLoader();
+                updateProgress(chapter + 1, storyState.storyLength);
+                document.getElementById('storyCategoryScreen').classList.add('hidden');
+                document.getElementById('lessonTopicScreen').classList.add('hidden');
+                document.getElementById('introText').classList.add('hidden');
+                document.getElementById('storyContainer').classList.remove('hidden');
+
+                // Restore selections
+                selectedCategory = storyState.storyCategory;
+                selectedLessonTopic = storyState.lessonTopic;
+                document.getElementById('storyCategory').value = selectedCategory;
+                document.getElementById('lessonTopic').value = selectedLessonTopic;
+
+                initWebSocket();
+            } else if (chapter > 0) {
+                manageState('reset');
+                window.location.href = '/';
+            } else {
+                hideLoader();
+            }
+        };
+
+        // Clean up WebSocket when leaving the page
+        window.onbeforeunload = function() {
+            if (storyWebSocket) {
+                storyWebSocket.close();
+            }
+        };
+
         // --- UI Update Functions ---
 
         function appendStoryText(text) {
