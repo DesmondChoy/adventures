@@ -27,6 +27,7 @@
         <!-- Screen 1: Story Category Selection -->
         <div id="storyCategoryScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6">
             <input type="hidden" id="storyCategory" name="storyCategory" required>
+            <div class="swipe-tip">Swipe to explore <span class="hand">➜</span></div>
             <div class="carousel-container">
                 <div class="carousel" id="categoryCarousel">
                     {% for category_id, category_data in story_categories.items() %}
@@ -314,6 +315,9 @@
             
             carousel.addEventListener('touchstart', function(event) {
                 touchStartX = event.touches[0].clientX;
+                // Hide swipe tip on first touch
+                const swipeTip = document.querySelector('.swipe-tip');
+                if (swipeTip) swipeTip.style.display = 'none';
             }, false);
             
             carousel.addEventListener('touchmove', function(event) {

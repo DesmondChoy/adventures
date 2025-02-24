@@ -277,6 +277,87 @@
     fill: currentColor;
 }
 
+/* Swipe Tip */
+.swipe-tip {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(79, 70, 229, 0.9);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 2000;
+    animation: fadeOutTip 3s forwards, tipGlow 1.5s ease-in-out infinite;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.swipe-tip::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.4),
+        transparent
+    );
+    animation: shine 2s ease-in-out infinite;
+}
+
+.swipe-tip .hand {
+    display: inline-block;
+    animation: swipeHint 1.5s ease-in-out infinite;
+}
+
+@keyframes fadeOutTip {
+    0% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; visibility: hidden; }
+}
+
+@keyframes swipeHint {
+    0% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    100% { transform: translateX(-5px); }
+}
+
+@keyframes tipGlow {
+    0% {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(79, 70, 229, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(79, 70, 229, 0.6), 0 0 30px rgba(79, 70, 229, 0.4);
+        border: 1px solid rgba(79, 70, 229, 0.8);
+    }
+    100% {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(79, 70, 229, 0.4);
+    }
+}
+
+@keyframes shine {
+    0% {
+        left: -100%;
+    }
+    50% {
+        left: 100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
 /* Animations */
 @keyframes cardGlow {
     0% {
