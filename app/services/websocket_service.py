@@ -51,17 +51,32 @@ async def process_choice(
     if not state:
         return None, None, False
 
-    # Extract choice information
+    # Extract choice information and debug state
+    logger.debug(f"Raw choice_data: {choice_data}")
     if isinstance(choice_data, dict):
-        chosen_path = choice_data.get("chosen_path", "")
-        choice_text = choice_data.get("choice_text", "")
+        chosen_path = choice_data.get("id") or choice_data.get("chosen_path", "")
+        choice_text = choice_data.get("text") or choice_data.get("choice_text", "")
+        if "state" in choice_data:
+            logger.debug("Choice data contains state")
+            logger.debug(
+                f"State chapters: {len(choice_data['state'].get('chapters', []))}"
+            )
+            if choice_data["state"].get("chapters"):
+                last_chapter = choice_data["state"]["chapters"][-1]
+                logger.debug(f"Last chapter type: {last_chapter.get('chapter_type')}")
+                logger.debug(f"Last chapter has choices: {'choices' in last_chapter}")
     else:
-        chosen_path = choice_data
+        chosen_path = str(choice_data)
         choice_text = "Unknown choice"
+        logger.debug("Choice data is not a dictionary")
 
     # Handle non-start choices
     if chosen_path != "start":
+        logger.debug(f"Processing non-start choice: {chosen_path}")
+        logger.debug(f"Current state chapters: {len(state.chapters)}")
+
         current_chapter_number = len(state.chapters) + 1
+        logger.debug(f"Processing chapter {current_chapter_number}")
         chapter_type = state.planned_chapter_types[current_chapter_number - 1]
         if not isinstance(chapter_type, ChapterType):
             chapter_type = ChapterType(chapter_type)
@@ -92,6 +107,7 @@ async def process_choice(
                 chosen_path=chosen_path, choice_text=choice_text
             )
             previous_chapter.response = story_response
+            logger.debug(f"Created story response: {story_response}")
 
         state.current_chapter_id = chosen_path
 
@@ -175,7 +191,7 @@ async def stream_and_send_chapter(
     if not isinstance(chapter_type, ChapterType):
         chapter_type = ChapterType(chapter_type)
 
-    # Send complete chapter data
+    # Send complete chapter data with choices included
     await websocket.send_json(
         {
             "type": "chapter_update",
@@ -184,14 +200,20 @@ async def stream_and_send_chapter(
                 "current_chapter": {
                     "chapter_number": current_chapter_number,
                     "content": content_to_stream,
-                    "chapter_content": chapter_content.content,
+                    "chapter_content": {
+                        "content": chapter_content.content,
+                        "choices": [
+                            {"text": choice.text, "next_chapter": choice.next_chapter}
+                            for choice in chapter_content.choices
+                        ],
+                    },
                     "question": sampled_question,
                 },
             },
         }
     )
 
-    # Send choices
+    # Also send choices separately for backward compatibility
     await websocket.send_json(
         {
             "type": "choices",

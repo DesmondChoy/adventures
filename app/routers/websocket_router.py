@@ -26,20 +26,36 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
             data = await websocket.receive_json()
             # logger.debug(f"Received data: {data}")
 
-            if "state" in data:
-                validated_state = data["state"]
-                if state_manager.get_current_state() is None:
-                    total_chapters = validated_state["story_length"]
+            # Extract state and choice data
+            validated_state = data.get("state")
+            choice_data = data.get("choice")
+
+            # Validate required fields
+            if not validated_state:
+                logger.error("Missing state in message")
+                await websocket.send_text("Missing state in message")
+                continue
+
+            if not choice_data:
+                logger.error("Missing choice in message")
+                await websocket.send_text("Missing choice in message")
+                continue
+
+            try:
+                # Handle state initialization
+                current_state = state_manager.get_current_state()
+                if current_state is None:
+                    # Initialize new state
+                    total_chapters = validated_state.get(
+                        "story_length", 10
+                    )  # Default to 10 chapters
                     logger.debug(
                         f"Initializing state with total_chapters: {total_chapters}"
                     )
                     try:
-                        # Initialize state with story category
-                        state_manager.initialize_state(
+                        state = state_manager.initialize_state(
                             total_chapters, lesson_topic, story_category
                         )
-                        state = state_manager.get_current_state()
-
                         logger.info(
                             "Initialized adventure state",
                             extra={
@@ -48,7 +64,6 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                                 "total_chapters": total_chapters,
                             },
                         )
-
                     except ValueError as e:
                         error_message = f"Error initializing state: {e}"
                         logger.error(error_message)
@@ -56,24 +71,32 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                         await websocket.close(code=1001)
                         return  # Exit to prevent further processing
                 else:
-                    logger.debug("Updating existing state from client.")
+                    # Update existing state with validated state
+                    logger.debug("Updating state from validated state")
+                    logger.debug(
+                        f"Validated state chapters: {len(validated_state.get('chapters', []))}"
+                    )
+                    if validated_state.get("chapters"):
+                        last_chapter = validated_state["chapters"][-1]
+                        logger.debug(
+                            f"Last chapter type: {last_chapter.get('chapter_type')}"
+                        )
+                        logger.debug(
+                            f"Last chapter has choices: {'choices' in last_chapter}"
+                        )
                     state_manager.update_state_from_client(validated_state)
                     state = state_manager.get_current_state()
+                    logger.debug(
+                        f"State after update - chapters: {len(state.chapters)}"
+                    )
 
-            if (
-                state is None
-            ):  # Check if state is still None after initialization/update
-                logger.error("State is None after initialization/update.")
-                await websocket.send_text(
-                    "An error occurred. Please restart the adventure."
-                )
-                continue
+                if state is None:
+                    logger.error("State is None after initialization/update.")
+                    await websocket.send_text(
+                        "An error occurred. Please restart the adventure."
+                    )
+                    continue
 
-            choice_data = data.get("choice")
-            if choice_data is None:
-                continue
-
-            try:
                 # Process the choice and generate next chapter
                 (
                     chapter_content,

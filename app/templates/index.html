@@ -219,10 +219,20 @@
                         const currentChapter = savedState.chapters.length;
                         updateProgress(currentChapter + 1, savedState.story_length);
                         
-                        // Then send the state to the server
+                        // Send both state and initial choice to server
                         this.connection.send(JSON.stringify({
-                            type: 'resume',
-                            state: savedState
+                            state: savedState,
+                            choice: 'start'  // Initial choice to trigger state processing
+                        }));
+                    } else {
+                        // For new adventures, send initial state
+                        const initialState = manageState('initialize', {
+                            storyCategory: document.getElementById('storyCategory').value,
+                            lessonTopic: document.getElementById('lessonTopic').value
+                        });
+                        this.connection.send(JSON.stringify({
+                            state: initialState,
+                            choice: 'start'
                         }));
                     }
                 };
@@ -640,7 +650,7 @@
                 const existingState = stateManager.loadState() || {};
                 const currentChapter = existingState.chapters || [];
                 
-                // Create new chapter data
+                // Create new chapter data with complete structure
                 const newChapter = {
                     chapter_number: currentChapter.length + 1,
                     content: document.getElementById('storyContent').textContent,
@@ -648,6 +658,10 @@
                     response: {
                         chosen_path: choiceId,
                         choice_text: choiceText
+                    },
+                    chapter_content: {
+                        content: document.getElementById('storyContent').textContent,
+                        choices: [] // Empty choices since this is a completed chapter
                     }
                 };
 
@@ -658,10 +672,14 @@
 
                 updateProgress(updatedState.chapters.length + 1, updatedState.story_length);
 
-                // Send the complete state to the server
+                // Send state and choice data to server
                 sendMessage({
-                    type: 'resume',
-                    state: updatedState
+                    state: updatedState,
+                    choice: {
+                        id: choiceId,
+                        text: choiceText,
+                        chapter_number: currentChapter.length + 1
+                    }
                 });
 
                 // Clear UI for next chapter
@@ -869,6 +887,11 @@
                 button.appendChild(contentWrapper);
 
                 button.onclick = (e) => {
+                    if (storyWebSocket?.readyState !== WebSocket.OPEN) {
+                        showError('Connection lost. Please refresh the page.');
+                        return;
+                    }
+
                     const allButtons = choicesContainer.querySelectorAll('button');
                     allButtons.forEach(btn => {
                         btn.disabled = true;
@@ -879,7 +902,7 @@
                     const selectedButton = e.target.closest('button');
                     selectedButton.classList.add('selected');
 
-                    setTimeout(() => makeChoice(choice.id, choice.text), 500);
+                    makeChoice(choice.id, choice.text);
                 };
                 
                 choicesContainer.appendChild(button);
