@@ -106,6 +106,27 @@
     - Theme and moral teaching
     - Plot twist and phase guidance
     - Metadata for consistency
+  * State Update Handling:
+    - Critical response preservation for LESSON chapters
+    - Proper chapter type determination from planned_chapter_types
+    - Robust handling of existing vs new chapters:
+      * Existing chapters: preserve responses, update content only
+      * New chapters: set appropriate response based on type
+    - State consistency through sorted chapter ordering
+    - Enhanced error handling with detailed logging
+    - CRITICAL: Cannot recreate responses from client data
+
+  * LESSON Chapter Requirements:
+    - Must call process_consequences() after every LESSON chapter
+    - Function generates narrative guidance based on:
+      * Whether answer was correct (is_correct)
+      * The lesson question
+      * The chosen answer
+      * Current chapter number
+    - Critical for story continuity and educational impact
+    - Influences subsequent chapter generation
+    - CRITICAL: Skipping this step breaks the educational narrative flow
+  
   * URL parameters handling:
     - Story category and lesson topic via URL
     - Not included in validated_state
