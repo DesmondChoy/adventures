@@ -59,7 +59,7 @@
             </div>
             <button onclick="goToLessonTopicScreen()"
                     class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                Choose a Lesson Topic
+                Confirm Your Adventure
             </button>
         </div>
 
@@ -98,7 +98,7 @@
             </div>
             <button onclick="startAdventure()"
                     class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                Start Adventure
+                Let's dive in!
             </button>
         </div>
 
@@ -363,13 +363,35 @@
         }
 
         // --- Navigation Functions ---
+        // Function to show error messages
+        function showError(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-md bg-red-500 text-white shadow-lg transition-opacity duration-300';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         function goToLessonTopicScreen() {
+            if (!selectedCategory) {
+                showError('Please select a story category to continue');
+                return;
+            }
             document.getElementById('storyCategoryScreen').classList.add('hidden');
             document.getElementById('lessonTopicScreen').classList.remove('hidden');
             initializeLessonCarousel();
         }
 
         function startAdventure() {
+            if (!selectedLessonTopic) {
+                showError('Please select a lesson topic to begin');
+                return;
+            }
             document.getElementById('lessonTopicScreen').classList.add('hidden');
             document.getElementById('storyContainer').classList.remove('hidden');
             initWebSocket();
