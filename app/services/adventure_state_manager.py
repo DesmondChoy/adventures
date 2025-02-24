@@ -153,52 +153,51 @@ class AdventureStateManager:
         try:
             if "chapters" in validated_state:
                 logger.debug("Updating chapters from client state.")
-                chapters = []
-                for chapter_data in validated_state["chapters"]:
-                    # Debug raw incoming data
-                    logger.debug(f"Raw chapter data: {chapter_data}")
+                client_chapters = validated_state["chapters"]
+                new_chapters = []
+
+                for client_chapter in client_chapters:
                     # Validate element consistency and plot twist progression
-                    self.validate_element_consistency(chapter_data)
-                    self.validate_plot_twist_progression(chapter_data)
+                    self.validate_element_consistency(client_chapter)
+                    self.validate_plot_twist_progression(client_chapter)
 
-                    chapter_type = ChapterType(chapter_data["chapter_type"])
+                    chapter_number = client_chapter["chapter_number"]
+                    # Find existing chapter in self.state.chapters
+                    existing_chapter = next(
+                        (
+                            ch
+                            for ch in self.state.chapters
+                            if ch.chapter_number == chapter_number
+                        ),
+                        None,
+                    )
 
-                    response = None
-                    if "response" in chapter_data and chapter_data["response"]:
-                        if chapter_type == ChapterType.STORY:
-                            response = StoryResponse(
-                                chosen_path=chapter_data["response"]["chosen_path"],
-                                choice_text=chapter_data["response"]["choice_text"],
-                            )
-                        else:  # ChapterType.LESSON
-                            response = LessonResponse(
-                                question=chapter_data["response"]["question"],
-                                chosen_answer=chapter_data["response"]["chosen_answer"],
-                                is_correct=chapter_data["response"]["is_correct"],
-                            )
+                    if existing_chapter:
+                        # Update existing chapter with client data, preserving response
+                        logger.debug(f"Updating existing chapter {chapter_number}")
+                        existing_chapter.content = client_chapter["content"]
 
-                    # Handle chapter content with proper choice preservation
-                    content = chapter_data.get("content", "")
-                    choices = []
-
-                    # First try to get choices from chapter_content
-                    if "chapter_content" in chapter_data:
-                        logger.debug("Found chapter_content, checking for choices")
-                        content = chapter_data["chapter_content"].get(
-                            "content", content
+                        # Update chapter_content
+                        client_chapter_content = client_chapter.get(
+                            "chapter_content", {}
                         )
-                        if isinstance(chapter_data["chapter_content"], dict):
+                        choices = []
+
+                        # Process choices from chapter_content
+                        if isinstance(client_chapter_content, dict):
                             logger.debug(
-                                f"Chapter content structure: {chapter_data['chapter_content'].keys()}"
+                                f"Chapter content structure: {client_chapter_content.keys()}"
                             )
-                            if "choices" in chapter_data["chapter_content"]:
+                            content = client_chapter_content.get(
+                                "content", existing_chapter.chapter_content.content
+                            )
+
+                            # Try to get choices from chapter_content
+                            if "choices" in client_chapter_content:
                                 logger.debug(
-                                    f"Found choices in chapter_content: {chapter_data['chapter_content']['choices']}"
+                                    f"Found choices in chapter_content: {client_chapter_content['choices']}"
                                 )
-                                for choice in chapter_data["chapter_content"][
-                                    "choices"
-                                ]:
-                                    logger.debug(f"Processing choice: {choice}")
+                                for choice in client_chapter_content["choices"]:
                                     choices.append(
                                         StoryChoice(
                                             text=choice["text"],
@@ -210,94 +209,142 @@ class AdventureStateManager:
                                     f"Parsed {len(choices)} choices from chapter_content"
                                 )
 
-                    # If no choices found in chapter_content, try getting from the root level
-                    if not choices and "choices" in chapter_data:
-                        logger.debug(
-                            f"Found choices at root level: {chapter_data['choices']}"
-                        )
-                        for choice in chapter_data["choices"]:
-                            logger.debug(f"Processing root choice: {choice}")
-                            choices.append(
-                                StoryChoice(
-                                    text=choice["text"],
-                                    next_chapter=choice.get("next_chapter")
-                                    or choice.get("id", ""),
-                                )
-                            )
-                        logger.debug(f"Parsed {len(choices)} choices from root level")
-
-                    # For story chapters, ensure we have exactly 3 choices
-                    if chapter_type == ChapterType.STORY:
-                        # First try to parse from content if we don't have choices
-                        if len(choices) == 0 and "chapter_content" in chapter_data:
-                            content_str = chapter_data["chapter_content"].get(
-                                "content", content
-                            )
-                            choices_match = re.search(
-                                r"<CHOICES>\s*(.*?)\s*</CHOICES>",
-                                content_str,
-                                re.DOTALL | re.IGNORECASE,
-                            )
-                            if choices_match:
-                                choices_text = choices_match.group(1).strip()
-                                choice_matches = re.finditer(
-                                    r"Choice\s*([ABC])\s*:\s*([^\n]+)",
-                                    choices_text,
-                                    re.IGNORECASE | re.MULTILINE,
-                                )
-                                choices = []
-                                for i, match in enumerate(choice_matches):
-                                    choices.append(
-                                        StoryChoice(
-                                            text=match.group(2).strip(),
-                                            next_chapter=f"chapter_{chapter_data['chapter_number']}_{i}",
-                                        )
+                            # For story chapters, ensure we have exactly 3 choices
+                            if existing_chapter.chapter_type == ChapterType.STORY:
+                                # If no choices found, try parsing from content
+                                if len(choices) == 0:
+                                    content_str = content
+                                    choices_match = re.search(
+                                        r"<CHOICES>\s*(.*?)\s*</CHOICES>",
+                                        content_str,
+                                        re.DOTALL | re.IGNORECASE,
                                     )
+                                    if choices_match:
+                                        choices_text = choices_match.group(1).strip()
+                                        choice_matches = re.finditer(
+                                            r"Choice\s*([ABC])\s*:\s*([^\n]+)",
+                                            choices_text,
+                                            re.IGNORECASE | re.MULTILINE,
+                                        )
+                                        choices = []
+                                        for i, match in enumerate(choice_matches):
+                                            choices.append(
+                                                StoryChoice(
+                                                    text=match.group(2).strip(),
+                                                    next_chapter=f"chapter_{chapter_number}_{i}",
+                                                )
+                                            )
 
-                        # If we still don't have exactly 3 choices, generate defaults
-                        if len(choices) != 3:
-                            logger.warning(
-                                f"Story chapter {chapter_data['chapter_number']} has {len(choices)} choices, generating defaults"
+                                # If still don't have exactly 3 choices, generate defaults
+                                if len(choices) != 3:
+                                    logger.warning(
+                                        f"Story chapter {chapter_number} has {len(choices)} choices, generating defaults"
+                                    )
+                                    existing_choices = choices[:3]
+                                    for i in range(len(existing_choices), 3):
+                                        existing_choices.append(
+                                            StoryChoice(
+                                                text=f"Continue with path {i + 1}",
+                                                next_chapter=f"chapter_{chapter_number}_{i}",
+                                            )
+                                        )
+                                    choices = existing_choices
+
+                            existing_chapter.chapter_content = ChapterContent(
+                                content=content,
+                                choices=choices,
                             )
-                            # Keep any existing choices
+
+                        if "question" in client_chapter:
+                            existing_chapter.question = client_chapter["question"]
+
+                        # Preserve existing response
+                        logger.debug(
+                            f"Preserving response for chapter {chapter_number}"
+                        )
+                        new_chapters.append(existing_chapter)
+                    else:
+                        # Create new chapter
+                        logger.debug(f"Creating new chapter {chapter_number}")
+                        chapter_type = self.state.planned_chapter_types[
+                            chapter_number - 1
+                        ]
+                        choices = []
+
+                        # Process chapter content for new chapter
+                        client_chapter_content = client_chapter.get(
+                            "chapter_content", {}
+                        )
+                        content = client_chapter_content.get(
+                            "content", client_chapter.get("content", "")
+                        )
+
+                        if (
+                            isinstance(client_chapter_content, dict)
+                            and "choices" in client_chapter_content
+                        ):
+                            for choice in client_chapter_content["choices"]:
+                                choices.append(
+                                    StoryChoice(
+                                        text=choice["text"],
+                                        next_chapter=choice.get("next_chapter")
+                                        or choice.get("id", ""),
+                                    )
+                                )
+
+                        # For story chapters, ensure 3 choices
+                        if chapter_type == ChapterType.STORY and len(choices) != 3:
                             existing_choices = choices[:3]
-                            # Generate defaults for remaining slots
                             for i in range(len(existing_choices), 3):
                                 existing_choices.append(
                                     StoryChoice(
                                         text=f"Continue with path {i + 1}",
-                                        next_chapter=f"chapter_{chapter_data['chapter_number']}_{i}",
+                                        next_chapter=f"chapter_{chapter_number}_{i}",
                                     )
                                 )
                             choices = existing_choices
 
-                    logger.debug(
-                        f"Final choices before creating ChapterContent: {choices}"
-                    )
-                    chapter_content = ChapterContent(content=content, choices=choices)
-                    logger.debug(
-                        f"Created ChapterContent with {len(chapter_content.choices)} choices"
-                    )
+                        # Handle response for new chapter
+                        response = None
+                        if "response" in client_chapter and client_chapter["response"]:
+                            if chapter_type == ChapterType.STORY:
+                                response = StoryResponse(
+                                    chosen_path=client_chapter["response"][
+                                        "chosen_path"
+                                    ],
+                                    choice_text=client_chapter["response"][
+                                        "choice_text"
+                                    ],
+                                )
+                            else:  # ChapterType.LESSON
+                                # For new LESSON chapters, response should be None
+                                # It will be set in process_choice()
+                                response = None
 
-                    # Create new chapter data
-                    new_chapter = ChapterData(
-                        chapter_number=len(chapters) + 1,
-                        content=chapter_data["content"],
-                        chapter_type=chapter_type,
-                        response=response,
-                        chapter_content=chapter_content,
-                        question=chapter_data.get("question"),
-                    )
-                    logger.debug(f"Created new chapter with type: {chapter_type}")
-                    logger.debug(
-                        f"Chapter content has {len(chapter_content.choices)} choices"
-                    )
-                    logger.debug(
-                        f"Chapter choices: {[choice.text for choice in chapter_content.choices]}"
-                    )
+                        new_chapter = ChapterData(
+                            chapter_number=chapter_number,
+                            content=client_chapter["content"],
+                            chapter_type=chapter_type,
+                            response=response,
+                            chapter_content=ChapterContent(
+                                content=content,
+                                choices=choices,
+                            ),
+                            question=client_chapter.get("question"),
+                        )
+                        new_chapters.append(new_chapter)
 
-                    chapters.append(new_chapter)
-                self.state.chapters = chapters
+                # Update self.state.chapters
+                # Keep existing chapters not in client_chapters and add new chapters
+                updated_chapters = [
+                    ch
+                    for ch in self.state.chapters
+                    if ch.chapter_number
+                    not in [c["chapter_number"] for c in client_chapters]
+                ] + new_chapters
+                self.state.chapters = sorted(
+                    updated_chapters, key=lambda x: x.chapter_number
+                )
 
             if "current_chapter_id" in validated_state:
                 logger.debug(
