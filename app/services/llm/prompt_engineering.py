@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional, List, Literal, TypedDict, cast
 import math
+import logging
 from app.models.story import (
     AdventureState,
     ChapterType,
@@ -19,7 +20,7 @@ Choice B: [Second choice description]
 Choice C: [Third choice description]
 </CHOICES>
 
-The choices section MUST follow these 5 rules:
+The choices section MUST follow these rules:
 1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices. No extra text, indentation, line breaks, or periods followed by "Choice" within choices
 2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
 3. Content: Make each choice meaningful, distinct, and advance the plot in interesting ways
@@ -374,6 +375,20 @@ def build_user_prompt(
     """Create a user prompt that includes story state and current requirements."""
     base_prompt, story_phase = _build_base_prompt(state)
 
+    # Debug logging for previous lessons
+    logger = logging.getLogger("story_app")
+    logger.debug("\n=== DEBUG: Previous Lessons in build_user_prompt ===")
+    if previous_lessons:
+        logger.debug(f"Number of previous lessons: {len(previous_lessons)}")
+        for i, lesson in enumerate(previous_lessons, 1):
+            logger.debug(f"Lesson {i}:")
+            logger.debug(f"Question: {lesson.question['question']}")
+            logger.debug(f"Chosen Answer: {lesson.chosen_answer}")
+            logger.debug(f"Is Correct: {lesson.is_correct}")
+    else:
+        logger.debug("No previous lessons provided")
+    logger.debug("===============================================\n")
+
     # Handle consequences for lesson responses
     consequences_guidance = ""
     num_previous_lessons = 0
@@ -381,12 +396,18 @@ def build_user_prompt(
         num_previous_lessons = len(previous_lessons)
         if num_previous_lessons > 0:
             last_lesson = previous_lessons[-1]
+            logger.debug("\n=== DEBUG: Processing Consequences ===")
+            logger.debug(f"Last lesson correct: {last_lesson.is_correct}")
+            logger.debug(f"Last lesson question: {last_lesson.question}")
+            logger.debug(f"Last lesson chosen answer: {last_lesson.chosen_answer}")
             consequences_guidance = process_consequences(
                 last_lesson.is_correct,
                 last_lesson.question,
                 last_lesson.chosen_answer,
                 state.current_chapter_number,
             )
+            logger.debug(f"Generated consequences: {consequences_guidance}")
+            logger.debug("===================================\n")
 
     # Determine chapter properties
     current_chapter_type = state.planned_chapter_types[state.current_chapter_number - 1]

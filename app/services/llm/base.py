@@ -60,7 +60,7 @@ class BaseLLMService(ABC):
         story_config: Dict[str, Any],
         state: AdventureState,
         question: Optional[Dict[str, Any]] = None,
-        previous_questions: Optional[List[Dict[str, Any]]] = None,
+        previous_lessons: Optional[List[Dict[str, Any]]] = None,
         context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[str, None]:
         """Generate the chapter content (story or lesson) as a stream of chunks."""

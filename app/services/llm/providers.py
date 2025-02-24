@@ -25,13 +25,13 @@ class OpenAIService(BaseLLMService):
         story_config: Dict[str, Any],
         state: AdventureState,
         question: Optional[Dict[str, Any]] = None,
-        previous_questions: Optional[List[Dict[str, Any]]] = None,
+        previous_lessons: Optional[List[Dict[str, Any]]] = None,
         context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[str, None]:
         """Generate the chapter content (story or lesson) as a stream of chunks."""
         # Build prompts using the shared prompt engineering module
         system_prompt = build_system_prompt(state)  # Pass state instead of story_config
-        user_prompt = build_user_prompt(state, question, previous_questions)
+        user_prompt = build_user_prompt(state, question, previous_lessons)
 
         # Log the prompts
         logger.info(
@@ -96,13 +96,13 @@ class GeminiService(BaseLLMService):
         story_config: Dict[str, Any],
         state: AdventureState,
         question: Optional[Dict[str, Any]] = None,
-        previous_questions: Optional[List[Dict[str, Any]]] = None,
+        previous_lessons: Optional[List[Dict[str, Any]]] = None,
         context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[str, None]:
         """Generate the chapter content (story or lesson) as a stream of chunks."""
         # Build prompts using the shared prompt engineering module
         system_prompt = build_system_prompt(state)  # Pass state instead of story_config
-        user_prompt = build_user_prompt(state, question, previous_questions)
+        user_prompt = build_user_prompt(state, question, previous_lessons)
 
         print("\n=== DEBUG: LLM Prompt Request ===")
         print("System Prompt:")

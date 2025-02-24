@@ -80,22 +80,55 @@ async def process_choice(
         chapter_type = state.planned_chapter_types[current_chapter_number - 1]
         if not isinstance(chapter_type, ChapterType):
             chapter_type = ChapterType(chapter_type)
+        logger.debug(f"Next chapter type: {chapter_type}")
 
         previous_chapter = state.chapters[-1]
+        logger.debug("\n=== DEBUG: Previous Chapter Info ===")
+        logger.debug(f"Previous chapter number: {previous_chapter.chapter_number}")
+        logger.debug(f"Previous chapter type: {previous_chapter.chapter_type}")
+        logger.debug(
+            f"Previous chapter has response: {previous_chapter.response is not None}"
+        )
+        if previous_chapter.response:
+            logger.debug(
+                f"Previous chapter response type: {type(previous_chapter.response)}"
+            )
+        logger.debug("===================================\n")
+
         if previous_chapter.chapter_type == ChapterType.LESSON:
+            logger.debug("\n=== DEBUG: Processing Lesson Response ===")
+            logger.debug(f"Previous chapter number: {previous_chapter.chapter_number}")
+            logger.debug(
+                f"Previous chapter has question: {previous_chapter.question is not None}"
+            )
+            logger.debug(f"Choice data: {choice_data}")
+
             try:
-                correct_answer = next(
-                    answer["text"]
-                    for answer in previous_chapter.question["answers"]
-                    if answer["is_correct"]
-                )
-                lesson_response = LessonResponse(
-                    question=previous_chapter.question,
-                    chosen_answer=choice_text,
-                    is_correct=choice_text == correct_answer,
-                )
-                previous_chapter.response = lesson_response
-                logger.debug(f"Created lesson response: {lesson_response}")
+                # Create lesson response using the stored question data
+                if previous_chapter.question:
+                    correct_answer = next(
+                        answer["text"]
+                        for answer in previous_chapter.question["answers"]
+                        if answer["is_correct"]
+                    )
+                    lesson_response = LessonResponse(
+                        question=previous_chapter.question,
+                        chosen_answer=choice_text,
+                        is_correct=choice_text == correct_answer,
+                    )
+                    previous_chapter.response = lesson_response
+                    logger.debug("\n=== DEBUG: Created Lesson Response ===")
+                    logger.debug(f"Question: {previous_chapter.question['question']}")
+                    logger.debug(f"Chosen answer: {choice_text}")
+                    logger.debug(f"Correct answer: {correct_answer}")
+                    logger.debug(f"Is correct: {choice_text == correct_answer}")
+                    logger.debug("====================================\n")
+                else:
+                    logger.error("Previous chapter missing question data")
+                    await websocket.send_text(
+                        "An error occurred while processing your answer. Missing question data."
+                    )
+                    return None, None, False
             except Exception as e:
                 logger.error(f"Error creating lesson response: {e}")
                 await websocket.send_text(
@@ -192,26 +225,31 @@ async def stream_and_send_chapter(
         chapter_type = ChapterType(chapter_type)
 
     # Send complete chapter data with choices included
-    await websocket.send_json(
-        {
-            "type": "chapter_update",
-            "state": {
-                "current_chapter_id": state.current_chapter_id,
-                "current_chapter": {
-                    "chapter_number": current_chapter_number,
-                    "content": content_to_stream,
-                    "chapter_content": {
-                        "content": chapter_content.content,
-                        "choices": [
-                            {"text": choice.text, "next_chapter": choice.next_chapter}
-                            for choice in chapter_content.choices
-                        ],
-                    },
-                    "question": sampled_question,
+    chapter_data = {
+        "type": "chapter_update",
+        "state": {
+            "current_chapter_id": state.current_chapter_id,
+            "current_chapter": {
+                "chapter_number": current_chapter_number,
+                "content": content_to_stream,
+                "chapter_type": chapter_type.value,  # Add chapter type to response
+                "chapter_content": {
+                    "content": chapter_content.content,
+                    "choices": [
+                        {"text": choice.text, "next_chapter": choice.next_chapter}
+                        for choice in chapter_content.choices
+                    ],
                 },
+                "question": sampled_question,
             },
-        }
-    )
+        },
+    }
+    logger.debug("\n=== DEBUG: Chapter Update Message ===")
+    logger.debug(f"Chapter number: {current_chapter_number}")
+    logger.debug(f"Chapter type: {chapter_type.value}")
+    logger.debug(f"Has question: {sampled_question is not None}")
+    logger.debug("===================================\n")
+    await websocket.send_json(chapter_data)
 
     # Also send choices separately for backward compatibility
     await websocket.send_json(
@@ -312,11 +350,22 @@ async def generate_chapter(
         if chapter.chapter_type == ChapterType.LESSON and chapter.response
     ]
 
+    logger.debug("\n=== DEBUG: Previous Lessons Collection ===")
+    logger.debug(f"Total chapters: {len(state.chapters)}")
+    logger.debug(f"Current chapter number: {current_chapter_number}")
+    logger.debug(f"Current chapter type: {chapter_type}")
+    logger.debug(f"Number of previous lessons: {len(previous_lessons)}")
+
     if previous_lessons:
-        logger.debug("\nDEBUG: Previous lessons history:")
+        logger.debug("\nLesson details:")
         for i, pl in enumerate(previous_lessons, 1):
-            logger.debug(f"Lesson {i}: {pl.question['question']}")
-            logger.debug(f"Chosen: {pl.chosen_answer} (Correct: {pl.is_correct})")
+            logger.debug(f"Lesson {i}:")
+            logger.debug(f"Question: {pl.question['question']}")
+            logger.debug(f"Chosen Answer: {pl.chosen_answer}")
+            logger.debug(f"Is Correct: {pl.is_correct}")
+    else:
+        logger.debug("No previous lessons found")
+    logger.debug("=========================================\n")
 
     # Load new question if at lesson chapter
     if chapter_type == ChapterType.LESSON:

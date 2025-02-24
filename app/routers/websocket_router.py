@@ -30,6 +30,29 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
             validated_state = data.get("state")
             choice_data = data.get("choice")
 
+            # Debug logging for incoming data
+            logger.debug("\n=== DEBUG: WebSocket Message ===")
+            logger.debug(f"Has state: {validated_state is not None}")
+            if validated_state:
+                logger.debug(
+                    f"State chapters: {len(validated_state.get('chapters', []))}"
+                )
+                if validated_state.get("chapters"):
+                    last_chapter = validated_state["chapters"][-1]
+                    logger.debug(
+                        f"Last chapter type: {last_chapter.get('chapter_type')}"
+                    )
+                    logger.debug(
+                        f"Last chapter has response: {'response' in last_chapter}"
+                    )
+                    if "response" in last_chapter:
+                        logger.debug(f"Response data: {last_chapter['response']}")
+
+            logger.debug(f"Has choice: {choice_data is not None}")
+            if choice_data:
+                logger.debug(f"Choice data: {choice_data}")
+            logger.debug("==============================\n")
+
             # Validate required fields
             if not validated_state:
                 logger.error("Missing state in message")
@@ -72,7 +95,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                         return  # Exit to prevent further processing
                 else:
                     # Update existing state with validated state
-                    logger.debug("Updating state from validated state")
+                    logger.debug("\nUpdating state from validated state")
                     logger.debug(
                         f"Validated state chapters: {len(validated_state.get('chapters', []))}"
                     )

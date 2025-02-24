@@ -316,19 +316,10 @@ graph TD
    - CRITICAL: Reference established elements
 
 2. Previous Chapter Impact:
-   - After LESSON Chapter (Correct Answer):
-     * Acknowledge understanding
-     * Apply knowledge practically
-     * Build confidence
-     * Connect to situation
+   - After LESSON Chapter (Correct or Incorrect Answer):
+     * Triggers `process_consequences()` in `prompt_engineering.py`
+     * This function generate appropriate story consequences based on lesson response
      * CRITICAL: Include answer in state
-   
-   - After LESSON Chapter (Incorrect Answer):
-     * Address misunderstanding
-     * Provide natural correction
-     * Create growth opportunity
-     * Show learning process
-     * CRITICAL: Include both answers in state
    
    - After STORY Chapter:
      * Continue from chosen path

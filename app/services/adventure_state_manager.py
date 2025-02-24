@@ -156,26 +156,52 @@ class AdventureStateManager:
                 chapters = []
                 for chapter_data in validated_state["chapters"]:
                     # Debug raw incoming data
-                    logger.debug(f"Raw chapter data: {chapter_data}")
+                    logger.debug("\n=== DEBUG: Processing Chapter Data ===")
+                    # logger.debug(f"Raw chapter data: {chapter_data}")
+                    logger.debug(f"Chapter number: {len(chapters) + 1}")
+
+                    # Get chapter type from planned sequence
+                    chapter_type = self.state.planned_chapter_types[len(chapters)]
+                    if not isinstance(chapter_type, ChapterType):
+                        chapter_type = ChapterType(chapter_type)
+                    logger.debug(f"Chapter type from planned sequence: {chapter_type}")
+                    logger.debug(f"Chapter type value: {chapter_type.value}")
+
+                    # Verify chapter data matches planned type
+                    if "chapter_type" in chapter_data:
+                        client_type = chapter_data["chapter_type"]
+                        logger.debug(f"Client sent chapter type: {client_type}")
+                        if client_type != chapter_type.value:
+                            logger.warning(
+                                f"Client chapter type {client_type} doesn't match planned type {chapter_type.value}"
+                            )
+
                     # Validate element consistency and plot twist progression
                     self.validate_element_consistency(chapter_data)
                     self.validate_plot_twist_progression(chapter_data)
 
-                    chapter_type = ChapterType(chapter_data["chapter_type"])
-
                     response = None
                     if "response" in chapter_data and chapter_data["response"]:
+                        logger.debug("\n=== DEBUG: Processing Response ===")
+                        logger.debug(f"Chapter type for response: {chapter_type}")
+                        logger.debug(f"Response data: {chapter_data['response']}")
+
                         if chapter_type == ChapterType.STORY:
                             response = StoryResponse(
                                 chosen_path=chapter_data["response"]["chosen_path"],
                                 choice_text=chapter_data["response"]["choice_text"],
                             )
-                        else:  # ChapterType.LESSON
+                            logger.debug("Created StoryResponse")
+                        elif chapter_type == ChapterType.LESSON:
                             response = LessonResponse(
                                 question=chapter_data["response"]["question"],
                                 chosen_answer=chapter_data["response"]["chosen_answer"],
                                 is_correct=chapter_data["response"]["is_correct"],
                             )
+                            logger.debug("Created LessonResponse")
+                        logger.debug(f"Final response object: {response}")
+                    else:
+                        logger.debug("No response data found")
 
                     # Handle chapter content with proper choice preservation
                     content = chapter_data.get("content", "")
@@ -286,7 +312,16 @@ class AdventureStateManager:
                         chapter_type=chapter_type,
                         response=response,
                         chapter_content=chapter_content,
-                        question=chapter_data.get("question"),
+                        question=chapter_data.get(
+                            "question",
+                            previous_chapter.question if previous_chapter else None,
+                        ),
+                    )
+                    logger.debug(
+                        f"Created chapter with type: {new_chapter.chapter_type}"
+                    )
+                    logger.debug(
+                        f"Chapter has question: {new_chapter.question is not None}"
                     )
                     logger.debug(f"Created new chapter with type: {chapter_type}")
                     logger.debug(
