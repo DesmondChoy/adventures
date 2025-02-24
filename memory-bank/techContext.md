@@ -367,3 +367,29 @@ const baseClasses = [
   - Min resolution: 680x906px
   - Format: JPG/WebP
   - Content: Theme-appropriate and child-friendly
+
+### Mobile Responsiveness (`app/static/css/carousel.css`)
+- Breakpoint: max-width 768px
+- Container dimensions:
+  * Desktop: 400px × 420px
+  * Mobile: 320px × 360px
+- Card dimensions:
+  * Desktop regular: 300px × 400px
+  * Desktop active: 340px × 453px
+  * Mobile regular: 200px × 267px
+  * Mobile active: 240px × 320px
+- Typography scaling:
+  * Desktop title: 1.25rem
+  * Desktop description: 0.95rem
+  * Mobile title: 0.85rem
+  * Mobile description: 0.75rem
+- Touch interaction:
+  * Swipe gesture navigation
+  * 50px swipe threshold
+  * Event prevention for smooth scrolling
+  * Hidden navigation arrows
+- Content optimization:
+  * Reduced padding (4px)
+  * Increased line clamp (10)
+  * Tighter line height (1.35)
+  * Maintained aspect ratios

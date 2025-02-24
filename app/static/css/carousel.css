@@ -8,6 +8,15 @@
     transform-style: preserve-3d;
 }
 
+@media (max-width: 768px) {
+    .carousel-container {
+        width: 320px;
+        height: 360px;
+        perspective: 1500px;
+        margin-bottom: 40px;
+    }
+}
+
 .carousel {
     width: 100%;
     height: 400px;
@@ -18,6 +27,12 @@
     left: 50%;
     transform-origin: center;
     transform: translate(-50%, -50%);
+}
+
+@media (max-width: 768px) {
+    .carousel {
+        height: 340px;
+    }
 }
 
 /* Carousel Cards */
@@ -47,6 +62,14 @@
     will-change: transform, opacity, width, margin-left;
     transform-style: preserve-3d;
     perspective: 1000px;
+}
+
+@media (max-width: 768px) {
+    .carousel-card {
+        width: 200px;
+        height: 267px;
+        margin-left: -100px;
+    }
 }
 
 .carousel-card .card-face {
@@ -99,6 +122,14 @@
     animation: cardGlow 3s ease-in-out infinite;
 }
 
+@media (max-width: 768px) {
+    .carousel-card.active {
+        width: 240px;
+        height: 320px;
+        margin-left: -120px;
+    }
+}
+
 /* Card Content Styles */
 .carousel-title {
     font-size: 1.25rem;
@@ -125,6 +156,53 @@
     padding: 0 12px;
 }
 
+@media (max-width: 768px) {
+    .carousel-title {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+        padding: 0 6px;
+    }
+
+    .carousel-description {
+        font-size: 0.8rem;
+        line-height: 1.4;
+        -webkit-line-clamp: 6;
+        max-height: 150px;
+        padding: 0 6px;
+    }
+
+    .carousel-card.selected .card-back {
+        padding: 20px 16px;
+    }
+
+    /* Specific styles for active card when selected */
+    .carousel-card.active.selected .carousel-title {
+        font-size: 0.85rem;
+        margin-bottom: 4px;
+        padding: 0 4px;
+    }
+
+    .carousel-card.active.selected .carousel-description {
+        font-size: 0.75rem;
+        line-height: 1.35;
+        -webkit-line-clamp: 10;
+        max-height: 180px;
+        padding: 0 4px;
+    }
+
+    /* Regular selected card (non-active) */
+    .carousel-card.selected .carousel-title {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+    }
+
+    .carousel-card.selected .carousel-description {
+        font-size: 0.8rem;
+        line-height: 1.4;
+        max-height: 150px;
+    }
+}
+
 /* Navigation Controls */
 .carousel-nav {
     position: absolute;
@@ -136,6 +214,32 @@
     justify-content: space-between;
     z-index: 1000;
     pointer-events: none;
+}
+
+@media (max-width: 768px) {
+    .carousel-nav {
+        left: -30px;
+        right: -30px;
+        top: 50%;
+        bottom: auto;
+        padding: 0;
+        transform: translateY(-50%);
+        display: none; /* Hide navigation arrows on mobile */
+    }
+    
+    .carousel-nav button {
+        width: 28px;
+        height: 28px;
+        background: rgba(79, 70, 229, 0.95);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        opacity: 0.9;
+        backdrop-filter: blur(4px);
+    }
+    
+    .carousel-nav button svg {
+        width: 16px;
+        height: 16px;
+    }
 }
 
 .carousel-nav button {

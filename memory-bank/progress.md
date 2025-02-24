@@ -106,3 +106,22 @@ These changes make the prompts more efficient while maintaining or improving the
 - Added active card expansion (340px) with glowing animation
 - Prepared component for reuse in lesson topic selection
 - Improved performance with CSS optimizations (will-change, transform-style)
+
+### Mobile Responsiveness Improvements (2024-02-24)
+- Enhanced carousel mobile experience
+  * Removed navigation arrows in favor of swipe gestures
+  * Increased card dimensions for better visibility
+    - Container: 320px × 360px
+    - Regular cards: 200px × 267px
+    - Active cards: 240px × 320px
+  * Optimized text display
+    - Reduced font sizes (title: 0.85rem, description: 0.75rem)
+    - Tightened line spacing (1.35)
+    - Increased content visibility (10 lines)
+    - Minimized padding (4px) for better space utilization
+  * Added touch event handling
+    - Smooth swipe gestures
+    - Proper event prevention
+    - 50px swipe threshold
+- Maintained aspect ratios across all card states
+- Preserved desktop experience while optimizing mobile view
