@@ -136,6 +136,117 @@
     </div>
 
     <script>
+        // State and WebSocket Management
+        class AdventureStateManager {
+            constructor() {
+                this.STORAGE_KEY = 'adventure_state';
+            }
+
+            saveState(state) {
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
+            }
+
+            loadState() {
+                const saved = localStorage.getItem(this.STORAGE_KEY);
+                return saved ? JSON.parse(saved) : null;
+            }
+
+            clearState() {
+                localStorage.removeItem(this.STORAGE_KEY);
+            }
+        }
+
+        class WebSocketManager {
+            constructor() {
+                this.stateManager = new AdventureStateManager();
+                this.connection = null;
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                this.baseDelay = 1000; // 1 second
+                this.maxDelay = 30000; // 30 seconds
+            }
+
+            getWebSocketUrl() {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const storyCategory = document.getElementById('storyCategory').value;
+                const lessonTopic = document.getElementById('lessonTopic').value;
+                return `${protocol}//${window.location.host}/ws/story/${storyCategory}/${lessonTopic}`;
+            }
+
+            async handleDisconnect() {
+                if (this.connection?.readyState === WebSocket.CLOSED) {
+                    await this.reconnect();
+                }
+            }
+
+            calculateBackoff() {
+                return Math.min(
+                    this.baseDelay * Math.pow(2, this.reconnectAttempts),
+                    this.maxDelay
+                );
+            }
+
+            async reconnect() {
+                if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+                    appendStoryText('\n\nUnable to reconnect after multiple attempts. Please refresh the page.');
+                    return;
+                }
+
+                const savedState = this.stateManager.loadState();
+                if (!savedState) {
+                    appendStoryText('\n\nUnable to recover story state. Please refresh the page.');
+                    return;
+                }
+
+                const delay = this.calculateBackoff();
+                await new Promise(resolve => setTimeout(resolve, delay));
+
+                this.connection = new WebSocket(this.getWebSocketUrl());
+                this.setupConnectionHandlers();
+                this.reconnectAttempts++;
+            }
+
+            setupConnectionHandlers() {
+                const savedState = this.stateManager.loadState();
+
+                this.connection.onopen = () => {
+                    console.log('WebSocket reconnected, restoring state...');
+                    hideLoader();
+                    this.reconnectAttempts = 0; // Reset counter on successful connection
+                    
+                    if (savedState) {
+                        // First restore the UI state
+                        const currentChapter = savedState.chapters.length;
+                        updateProgress(currentChapter + 1, savedState.story_length);
+                        
+                        // Then send the state to the server
+                        this.connection.send(JSON.stringify({
+                            type: 'resume',
+                            state: savedState
+                        }));
+                    }
+                };
+
+                this.connection.onclose = (event) => {
+                    hideLoader();
+                    if (!event.wasClean) {
+                        console.error('WebSocket connection died');
+                        this.handleDisconnect();
+                    }
+                };
+
+                this.connection.onerror = (error) => {
+                    console.error('WebSocket Error:', error);
+                    hideLoader();
+                };
+
+                this.connection.onmessage = handleMessage;
+            }
+        }
+
+        // Global instances
+        const stateManager = new AdventureStateManager();
+        const wsManager = new WebSocketManager();
         let storyWebSocket;
         let currentRotation = 0;
         let selectedCategory = '';
@@ -438,75 +549,18 @@
         // --- WebSocket Functions ---
 
         function initWebSocket() {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const storyCategory = document.getElementById('storyCategory').value;
-            const lessonTopic = document.getElementById('lessonTopic').value;
-            const wsUrl = `${protocol}//${window.location.host}/ws/story/${storyCategory}/${lessonTopic}`;
+            showLoader();
+            storyWebSocket = new WebSocket(wsManager.getWebSocketUrl());
+            wsManager.connection = storyWebSocket;
+            wsManager.setupConnectionHandlers();
 
-            storyWebSocket = new WebSocket(wsUrl);
-
-            storyWebSocket.onopen = function() {
-                // First send the stored state if it exists
-                const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
-
-                if (Object.keys(storyState).length > 0) {
-                    const currentChapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
-                    updateProgress(currentChapter + 1, storyState.storyLength || 10);
-
-                    sendMessage({
-                        state: {
-                            current_chapter_id: storyState.choice?.chosen_path || 'start',
-                            current_chapter_number: parseInt(sessionStorage.getItem('storyChapter') || '0'),
-                            story_choices: storyState.story_choices || [],
-                            correct_lesson_answers: storyState.correct_lesson_answers || 0,
-                            total_lessons: storyState.total_lessons || 0,
-                            previous_chapter_content: storyState.previous_chapter_content,
-                            story_length: storyState.storyLength || 10
-                        }
-                    });
-                } else {
-                    // Always send initial state with story length
-                   sendMessage({
-                        state: {
-                            current_chapter_id: 'start',
-                            current_chapter_number: 0,
-                            story_choices: [],
-                            correct_lesson_answers: 0,
-                            total_lessons: 0,
-                            previous_chapter_content: '',
-                            story_length: 10
-                        }
-                    });
-                }
-
-                // Then send the choice to continue the story
-                if (storyState.choice) {
-                    sendMessage({
-                        choice: {
-                            chosen_path: storyState.choice.chosen_path,
-                            choice_text: storyState.choice.choice_text
-                        }
-                    });
-                } else {
-                    sendMessage({
-                        choice: 'start'
-                    });
-                }
-            };
-
-            storyWebSocket.onmessage = handleMessage;
-            storyWebSocket.onerror = function(error) {
-                console.error('WebSocket Error:', error);
-                hideLoader();
-                appendStoryText('\n\nConnection error occurred. Please refresh the page to try again.');
-            };
-            storyWebSocket.onclose = function(event) {
-                hideLoader();
-                if (!event.wasClean) {
-                    console.error('WebSocket connection died');
-                    appendStoryText('\n\nConnection lost. Please refresh the page to continue the story.');
-                }
-            };
+            // Initialize with a new state or restore existing
+            const savedState = stateManager.loadState();
+            if (savedState) {
+                // Restore UI state
+                const currentChapter = savedState.chapters.length;
+                updateProgress(currentChapter + 1, savedState.story_length);
+            }
         }
 
         function handleMessage(event) {
@@ -544,29 +598,28 @@
                     const initialState = {
                         storyCategory: data.storyCategory,
                         lessonTopic: data.lessonTopic,
-                        storyLength: 10, // Fixed at 10 chapters
-                        current_chapter_number: 0,
-                        story_choices: [],
-                        correct_lesson_answers: 0,
-                        total_lessons: 0,
-                        all_previous_content: [],
-                        lesson_responses: []
+                        story_length: 10, // Fixed at 10 chapters
+                        current_chapter_id: 'start',
+                        chapters: [],
+                        selected_narrative_elements: {},
+                        selected_sensory_details: {},
+                        selected_theme: '',
+                        selected_moral_teaching: '',
+                        selected_plot_twist: '',
+                        metadata: {},
+                        current_storytelling_phase: 'Exposition'
                     };
-                    sessionStorage.setItem('storyState', JSON.stringify(initialState));
-                    sessionStorage.setItem('storyChapter', '0');
+                    stateManager.saveState(initialState);
                     return initialState;
 
                 case 'update':
-                    const existingState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
+                    const existingState = stateManager.loadState() || {};
                     const updatedState = { ...existingState, ...data };
-                    sessionStorage.setItem('storyState', JSON.stringify(updatedState));
-                    if (data.current_chapter_number !== undefined) {
-                        sessionStorage.setItem('storyChapter', data.current_chapter_number.toString());
-                    }
+                    stateManager.saveState(updatedState);
                     return updatedState;
 
                 case 'reset':
-                    sessionStorage.clear();
+                    stateManager.clearState();
                     return null;
 
                 default:
@@ -584,48 +637,34 @@
                     clearTimeout(renderTimeout);
                 }
 
-                const existingState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
-                const currentChapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
-                const history = existingState.story_choices || [];
-                history.push({
-                    chosen_path: choiceId,
-                    choice_text: choiceText
-                });
-
-                const currentState = manageState('update', {
-                    choice: {
-                        chosen_path: choiceId,
-                        choice_text: choiceText
-                    },
-                    current_chapter_number: currentChapter + 1,
-                    story_choices: history,
-                    previous_chapter_content: document.getElementById('storyContent').textContent,
-                    all_previous_content: [...(existingState.all_previous_content || []), document.getElementById('storyContent').textContent]
-                });
-
-                updateProgress(currentState.current_chapter_number + 1, currentState.storyLength);
-
-                sendMessage({
-                    state: {
-                        current_chapter_id: currentState.choice?.chosen_path || 'start',
-                        current_chapter_number: currentState.current_chapter_number,
-                        story_choices: currentState.story_choices || [],
-                        correct_lesson_answers: currentState.correct_lesson_answers || 0,
-                        total_lessons: currentState.total_lessons || 0,
-                        previous_chapter_content: currentState.previous_chapter_content,
-                        all_previous_content: currentState.all_previous_content,
-                        lesson_responses: currentState.lesson_responses || [],
-                        story_length: currentState.storyLength
-                    }
-                });
-
-                sendMessage({
-                    choice: {
+                const existingState = stateManager.loadState() || {};
+                const currentChapter = existingState.chapters || [];
+                
+                // Create new chapter data
+                const newChapter = {
+                    chapter_number: currentChapter.length + 1,
+                    content: document.getElementById('storyContent').textContent,
+                    chapter_type: 'story', // This will be corrected by server if needed
+                    response: {
                         chosen_path: choiceId,
                         choice_text: choiceText
                     }
+                };
+
+                const updatedState = manageState('update', {
+                    current_chapter_id: choiceId,
+                    chapters: [...currentChapter, newChapter]
                 });
 
+                updateProgress(updatedState.chapters.length + 1, updatedState.story_length);
+
+                // Send the complete state to the server
+                sendMessage({
+                    type: 'resume',
+                    state: updatedState
+                });
+
+                // Clear UI for next chapter
                 document.getElementById('storyContent').textContent = '';
                 document.getElementById('choicesContainer').innerHTML = '';
             }
@@ -707,28 +746,25 @@
 
         // On page load, check if we're continuing a story
         window.onload = function() {
-            const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
-            const chapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
+            const savedState = stateManager.loadState();
 
-            if (chapter > 0 && storyState && storyState.storyCategory && storyState.lessonTopic) {
+            if (savedState?.chapters?.length > 0 && savedState.storyCategory && savedState.lessonTopic) {
                 showLoader();
-                updateProgress(chapter + 1, storyState.storyLength);
+                updateProgress(savedState.chapters.length + 1, savedState.story_length);
                 document.getElementById('storyCategoryScreen').classList.add('hidden');
                 document.getElementById('lessonTopicScreen').classList.add('hidden');
                 document.getElementById('introText').classList.add('hidden');
                 document.getElementById('storyContainer').classList.remove('hidden');
 
                 // Restore selections
-                selectedCategory = storyState.storyCategory;
-                selectedLessonTopic = storyState.lessonTopic;
+                selectedCategory = savedState.storyCategory;
+                selectedLessonTopic = savedState.lessonTopic;
                 document.getElementById('storyCategory').value = selectedCategory;
                 document.getElementById('lessonTopic').value = selectedLessonTopic;
 
                 initWebSocket();
-            } else if (chapter > 0) {
-                manageState('reset');
-                window.location.href = '/';
             } else {
+                manageState('reset'); // Clear any partial state
                 hideLoader();
             }
         };
