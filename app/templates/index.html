@@ -1,4 +1,3 @@
-<!-- app/templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -25,74 +24,82 @@
             <p class="text-gray-600 max-w-2xl mx-auto">Choose your path and learn through engaging, personalized adventures.</p>
         </div>
         
-        <!-- Selection Form -->
-        <div id="formContainer" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6">
-            <form id="storyForm" class="space-y-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-4">
-                        Choose a Story Category
-                    </label>
-                    <input type="hidden" id="storyCategory" name="storyCategory" required>
-                    <div class="carousel-container">
-                        <div class="carousel" id="categoryCarousel">
-                            {% for category_id, category_data in story_categories.items() %}
-                            <div class="carousel-card" data-category="{{ category_id }}" onclick="selectCategory('{{ category_id }}')">
-                                <div class="card-face card-front">
-                                    <img src="/static/images/categories/{{ category_id }}.jpg" alt="{{ category_data.name }}" class="card-image">
-                                </div>
-                                <div class="card-face card-back">
-                                    <div class="carousel-title">{{ category_data.name }}</div>
-                                    <div class="carousel-description">{{ category_data.description }}</div>
-                                </div>
-                            </div>
-                            {% endfor %}
+        <!-- Screen 1: Story Category Selection -->
+        <div id="storyCategoryScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6">
+            <label class="block text-sm font-medium text-gray-700 mb-4">
+                Choose a Story Category
+            </label>
+            <input type="hidden" id="storyCategory" name="storyCategory" required>
+            <div class="carousel-container">
+                <div class="carousel" id="categoryCarousel">
+                    {% for category_id, category_data in story_categories.items() %}
+                    <div class="carousel-card" data-category="{{ category_id }}" onclick="selectCategory('{{ category_id }}')">
+                        <div class="card-face card-front">
+                            <img src="/static/images/categories/{{ category_id }}.jpg" alt="{{ category_data.name }}" class="card-image">
                         </div>
-                        <div class="carousel-nav">
-                            <button type="button" onclick="rotateCarousel('prev')" aria-label="Previous">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-                                </svg>
-                            </button>
-                            <button type="button" onclick="rotateCarousel('next')" aria-label="Next">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                                    <path d="M8.59 7.41L10 6l6 6-6 6-1.41-1.41L13.17 12z"/>
-                                </svg>
-                            </button>
+                        <div class="card-face card-back">
+                            <div class="carousel-title">{{ category_data.name }}</div>
+                            <div class="carousel-description">{{ category_data.description }}</div>
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">
-                        Choose Your Journey
-                    </label>
-                    <select id="storyLength" name="storyLength" required
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <option value="">Select journey length...</option>
-                        <option value="5">Lightning Quest (5 chapters)</option>
-                        <option value="8">Epic Tale (8 chapters)</option>
-                        <option value="10">Legendary Saga (10 chapters)</option>
-                    </select>
+                <div class="carousel-nav">
+                    <button type="button" onclick="rotateCarousel('prev')" aria-label="Previous">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                        </svg>
+                    </button>
+                    <button type="button" onclick="rotateCarousel('next')" aria-label="Next">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M8.59 7.41L10 6l6 6-6 6-1.41-1.41L13.17 12z"/>
+                        </svg>
+                    </button>
                 </div>
+            </div>
+            <button onclick="goToLessonTopicScreen()"
+                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Choose a Lesson Topic
+            </button>
+        </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">
-                        Choose a Lesson Topic
-                    </label>
-                    <select id="lessonTopic" name="lessonTopic" required
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <option value="">Select a topic...</option>
-                        {% for topic in lesson_topics %}
-                        <option value="{{ topic }}">{{ topic }}</option>
-                        {% endfor %}
-                    </select>
+        <!-- Screen 2: Lesson Topic Selection -->
+        <div id="lessonTopicScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6 hidden">
+            <label class="block text-sm font-medium text-gray-700 mb-4">
+                Choose a Lesson Topic
+            </label>
+            <input type="hidden" id="lessonTopic" name="lessonTopic" required>
+            <div class="carousel-container">
+                <div class="carousel" id="lessonCarousel">
+                    {% for topic in lesson_topics %}
+                    <div class="carousel-card" data-topic="{{ topic }}" onclick="selectLessonTopic('{{ topic }}')">
+                        <div class="card-face card-front">
+                            <img src="/static/images/lessons/{{ topic }}.jpg" alt="{{ topic }}" class="card-image">
+                        </div>
+                        <div class="card-face card-back">
+                            <div class="carousel-title">{{ topic }}</div>
+                            <div class="carousel-description">Learn about {{ topic }}!</div>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
-
-                <button type="submit"
-                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Start Adventure
-                </button>
-            </form>
+                <div class="carousel-nav">
+                    <button type="button" onclick="rotateLessonCarousel('prev')" aria-label="Previous">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                        </svg>
+                    </button>
+                    <button type="button" onclick="rotateLessonCarousel('next')" aria-label="Next">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M8.59 7.41L10 6l6 6-6 6-1.41-1.41L13.17 12z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <button onclick="startAdventure()"
+                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Start Adventure
+            </button>
         </div>
 
         <!-- Loader Overlay - NEW -->
@@ -132,10 +139,16 @@
         let storyWebSocket;
         let currentRotation = 0;
         let selectedCategory = '';
+        let currentLessonRotation = 0;
+        let selectedLessonTopic = '';
         let currentIndex = 0;
+        let currentLessonIndex = 0;
         const totalCategories = parseInt("{{ story_categories|length }}");
+        const totalLessonTopics = parseInt("{{ lesson_topics|length }}");
         const rotationAngle = 360 / totalCategories;
+        const lessonRotationAngle = 360 / totalLessonTopics;
 
+        // --- Carousel Functions ---
         function rotateCarousel(direction) {
             if (direction === 'next') {
                 currentRotation -= rotationAngle;
@@ -242,8 +255,130 @@
             });
         }
 
-        // Initialize carousel on page load
-        window.addEventListener('load', initializeCarousel);
+        // --- Lesson Carousel Functions ---
+        function rotateLessonCarousel(direction) {
+            if (direction === 'next') {
+                currentLessonRotation -= lessonRotationAngle;
+                currentLessonIndex = (currentLessonIndex + 1) % totalLessonTopics;
+            } else {
+                currentLessonRotation += lessonRotationAngle;
+                currentLessonIndex = (currentLessonIndex - 1 + totalLessonTopics) % totalLessonTopics;
+            }
+            
+            const carousel = document.getElementById('lessonCarousel');
+            carousel.style.transform = `translate(-50%, -50%) rotateY(${currentLessonRotation}deg)`;
+            
+            // Update active state
+            updateActiveLessonCard();
+        }
+
+        function updateActiveLessonCard() {
+            const cards = document.getElementsByClassName('carousel-card');
+            Array.from(cards).forEach((card, index) => {
+                card.classList.remove('active');
+                if (index === currentLessonIndex) {
+                    card.classList.add('active');
+                }
+            });
+        }
+
+        function initializeLessonCarousel() {
+            const carousel = document.getElementById('lessonCarousel');
+            const cards = carousel.getElementsByClassName('carousel-card');
+            
+            // Position cards in 3D space
+            for (let i = 0; i < cards.length; i++) {
+                const angle = (i * lessonRotationAngle);
+                const radius = 400;
+                cards[i].style.transform = `rotateY(${angle}deg) translateZ(${radius}px)`;
+                cards[i].style.visibility = 'visible';
+            }
+
+            // Set initial active card
+            updateActiveLessonCard();
+
+            // Add keyboard navigation
+            document.addEventListener('keydown', handleLessonKeyPress);
+
+            // Add touch event handling
+            let touchStartX = 0;
+            let touchEndX = 0;
+            
+            carousel.addEventListener('touchstart', function(event) {
+                touchStartX = event.touches[0].clientX;
+            }, false);
+            
+            carousel.addEventListener('touchmove', function(event) {
+                event.preventDefault(); // Prevent scrolling while swiping
+            }, false);
+            
+            carousel.addEventListener('touchend', function(event) {
+                touchEndX = event.changedTouches[0].clientX;
+                handleSwipe();
+            }, false);
+            
+            function handleSwipe() {
+                const swipeThreshold = 50; // Minimum distance for a swipe
+                const swipeDistance = touchEndX - touchStartX;
+                
+                if (Math.abs(swipeDistance) > swipeThreshold) {
+                    if (swipeDistance > 0) {
+                        // Swipe right
+                        rotateLessonCarousel('prev');
+                    } else {
+                        // Swipe left
+                        rotateLessonCarousel('next');
+                    }
+                }
+            }
+        }
+
+        function handleLessonKeyPress(event) {
+            if (event.key === 'ArrowLeft') {
+                rotateLessonCarousel('prev');
+            } else if (event.key === 'ArrowRight') {
+                rotateLessonCarousel('next');
+            } else if (event.key === 'Enter') {
+                const cards = document.getElementsByClassName('carousel-card');
+                const activeCard = cards[currentLessonIndex];
+                if (activeCard) {
+                    selectLessonTopic(activeCard.dataset.topic);
+                }
+            }
+        }
+
+        function selectLessonTopic(topic) {
+            selectedLessonTopic = topic;
+            document.getElementById('lessonTopic').value = topic;
+            
+            // Remove selected class from all cards and add to the chosen one
+            const cards = document.getElementsByClassName('carousel-card');
+            Array.from(cards).forEach(card => {
+                card.classList.remove('selected', 'selecting');
+                if (card.dataset.topic === topic) {
+                    card.classList.add('selected', 'selecting');
+                    setTimeout(() => card.classList.remove('selecting'), 300);
+                }
+            });
+        }
+
+        // --- Navigation Functions ---
+        function goToLessonTopicScreen() {
+            document.getElementById('storyCategoryScreen').classList.add('hidden');
+            document.getElementById('lessonTopicScreen').classList.remove('hidden');
+            initializeLessonCarousel();
+        }
+
+        function startAdventure() {
+            document.getElementById('lessonTopicScreen').classList.add('hidden');
+            document.getElementById('storyContainer').classList.remove('hidden');
+            initWebSocket();
+        }
+
+        // Initialize carousels on page load
+        window.addEventListener('load', () => {
+            initializeCarousel();
+        });
 
         // Initialize marked.js with custom options
         marked.setOptions({
@@ -291,11 +426,10 @@
             storyWebSocket.onopen = function() {
                 // First send the stored state if it exists
                 const storyState = JSON.parse(sessionStorage.getItem('storyState') || '{}');
-                const selectedStoryLength = parseInt(document.getElementById('storyLength').value);
 
                 if (Object.keys(storyState).length > 0) {
                     const currentChapter = parseInt(sessionStorage.getItem('storyChapter') || '0');
-                    updateProgress(currentChapter + 1, storyState.storyLength || selectedStoryLength);
+                    updateProgress(currentChapter + 1, storyState.storyLength || 10);
 
                     sendMessage({
                         state: {
@@ -305,7 +439,7 @@
                             correct_lesson_answers: storyState.correct_lesson_answers || 0,
                             total_lessons: storyState.total_lessons || 0,
                             previous_chapter_content: storyState.previous_chapter_content,
-                            story_length: storyState.storyLength || selectedStoryLength
+                            story_length: storyState.storyLength || 10
                         }
                     });
                 } else {
@@ -318,7 +452,7 @@
                             correct_lesson_answers: 0,
                             total_lessons: 0,
                             previous_chapter_content: '',
-                            story_length: selectedStoryLength
+                            story_length: 10
                         }
                     });
                 }
