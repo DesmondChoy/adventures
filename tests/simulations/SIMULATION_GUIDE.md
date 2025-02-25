@@ -1,6 +1,20 @@
-# Story Simulations
+# Story Simulation Guide
 
-This directory contains scripts and documentation for simulating user interactions with the Learning Odyssey application. These simulations are used for testing, debugging, and validating the application's functionality.
+This directory contains scripts for simulating user interactions with the Learning Odyssey application. The primary purpose of these simulations is to generate structured log data that captures complete user journeys, which will then be analyzed by dedicated test files.
+
+## Dual Purpose
+
+The simulation scripts serve two complementary roles:
+
+1. **Primary: Data Generation Tool**
+   - Produces comprehensive logs with standardized prefixes
+   - Captures the complete state transitions throughout a user journey
+   - Generates consistent output that can be analyzed by dedicated test files
+
+2. **Secondary: End-to-End Verification**
+   - Verifies that the complete workflow can execute successfully
+   - Acts as a basic smoke test for the integrated system
+   - Validates that all components can work together
 
 ## Files
 
@@ -23,16 +37,39 @@ The simulation script has been updated to align with the current codebase:
   - `LESSON:` - Logs lesson answer correctness
   - `STATS:` - Logs story completion statistics
 
+## Test Integration
+
+While the simulation itself is not a test suite, it generates the data that enables comprehensive testing:
+
+1. **Future Test Files**
+   - Dedicated test files will analyze the simulation output
+   - Tests will verify specific behaviors and requirements
+   - Multiple test suites can use the same simulation output
+
+2. **Testable Patterns**
+   - Process sequence validation (e.g., `process_consequences()` after LESSON chapters)
+   - Chapter type sequence verification
+   - Phase assignment validation
+   - Content loading and sampling verification
+   - State transition consistency checks
+
+3. **Log Analysis Approach**
+   - Standardized log prefixes enable consistent parsing
+   - Tests can search for specific patterns in the logs
+   - State transitions can be reconstructed from the log data
+
 ## Purpose
 
 The simulation tools in this directory serve several purposes:
-1. Testing the WebSocket communication
-2. Validating story generation flow
-3. Debugging LLM interactions
-4. Testing lesson integration
-5. Verifying choice selection logic
-6. Ensuring state management consistency
-7. Validating chapter type progression
+1. Generating structured log data for subsequent test analysis
+2. Verifying basic end-to-end functionality
+3. Validating WebSocket communication
+4. Exercising the story generation flow
+5. Debugging LLM interactions
+6. Testing lesson integration
+7. Verifying choice selection logic
+8. Ensuring state management consistency
+9. Validating chapter type progression
 
 ## Usage Guide
 

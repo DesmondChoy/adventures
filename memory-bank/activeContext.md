@@ -58,21 +58,25 @@ See progress.md for detailed change history.
   * Generates default choices when needed
   * Implements proper error handling
 
-### Testing Framework (`tests/simulations/story_simulation.py`)
-- Primary purpose:
-  * Generate test data through random adventure progression
-  * Provide comprehensive logs for test validation
-  * Support testing requirements when core components change
-  * Validate element consistency
-  * Test plot twist progression
+### Simulation Framework (`tests/simulations/story_simulation.py`)
+- Dual purpose:
+  * **Primary: Data Generation Tool**
+    - Produces structured log data for subsequent test analysis
+    - Captures complete user journeys through the application
+    - Generates consistent output that dedicated test files will analyze
+  * **Secondary: End-to-End Verification**
+    - Verifies that the complete workflow executes successfully
+    - Acts as a basic smoke test for the integrated system
+    - Validates that all components can work together
+
 - Current status:
-  * Successfully generates required DEBUG level logs
-  * Captures all state changes and responses
-  * Maintains WebSocket communication
-  * Implements robust error handling
-  * Functions as intended for test data generation
-  * Validates element consistency
-  * Tracks plot twist development
+  * Successfully generates structured log data with standardized prefixes
+  * Captures all state transitions throughout user journeys
+  * Maintains WebSocket communication with proper error handling
+  * Implements robust retry logic for connection failures
+  * Functions as intended for both data generation and basic verification
+  * Validates element consistency and tracks plot twist development
+
 - Recent optimizations (2025-02-25):
   * Fixed story length to match codebase (constant 10 chapters)
   * Removed real-time content streaming for testing efficiency
@@ -82,4 +86,15 @@ See progress.md for detailed change history.
     - `LESSON:` - Logs lesson answer correctness
     - `STATS:` - Logs story completion statistics
   * Added content preview logging for better traceability
-  * Updated documentation in README.md with detailed implementation information
+  * Updated documentation with detailed implementation information
+  * Renamed README.md to SIMULATION_GUIDE.md for clarity
+  * Clarified the simulation's role as a data generation tool rather than a test suite
+
+- Future integration:
+  * Dedicated test files will analyze the simulation output
+  * Tests will verify specific behaviors and requirements:
+    - Process sequence validation (e.g., `process_consequences()` after LESSON chapters)
+    - Chapter type sequence verification
+    - Phase assignment validation
+    - Content loading and sampling verification
+    - State transition consistency checks

@@ -1,7 +1,12 @@
 """
-Story simulation for testing WebSocket router and service integration.
+Story simulation for WebSocket router and service integration.
 
-This simulation tests both:
+This simulation serves two purposes:
+1. Primary: Generate structured log data that captures a complete user journey
+   through the application, which will be analyzed by dedicated test files.
+2. Secondary: Verify that the end-to-end workflow executes successfully.
+
+The simulation exercises both:
 1. WebSocket Router (`app/routers/websocket_router.py`):
    - Connection management
    - Message routing
@@ -14,8 +19,9 @@ This simulation tests both:
    - State management
    - Error handling at application level
 
-The simulation generates random adventures and validates the entire
-story generation pipeline, including router-service interaction.
+The simulation produces comprehensive logs with standardized prefixes that make it easy
+to verify specific behaviors in subsequent test runs. It is not a test suite itself,
+but rather a data generation tool that enables more specific testing.
 
 Updates (2025-02-25):
 - Fixed file path for story data (new_stories.yaml)
