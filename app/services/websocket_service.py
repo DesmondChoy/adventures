@@ -183,8 +183,11 @@ async def process_choice(
         )
         return None, None, False
 
-    # Check if story is complete
-    is_story_complete = len(state.chapters) >= state.story_length
+    # Check if story is complete - only when we've reached the final CONCLUSION chapter
+    is_story_complete = (
+        len(state.chapters) == state.story_length
+        and state.chapters[-1].chapter_type == ChapterType.CONCLUSION
+    )
 
     return chapter_content, sampled_question, is_story_complete
 

@@ -455,6 +455,33 @@ async def simulate_story():
                                                 "stats", {}
                                             )
 
+                                            # First, log the accumulated story content for the final chapter
+                                            if story_content:
+                                                full_content = "".join(story_content)
+                                                content_length = len(full_content)
+                                                # Log the final chapter content
+                                                simulation_logger.info(
+                                                    f"Chapter {current_chapter} content complete ({content_length} chars)"
+                                                )
+                                                # Log the first 100 chars as a preview
+                                                preview = (
+                                                    full_content[:100] + "..."
+                                                    if content_length > 100
+                                                    else full_content
+                                                )
+                                                simulation_logger.debug(
+                                                    f"Content preview: {preview}"
+                                                )
+
+                                                # Log the full content for the final chapter
+                                                simulation_logger.debug(
+                                                    f"Final chapter content: {full_content}"
+                                                )
+
+                                                # Print for human readability
+                                                print_separator("Final Chapter Content")
+                                                print(full_content)
+
                                             # Log detailed statistics in structured format for automated testing
                                             simulation_logger.info(
                                                 "EVENT:STORY_COMPLETE",
