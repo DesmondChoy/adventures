@@ -19,8 +19,12 @@ The simulation scripts serve two complementary roles:
 ## Files
 
 - `story_simulation.py`: A Python script that simulates user interaction with the story generation WebSocket API
+- `log_utils.py`: Utility functions for finding, parsing, and analyzing simulation logs
+- `test_story_simulation.py`: Example test file that demonstrates how to test simulation outputs
 
 ## Recent Updates (2025-02-25)
+
+### Simulation Script Updates
 
 The simulation script has been updated to align with the current codebase:
 
@@ -37,13 +41,58 @@ The simulation script has been updated to align with the current codebase:
   - `LESSON:` - Logs lesson answer correctness
   - `STATS:` - Logs story completion statistics
 
+### New Logging System
+
+A major improvement has been implemented in the logging system:
+
+- **Timestamped Log Files**: Each simulation run now creates its own log file with timestamp and unique run ID
+  - Format: `logs/simulations/simulation_YYYY-MM-DD_HH-MM-SS_runid.log`
+  - Prevents log file confusion and makes it easy to identify specific runs
+  
+- **Run Metadata**: Each log file includes complete run metadata:
+  - Run ID (unique identifier for each simulation run)
+  - Timestamp (when the simulation was started)
+  - Story category and lesson topic
+  - Story length
+  - Duration (for completed runs)
+  
+- **Run Boundaries**: Clear START and END markers in logs:
+  - `SIMULATION_RUN_START` - Marks the beginning of a simulation run with metadata
+  - `SIMULATION_RUN_END` - Marks the successful completion of a run with summary statistics
+
+- **Structured JSON Logging**: Uses the application's `StructuredLogger` for consistent format
+  - All log entries include the run ID for easy filtering
+  - JSON-formatted metadata for automated parsing
+
+### New Test Utilities
+
+New test utilities have been added to support automated testing:
+
+- **Log Finding Functions**:
+  - `get_latest_simulation_log()` - Get the most recent simulation log
+  - `get_simulation_logs_by_date(date_str)` - Find logs from a specific date
+  - `get_simulation_log_by_run_id(run_id)` - Find a specific run by ID
+  - `find_simulations_by_criteria(...)` - Find runs matching specific criteria
+
+- **Log Parsing Functions**:
+  - `parse_simulation_log(log_file)` - Extract structured data from a log file
+  - `get_chapter_sequence(log_file)` - Get the sequence of chapter types
+  - `count_lesson_chapters(log_file)` - Count the number of lesson chapters
+  - `get_lesson_success_rate(log_file)` - Calculate lesson success rate
+  - `check_simulation_complete(log_file)` - Check if a simulation completed successfully
+  - `get_simulation_errors(log_file)` - Get all errors from a simulation run
+
+- **Example Test File**:
+  - `test_story_simulation.py` - Demonstrates how to test simulation outputs
+  - Includes tests for chapter sequence, lesson ratio, success rate, and more
+
 ## Test Integration
 
 While the simulation itself is not a test suite, it generates the data that enables comprehensive testing:
 
-1. **Future Test Files**
-   - Dedicated test files will analyze the simulation output
-   - Tests will verify specific behaviors and requirements
+1. **Dedicated Test Files**
+   - `test_story_simulation.py` provides examples of how to test simulation outputs
+   - Tests verify specific behaviors and requirements
    - Multiple test suites can use the same simulation output
 
 2. **Testable Patterns**
@@ -57,6 +106,7 @@ While the simulation itself is not a test suite, it generates the data that enab
    - Standardized log prefixes enable consistent parsing
    - Tests can search for specific patterns in the logs
    - State transitions can be reconstructed from the log data
+   - Run ID tracking ensures test isolation
 
 ## Purpose
 
@@ -87,12 +137,43 @@ The simulation tools in this directory serve several purposes:
    - yaml
    - pandas
    - logging
+   - pytest (for running tests)
 
 ### Running the Simulation
 
 Execute the script from the project root directory:
 ```bash
 python tests/simulations/story_simulation.py
+```
+
+#### Command-Line Options
+
+The simulation script now supports command-line arguments:
+
+```bash
+# Get just the run ID (useful for test scripts)
+python tests/simulations/story_simulation.py --output-run-id
+
+# Specify a story category
+python tests/simulations/story_simulation.py --category "enchanted_forest_tales"
+
+# Specify a lesson topic
+python tests/simulations/story_simulation.py --topic "Farm Animals"
+```
+
+### Running Tests
+
+After running a simulation, you can run the tests to analyze the output:
+
+```bash
+# Run all tests
+pytest tests/simulations/test_story_simulation.py
+
+# Run a specific test
+pytest tests/simulations/test_story_simulation.py::test_chapter_sequence
+
+# Run tests with verbose output
+pytest -v tests/simulations/test_story_simulation.py
 ```
 
 ### Monitoring Output
@@ -106,13 +187,19 @@ python tests/simulations/story_simulation.py
 
 ### Logging
 
-The simulation logs detailed information to:
+The simulation now logs detailed information to:
 - Console (INFO level and above)
-- `logs/simulation_debug.log` (DEBUG level and above)
+- Timestamped log file (DEBUG level and above): `logs/simulations/simulation_YYYY-MM-DD_HH-MM-SS_runid.log`
 
-To view detailed logs:
+Each simulation run creates its own log file with a unique run ID, making it easy to identify and analyze specific runs.
+
+To view the latest simulation log:
 ```bash
-cat logs/simulation_debug.log
+# Using the log_utils.py module
+python -c "from tests.simulations.log_utils import get_latest_simulation_log; print(get_latest_simulation_log())"
+
+# View the content of the latest log
+cat $(python -c "from tests.simulations.log_utils import get_latest_simulation_log; print(get_latest_simulation_log())")
 ```
 
 ## Implementation Details
@@ -248,6 +335,7 @@ To extend the simulation for additional testing:
 3. **Performance Testing**: Add timing measurements for response latency analysis.
 4. **Error Injection**: Modify messages to test error handling in the server.
 5. **Parallel Simulations**: Run multiple instances to test server load handling.
+6. **Custom Test Cases**: Create new test files that use the log_utils.py module to test specific behaviors.
 
 ## Troubleshooting
 
@@ -267,3 +355,8 @@ Common issues and solutions:
    - Check for mismatches between client and server state
    - Verify the state structure matches AdventureState model
    - Ensure chapter progression is properly tracked
+
+4. **Log File Issues**:
+   - Ensure the logs/simulations directory exists
+   - Check file permissions
+   - Verify that the simulation script has write access to the logs directory
