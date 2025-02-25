@@ -456,8 +456,30 @@ graph TD
     - Checks for absence of critical errors
 - **Simulation Script**: `story_simulation.py` generates structured log data for test analysis
 - **Utility Module**: `log_utils.py` provides functions for finding, parsing, and analyzing logs
+- **Orchestration Script**: `run_simulation_tests.py` automates the entire testing workflow
+  * Starts the FastAPI server with uvicorn
+  * Runs the story simulation
+  * Executes all pytest tests
+  * Handles proper cleanup of all processes
 
 #### Running Tests Before Feature Deployment
+
+##### Using the Orchestration Script (Recommended)
+```bash
+# Run the complete workflow (server, simulation, tests)
+python tests/simulations/run_simulation_tests.py
+
+# Run with specific story category and lesson topic
+python tests/simulations/run_simulation_tests.py --category "enchanted_forest_tales" --topic "Farm Animals"
+
+# Skip simulation and just run tests on existing logs
+python tests/simulations/run_simulation_tests.py --tests-only
+
+# Run only the simulation without tests
+python tests/simulations/run_simulation_tests.py --simulation-only
+```
+
+##### Manual Testing (Alternative)
 1. **Generate Test Data**:
    ```bash
    # Run a simulation to generate log data

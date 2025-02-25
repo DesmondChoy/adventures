@@ -225,14 +225,52 @@ This test file verifies the simulation's ability to handle errors gracefully and
    - logging
    - pytest (for running tests)
 
-### Running the Simulation
+### Orchestration Script
+
+The `run_simulation_tests.py` script automates the entire testing workflow by:
+
+1. Starting the FastAPI server with uvicorn
+2. Running the story simulation
+3. Executing all pytest tests in tests/simulations with prefix test_
+4. Handling proper cleanup of all processes
+
+#### Using the Orchestration Script
 
 Execute the script from the project root directory:
+```bash
+python tests/simulations/run_simulation_tests.py
+```
+
+#### Command-Line Options
+
+The orchestration script supports several command-line arguments:
+
+```bash
+# Run with specific story category and lesson topic
+python tests/simulations/run_simulation_tests.py --category "enchanted_forest_tales" --topic "Farm Animals"
+
+# Skip simulation and just run tests on existing logs
+python tests/simulations/run_simulation_tests.py --tests-only
+
+# Run only the simulation without tests
+python tests/simulations/run_simulation_tests.py --simulation-only
+
+# Use a different port for the server
+python tests/simulations/run_simulation_tests.py --server-port 8080
+
+# Use a different host for the server
+python tests/simulations/run_simulation_tests.py --server-host "0.0.0.0"
+```
+
+### Running the Simulation Manually
+
+If you prefer to run the simulation manually without the orchestration script:
+
 ```bash
 python tests/simulations/story_simulation.py
 ```
 
-#### Command-Line Options
+#### Simulation Command-Line Options
 
 The simulation script supports command-line arguments:
 
@@ -247,9 +285,9 @@ python tests/simulations/story_simulation.py --category "enchanted_forest_tales"
 python tests/simulations/story_simulation.py --topic "Farm Animals"
 ```
 
-### Running Tests
+### Running Tests Manually
 
-After running a simulation, you can run the tests to analyze the output:
+After running a simulation, you can run the tests manually to analyze the output:
 
 ```bash
 # Run all functionality tests
@@ -427,6 +465,16 @@ The simulation includes comprehensive error handling:
 ## Troubleshooting
 
 Common issues and solutions:
+
+### Orchestration Script Issues
+- **Server Startup Failures**: 
+  - Check if the port is already in use
+  - Verify that uvicorn is installed
+  - Check for any error messages in the server output
+- **Process Cleanup Issues**:
+  - If processes are left running after script termination, check for error messages
+  - Manually terminate any orphaned processes using `ps` and `kill` commands
+  - Ensure the script has proper permissions to terminate processes
 
 ### Connection Failures
 - Ensure the FastAPI server is running
