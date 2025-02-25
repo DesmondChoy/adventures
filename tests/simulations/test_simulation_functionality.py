@@ -1,13 +1,13 @@
 """
-Example test file for analyzing story simulation logs.
+Test file for analyzing simulation functionality through log analysis.
 
-This file demonstrates how to use the log_utils module to test
-simulation outputs. It provides examples of common test patterns
-that can be used to verify simulation behavior.
+This file tests the functional correctness of the simulation system by analyzing
+simulation logs. It verifies chapter sequences, lesson ratios, success rates,
+and other functional aspects of the simulation.
 
 Usage:
     1. Run a simulation: python tests/simulations/story_simulation.py
-    2. Run these tests: pytest tests/simulations/test_story_simulation.py
+    2. Run these tests: pytest tests/simulations/test_simulation_functionality.py
 """
 
 import pytest

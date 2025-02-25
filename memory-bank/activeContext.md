@@ -69,6 +69,21 @@ See progress.md for detailed change history.
     - Acts as a basic smoke test for the integrated system
     - Validates that all components can work together
 
+### Test Files
+- Two complementary test files:
+  * **`test_simulation_functionality.py`**: Tests the functional correctness of the simulation system
+    - Verifies chapter sequences (ensuring proper STORY/LESSON/CONCLUSION ordering)
+    - Validates lesson ratio (approximately 50% of flexible chapters)
+    - Checks lesson success rate calculations
+    - Verifies simulation metadata
+    - Tests state transition consistency
+  * **`test_simulation_errors.py`**: Tests error handling and recovery mechanisms
+    - Verifies error detection and classification
+    - Tests logging level configuration
+    - Validates error recovery mechanisms
+    - Performs comprehensive error analysis
+    - Checks for absence of critical errors
+
 - Current status:
   * Successfully generates structured log data with standardized prefixes
   * Captures all state transitions throughout user journeys
@@ -90,11 +105,12 @@ See progress.md for detailed change history.
   * Renamed README.md to SIMULATION_GUIDE.md for clarity
   * Clarified the simulation's role as a data generation tool rather than a test suite
 
-- Future integration:
-  * Dedicated test files will analyze the simulation output
-  * Tests will verify specific behaviors and requirements:
+- Test integration:
+  * Both test files analyze the simulation output from different perspectives
+  * Tests verify specific behaviors and requirements:
     - Process sequence validation (e.g., `process_consequences()` after LESSON chapters)
     - Chapter type sequence verification
     - Phase assignment validation
     - Content loading and sampling verification
     - State transition consistency checks
+    - Error handling and recovery mechanisms

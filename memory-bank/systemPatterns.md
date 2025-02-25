@@ -423,6 +423,93 @@ graph TD
 - **State Management:** Complete state tracking, question history, answer selections, performance metrics.
 - **Testing Automation:** Question sampling tests, answer shuffling validation, flow verification, state consistency.
 
+### Testing Framework (`tests/`)
+```mermaid
+graph TD
+    Tests[tests/] --> Simulations[simulations/]
+    Simulations --> SimScript[story_simulation.py]
+    Simulations --> FuncTests[test_simulation_functionality.py]
+    Simulations --> ErrorTests[test_simulation_errors.py]
+    Simulations --> LogUtils[log_utils.py]
+    Simulations --> Docs[Documentation Files]
+    
+    Docs --> TestingMD[SIMULATION_TESTING.md]
+    Docs --> GuideMD[SIMULATION_GUIDE.md]
+    Docs --> SummaryMD[TEST_SUMMARY.md]
+```
+
+#### Test Structure and Organization
+- **Root Directory**: `tests/` contains all testing code
+- **Simulation Tests**: `tests/simulations/` focuses on end-to-end testing through simulation
+- **Test Files**:
+  * `test_simulation_functionality.py`: Tests functional correctness of the simulation system
+    - Verifies chapter sequences (STORY/LESSON/CONCLUSION ordering)
+    - Validates lesson ratio (approximately 50% of flexible chapters)
+    - Checks lesson success rate calculations
+    - Verifies simulation metadata
+    - Tests state transition consistency
+  * `test_simulation_errors.py`: Tests error handling and recovery mechanisms
+    - Verifies error detection and classification
+    - Tests logging level configuration
+    - Validates error recovery mechanisms
+    - Performs comprehensive error analysis
+    - Checks for absence of critical errors
+- **Simulation Script**: `story_simulation.py` generates structured log data for test analysis
+- **Utility Module**: `log_utils.py` provides functions for finding, parsing, and analyzing logs
+
+#### Running Tests Before Feature Deployment
+1. **Generate Test Data**:
+   ```bash
+   # Run a simulation to generate log data
+   python tests/simulations/story_simulation.py
+   
+   # Optionally specify story category and lesson topic
+   python tests/simulations/story_simulation.py --category "enchanted_forest_tales" --topic "Farm Animals"
+   ```
+
+2. **Run Functionality Tests**:
+   ```bash
+   # Run all functionality tests
+   pytest tests/simulations/test_simulation_functionality.py
+   
+   # Run a specific test
+   pytest tests/simulations/test_simulation_functionality.py::test_chapter_sequence
+   ```
+
+3. **Run Error Handling Tests**:
+   ```bash
+   # Run all error handling tests
+   pytest tests/simulations/test_simulation_errors.py
+   
+   # Run a specific test
+   pytest tests/simulations/test_simulation_errors.py::test_error_recovery_mechanism
+   ```
+
+4. **Verify Test Results**:
+   - All tests should pass with output similar to:
+     ```
+     ========================== 6 passed in 0.33s ==========================
+     ```
+   - If tests fail, the error message will indicate which assertion failed and provide guidance
+
+#### When to Run Tests
+- **Required**: Before pushing changes to any of these files:
+  * `app/services/llm/*`
+  * `app/routers/websocket_router.py`
+  * `app/services/websocket_service.py`
+  * `app/services/chapter_manager.py`
+  * `app/models/story.py`
+  * `app/init_data.py`
+  * `app/data/new_stories.yaml`
+  * `app/data/lessons.csv`
+  * `app/templates/index.html`
+- **Recommended**: After any significant changes to the codebase
+- **Best Practice**: Include in CI/CD pipeline for automated verification
+
+#### Test Documentation
+- **Primary Reference**: `SIMULATION_TESTING.md` contains comprehensive documentation
+- **Deprecated Files**: `SIMULATION_GUIDE.md` and `TEST_SUMMARY.md` have been merged into the primary reference
+
 ## Text Streaming Pattern
 1. Content Delivery:
    - Word-by-word streaming for natural flow
