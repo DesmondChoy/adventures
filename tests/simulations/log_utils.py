@@ -351,6 +351,23 @@ def get_chapter_sequence(log_file: str) -> List[str]:
     Returns:
         List[str]: Sequence of chapter types in order
     """
+    # Extract chapter information directly from the log file
+    with open(log_file, "r") as f:
+        log_content = f.read()
+        # Look for EVENT:CHAPTER_START events
+        chapter_start_events = re.findall(
+            r'"EVENT:CHAPTER_START".*?"chapter_type": "([^"]+)".*?"chapter_number": (\d+)',
+            log_content,
+        )
+        if chapter_start_events:
+            # Convert to list of (chapter_number, chapter_type) tuples
+            chapters = [(int(num), type.upper()) for type, num in chapter_start_events]
+            # Sort by chapter number
+            chapters.sort(key=lambda x: x[0])
+            # Return just the chapter types in order
+            return [chapter[1] for chapter in chapters]
+
+    # Fallback to using parse_simulation_log if direct extraction fails
     parsed_data = parse_simulation_log(log_file)
     # Sort by chapter number and extract types
     sorted_chapters = sorted(
@@ -368,6 +385,20 @@ def count_lesson_chapters(log_file: str) -> int:
     Returns:
         int: Number of lesson chapters
     """
+    # Extract chapter information directly from the log file
+    with open(log_file, "r") as f:
+        log_content = f.read()
+        # Look for EVENT:CHAPTER_START events
+        chapter_start_events = re.findall(
+            r'"EVENT:CHAPTER_START".*?"chapter_type": "([^"]+)"', log_content
+        )
+        if chapter_start_events:
+            chapter_types = [
+                chapter_type.upper() for chapter_type in chapter_start_events
+            ]
+            return chapter_types.count("LESSON")
+
+    # Fallback to using get_chapter_sequence if direct extraction fails
     chapter_types = get_chapter_sequence(log_file)
     return chapter_types.count("LESSON")
 

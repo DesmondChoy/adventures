@@ -109,7 +109,7 @@ This test file verifies the functional correctness of the simulation system by a
 
 ### Error Handling Tests (`test_simulation_errors.py`)
 
-This test file verifies the simulation's ability to handle errors gracefully and continue operation.
+This test file verifies the simulation's ability to handle errors gracefully and continue operation. The tests are designed to automatically skip if no errors are found in the log file, making them compatible with both error-containing and error-free simulation runs.
 
 #### Test: Error Detection and Classification
 
@@ -119,6 +119,8 @@ This test file verifies the simulation's ability to handle errors gracefully and
 - Errors in the log file are correctly identified
 - Errors can be classified into different categories (connection, service, etc.)
 - The simulation completes successfully despite encountering errors
+
+**Note**: This test will be skipped if no errors are found in the log file.
 
 **If it fails**:
 - Check if the log file format has changed
@@ -134,6 +136,8 @@ This test file verifies the simulation's ability to handle errors gracefully and
 - Specific error types (like WebSocket connection errors) are being logged
 - The logging level in story_simulation.py is set to capture ERROR messages
 
+**Note**: This test will be skipped if no ERROR level messages or WebSocket connection errors are found in the log file.
+
 **If it fails**:
 - Check if the logging level in story_simulation.py has been changed
 - Verify that the logger is properly configured to log ERROR level messages
@@ -147,6 +151,8 @@ This test file verifies the simulation's ability to handle errors gracefully and
 - The retry mechanism is working after errors occur
 - The simulation can continue and complete successfully after encountering errors
 - Retry messages are properly logged
+
+**Note**: This test will be skipped if no retry messages are found in the log file.
 
 **If it fails**:
 - Check if the retry logic in story_simulation.py is working correctly
@@ -163,6 +169,8 @@ This test file verifies the simulation's ability to handle errors gracefully and
 - The simulation makes significant progress despite errors (at least 80% completion)
 - Chapter information can be extracted from the log file
 
+**Note**: This test will be skipped if no errors are found in the log file.
+
 **If it fails**:
 - Check if the chapter information format in the log has changed
 - Verify that the simulation is making sufficient progress despite errors
@@ -177,6 +185,8 @@ This test file verifies the simulation's ability to handle errors gracefully and
 - Errors can be classified as critical or recoverable
 - No critical errors (fatal, crash, exception, traceback) are present in the log
 - The simulation completes successfully despite recoverable errors
+
+**Note**: This test will be skipped if no errors are found in the log file.
 
 **If it fails**:
 - Check for critical error keywords in the log (fatal, crash, exception, traceback)
