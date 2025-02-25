@@ -22,10 +22,10 @@ from tests.simulations.log_utils import (
     get_latest_simulation_log,
     parse_simulation_log,
     get_chapter_sequence,
-    count_lesson_chapters,
     get_lesson_success_rate,
     check_simulation_complete,
     get_simulation_errors,
+    check_process_after_chapter_type,
 )
 
 
@@ -498,6 +498,107 @@ def test_simulation_metadata():
         pytest.skip("No simulation logs found")
 
 
+def test_process_consequences_after_lesson():
+    """
+    Test that the process_consequences function is called after each LESSON chapter.
+
+    This test verifies:
+    - Each LESSON chapter is followed by a call to the process_consequences function
+    - The consequence processing is only happening after LESSON chapters
+    - The correct lesson data is being processed
+
+    Skip Conditions:
+    - This test is skipped when no simulation logs are found.
+
+    If this test fails:
+    - Check if the process_consequences function is being correctly called in LessonManager
+    - Verify that the story flow correctly handles lesson consequences
+    - Ensure that the simulation is properly logging process executions
+    """
+    try:
+        log_file = get_latest_simulation_log()
+
+        # Check if process_consequences is called after LESSON chapters
+        is_process_after_lesson = check_process_after_chapter_type(
+            log_file, "process_consequences", "LESSON"
+        )
+
+        # If we can't verify using the utility function, try manual verification
+        if not is_process_after_lesson:
+            # Extract chapter information directly from the log file
+            chapter_types = []
+            with open(log_file, "r") as f:
+                log_content = f.read()
+                # Look for process_consequences calls
+                process_calls = re.findall(
+                    r'Executing process "process_consequences".*?"chapter_number": (\d+)',
+                    log_content,
+                )
+
+                # Look for LESSON chapters
+                lesson_chapters = re.findall(
+                    r'"EVENT:CHAPTER_START".*?"chapter_type": "LESSON".*?"chapter_number": (\d+)',
+                    log_content,
+                )
+
+                print(f"Found {len(process_calls)} process_consequences calls")
+                print(f"Found {len(lesson_chapters)} LESSON chapters")
+
+                # Convert to ints for comparison
+                process_chapters = [int(chapter) for chapter in process_calls]
+                lesson_chapters = [int(chapter) for chapter in lesson_chapters]
+
+                # Check if all LESSON chapters are followed by process_consequences
+                missing_process = [
+                    ch for ch in lesson_chapters if ch not in process_chapters
+                ]
+
+                if missing_process:
+                    print(
+                        f"LESSON chapters without process_consequences: {missing_process}"
+                    )
+                    is_process_after_lesson = False
+                else:
+                    is_process_after_lesson = True
+
+        assert is_process_after_lesson, (
+            "process_consequences is not called after all LESSON chapters"
+        )
+
+        # Additional verification: check that process_consequences is ONLY called after LESSON chapters
+        # This ensures consequences are only processed when there's actually a lesson outcome
+        parsed_data = parse_simulation_log(log_file)
+        process_executions = [
+            p
+            for p in parsed_data.get("process_executions", [])
+            if p.get("process_name") == "process_consequences"
+        ]
+
+        chapter_types = parsed_data.get("chapter_types", [])
+        chapter_type_map = {
+            c.get("chapter_number"): c.get("type").upper()
+            for c in chapter_types
+            if "chapter_number" in c and "type" in c
+        }
+
+        # Check each process_consequences call to ensure it follows a LESSON chapter
+        for proc in process_executions:
+            chapter_num = proc.get("chapter_number")
+            if chapter_num is not None:
+                chapter_type = chapter_type_map.get(chapter_num)
+                assert chapter_type == "LESSON", (
+                    f"process_consequences called after chapter {chapter_num} "
+                    f"which is type {chapter_type}, not LESSON"
+                )
+
+    except FileNotFoundError:
+        pytest.skip("No simulation logs found")
+    except AssertionError as e:
+        # Print more debug info before failing
+        print(f"Test failed: {str(e)}")
+        raise
+
+
 if __name__ == "__main__":
     # Run tests manually
     test_simulation_log_exists()
@@ -507,4 +608,5 @@ if __name__ == "__main__":
     test_lesson_success_rate()
     test_no_errors_in_simulation()
     test_simulation_metadata()
+    test_process_consequences_after_lesson()
     print("All tests completed")

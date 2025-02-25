@@ -133,8 +133,8 @@ with open(log_filename, "w") as f:
     f.write("=" * 80 + "\n\n")
 
 # Constants
-MAX_RETRIES = 3
-RETRY_DELAY = 2  # seconds
+MAX_RETRIES = 5  # Increased from 3 to 5
+RETRY_DELAY = 2  # Base delay in seconds for exponential backoff
 WEBSOCKET_TIMEOUT = 30  # seconds
 
 # Global variables for cleanup
@@ -704,8 +704,9 @@ async def simulate_story():
                 f"Failed to connect to WebSocket (attempt {retry + 1}/{MAX_RETRIES}): {e}"
             )
             if retry < MAX_RETRIES - 1 and not should_exit:
-                simulation_logger.info(f"Retrying in {RETRY_DELAY} seconds...")
-                await asyncio.sleep(RETRY_DELAY)
+                backoff_delay = RETRY_DELAY * (2**retry)
+                simulation_logger.info(f"Retrying in {backoff_delay} seconds...")
+                await asyncio.sleep(backoff_delay)
             else:
                 simulation_logger.error(
                     "Max retries reached or exit requested. Exiting."
@@ -716,8 +717,9 @@ async def simulate_story():
                 f"Unexpected error (attempt {retry + 1}/{MAX_RETRIES}): {e}"
             )
             if retry < MAX_RETRIES - 1 and not should_exit:
-                simulation_logger.info(f"Retrying in {RETRY_DELAY} seconds...")
-                await asyncio.sleep(RETRY_DELAY)
+                backoff_delay = RETRY_DELAY * (2**retry)
+                simulation_logger.info(f"Retrying in {backoff_delay} seconds...")
+                await asyncio.sleep(backoff_delay)
             else:
                 simulation_logger.error(
                     "Max retries reached or exit requested. Exiting."
