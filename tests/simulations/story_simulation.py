@@ -16,6 +16,16 @@ This simulation tests both:
 
 The simulation generates random adventures and validates the entire
 story generation pipeline, including router-service interaction.
+
+Updates (2025-02-25):
+- Fixed file path for story data (new_stories.yaml)
+- Updated initial state structure to match AdventureStateManager expectations
+- Enhanced response handling for different message types
+- Added support for lesson chapter detection and answer validation
+- Improved logging for chapter types and question handling
+- Fixed story length to match codebase (constant 10 chapters)
+- Optimized for automated testing by removing real-time content streaming
+- Enhanced logging for better test analysis and debugging
 """
 
 import asyncio
@@ -103,7 +113,7 @@ def print_separator(title=""):
 def load_story_data():
     """Load story data from YAML file."""
     try:
-        with open("app/data/newstories.yaml", "r") as f:
+        with open("app/data/new_stories.yaml", "r") as f:
             return yaml.safe_load(f)
     except Exception as e:
         simulation_logger.error(f"Failed to load story data: {e}")
@@ -131,10 +141,8 @@ def get_random_lesson_topic(lesson_df):
     return random.choice(topics)
 
 
-def get_random_story_length():
-    """Randomly select a story length."""
-    story_lengths = [5, 8, 10]  # Mirror available options in index.html
-    return random.choice(story_lengths)
+# Fixed story length as per current codebase
+STORY_LENGTH = 10  # Fixed story length in the current codebase
 
 
 async def simulate_story():
@@ -146,7 +154,7 @@ async def simulate_story():
 
     story_category = get_random_story_category(story_data)
     lesson_topic = get_random_lesson_topic(lesson_df)
-    story_length = get_random_story_length()
+    story_length = STORY_LENGTH  # Use the fixed story length
 
     print_separator("Story Configuration")
     print(f"Date: {time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -178,19 +186,22 @@ async def simulate_story():
 
             try:
                 # Send initial state message with story length
+                # Note: The actual state initialization is handled by AdventureStateManager
+                # We only need to provide the story_length here
                 initial_state_message = {
                     "state": {
                         "current_chapter_id": "start",
-                        "current_chapter_number": 0,
-                        "story_choices": [],
-                        "correct_lesson_answers": 0,
-                        "total_lessons": 0,
-                        "previous_chapter_content": "",
                         "story_length": story_length,
                         "chapters": [],
-                        "story_category": story_category,  # Add story category
-                        "lesson_topic": lesson_topic,  # Add lesson topic
-                        "story_length_num": story_length,  # Add story length (numerical for easier processing if needed)
+                        # The following fields are not used by the server but included for completeness
+                        "selected_narrative_elements": {},
+                        "selected_sensory_details": {},
+                        "selected_theme": "",
+                        "selected_moral_teaching": "",
+                        "selected_plot_twist": "",
+                        "planned_chapter_types": [],
+                        "current_storytelling_phase": "Exposition",
+                        "metadata": {},
                     }
                 }
                 await websocket.send(json.dumps(initial_state_message))
@@ -241,27 +252,65 @@ async def simulate_story():
                                             f"Parsed JSON response:\n{formatted_json}"
                                         )
 
-                                        if (
-                                            response_data.get("type")
-                                            == "chapter_update"
-                                        ):
+                                        # Handle different response types
+                                        response_type = response_data.get("type")
+
+                                        if response_type == "chapter_update":
+                                            # Store state for later use
                                             response_state = response_data.get(
                                                 "state", {}
                                             )
+
+                                            # Log chapter type information if available
+                                            if "current_chapter" in response_state:
+                                                chapter_info = response_state[
+                                                    "current_chapter"
+                                                ]
+                                                chapter_type = chapter_info.get(
+                                                    "chapter_type", "unknown"
+                                                )
+                                                # Log chapter type for automated testing
+                                                simulation_logger.info(
+                                                    f"CHAPTER_TYPE: {chapter_type.upper()} (Chapter {current_chapter})"
+                                                )
+
+                                                # If this is a lesson chapter, log question info
+                                                if chapter_info.get("question"):
+                                                    simulation_logger.debug(
+                                                        f"Question: {chapter_info['question'].get('question')}"
+                                                    )
                                             continue
-                                        elif response_data.get("type") == "choices":
+
+                                        elif response_type == "choices":
+                                            # Store choices and break the inner loop to process them
                                             choices_data = response_data.get(
                                                 "choices", []
                                             )
+                                            simulation_logger.debug(
+                                                f"Received {len(choices_data)} choices"
+                                            )
                                             break
-                                        elif (
-                                            response_data.get("type")
-                                            == "story_complete"
-                                        ):
-                                            print_separator("Story Complete")
+
+                                        elif response_type == "story_complete":
+                                            # Handle story completion
                                             stats = response_data.get("state", {}).get(
                                                 "stats", {}
                                             )
+
+                                            # Log detailed statistics for automated testing
+                                            simulation_logger.info("Story Complete")
+                                            simulation_logger.info(
+                                                f"STATS: Total Lessons: {stats.get('total_lessons', 0)}"
+                                            )
+                                            simulation_logger.info(
+                                                f"STATS: Correct Answers: {stats.get('correct_lesson_answers', 0)}"
+                                            )
+                                            simulation_logger.info(
+                                                f"STATS: Success Rate: {stats.get('completion_percentage', 0)}%"
+                                            )
+
+                                            # Print for human readability
+                                            print_separator("Story Complete")
                                             print(
                                                 f"Total Lessons: {stats.get('total_lessons', 0)}"
                                             )
@@ -275,7 +324,10 @@ async def simulate_story():
                                 except json.JSONDecodeError:
                                     # Not JSON, must be story content or completion
                                     story_content.append(response_raw)
-                                    print(response_raw, end="", flush=True)
+                                    # Accumulate content without real-time display
+                                    simulation_logger.debug(
+                                        f"Received content chunk ({len(response_raw)} chars)"
+                                    )
                                 except Exception as e:
                                     simulation_logger.error(
                                         f"Error parsing response: {e}"
@@ -299,10 +351,24 @@ async def simulate_story():
                         if should_exit:
                             break
 
-                        # Print accumulated story content
+                        # Log accumulated story content
                         if story_content:
-                            print_separator("Chapter Content")
                             full_content = "".join(story_content)
+                            content_length = len(full_content)
+                            # Log a summary of the content instead of the full content
+                            simulation_logger.info(
+                                f"Chapter {current_chapter} content complete ({content_length} chars)"
+                            )
+                            # Log the first 100 chars as a preview
+                            preview = (
+                                full_content[:100] + "..."
+                                if content_length > 100
+                                else full_content
+                            )
+                            simulation_logger.debug(f"Content preview: {preview}")
+
+                            # Still print for human readability during development
+                            print_separator("Chapter Content")
                             print(full_content)
 
                         if choices_data:
@@ -312,12 +378,74 @@ async def simulate_story():
                                     f"  {i + 1}. {choice['text']} (ID: {choice['id']})"
                                 )
 
+                            # Determine if this is a lesson chapter or story chapter
+                            is_lesson_chapter = False
+                            if response_state and "current_chapter" in response_state:
+                                chapter_info = response_state["current_chapter"]
+                                is_lesson_chapter = (
+                                    chapter_info.get("chapter_type") == "lesson"
+                                )
+
+                                if is_lesson_chapter:
+                                    simulation_logger.debug(
+                                        "Processing lesson chapter choice"
+                                    )
+                                    # For lesson chapters, try to find the correct answer
+                                    question_data = chapter_info.get("question", {})
+                                    if question_data and "answers" in question_data:
+                                        # Find the correct answer for logging purposes
+                                        correct_answer = next(
+                                            (
+                                                a
+                                                for a in question_data["answers"]
+                                                if a.get("is_correct")
+                                            ),
+                                            None,
+                                        )
+                                        if correct_answer:
+                                            simulation_logger.debug(
+                                                f"Correct answer: {correct_answer.get('text')}"
+                                            )
+
                             # Simulate choice selection
                             chosen_choice = random.choice(choices_data)
+
+                            # Log choice selection for automated testing
+                            simulation_logger.info(
+                                f"CHOICE: Selected '{chosen_choice['text']}' (ID: {chosen_choice['id']})"
+                            )
+
+                            # Print for human readability
                             print_separator("Selected Choice")
                             print(
                                 f"Selected: '{chosen_choice['text']}' (ID: {chosen_choice['id']})"
                             )
+
+                            # For lesson chapters, log whether the choice was correct
+                            if (
+                                is_lesson_chapter
+                                and "current_chapter" in response_state
+                            ):
+                                question_data = response_state["current_chapter"].get(
+                                    "question", {}
+                                )
+                                if question_data and "answers" in question_data:
+                                    correct_answer = next(
+                                        (
+                                            a["text"]
+                                            for a in question_data["answers"]
+                                            if a.get("is_correct")
+                                        ),
+                                        None,
+                                    )
+                                    if correct_answer:
+                                        is_correct = (
+                                            chosen_choice["text"] == correct_answer
+                                        )
+                                        # Log lesson answer correctness for automated testing
+                                        simulation_logger.info(
+                                            f"LESSON: Answer is {'CORRECT' if is_correct else 'INCORRECT'} - Selected: '{chosen_choice['text']}', Correct: '{correct_answer}'"
+                                        )
 
                             # Prepare and send choice message
                             choice_message = {
