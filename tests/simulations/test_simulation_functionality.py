@@ -30,7 +30,20 @@ from tests.simulations.log_utils import (
 
 
 def test_simulation_log_exists():
-    """Test that simulation logs exist."""
+    """
+    Test that simulation logs exist.
+
+    This test verifies:
+    - The simulations directory exists
+    - There are simulation log files in the directory
+
+    Skip Conditions:
+    - This test is not skipped under any conditions.
+
+    If this test fails:
+    - Check if the logs/simulations directory exists
+    - Verify that simulation runs have been executed
+    """
     # Check if the simulations directory exists
     assert os.path.exists("logs/simulations"), "Simulations directory not found"
 
@@ -41,7 +54,22 @@ def test_simulation_log_exists():
 
 
 def test_latest_simulation_complete():
-    """Test that the latest simulation completed successfully."""
+    """
+    Test that the latest simulation completed successfully.
+
+    This test verifies:
+    - The latest simulation log file exists
+    - The simulation has a STORY_COMPLETE event or other completion marker
+    - The simulation ran to completion without being interrupted
+
+    Skip Conditions:
+    - This test is skipped when no simulation logs are found.
+
+    If this test fails:
+    - Check if the simulation was interrupted
+    - Verify that the simulation is properly sending completion events
+    - Ensure that the log file format hasn't changed
+    """
     try:
         log_file = get_latest_simulation_log()
         is_complete = check_simulation_complete(log_file)
@@ -65,7 +93,24 @@ def test_latest_simulation_complete():
 
 
 def test_chapter_sequence():
-    """Test that the chapter sequence follows the expected pattern."""
+    """
+    Test that the chapter sequence follows the expected pattern.
+
+    This test verifies:
+    - Chapters can be extracted from the simulation log
+    - The first two chapters are STORY type
+    - The last chapter is CONCLUSION type (if simulation completed)
+    - The second-to-last chapter is STORY type (if simulation completed)
+    - LESSON chapters are present in the sequence (if enough chapters)
+
+    Skip Conditions:
+    - This test is skipped when no simulation logs are found.
+
+    If this test fails:
+    - Check if the chapter type pattern has changed
+    - Verify that the chapter events are being properly logged
+    - Ensure that the ChapterManager is correctly determining chapter types
+    """
     try:
         log_file = get_latest_simulation_log()
 
@@ -145,7 +190,23 @@ def test_chapter_sequence():
 
 
 def test_lesson_chapters_ratio():
-    """Test that approximately 50% of non-fixed chapters are LESSON type."""
+    """
+    Test that approximately 50% of non-fixed chapters are LESSON type.
+
+    This test verifies:
+    - The chapter sequence contains the expected ratio of LESSON chapters
+    - Approximately 50% of non-fixed chapters (excluding first two and last two) are LESSON type
+    - The ratio is within ±1 of the expected count to account for available questions
+
+    Skip Conditions:
+    - This test is skipped when no simulation logs are found.
+    - This test is also skipped when there are fewer than 5 chapters in the simulation.
+
+    If this test fails:
+    - Check if the chapter type ratio has changed in ChapterManager
+    - Verify that there are enough lesson questions available
+    - Ensure that the chapter events are being properly logged
+    """
     try:
         log_file = get_latest_simulation_log()
         print(f"DEBUG: Using log file: {log_file}")
@@ -198,7 +259,22 @@ def test_lesson_chapters_ratio():
 
 
 def test_lesson_success_rate():
-    """Test that the lesson success rate is within expected range."""
+    """
+    Test that the lesson success rate is within expected range.
+
+    This test verifies:
+    - The lesson success rate can be calculated from the simulation log
+    - The success rate is within the valid range (0-100%)
+    - The success rate is consistent with random selection (approximately 33% for 3 options)
+
+    Skip Conditions:
+    - This test is skipped when no simulation logs are found.
+
+    If this test fails:
+    - Check if the lesson answer logging format has changed
+    - Verify that the success rate calculation is working correctly
+    - Ensure that the random selection of answers is functioning properly
+    """
     try:
         log_file = get_latest_simulation_log()
         success_rate = get_lesson_success_rate(log_file)
@@ -215,7 +291,22 @@ def test_lesson_success_rate():
 
 
 def test_no_errors_in_simulation():
-    """Test that there are no errors in the simulation log."""
+    """
+    Test that there are no errors in the simulation log.
+
+    This test verifies:
+    - The simulation log can be parsed for errors
+    - No ERROR level messages are present in the log
+    - The simulation ran without encountering any errors
+
+    Skip Conditions:
+    - This test is skipped when no simulation logs are found.
+
+    If this test fails:
+    - Check the error messages to identify the source of the errors
+    - Investigate the simulation code that generated the errors
+    - Fix any bugs or issues in the error-generating code
+    """
     try:
         log_file = get_latest_simulation_log()
         errors = get_simulation_errors(log_file)
@@ -231,7 +322,24 @@ def test_no_errors_in_simulation():
 
 
 def test_simulation_metadata():
-    """Test that the simulation metadata is correctly recorded."""
+    """
+    Test that the simulation metadata is correctly recorded.
+
+    This test verifies:
+    - The simulation log contains required metadata (run_id, timestamp, story_category)
+    - The metadata can be extracted from the log file
+    - The story length matches the number of chapters (if simulation is complete)
+
+    Skip Conditions:
+    - This test is skipped when no simulation logs are found.
+    - This test is also skipped when no run_id is found in the log.
+    - This test is also skipped when required metadata (timestamp, story_category) is missing.
+
+    If this test fails:
+    - Check if the metadata logging format has changed
+    - Verify that the SIMULATION_RUN_START event is being properly logged
+    - Ensure that all required metadata fields are included in the simulation
+    """
     try:
         log_file = get_latest_simulation_log()
         parsed_data = parse_simulation_log(log_file)

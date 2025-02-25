@@ -70,6 +70,9 @@ def test_error_detection_and_classification():
     - Errors can be classified into different categories (connection, service, etc.)
     - The simulation completes successfully despite encountering errors
 
+    Skip Conditions:
+    - This test is skipped when no errors are found in the log file.
+
     If this test fails:
     - Check if the log file format has changed
     - Verify that the error detection function can parse the log format
@@ -134,6 +137,10 @@ def test_logging_level_sufficient_for_errors():
     - Specific error types (like WebSocket connection errors) are being logged
     - The logging level in story_simulation.py is set to capture ERROR messages
 
+    Skip Conditions:
+    - This test is skipped when no ERROR level messages are found in the log file.
+    - This test is also skipped when no WebSocket connection errors are found.
+
     If this test fails:
     - Check if the logging level in story_simulation.py has been changed
     - Verify that the logger is properly configured to log ERROR level messages
@@ -193,6 +200,9 @@ def test_error_recovery_mechanism():
     - The retry mechanism is working after errors occur
     - The simulation can continue and complete successfully after encountering errors
     - Retry messages are properly logged
+
+    Skip Conditions:
+    - This test is skipped when no retry messages are found in the log file.
 
     If this test fails:
     - Check if the retry logic in story_simulation.py is working correctly
@@ -276,6 +286,9 @@ def test_comprehensive_error_analysis():
     - The simulation makes significant progress despite errors (at least 80% completion)
     - Chapter information can be extracted from the log file
 
+    Skip Conditions:
+    - This test is skipped when no errors are found in the log file.
+
     If this test fails:
     - Check if the chapter information format in the log has changed
     - Verify that the simulation is making sufficient progress despite errors
@@ -343,6 +356,9 @@ def test_no_critical_errors():
     - No critical errors (fatal, crash, exception, traceback) are present in the log
     - The simulation completes successfully despite recoverable errors
 
+    Skip Conditions:
+    - This test is skipped when no errors are found in the log file.
+
     If this test fails:
     - Check for critical error keywords in the log (fatal, crash, exception, traceback)
     - Investigate any critical errors found and fix their root causes
@@ -400,6 +416,9 @@ def test_error_logging_in_story_simulation():
     - The story_simulation.py file contains error logging statements
     - There are try-except blocks to catch and handle errors
     - Error handling is implemented throughout the code
+
+    Skip Conditions:
+    - This test is not skipped under any conditions.
 
     If this test fails:
     - Check if error logging statements have been removed from story_simulation.py
