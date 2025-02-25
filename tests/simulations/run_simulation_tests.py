@@ -20,13 +20,71 @@ import argparse
 import glob
 import re
 import socket
+import random
 from pathlib import Path
+from enum import Enum
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
+# Import ChapterType enum
+from app.models.story import ChapterType
+
 # Global variables for cleanup
 processes = []
+
+
+def generate_chapter_sequence(total_chapters=10, available_questions=5):
+    """Generate a chapter sequence similar to ChapterManager.determine_chapter_types().
+
+    Args:
+        total_chapters: Total number of chapters in the adventure
+        available_questions: Number of available questions for the topic
+
+    Returns:
+        List of chapter types as strings
+    """
+    if total_chapters < 4:
+        raise ValueError(
+            "Total chapters must be at least 4 to accommodate the required chapter types"
+        )
+
+    # Initialize with all chapters as STORY type
+    chapter_types = [ChapterType.STORY] * total_chapters
+
+    # First two chapters are always STORY
+    chapter_types[0] = ChapterType.STORY
+    chapter_types[1] = ChapterType.STORY
+
+    # Second-to-last chapter is always STORY
+    chapter_types[-2] = ChapterType.STORY
+
+    # Last chapter is always CONCLUSION
+    chapter_types[-1] = ChapterType.CONCLUSION
+
+    # Calculate required number of LESSON chapters (50% of non-conclusion chapters)
+    required_lessons = (total_chapters - 1) // 2
+    possible_lessons = min(required_lessons, available_questions)
+
+    if possible_lessons <= 0:
+        return [ct.value.upper() for ct in chapter_types]
+
+    # Get available positions for lessons (excluding first two, second-to-last, and last chapters)
+    available_positions = list(range(2, total_chapters - 2))
+
+    # Only attempt to select lesson positions if we have both possible lessons and available positions
+    if possible_lessons > 0 and available_positions:
+        # Ensure we don't try to sample more positions than are available
+        possible_lessons = min(possible_lessons, len(available_positions))
+
+        # Randomly select positions for lessons
+        lesson_positions = random.sample(available_positions, possible_lessons)
+
+        # Set selected positions to LESSON type
+        for pos in lesson_positions:
+            chapter_types[pos] = ChapterType.LESSON
+
+    return [ct.value.upper() for ct in chapter_types]
 
 
 def signal_handler(signum, frame):
@@ -84,6 +142,28 @@ def check_server_ready(host="localhost", port=8000, max_retries=10, retry_delay=
     return False
 
 
+def count_available_questions(topic):
+    """Count the number of available questions for a given topic.
+
+    Args:
+        topic: The educational topic to count questions for
+
+    Returns:
+        Number of available questions for the topic
+    """
+    # Import here to avoid circular imports
+    from app.init_data import load_lesson_data
+
+    try:
+        df = load_lesson_data()
+        topic_questions = df[df["topic"] == topic]
+        question_count = len(topic_questions)
+        return question_count
+    except Exception as e:
+        print(f"Error counting questions: {e}")
+        return 5  # Default to 5 questions if there's an error
+
+
 def run_simulation(category=None, topic=None):
     """Run the story simulation and return the run ID."""
     # First get the run ID
@@ -97,6 +177,14 @@ def run_simulation(category=None, topic=None):
     result = subprocess.run(cmd, capture_output=True, text=True)
     run_id = result.stdout.strip()
     print(f"Generated run ID: {run_id}")
+
+    # Generate the chapter sequence
+    story_length = 10  # Fixed story length as per current codebase
+    available_questions = count_available_questions(topic) if topic else 5
+    chapter_sequence = generate_chapter_sequence(story_length, available_questions)
+
+    # Write the Final Chapter Sequence to the log file
+    # The log file will be created by the simulation, so we need to wait for it
 
     # Now run the actual simulation
     cmd = ["python", "tests/simulations/story_simulation.py"]
@@ -113,6 +201,16 @@ def run_simulation(category=None, topic=None):
 
     simulation_process.wait()
     print("Simulation completed")
+
+    # Find the log file and append the Final Chapter Sequence
+    log_file = find_latest_log_file()
+    if log_file:
+        with open(log_file, "a") as f:
+            # Format exactly as expected by get_final_chapter_sequence in log_utils.py
+            f.write(
+                f"\nFinal Chapter Sequence ({story_length} total): [{', '.join(chapter_sequence)}]\n"
+            )
+        print(f"Added Final Chapter Sequence to log file: {log_file}")
 
     return run_id
 

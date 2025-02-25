@@ -96,6 +96,15 @@ class JsonPassthroughFormatter(logging.Formatter):
             and record.msg.startswith("{")
         ):
             return record.msg
+        # For debug logs from chapter_manager.py, ensure they're properly formatted
+        if (
+            hasattr(record, "name")
+            and record.name == "story_app"
+            and hasattr(record, "levelname")
+            and record.levelname == "DEBUG"
+        ):
+            # Include the original message in the formatted output
+            return f"{record.getMessage()}"
         # Otherwise use the default formatter
         return super().format(record)
 
@@ -117,6 +126,9 @@ logging.getLogger("websockets").setLevel(logging.WARNING)
 # Setup story_app logger
 logger = logging.getLogger("story_app")
 logger.setLevel(logging.DEBUG)
+# Add handlers to story_app logger to capture logs from chapter_manager.py
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
 
 # Setup simulation logger with the new handlers
 simulation_logger = logging.getLogger(f"simulation.{run_id}")
