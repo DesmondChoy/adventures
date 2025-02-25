@@ -1,7 +1,12 @@
 """
-Story simulation for testing WebSocket router and service integration.
+Story simulation for WebSocket router and service integration.
 
-This simulation tests both:
+This simulation serves two purposes:
+1. Primary: Generate structured log data that captures a complete user journey
+   through the application, which will be analyzed by dedicated test files.
+2. Secondary: Verify that the end-to-end workflow executes successfully.
+
+The simulation exercises both:
 1. WebSocket Router (`app/routers/websocket_router.py`):
    - Connection management
    - Message routing
@@ -14,8 +19,19 @@ This simulation tests both:
    - State management
    - Error handling at application level
 
-The simulation generates random adventures and validates the entire
-story generation pipeline, including router-service interaction.
+The simulation produces comprehensive logs with standardized prefixes that make it easy
+to verify specific behaviors in subsequent test runs. It is not a test suite itself,
+but rather a data generation tool that enables more specific testing.
+
+Updates (2025-02-25):
+- Fixed file path for story data (new_stories.yaml)
+- Updated initial state structure to match AdventureStateManager expectations
+- Enhanced response handling for different message types
+- Added support for lesson chapter detection and answer validation
+- Improved logging for chapter types and question handling
+- Fixed story length to match codebase (constant 10 chapters)
+- Optimized for automated testing by removing real-time content streaming
+- Enhanced logging for better test analysis and debugging
 """
 
 import asyncio
@@ -27,6 +43,7 @@ import pandas as pd
 import logging
 import urllib.parse
 import signal
+import sys
 import time
 from enum import Enum
 
@@ -46,27 +63,74 @@ class SimulationError(Exception):
         super().__init__(f"{error_type.value.upper()}: {message}")
 
 
-# Configure Logging
-logging.basicConfig(
-    level=logging.DEBUG,  # Changed from INFO to DEBUG - Ensure DEBUG level for simulation
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("logs/simulation_debug.log"),
-        logging.StreamHandler(),
-    ],
-)
+import uuid
+import os
+import sys
+from datetime import datetime
+
+# Add the project root to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+# Now we can import from app
+from app.utils.logging_config import StructuredLogger
+
+# Generate unique run ID and timestamp for this simulation run
+run_id = str(uuid.uuid4())[:8]
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+log_filename = f"logs/simulations/simulation_{timestamp}_{run_id}.log"
+
+# Ensure logs directory exists
+os.makedirs("logs/simulations", exist_ok=True)
+
+# Configure logging - use the StructuredLogger properly
+logging.setLoggerClass(StructuredLogger)
+
+
+# Create a custom JSON formatter that doesn't interfere with StructuredLogger's formatting
+class JsonPassthroughFormatter(logging.Formatter):
+    def format(self, record):
+        # Just return the message as is if it's already JSON formatted
+        if (
+            hasattr(record, "msg")
+            and isinstance(record.msg, str)
+            and record.msg.startswith("{")
+        ):
+            return record.msg
+        # Otherwise use the default formatter
+        return super().format(record)
+
+
+# Create handlers
+file_handler = logging.FileHandler(log_filename)
+file_handler.setLevel(logging.DEBUG)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+# Apply the JsonPassthroughFormatter to the handlers
+json_formatter = JsonPassthroughFormatter("%(message)s")
+file_handler.setFormatter(json_formatter)
+console_handler.setFormatter(json_formatter)
+
 # Configure websockets logger to only show warnings and errors
 logging.getLogger("websockets").setLevel(logging.WARNING)
-# Allow debug logs from story_app logger - CRITICAL FIX: Get the story_app logger
-logger = logging.getLogger("story_app")
-logger.setLevel(logging.DEBUG)  # Ensure story_app logger is also at DEBUG level
 
-simulation_logger = logging.getLogger(
-    __name__
-)  # Keep a separate logger for simulation script itself
-simulation_logger.setLevel(
-    logging.DEBUG
-)  # Set simulation script logger to DEBUG as well
+# Setup story_app logger
+logger = logging.getLogger("story_app")
+logger.setLevel(logging.DEBUG)
+
+# Setup simulation logger with the new handlers
+simulation_logger = logging.getLogger(f"simulation.{run_id}")
+simulation_logger.setLevel(logging.DEBUG)
+simulation_logger.addHandler(file_handler)
+simulation_logger.addHandler(console_handler)
+simulation_logger.propagate = False  # Prevent propagation to avoid duplicate logging
+
+# Write a direct header to the log file to ensure it's working
+with open(log_filename, "w") as f:
+    f.write(f"=== SIMULATION RUN START: {timestamp} (ID: {run_id}) ===\n")
+    f.write("This header is written directly to ensure the log file is working.\n")
+    f.write("Subsequent logs will be written through the logging system.\n")
+    f.write("=" * 80 + "\n\n")
 
 # Constants
 MAX_RETRIES = 3
@@ -103,7 +167,7 @@ def print_separator(title=""):
 def load_story_data():
     """Load story data from YAML file."""
     try:
-        with open("app/data/newstories.yaml", "r") as f:
+        with open("app/data/new_stories.yaml", "r") as f:
             return yaml.safe_load(f)
     except Exception as e:
         simulation_logger.error(f"Failed to load story data: {e}")
@@ -131,10 +195,8 @@ def get_random_lesson_topic(lesson_df):
     return random.choice(topics)
 
 
-def get_random_story_length():
-    """Randomly select a story length."""
-    story_lengths = [5, 8, 10]  # Mirror available options in index.html
-    return random.choice(story_lengths)
+# Fixed story length as per current codebase
+STORY_LENGTH = 10  # Fixed story length in the current codebase
 
 
 async def simulate_story():
@@ -146,10 +208,24 @@ async def simulate_story():
 
     story_category = get_random_story_category(story_data)
     lesson_topic = get_random_lesson_topic(lesson_df)
-    story_length = get_random_story_length()
+    story_length = STORY_LENGTH  # Use the fixed story length
+
+    # Log simulation start with complete metadata
+    simulation_logger.info(
+        "SIMULATION_RUN_START",
+        extra={
+            "run_id": run_id,
+            "timestamp": timestamp,
+            "story_category": story_category,
+            "lesson_topic": lesson_topic,
+            "story_length": story_length,
+        },
+    )
 
     print_separator("Story Configuration")
     print(f"Date: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Run ID: {run_id}")
+    print(f"Log File: {log_filename}")
     print(f"Category: {story_category}")
     print(f"Topic: {lesson_topic}")
     print(f"Length: {story_length} chapters")
@@ -158,9 +234,10 @@ async def simulate_story():
     )
     print("=" * 80)
 
-    # Remove duplicate logging of configuration
+    # Log configuration with run_id for traceability
     simulation_logger.debug(
-        f"Starting story simulation with: Category='{story_category}', Topic='{lesson_topic}', Length={story_length} chapters"
+        f"Starting story simulation with: Category='{story_category}', Topic='{lesson_topic}', Length={story_length} chapters",
+        extra={"run_id": run_id},
     )
 
     uri = f"ws://localhost:8000/ws/story/{urllib.parse.quote(story_category)}/{urllib.parse.quote(lesson_topic)}"
@@ -178,19 +255,22 @@ async def simulate_story():
 
             try:
                 # Send initial state message with story length
+                # Note: The actual state initialization is handled by AdventureStateManager
+                # We only need to provide the story_length here
                 initial_state_message = {
                     "state": {
                         "current_chapter_id": "start",
-                        "current_chapter_number": 0,
-                        "story_choices": [],
-                        "correct_lesson_answers": 0,
-                        "total_lessons": 0,
-                        "previous_chapter_content": "",
                         "story_length": story_length,
                         "chapters": [],
-                        "story_category": story_category,  # Add story category
-                        "lesson_topic": lesson_topic,  # Add lesson topic
-                        "story_length_num": story_length,  # Add story length (numerical for easier processing if needed)
+                        # The following fields are not used by the server but included for completeness
+                        "selected_narrative_elements": {},
+                        "selected_sensory_details": {},
+                        "selected_theme": "",
+                        "selected_moral_teaching": "",
+                        "selected_plot_twist": "",
+                        "planned_chapter_types": [],
+                        "current_storytelling_phase": "Exposition",
+                        "metadata": {},
                     }
                 }
                 await websocket.send(json.dumps(initial_state_message))
@@ -237,31 +317,194 @@ async def simulate_story():
                                         formatted_json = json.dumps(
                                             response_data, indent=2
                                         )
-                                        simulation_logger.debug(
-                                            f"Parsed JSON response:\n{formatted_json}"
-                                        )
 
-                                        if (
-                                            response_data.get("type")
-                                            == "chapter_update"
-                                        ):
+                                        # Handle different response types
+                                        response_type = response_data.get("type")
+
+                                        if response_type == "chapter_update":
+                                            # Store state for later use
                                             response_state = response_data.get(
                                                 "state", {}
                                             )
+
+                                            # Log chapter type information if available
+                                            if "current_chapter" in response_state:
+                                                chapter_info = response_state[
+                                                    "current_chapter"
+                                                ]
+                                                chapter_type = chapter_info.get(
+                                                    "chapter_type", "unknown"
+                                                )
+
+                                                # Log structured chapter data for automated testing
+                                                simulation_logger.info(
+                                                    "EVENT:CHAPTER_START",
+                                                    extra={
+                                                        "chapter_number": current_chapter,
+                                                        "chapter_type": chapter_type,
+                                                        "chapter_id": response_state.get(
+                                                            "current_chapter_id"
+                                                        ),
+                                                        "timestamp": datetime.now().isoformat(),
+                                                        "run_id": run_id,
+                                                    },
+                                                )
+
+                                                # Log state transition
+                                                simulation_logger.info(
+                                                    "EVENT:STATE_TRANSITION",
+                                                    extra={
+                                                        "from_chapter": initial_state_message[
+                                                            "state"
+                                                        ].get("current_chapter_id")
+                                                        if current_chapter == 1
+                                                        else "previous_chapter",
+                                                        "to_chapter": response_state.get(
+                                                            "current_chapter_id"
+                                                        ),
+                                                        "state": json.dumps(
+                                                            response_state
+                                                        ),
+                                                        "timestamp": datetime.now().isoformat(),
+                                                    },
+                                                )
+
+                                                # If this is a lesson chapter, log question info
+                                                if chapter_info.get("question"):
+                                                    question_data = chapter_info[
+                                                        "question"
+                                                    ]
+                                                    simulation_logger.info(
+                                                        "EVENT:LESSON_QUESTION",
+                                                        extra={
+                                                            "chapter_number": current_chapter,
+                                                            "question": question_data.get(
+                                                                "question"
+                                                            ),
+                                                            "topic": question_data.get(
+                                                                "topic"
+                                                            ),
+                                                            "subtopic": question_data.get(
+                                                                "subtopic"
+                                                            ),
+                                                            "answers": json.dumps(
+                                                                [
+                                                                    a.get("text")
+                                                                    for a in question_data.get(
+                                                                        "answers", []
+                                                                    )
+                                                                ]
+                                                            ),
+                                                            "correct_answer": next(
+                                                                (
+                                                                    a.get("text")
+                                                                    for a in question_data.get(
+                                                                        "answers", []
+                                                                    )
+                                                                    if a.get(
+                                                                        "is_correct"
+                                                                    )
+                                                                ),
+                                                                None,
+                                                            ),
+                                                            "timestamp": datetime.now().isoformat(),
+                                                        },
+                                                    )
+
+                                                    # Log process execution for lesson processing
+                                                    simulation_logger.info(
+                                                        "EVENT:PROCESS_START",
+                                                        extra={
+                                                            "process_name": "process_lesson",
+                                                            "chapter_number": current_chapter,
+                                                            "chapter_type": chapter_type,
+                                                            "timestamp": datetime.now().isoformat(),
+                                                        },
+                                                    )
                                             continue
-                                        elif response_data.get("type") == "choices":
+
+                                        elif response_type == "choices":
+                                            # Store choices and break the inner loop to process them
                                             choices_data = response_data.get(
                                                 "choices", []
                                             )
+
+                                            # Log choices in a structured format for testing
+                                            simulation_logger.info(
+                                                "EVENT:CHOICES_PRESENTED",
+                                                extra={
+                                                    "chapter_number": current_chapter,
+                                                    "choices_count": len(choices_data),
+                                                    "choices": json.dumps(
+                                                        [
+                                                            {
+                                                                "text": c.get("text"),
+                                                                "id": c.get("id"),
+                                                            }
+                                                            for c in choices_data
+                                                        ]
+                                                    ),
+                                                    "timestamp": datetime.now().isoformat(),
+                                                },
+                                            )
                                             break
-                                        elif (
-                                            response_data.get("type")
-                                            == "story_complete"
-                                        ):
-                                            print_separator("Story Complete")
+
+                                        elif response_type == "story_complete":
+                                            # Handle story completion
                                             stats = response_data.get("state", {}).get(
                                                 "stats", {}
                                             )
+
+                                            # First, log the accumulated story content for the final chapter
+                                            if story_content:
+                                                full_content = "".join(story_content)
+                                                content_length = len(full_content)
+                                                # Log the final chapter content
+                                                simulation_logger.info(
+                                                    f"Chapter {current_chapter} content complete ({content_length} chars)"
+                                                )
+                                                # Log the first 100 chars as a preview
+                                                preview = (
+                                                    full_content[:100] + "..."
+                                                    if content_length > 100
+                                                    else full_content
+                                                )
+                                                simulation_logger.debug(
+                                                    f"Content preview: {preview}"
+                                                )
+
+                                                # Log the full content for the final chapter
+                                                simulation_logger.debug(
+                                                    f"Final chapter content: {full_content}"
+                                                )
+
+                                                # Print for human readability
+                                                print_separator("Final Chapter Content")
+                                                print(full_content)
+
+                                            # Log detailed statistics in structured format for automated testing
+                                            simulation_logger.info(
+                                                "EVENT:STORY_COMPLETE",
+                                                extra={
+                                                    "total_lessons": stats.get(
+                                                        "total_lessons", 0
+                                                    ),
+                                                    "correct_answers": stats.get(
+                                                        "correct_lesson_answers", 0
+                                                    ),
+                                                    "success_rate": stats.get(
+                                                        "completion_percentage", 0
+                                                    ),
+                                                    "timestamp": datetime.now().isoformat(),
+                                                    "run_id": run_id,
+                                                    "final_state": json.dumps(
+                                                        response_data.get("state", {})
+                                                    ),
+                                                },
+                                            )
+
+                                            # Print for human readability
+                                            print_separator("Story Complete")
                                             print(
                                                 f"Total Lessons: {stats.get('total_lessons', 0)}"
                                             )
@@ -275,7 +518,7 @@ async def simulate_story():
                                 except json.JSONDecodeError:
                                     # Not JSON, must be story content or completion
                                     story_content.append(response_raw)
-                                    print(response_raw, end="", flush=True)
+                                    # Don't log each chunk to reduce noise - we'll log a summary later
                                 except Exception as e:
                                     simulation_logger.error(
                                         f"Error parsing response: {e}"
@@ -299,10 +542,24 @@ async def simulate_story():
                         if should_exit:
                             break
 
-                        # Print accumulated story content
+                        # Log accumulated story content
                         if story_content:
-                            print_separator("Chapter Content")
                             full_content = "".join(story_content)
+                            content_length = len(full_content)
+                            # Log a summary of the content instead of the full content
+                            simulation_logger.info(
+                                f"Chapter {current_chapter} content complete ({content_length} chars)"
+                            )
+                            # Log the first 100 chars as a preview
+                            preview = (
+                                full_content[:100] + "..."
+                                if content_length > 100
+                                else full_content
+                            )
+                            simulation_logger.debug(f"Content preview: {preview}")
+
+                            # Still print for human readability during development
+                            print_separator("Chapter Content")
                             print(full_content)
 
                         if choices_data:
@@ -312,12 +569,101 @@ async def simulate_story():
                                     f"  {i + 1}. {choice['text']} (ID: {choice['id']})"
                                 )
 
+                            # Determine if this is a lesson chapter or story chapter
+                            is_lesson_chapter = False
+                            if response_state and "current_chapter" in response_state:
+                                chapter_info = response_state["current_chapter"]
+                                is_lesson_chapter = (
+                                    chapter_info.get("chapter_type") == "lesson"
+                                )
+
+                                if is_lesson_chapter:
+                                    simulation_logger.debug(
+                                        "Processing lesson chapter choice"
+                                    )
+                                    # For lesson chapters, try to find the correct answer
+                                    question_data = chapter_info.get("question", {})
+                                    if question_data and "answers" in question_data:
+                                        # Find the correct answer for logging purposes
+                                        correct_answer = next(
+                                            (
+                                                a
+                                                for a in question_data["answers"]
+                                                if a.get("is_correct")
+                                            ),
+                                            None,
+                                        )
+                                        if correct_answer:
+                                            simulation_logger.debug(
+                                                f"Correct answer: {correct_answer.get('text')}"
+                                            )
+
                             # Simulate choice selection
                             chosen_choice = random.choice(choices_data)
+
+                            # Log choice selection in structured format for automated testing
+                            simulation_logger.info(
+                                "EVENT:CHOICE_SELECTED",
+                                extra={
+                                    "chapter_number": current_chapter,
+                                    "choice_id": chosen_choice["id"],
+                                    "choice_text": chosen_choice["text"],
+                                    "timestamp": datetime.now().isoformat(),
+                                    "run_id": run_id,
+                                },
+                            )
+
+                            # Print for human readability
                             print_separator("Selected Choice")
                             print(
                                 f"Selected: '{chosen_choice['text']}' (ID: {chosen_choice['id']})"
                             )
+
+                            # For lesson chapters, log whether the choice was correct
+                            if (
+                                is_lesson_chapter
+                                and "current_chapter" in response_state
+                            ):
+                                question_data = response_state["current_chapter"].get(
+                                    "question", {}
+                                )
+                                if question_data and "answers" in question_data:
+                                    correct_answer = next(
+                                        (
+                                            a["text"]
+                                            for a in question_data["answers"]
+                                            if a.get("is_correct")
+                                        ),
+                                        None,
+                                    )
+                                    if correct_answer:
+                                        is_correct = (
+                                            chosen_choice["text"] == correct_answer
+                                        )
+                                        # Log lesson answer correctness in structured format
+                                        simulation_logger.info(
+                                            "EVENT:LESSON_ANSWER",
+                                            extra={
+                                                "chapter_number": current_chapter,
+                                                "is_correct": is_correct,
+                                                "selected_answer": chosen_choice[
+                                                    "text"
+                                                ],
+                                                "correct_answer": correct_answer,
+                                                "timestamp": datetime.now().isoformat(),
+                                            },
+                                        )
+
+                                        # Log process execution for consequences
+                                        simulation_logger.info(
+                                            "EVENT:PROCESS_START",
+                                            extra={
+                                                "process_name": "process_consequences",
+                                                "chapter_number": current_chapter,
+                                                "chapter_type": "lesson",
+                                                "timestamp": datetime.now().isoformat(),
+                                            },
+                                        )
 
                             # Prepare and send choice message
                             choice_message = {
@@ -384,24 +730,63 @@ async def simulate_story():
                 except Exception as e:
                     simulation_logger.debug(f"Error during websocket cleanup: {e}")
 
-    simulation_logger.info("Simulation finished.")
+    # Log simulation end with summary statistics
+    simulation_logger.info(
+        "SIMULATION_RUN_END",
+        extra={
+            "run_id": run_id,
+            "timestamp": datetime.now().isoformat(),
+            "story_category": story_category,
+            "lesson_topic": lesson_topic,
+            "story_length": story_length,
+            "duration_seconds": time.time() - start_time,
+        },
+    )
+
+    simulation_logger.info(f"Simulation finished. Log file: {log_filename}")
 
 
 if __name__ == "__main__":
+    import argparse
+
+    # Add command-line arguments for test integration
+    parser = argparse.ArgumentParser(description="Run story simulation")
+    parser.add_argument(
+        "--output-run-id",
+        action="store_true",
+        help="Output only the run ID to stdout for test scripts",
+    )
+    parser.add_argument("--category", type=str, help="Specify story category")
+    parser.add_argument("--topic", type=str, help="Specify lesson topic")
+    args = parser.parse_args()
+
+    # If test script just needs the run ID
+    if args.output_run_id:
+        print(run_id)
+        sys.exit(0)
+
     try:
+        # Record start time for duration calculation
+        start_time = time.time()
+
         # Assume FastAPI server is already running
         simulation_logger.info(
-            "Assuming FastAPI server is already running at http://localhost:8000"
+            "Assuming FastAPI server is already running at http://localhost:8000",
+            extra={"run_id": run_id},
         )
 
         # Run the simulation
         asyncio.run(simulate_story())
     except KeyboardInterrupt:
-        simulation_logger.info("\nSimulation interrupted by user")
+        simulation_logger.info(
+            "\nSimulation interrupted by user", extra={"run_id": run_id}
+        )
     finally:
         # Ensure we clean up any remaining connections
         if websocket:
             try:
                 asyncio.run(websocket.close())
             except Exception as e:
-                simulation_logger.debug(f"Error during websocket cleanup: {e}")
+                simulation_logger.debug(
+                    f"Error during websocket cleanup: {e}", extra={"run_id": run_id}
+                )
