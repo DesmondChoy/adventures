@@ -229,7 +229,7 @@ class ChapterManager:
                 "first_chapter": "STORY",
                 "second_to_last": "STORY",
                 "last_chapter": "CONCLUSION",
-                "initial_state": [ct.value for ct in chapter_types],
+                "initial_state": [ct.value.upper() for ct in chapter_types],
             },
         )
 
@@ -396,10 +396,10 @@ class ChapterManager:
         # Add clear debug log showing final chapter sequence
         logger.debug(
             f"Final Chapter Sequence ({total_chapters} total):\n"
-            + f"[{', '.join(ct.value for ct in chapter_types)}]",
+            + f"[{', '.join(ct.value.upper() for ct in chapter_types)}]",
             extra={
                 "total_chapters": total_chapters,
-                "chapter_sequence": [ct.value for ct in chapter_types],
+                "chapter_sequence": [ct.value.upper() for ct in chapter_types],
             },
         )
 
@@ -512,7 +512,7 @@ class ChapterManager:
                 extra={
                     "story_category": story_category,
                     "non_random_elements": selected_elements["non_random_elements"],
-                    "chapter_types": [ct.value for ct in chapter_types],
+                    "chapter_types": [ct.value.upper() for ct in chapter_types],
                     "plot_twist_guidance": plot_twist_guidance,
                 },
             )
