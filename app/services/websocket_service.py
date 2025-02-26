@@ -413,7 +413,18 @@ async def generate_chapter(
                     else f"wrong{len(story_choices) + 1}",
                 )
             )
-    elif chapter_type == ChapterType.STORY:
+    elif chapter_type == ChapterType.STORY or chapter_type == ChapterType.REASON:
+        # Both STORY and REASON chapters use the same choice extraction logic
+        logger.debug(f"Extracting choices for {chapter_type.value} chapter")
+
+        # Add more detailed logging for REASON chapters
+        if chapter_type == ChapterType.REASON:
+            logger.debug("Processing REASON chapter choices")
+            logger.debug(f"Content length: {len(story_content)}")
+            # Log the last 200 characters to see if <CHOICES> section is present
+            logger.debug(
+                f"Content tail: {story_content[-200:] if len(story_content) > 200 else story_content}"
+            )
         try:
             # First extract the choices section
             choices_match = re.search(
