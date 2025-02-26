@@ -9,6 +9,7 @@ class ChapterType(str, Enum):
     LESSON = "lesson"
     STORY = "story"
     CONCLUSION = "conclusion"
+    REASON = "reason"  # New chapter type for deeper understanding after LESSON
 
 
 class StoryChoice(BaseModel):
