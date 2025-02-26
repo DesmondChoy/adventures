@@ -251,6 +251,120 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
     return base_prompt, story_phase
 
 
+def build_reason_chapter_prompt(
+    is_correct: bool,
+    lesson_question: Dict[str, Any],
+    chosen_answer: str,
+    base_prompt: str,
+) -> str:
+    """Generate a prompt for chapters that test deeper understanding after a lesson.
+
+    Args:
+        is_correct: Whether the previous lesson answer was correct
+        lesson_question: The question from the previous lesson
+        chosen_answer: The answer chosen in the previous lesson
+        base_prompt: Base story state and history
+
+    Returns:
+        A prompt string for generating a chapter that tests deeper understanding
+    """
+    # Extract all answers
+    all_answers = [answer["text"] for answer in lesson_question["answers"]]
+
+    # Find the correct answer
+    correct_answer = next(
+        answer["text"] for answer in lesson_question["answers"] if answer["is_correct"]
+    )
+
+    # Find incorrect answers
+    incorrect_answers = [
+        answer["text"]
+        for answer in lesson_question["answers"]
+        if not answer["is_correct"]
+    ]
+
+    # Creative storytelling techniques for reflective moments
+    reflective_techniques = """Create a reflective moment using one of these storytelling techniques:
+- A vivid dream or vision that symbolically represents the concept
+- A conversation with a wise mentor, guide, or symbolic character
+- A magical environment that transforms to represent understanding
+- A memory palace or special location that appears for reflection
+- An object (mirror, book, crystal) that reveals deeper truths
+- A flashback that gains new meaning with current knowledge
+- Heightened senses that reveal previously hidden aspects of reality
+- A parallel storyline that converges to provide insight"""
+
+    # Choice format instructions
+    reason_choice_format = """CHOICE FORMAT:
+Use this EXACT format for the choices, with NO indentation and NO line breaks within choices:
+
+<CHOICES>
+Choice A: [First option - make this the correct answer]
+Choice B: [Second option - make this incorrect]
+Choice C: [Third option - make this incorrect]
+</CHOICES>
+
+The choices section MUST follow these rules:
+1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices
+2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
+3. Content: Choice A should be correct, Choices B and C should be plausible but incorrect"""
+
+    if is_correct:
+        # For correct answers: Test confidence without revealing it was correct
+        return f"""{base_prompt}
+
+The character has answered "{chosen_answer}" to the question: "{lesson_question["question"]}"
+Now, we need to test if they truly understand the concept or if it was just a lucky guess.
+
+{reflective_techniques}
+
+In this reflective scene:
+1. DO NOT reveal whether their answer was correct or incorrect
+2. Present a scenario where the character is challenged to reconsider their answer
+3. Make the incorrect alternatives sound compelling and plausible
+4. Test their confidence and understanding by seeing if they'll stick with their answer
+
+Present a follow-up scenario that makes the character question their original answer.
+Frame it as: "Are you sure about your answer? Consider these alternatives..."
+
+The choices should include:
+- Choice A: Stick with the original answer ("{chosen_answer}") - this is the correct choice
+- Choice B: Switch to a different answer that sounds convincing but is incorrect
+- Choice C: Switch to another different answer that sounds convincing but is incorrect
+
+For choices B and C, use these incorrect answers as inspiration but make them sound very plausible:
+{", ".join(incorrect_answers)}
+
+{reason_choice_format}"""
+    else:
+        # For incorrect answers: Learning opportunity with explanation
+        return f"""{base_prompt}
+
+The character answered "{chosen_answer}" to the question: "{lesson_question["question"]}"
+The correct answer was "{correct_answer}".
+We need to help them understand why their answer was incorrect and learn how to approach similar questions.
+
+{reflective_techniques}
+
+In this reflective scene:
+1. Gently reveal that their answer wasn't correct
+2. Explain the reasoning behind why "{correct_answer}" is correct
+3. Use the original options as examples to demonstrate the thinking process:
+   - Why "{correct_answer}" is correct
+   - Why "{chosen_answer}" and the other options are incorrect
+4. Present a similar but new question that applies the same concept
+
+Present a new question that tests the same concept but in a different context.
+Frame it as: "Now that you understand why {correct_answer} was correct, let's try a similar question..."
+
+The choices should include:
+- Choice A: The correct answer that applies the same reasoning as the original correct answer
+- Choice B: An incorrect answer that makes the same type of mistake as their original choice
+- Choice C: Another incorrect answer that represents a different common misconception
+
+{reason_choice_format}"""
+
+
 def _build_chapter_prompt(
     base_prompt: str,
     story_phase: str,
@@ -266,14 +380,28 @@ def _build_chapter_prompt(
     Args:
         base_prompt: Base story state and history
         story_phase: Current phase of the story (Exposition, Rising, Trials, Climax, Return)
-        chapter_type: Type of chapter to generate (LESSON or STORY)
+        chapter_type: Type of chapter to generate (LESSON, STORY, REASON, or CONCLUSION)
         lesson_question: Question data for lesson chapters
         consequences_guidance: Guidance based on previous lesson outcomes
         num_previous_lessons: Number of previous lesson chapters
         previous_lessons: History of previous lesson responses
     """
+    # Handle REASON chapters
+    if chapter_type == ChapterType.REASON:
+        # A REASON chapter must follow a LESSON chapter
+        if not previous_lessons or len(previous_lessons) == 0:
+            raise ValueError("REASON chapter requires a previous LESSON")
+
+        last_lesson = previous_lessons[-1]
+        return build_reason_chapter_prompt(
+            is_correct=last_lesson.is_correct,
+            lesson_question=last_lesson.question,
+            chosen_answer=last_lesson.chosen_answer,
+            base_prompt=base_prompt,
+        )
+
     # Handle lesson chapters
-    if chapter_type == ChapterType.LESSON:
+    elif chapter_type == ChapterType.LESSON:
         continuation_text = ""
         if num_previous_lessons > 0:
             continuation_text = f"""Continue the story, acknowledging the previous lesson{" and earlier lessons" if num_previous_lessons > 1 else ""} while leading to a new question.
