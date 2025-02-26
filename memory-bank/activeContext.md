@@ -6,10 +6,11 @@ The project is focused on implementing core Learning Odyssey features, including
 
 1.  **Adventure Flow Implementation:**
     *   Landing page topic and length selection (`app/routers/web.py`).
-    *   ChapterType determination (LESSON/STORY/CONCLUSION) in `app/services/chapter_manager.py`.
+    *   ChapterType determination (LESSON/STORY/REASON/CONCLUSION) in `app/services/chapter_manager.py`.
     *   Content source integration in `app/services/llm/prompt_engineering.py`:
         *   LESSON chapters: `lessons.csv` + LLM narrative wrapper.
         *   STORY chapters: Full LLM generation with choices.
+        *   REASON chapters: Follow-up to LESSON chapters to test deeper understanding.
         *   CONCLUSION chapters: Full LLM generation without choices.
     *   Narrative continuity via prompt engineering.
 
@@ -21,10 +22,14 @@ The project is focused on implementing core Learning Odyssey features, including
     *   Element consistency tracking via metadata.
 
 3.  **Chapter Sequencing (`app/services/chapter_manager.py`):**
-    *   First two chapters: Always STORY.
+    *   First chapter: Always STORY (changed from first two chapters).
     *   Second-to-last chapter: Always STORY.
     *   Last chapter: Always CONCLUSION.
-    *   50% of remaining chapters: LESSON (subject to available questions).
+    *   50% of remaining chapters, rounded down: LESSON (subject to available questions).
+    *   No consecutive LESSON chapters allowed.
+    *   50% of LESSON chapters, rounded down: REASON chapters.
+    *   REASON chapters only occur immediately after a LESSON chapter.
+    *   STORY chapters must follow REASON chapters.
 
 4.  **Testing Strategy (`tests/simulations/`):**
     *   Story simulation framework.
