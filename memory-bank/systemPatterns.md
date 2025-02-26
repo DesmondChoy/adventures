@@ -133,18 +133,18 @@ graph TD
   * LESSON: Question-based narrative with educational focus
   * STORY: Choice-driven narrative with three options
   * REASON: Follow-up to LESSON chapters to test deeper understanding
-    - For correct answers: Tests confidence without revealing the answer was correct
-    - For incorrect answers: Provides a learning opportunity with explanation
+    - For correct answers: Multiple challenge types to test understanding:
+      * `confidence_test`: Tests if they'll stick with their original answer
+      * `application`: Tests if they can apply the concept in a new scenario
+      * `connection_making`: Tests if they can connect the concept to broader themes
+      * `teaching_moment`: Tests if they can explain the concept to another character
+    - For incorrect answers: Structured educational approach:
+      * Educational reflection: Gently revealing the correct concept
+      * Narrative deepening: Using the story environment to illustrate the concept
+      * "Aha moment": Creating a moment where understanding clicks
+      * Story-integrated choices: Testing understanding while advancing the story
+    - Challenge type tracking in AdventureState metadata for debugging
     - Uses diverse storytelling techniques for reflective moments
-  * CONCLUSION: Resolution narrative without choices
-- Story choice generation.
-- Narrative continuity management.
-- Response processing.
-- **Critical State Handling**:
-  * Providers MUST pass complete AdventureState object to build_system_prompt
-  * State object contains all necessary narrative elements and context
-  * Direct attribute access required for prompt construction
-  * Story configuration used only for initial state setup
 
 ### 7. State Management Pattern
 - Centralized AdventureState:
@@ -427,8 +427,9 @@ graph TD
    - Lesson: `lessons.csv` + LLM narrative with educational focus
    - Story: Full LLM generation with three choices
    - Reason: Follow-up to LESSON chapters to test deeper understanding
-     * For correct answers: Tests confidence without revealing correctness
-     * For incorrect answers: Provides learning opportunity with explanation
+     * For correct answers: Multiple challenge types (confidence_test, application, connection_making, teaching_moment)
+     * For incorrect answers: Structured educational approach with "aha moment"
+     * Challenge type tracking in AdventureState metadata for debugging
      * Uses creative storytelling techniques for reflective moments
    - Conclusion: Full LLM generation without choices
 2. Narrative continuity maintained.

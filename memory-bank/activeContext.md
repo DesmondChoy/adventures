@@ -11,6 +11,9 @@ The project is focused on implementing core Learning Odyssey features, including
         *   LESSON chapters: `lessons.csv` + LLM narrative wrapper.
         *   STORY chapters: Full LLM generation with choices.
         *   REASON chapters: Follow-up to LESSON chapters to test deeper understanding.
+            * For correct answers: Multiple challenge types (confidence_test, application, connection_making, teaching_moment)
+            * For incorrect answers: Structured educational reflection with "aha moment"
+            * Challenge type tracking in AdventureState metadata for debugging
         *   CONCLUSION chapters: Full LLM generation without choices.
     *   Narrative continuity via prompt engineering.
 
@@ -46,6 +49,20 @@ The project is focused on implementing core Learning Odyssey features, including
     * Progress tracking visualization.
 
 ## Recent Changes
+
+### Enhanced REASON Chapter Implementation (2025-02-27)
+- Improved `build_reason_chapter_prompt()` in `app/services/llm/prompt_engineering.py`:
+  * Added variety to correct answer handling with different challenge types:
+    - `confidence_test`: Tests if they'll stick with their original answer
+    - `application`: Tests if they can apply the concept in a new scenario
+    - `connection_making`: Tests if they can connect the concept to broader themes
+    - `teaching_moment`: Tests if they can explain the concept to another character
+  * Restructured incorrect answer handling with a more educational approach
+  * Added challenge type tracking in AdventureState metadata:
+    - Structured history in `state.metadata["reason_challenge_history"]`
+    - Quick access via `state.metadata["last_reason_challenge_type"]`
+    - Debug logging for selected challenge types
+
 See progress.md for detailed change history.
 
 ## Current Considerations
@@ -62,6 +79,17 @@ See progress.md for detailed change history.
   * Provides fallback mechanisms
   * Generates default choices when needed
   * Implements proper error handling
+
+### Metadata Usage
+- The AdventureState metadata field is now used for:
+  * Non-random elements tracking
+  * Plot twist guidance
+  * Story category tracking
+  * Initialization timestamp
+  * Element consistency tracking
+  * Previous hints tracking
+  * REASON challenge type tracking (new)
+- This provides a flexible way to store additional information without changing the core data model
 
 ### Simulation Framework (`tests/simulations/story_simulation.py`)
 - Dual purpose:
