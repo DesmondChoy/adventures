@@ -22,7 +22,7 @@ Choice B: [Second choice description]
 Choice C: [Third choice description]
 </CHOICES>
 
-## Rules
+# CRITICAL RULES
 1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices
 2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
 3. Content: Make each choice meaningful, distinct, and advance the plot in interesting ways"""
@@ -56,7 +56,7 @@ Choice B: [Second option - make this incorrect]
 Choice C: [Third option - make this incorrect]
 </CHOICES>
 
-## Rules
+# CRITICAL RULES
 1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices
 2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
 3. Content: One choice must be correct, the other choices should be plausible but incorrect"""
@@ -147,6 +147,28 @@ Create a narrative moment where the question emerges through:
 - A challenge or obstacle that needs to be overcome
 - An important decision that needs to be made
 
+# CRITICAL RULES
+1. NEVER mention any answer options in your narrative, but DO include the exact question "[Core Question]" verbatim somewhere in the story.
+2. Create ONE visually interesting story object (artifact, phenomenon, pattern, or map) that naturally connects to the question and makes it relevant to the character's journey.
+3. Make the question feel like a natural part of the story world, with clear stakes for why answering it matters to the characters.
+
+## Narrative Bridge - The Story Object Method
+1. Identify ONE story object or element that can naturally connect to the [Core Question]:
+   - For historical questions: Something that preserves or reveals the past
+   - For scientific questions: Something that demonstrates or relates to natural phenomena
+   - For mathematical questions: Something involving patterns, quantities, or relationships
+   - For geographical questions: Something that represents places or spatial relationships
+
+2. Make this story element:
+   - Visually interesting (describe how it appears in the story world)
+   - Relevant to the plot (connect it to the character's journey)
+   - Mysterious or incomplete (create a reason to seek the answer)
+
+3. Include the exact question "[Core Question]" somewhere in the narrative:
+   - It can be in dialogue, a character's thoughts, or written text within the story
+   - The question should feel natural in context
+   - The narrative should build toward this question, making it feel important
+
 ## Key Requirements
 1. The question should feel like a natural part of the character's journey, not an artificial insert
 2. Ensure the context makes it clear why answering this question matters to the story
@@ -162,7 +184,7 @@ Continue the story by:
 3. Creating meaningful consequences for these decisions
 4. Focusing on character development and plot progression
 
-## Important Guidelines
+# CRITICAL RULES
 1. Build towards a natural story decision point
 2. The story choices will be provided separately - do not list them in the narrative
 3. End the scene at a moment of decision"""
@@ -175,7 +197,7 @@ Write the conclusion of the story by:
 4. Providing a satisfying ending that reflects the consequences of their decisions
 5. Incorporating the wisdom gained from their educational journey
 
-## Important Guidelines
+# CRITICAL RULES
 1. This is the final chapter - provide a complete and satisfying resolution
 2. DO NOT include any choices or decision points
 3. End with a sense of closure while highlighting the character's transformation"""
@@ -326,6 +348,9 @@ USER_PROMPT_TEMPLATE = """# Current Context
 - Phase: {story_phase}
 - Progress: {correct_lessons}/{total_lessons} lessons correct
 
+# CRITICAL RULES
+For LESSON chapters: Include the exact question verbatim, but NEVER mention any answer options.
+
 # Story History
 {story_history}
 
@@ -360,7 +385,7 @@ You are a master storyteller crafting an interactive educational story that seam
 4. Incorporate sensory details naturally to enhance immersion
 5. Apply markdown formatting judiciously: use **bold** for critical revelations or important realizations, and *italics* for character thoughts or emotional emphasis
 
-# Critical Rules
+# CRITICAL RULES
 1. Structure and flow: begin narrative directly (never with "Chapter X"), end at natural decision points, maintain consistent narrative elements
 2. Content development: incorporate sensory details naturally, develop theme and moral teaching organically
 3. Educational integration: balance entertainment with learning, ensure lessons feel organic to the story"""

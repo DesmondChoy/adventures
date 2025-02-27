@@ -323,14 +323,15 @@ def _build_chapter_prompt(
 
 {continuation_text}{_get_phase_guidance(story_phase, state)}
 
-Continue the story naturally, weaving in a situation or moment that raises this core question:
+Continue the story naturally, weaving in a situation or moment that raises this question:
 {lesson_question["question"]}
 
-CRITICAL INSTRUCTIONS:
+# CRITICAL RULES
 1. {"Build on the consequences of the previous lesson, showing how it connects to this new challenge" if num_previous_lessons > 0 else "Let the story flow organically towards this new challenge"}
-{LESSON_CHAPTER_INSTRUCTIONS}
+2. DO NOT mention or hint at any of these answer options in your narrative:
+{_format_lesson_answers(lesson_question)}
 
-{_format_lesson_answers(lesson_question)}"""
+{LESSON_CHAPTER_INSTRUCTIONS.replace("[Core Question]", f'"{lesson_question["question"]}"')}"""
 
     # Handle story chapters
     elif chapter_type == ChapterType.STORY:
@@ -350,7 +351,7 @@ CRITICAL INSTRUCTIONS:
 
 {STORY_CHAPTER_INSTRUCTIONS}
 
-IMPORTANT:
+# CRITICAL RULES
 1. {"The story should clearly but naturally acknowledge the impact of their previous lesson" if num_previous_lessons > 0 else "DO NOT include any lesson questions"}
 2. Build towards a natural story decision point
 3. The story choices will be provided separately - do not list them in the narrative
@@ -376,7 +377,7 @@ IMPORTANT:
 
 {CONCLUSION_CHAPTER_INSTRUCTIONS}
 
-IMPORTANT:
+# CRITICAL RULES
 1. This is the final chapter - provide a complete and satisfying resolution
 2. {"Demonstrate how the lessons learned have contributed to the character's growth" if num_previous_lessons > 0 else "Focus on the character's personal growth through their journey"}
 3. DO NOT include any choices or decision points
