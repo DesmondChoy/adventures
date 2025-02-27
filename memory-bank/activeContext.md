@@ -54,6 +54,30 @@ The project is focused on implementing core Learning Odyssey features, including
 
 ## Recent Changes
 
+### Phase-Specific Choice Instructions Implementation (2025-02-27)
+- Implemented phase-specific choice instructions in `app/services/llm/prompt_templates.py` and `app/services/llm/prompt_engineering.py`:
+  * Created `BASE_CHOICE_FORMAT` with common choice format instructions
+  * Added `CHOICE_PHASE_GUIDANCE` dictionary with appropriate guidance for each phase:
+    - Exposition: "Character Establishment: Choices should reveal character traits and establish initial direction"
+    - Rising: "Plot Development: Choices should subtly hint at the emerging plot twist"
+    - Trials: "Challenge Response: Choices should show different approaches to mounting challenges"
+    - Climax: "Critical Decision: Choices should represent pivotal decisions with significant consequences"
+    - Return: "Resolution: Choices should reflect the character's growth and transformation"
+  * Implemented `get_choice_instructions(phase)` function to get appropriate instructions for a given phase
+  * Updated `prompt_engineering.py` to use phase-specific instructions
+  * Created a test script to verify the implementation
+  * Fixed inconsistency where plot twist guidance was incorrectly appearing in Exposition phase
+  * Ensured plot twist guidance only appears in appropriate phases (Rising, Trials, Climax)
+
+### LLM Prompt Optimization with Markdown Structure (2025-02-27)
+- Restructured LLM prompts in `app/services/llm/prompt_templates.py` and `app/services/llm/prompt_engineering.py`:
+  * Implemented markdown-based structure for better organization and readability
+  * Created clear visual hierarchy with headings and subheadings
+  * Enhanced formatting for lesson answers and lesson history
+  * Fixed continuity guidance formatting issue that was causing empty bullet points
+  * Created a test script to verify the new prompt structure
+  * Improved the overall clarity and effectiveness of prompts for all chapter types
+
 ### Enhanced REASON Chapter Implementation (2025-02-27)
 - Improved `build_reason_chapter_prompt()` in `app/services/llm/prompt_engineering.py`:
   * Added variety to correct answer handling with different challenge types:

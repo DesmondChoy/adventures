@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional, List, Literal, TypedDict, cast
 import math
 import logging
+import random
 from app.models.story import (
     AdventureState,
     ChapterType,
@@ -10,6 +11,7 @@ from app.models.story import (
 )
 from app.services.llm.prompt_templates import (
     CHOICE_FORMAT_INSTRUCTIONS,
+    get_choice_instructions,
     REASON_CHOICE_FORMAT,
     REFLECTIVE_TECHNIQUES,
     BASE_PHASE_GUIDANCE,
@@ -151,6 +153,23 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str, str]:
     return formatted_story_history, story_phase, chapter_type
 
 
+def get_random_reflective_technique() -> str:
+    """Randomly select one reflective technique from the available options."""
+    # Extract individual techniques from the REFLECTIVE_TECHNIQUES string
+    techniques_text = REFLECTIVE_TECHNIQUES.split(
+        "Create a reflective moment using one of these storytelling techniques:"
+    )[1]
+    # Split by bullet points and clean up
+    techniques_list = [t.strip() for t in techniques_text.split("-") if t.strip()]
+
+    # Select one random technique
+    selected_technique = random.choice(techniques_list)
+
+    return f"""# Reflective Technique
+Use this specific storytelling technique for the reflection:
+- {selected_technique}"""
+
+
 def build_reason_chapter_prompt(
     is_correct: bool,
     lesson_question: Dict[str, Any],
@@ -182,9 +201,11 @@ def build_reason_chapter_prompt(
         if not answer["is_correct"]
     ]
 
+    # Get a random reflective technique
+    reflective_technique = get_random_reflective_technique()
+
     if is_correct:
         # For correct answers: Select from multiple challenge types
-        import random
         from datetime import datetime
 
         challenge_type = random.choice(
@@ -218,27 +239,33 @@ def build_reason_chapter_prompt(
             state.metadata["last_reason_challenge_type"] = challenge_type
 
         # Use the appropriate template based on challenge type
+        template = REASON_CHALLENGE_TEMPLATES[challenge_type]
+        # Replace the reflective_techniques placeholder with our random selection
+        template = template.replace("{reflective_techniques}", reflective_technique)
+
         return f"""{base_prompt}
 
 {
-            REASON_CHALLENGE_TEMPLATES[challenge_type].format(
+            template.format(
                 chosen_answer=chosen_answer,
                 question=lesson_question["question"],
-                reflective_techniques=REFLECTIVE_TECHNIQUES,
                 incorrect_answers=", ".join(incorrect_answers),
                 reason_choice_format=REASON_CHOICE_FORMAT,
             )
         }"""
     else:
         # For incorrect answers: Learning opportunity with structured reflection
+        template = INCORRECT_ANSWER_TEMPLATE
+        # Replace the reflective_techniques placeholder with our random selection
+        template = template.replace("{reflective_techniques}", reflective_technique)
+
         return f"""{base_prompt}
 
 {
-            INCORRECT_ANSWER_TEMPLATE.format(
+            template.format(
                 chosen_answer=chosen_answer,
                 question=lesson_question["question"],
                 correct_answer=correct_answer,
-                reflective_techniques=REFLECTIVE_TECHNIQUES,
                 reason_choice_format=REASON_CHOICE_FORMAT,
             )
         }"""
@@ -329,7 +356,7 @@ IMPORTANT:
 3. The story choices will be provided separately - do not list them in the narrative
 4. End the scene at a moment of decision
 
-{CHOICE_FORMAT_INSTRUCTIONS}"""
+{get_choice_instructions(story_phase)}"""
 
     # Handle conclusion chapters
     else:  # chapter_type == ChapterType.CONCLUSION
@@ -466,7 +493,7 @@ def build_user_prompt(
 
 {continuation_text}
 
-{CHOICE_FORMAT_INSTRUCTIONS}"""
+{get_choice_instructions(story_phase)}"""
 
     else:  # chapter_type == ChapterType.CONCLUSION
         # For conclusion chapters

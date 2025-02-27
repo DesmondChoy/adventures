@@ -12,7 +12,8 @@ from typing import Dict
 # Choice format instructions
 # --------------------------
 
-CHOICE_FORMAT_INSTRUCTIONS = """# Choice Format
+# Base choice format (common elements for all phases)
+BASE_CHOICE_FORMAT = """# Choice Format
 Use this EXACT format for the choices, with NO indentation and NO line breaks within choices:
 
 <CHOICES>
@@ -24,8 +25,27 @@ Choice C: [Third choice description]
 ## Rules
 1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices
 2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
-3. Content: Make each choice meaningful, distinct, and advance the plot in interesting ways
-4. Plot Twist: Choices should relate to the unfolding plot twist, from subtle hints to direct connections as the story progresses"""
+3. Content: Make each choice meaningful, distinct, and advance the plot in interesting ways"""
+
+# Phase-specific choice guidance that aligns with existing phase guidance
+CHOICE_PHASE_GUIDANCE: Dict[str, str] = {
+    "Exposition": "4. Character Establishment: Choices should reveal character traits and establish initial direction",
+    "Rising": "4. Plot Development: Choices should subtly hint at the emerging plot twist",
+    "Trials": "4. Challenge Response: Choices should show different approaches to mounting challenges",
+    "Climax": "4. Critical Decision: Choices should represent pivotal decisions with significant consequences",
+    "Return": "4. Resolution: Choices should reflect the character's growth and transformation",
+}
+
+
+def get_choice_instructions(phase: str) -> str:
+    """Get the appropriate choice instructions for a given story phase."""
+    base = BASE_CHOICE_FORMAT
+    phase_guidance = CHOICE_PHASE_GUIDANCE.get(phase, CHOICE_PHASE_GUIDANCE["Rising"])
+    return f"{base}\n\n{phase_guidance}"
+
+
+# Keep the original for backward compatibility
+CHOICE_FORMAT_INSTRUCTIONS = get_choice_instructions("Rising")
 
 REASON_CHOICE_FORMAT = """# Choice Format
 Use this EXACT format for the choices, with NO indentation and NO line breaks within choices:
@@ -334,16 +354,13 @@ You are a master storyteller crafting an interactive educational story that seam
   - Scent: {smells}
 
 # Storytelling Approach
-1. Maintain narrative consistency with previous choices
-2. Create meaningful consequences for user decisions
-3. Seamlessly integrate lesson elements when provided
-4. Use multiple paragraphs separated by blank lines for readability
-5. Incorporate sensory details naturally to enhance immersion
-6. Develop the theme and moral teaching organically through the narrative
+1. Maintain narrative consistency and create meaningful consequences for user decisions
+2. Seamlessly integrate lesson elements and develop theme/moral teaching organically
+3. Structure content with multiple paragraphs and blank lines for readability
+4. Incorporate sensory details naturally to enhance immersion
+5. Apply markdown formatting judiciously: use **bold** for critical revelations or important realizations, and *italics* for character thoughts or emotional emphasis
 
 # Critical Rules
-1. Never start with "Chapter X" - begin narrative directly
-2. End at a natural decision point
-3. Incorporate sensory details naturally
-4. Develop theme and moral teaching organically
-5. Maintain consistent narrative elements"""
+1. Structure and flow: begin narrative directly (never with "Chapter X"), end at natural decision points, maintain consistent narrative elements
+2. Content development: incorporate sensory details naturally, develop theme and moral teaching organically
+3. Educational integration: balance entertainment with learning, ensure lessons feel organic to the story"""

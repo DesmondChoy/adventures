@@ -1,5 +1,126 @@
 # Progress Log
 
+## 2025-02-27: Phase-Specific Choice Instructions Implementation
+
+### Problem
+The choice format instructions in the Learning Odyssey application included guidance about plot twists in all story phases, including the Exposition phase. However, according to the plot twist development pattern, plot twist elements should only be introduced starting from the Rising phase, not in the Exposition phase.
+
+### Requirements
+- Ensure plot twist guidance only appears in appropriate phases (Rising, Trials, Climax)
+- Create phase-specific choice instructions for each story phase
+- Maintain consistent format and structure across all phases
+- Implement a clean, maintainable solution that integrates with existing systems
+- Create a test script to verify the implementation
+
+### Solution
+1. Modified `prompt_templates.py` to implement phase-specific choice instructions:
+   ```python
+   # Base choice format (common elements for all phases)
+   BASE_CHOICE_FORMAT = """# Choice Format
+   Use this EXACT format for the choices, with NO indentation and NO line breaks within choices:
+   
+   <CHOICES>
+   Choice A: [First choice description]
+   Choice B: [Second choice description]
+   Choice C: [Third choice description]
+   </CHOICES>
+   
+   ## Rules
+   1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices
+   2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
+   3. Content: Make each choice meaningful, distinct, and advance the plot in interesting ways"""
+   
+   # Phase-specific choice guidance
+   CHOICE_PHASE_GUIDANCE: Dict[str, str] = {
+       "Exposition": "4. Character Establishment: Choices should reveal character traits and establish initial direction",
+       "Rising": "4. Plot Development: Choices should subtly hint at the emerging plot twist",
+       "Trials": "4. Challenge Response: Choices should show different approaches to mounting challenges",
+       "Climax": "4. Critical Decision: Choices should represent pivotal decisions with significant consequences",
+       "Return": "4. Resolution: Choices should reflect the character's growth and transformation"
+   }
+   
+   def get_choice_instructions(phase: str) -> str:
+       """Get the appropriate choice instructions for a given story phase."""
+       base = BASE_CHOICE_FORMAT
+       phase_guidance = CHOICE_PHASE_GUIDANCE.get(phase, CHOICE_PHASE_GUIDANCE["Rising"])
+       return f"{base}\n\n{phase_guidance}"
+   
+   # Keep the original for backward compatibility
+   CHOICE_FORMAT_INSTRUCTIONS = get_choice_instructions("Rising")
+   ```
+
+2. Updated `prompt_engineering.py` to use the new phase-specific instructions:
+   ```python
+   # In the imports section, added:
+   from app.services.llm.prompt_templates import get_choice_instructions
+   
+   # In _build_chapter_prompt function, replaced:
+   {CHOICE_FORMAT_INSTRUCTIONS}
+   
+   # With:
+   {get_choice_instructions(story_phase)}
+   
+   # Also updated build_user_prompt function similarly
+   ```
+
+3. Created a test script `app/services/llm/test_phase_choice_instructions.py` to verify the implementation:
+   - Tests each phase to ensure it gets the appropriate choice instructions
+   - Verifies that the plot twist guidance only appears in Rising, Trials, and Climax phases
+   - Confirms that the fallback behavior works correctly for unknown phases
+
+### Results
+The implementation successfully:
+1. Ensures plot twist guidance only appears in appropriate phases (Rising, Trials, Climax)
+2. Provides phase-appropriate guidance for each story phase:
+   - Exposition: Focus on character establishment
+   - Rising: Subtle hints at the plot twist
+   - Trials: Different approaches to challenges
+   - Climax: Pivotal decisions with consequences
+   - Return: Character growth and transformation
+3. Maintains consistent format and structure across all phases
+4. Integrates cleanly with the existing prompt engineering system
+5. Provides backward compatibility through the original CHOICE_FORMAT_INSTRUCTIONS constant
+6. Verifies correct behavior through comprehensive testing
+
+## 2025-02-27: LLM Prompt Optimization with Markdown Structure
+
+### Problem
+The LLM prompts in the Learning Odyssey application were lengthy and not optimally structured, making them harder to parse for both humans and the LLM. Additionally, there was a formatting issue in the continuity guidance section that was causing empty bullet points when there was only one previous lesson.
+
+### Requirements
+- Restructure LLM prompts to be more organized and readable
+- Create a clear visual hierarchy with markdown headings and subheadings
+- Enhance formatting for lesson answers and lesson history
+- Fix the continuity guidance formatting issue
+- Create a test script to verify the new prompt structure
+- Improve the overall clarity and effectiveness of prompts for all chapter types
+
+### Solution
+1. Restructured the system prompt and user prompt templates in `app/services/llm/prompt_templates.py` to use markdown headings and formatting
+2. Enhanced the formatting of lesson answers and lesson history in `app/services/llm/prompt_engineering.py`
+3. Fixed the continuity guidance formatting issue in `build_user_prompt()` by using a more robust approach:
+   ```python
+   additional_guidance = ""
+   if num_previous_lessons > 0:
+       guidance_points = ["Build on the consequences of the previous lesson"]
+       if num_previous_lessons > 1:
+           guidance_points.append("Show how previous lessons have impacted the character")
+       
+       formatted_points = "\n".join([f"{i+1}. {point}" for i, point in enumerate(guidance_points)])
+       additional_guidance = f"## Continuity Guidance\n{formatted_points}"
+   ```
+4. Created a test script `app/services/llm/test_prompt.py` to verify the new prompt structure
+5. Improved the overall clarity and effectiveness of prompts for all chapter types
+
+### Results
+The implementation successfully:
+1. Created a more organized and readable prompt structure using markdown
+2. Established a clear visual hierarchy with headings and subheadings
+3. Enhanced the formatting of lesson answers and lesson history
+4. Fixed the continuity guidance formatting issue
+5. Verified the new prompt structure with a test script
+6. Improved the overall clarity and effectiveness of prompts for all chapter types
+
 ## 2025-02-27: Chapter Sequence Optimization Tradeoff
 
 ### Problem

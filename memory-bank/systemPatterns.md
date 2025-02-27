@@ -282,11 +282,16 @@ graph TD
 
 2.  Plot Twist Integration:
     - Phase-specific guidance via get_plot_twist_guidance():
-      * Exposition: Subtle hints and background elements only
-      * Rising: Begin connecting previous hints, maintain mystery
-      * Trials: Build tension and increase visibility of hints
-      * Climax: Full revelation and impact of the twist
-      * Return: Show aftermath and consequences
+      * Rising: Subtly introduce elements that hint at the plot twist
+      * Trials: Build tension around the emerging plot twist
+      * Climax: Bring the plot twist to its full revelation
+    - Phase-specific choice instructions via get_choice_instructions():
+      * Exposition: Character establishment (no plot twist elements)
+      * Rising: Subtle hints at the emerging plot twist
+      * Trials: Different approaches to mounting challenges
+      * Climax: Pivotal decisions with significant consequences
+      * Return: Character growth and transformation
+    - CRITICAL: Plot twist elements only introduced from Rising phase onwards
     - CRITICAL: Plot twist must evolve naturally
     - CRITICAL: Previous hints must connect logically
     - CRITICAL: Guidance stored in state metadata
