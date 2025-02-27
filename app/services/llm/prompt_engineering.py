@@ -485,6 +485,20 @@ def build_user_prompt(
 
 {continuation_text}"""
 
+    # Create additional guidance with proper formatting
+    additional_guidance = ""
+    if num_previous_lessons > 0:
+        guidance_points = ["Build on the consequences of the previous lesson"]
+        if num_previous_lessons > 1:
+            guidance_points.append(
+                "Show how previous lessons have impacted the character"
+            )
+
+        formatted_points = "\n".join(
+            [f"{i + 1}. {point}" for i, point in enumerate(guidance_points)]
+        )
+        additional_guidance = f"## Continuity Guidance\n{formatted_points}"
+
     # Format the final prompt using the template
     return USER_PROMPT_TEMPLATE.format(
         chapter_number=state.current_chapter_number,
@@ -496,9 +510,7 @@ def build_user_prompt(
         story_history=story_history,
         phase_guidance=phase_guidance,
         chapter_instructions=chapter_instructions,
-        additional_guidance=""
-        if num_previous_lessons == 0
-        else f"## Continuity Guidance\n1. {'Build on the consequences of the previous lesson' if num_previous_lessons > 0 else 'Let the story flow organically'}\n2. {'Show how previous lessons have impacted the character' if num_previous_lessons > 1 else ''}",
+        additional_guidance=additional_guidance,
     )
 
 
