@@ -65,7 +65,7 @@ graph TD
 - Centralized adventure state management.
 - Chapter progression tracking.
 - Adventure length handling.
-- ChapterType enum management (LESSON/STORY/CONCLUSION).
+- ChapterType enum management (LESSON/STORY/REASON/CONCLUSION).
 - Question and answer tracking.
 - Narrative continuity enforcement.
 - Metadata tracking for element consistency.
@@ -110,12 +110,21 @@ graph TD
 - **Chapter Type Pattern:**
   - Adventure length selection at landing page.
   - Chapter sequence determined by ChapterManager:
-    * First two chapters: STORY (for setting/character development)
+    * First chapter: STORY (for setting/character development)
     * Second-to-last chapter: STORY (for pivotal choices)
     * Last chapter: CONCLUSION (for story resolution)
-    * 50% of remaining chapters: LESSON (subject to available questions)
+    * 50% of remaining chapters, rounded down: LESSON (subject to available questions)
+    * **Priority Rules:**
+      - No consecutive LESSON chapters allowed (highest priority)
+      - At least 1 REASON chapter in every scenario (required)
+      - Every LESSON assumes at least 3 questions available
+      - Accept 25% of scenarios where there are two LESSON chapters (optimization tradeoff)
+    * 50% of LESSON chapters, rounded down: REASON chapters
+    * REASON chapters only occur immediately after a LESSON chapter
+    * STORY chapters must follow REASON chapters
   - LESSON chapters limited by available questions in `lessons.csv`.
   - STORY chapters use full LLM generation with choices.
+  - REASON chapters test deeper understanding of previous LESSON chapter.
   - CONCLUSION chapters use full LLM generation without choices.
   - The chapter type for each chapter during the adventure is determined using `state.planned_chapter_types`.
 - Adventure flow control.
@@ -127,15 +136,19 @@ graph TD
 - **Narrative generation for all chapter types (using prompts in `app/services/llm/prompt_engineering.py`)**:
   * LESSON: Question-based narrative with educational focus
   * STORY: Choice-driven narrative with three options
-  * CONCLUSION: Resolution narrative without choices
-- Story choice generation.
-- Narrative continuity management.
-- Response processing.
-- **Critical State Handling**:
-  * Providers MUST pass complete AdventureState object to build_system_prompt
-  * State object contains all necessary narrative elements and context
-  * Direct attribute access required for prompt construction
-  * Story configuration used only for initial state setup
+  * REASON: Follow-up to LESSON chapters to test deeper understanding
+    - For correct answers: Multiple challenge types to test understanding:
+      * `confidence_test`: Tests if they'll stick with their original answer
+      * `application`: Tests if they can apply the concept in a new scenario
+      * `connection_making`: Tests if they can connect the concept to broader themes
+      * `teaching_moment`: Tests if they can explain the concept to another character
+    - For incorrect answers: Structured educational approach:
+      * Educational reflection: Gently revealing the correct concept
+      * Narrative deepening: Using the story environment to illustrate the concept
+      * "Aha moment": Creating a moment where understanding clicks
+      * Story-integrated choices: Testing understanding while advancing the story
+    - Challenge type tracking in AdventureState metadata for debugging
+    - Uses diverse storytelling techniques for reflective moments
 
 ### 7. State Management Pattern
 - Centralized AdventureState:
@@ -401,22 +414,34 @@ graph TD
 ### Initial Flow
 1. User selects topic and length at landing.
 2. `ChapterManager` determines chapter sequence:
-   - First two chapters: STORY
-   - Second-to-last chapter: STORY
-   - Last chapter: CONCLUSION
-   - 50% of remaining chapters: LESSON
+   - First chapter: STORY (for setting/character development)
+   - Second-to-last chapter: STORY (for pivotal choices)
+   - Last chapter: CONCLUSION (for story resolution)
+   - 50% of remaining chapters, rounded down: LESSON (subject to available questions)
+   - No consecutive LESSON chapters allowed
+   - 50% of LESSON chapters, rounded down: REASON chapters
+   - REASON chapters only occur immediately after a LESSON chapter
+   - STORY chapters follow REASON chapters
 3. First chapter (STORY) begins.
 4. LLM generates narrative with choices.
 5. State tracks progression.
 
 ### Chapter Progression
 1. Content source varies by chapter type:
-   - Lesson: `lessons.csv` + LLM narrative
-   - Story: Full LLM generation with choices
+   - Lesson: `lessons.csv` + LLM narrative with educational focus
+   - Story: Full LLM generation with three choices
+   - Reason: Follow-up to LESSON chapters to test deeper understanding
+     * For correct answers: Multiple challenge types (confidence_test, application, connection_making, teaching_moment)
+     * For incorrect answers: Structured educational approach with "aha moment"
+     * Challenge type tracking in AdventureState metadata for debugging
+     * Uses creative storytelling techniques for reflective moments
    - Conclusion: Full LLM generation without choices
 2. Narrative continuity maintained.
 3. Previous chapter consequences reflected.
 4. No repeat questions in session.
+5. No consecutive LESSON chapters allowed.
+6. REASON chapters only follow LESSON chapters.
+7. STORY chapters follow REASON chapters.
 
 ## Technical Details and Testing
 - **Question Handling:** Dynamic sampling, answer shuffling, duplicate prevention, topic management.

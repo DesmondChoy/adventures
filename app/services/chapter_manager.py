@@ -188,9 +188,17 @@ class ChapterManager:
     ) -> List[ChapterType]:
         """Determine the sequence of chapter types for the entire adventure.
 
+        Implementation of the new algorithm:
+        - Fixed length of 10 chapters
+        - Chapters 1 and 9 are STORY
+        - Chapter 10 is CONCLUSION
+        - Places a LESSON-REASON-STORY sequence at a random position between 2-7
+        - Selects two non-consecutive positions for additional LESSON chapters
+        - Fills remaining positions with STORY
+
         Args:
-            total_chapters: Total number of chapters in the adventure
-            available_questions: Number of available questions in the database for the topic
+            total_chapters: Total number of chapters in the adventure (assumed to be 10)
+            available_questions: Number of available questions (assumed to be 3)
 
         Returns:
             List of ChapterType values representing the type of each chapter
@@ -198,108 +206,218 @@ class ChapterManager:
         Raises:
             ValueError: If there aren't enough questions for the required lessons
         """
-        if total_chapters < 4:
-            raise ValueError(
-                "Total chapters must be at least 4 to accommodate the required chapter types"
+        # For now, we assume a fixed length of 10 chapters
+        if total_chapters != 10:
+            logger.warning(
+                "This implementation assumes exactly 10 chapters. Using 10 chapters instead of the provided value.",
+                extra={"requested_chapters": total_chapters, "using_chapters": 10},
             )
+            total_chapters = 10
+
+        # For now, we assume 3 questions available
+        if available_questions < 3:
+            error_msg = (
+                f"Need at least 3 questions, but only have {available_questions}"
+            )
+            logger.error(error_msg, extra={"error_type": "insufficient_questions"})
+            raise ValueError(error_msg)
 
         logger.info(
-            "Starting chapter type determination",
+            "Starting chapter type determination with new algorithm",
             extra={
                 "total_chapters": total_chapters,
                 "available_questions": available_questions,
             },
         )
 
-        # Initialize with all chapters as STORY type
-        chapter_types = [ChapterType.STORY] * total_chapters
+        # Initialize chapters (1-based indexing in algorithm, 0-based in our implementation)
+        # We'll create a temporary list with None values, then convert to ChapterType
+        chapters = [None] * 10  # 0-9 indices (we'll ignore index 0 for clarity)
 
-        # First two chapters are always STORY
-        chapter_types[0] = ChapterType.STORY
-        chapter_types[1] = ChapterType.STORY
-
-        # Second-to-last chapter is always STORY
-        chapter_types[-2] = ChapterType.STORY
-
-        # Last chapter is always CONCLUSION
-        chapter_types[-1] = ChapterType.CONCLUSION
+        # Set fixed positions
+        chapters[0] = "STORY"  # Chapter 1
+        chapters[8] = "STORY"  # Chapter 9
+        chapters[9] = "CONCLUSION"  # Chapter 10
 
         logger.debug(
             "Set mandatory chapter types",
             extra={
-                "first_chapter": "STORY",
-                "second_chapter": "STORY",
-                "second_to_last": "STORY",
-                "last_chapter": "CONCLUSION",
-                "initial_state": [ct.value for ct in chapter_types],
+                "chapter_1": "STORY",
+                "chapter_9": "STORY",
+                "chapter_10": "CONCLUSION",
             },
         )
 
-        # Calculate required number of LESSON chapters (50% of non-conclusion chapters)
-        required_lessons = (total_chapters - 1) // 2
-        possible_lessons = min(required_lessons, available_questions)
+        # Randomly choose position for LESSON-REASON pair
+        i = random.randint(1, 6)  # Position 2-7 (0-indexed: 1-6)
 
-        if possible_lessons < 0:
-            error_msg = f"Need at least {required_lessons} questions, but only have {available_questions}"
-            logger.error(error_msg, extra={"error_type": "insufficient_questions"})
-            raise ValueError(error_msg)
+        logger.debug(
+            "Selected position for LESSON-REASON-STORY sequence",
+            extra={"position": i + 1},  # Log 1-indexed position for clarity
+        )
 
-        logger.info(
-            "Calculated lesson allocation constraints",
+        if i <= 5:  # Position 2-6 (0-indexed: 1-5)
+            # Place LESSON-REASON-STORY sequence
+            chapters[i] = "LESSON"
+            chapters[i + 1] = "REASON"
+            chapters[i + 2] = "STORY"
+            set_positions = {i, i + 1, i + 2}
+            # Exclude position before i to avoid adjacent LESSONs
+            exclude = {i - 1} if i - 1 >= 1 else set()
+            available = [
+                p for p in range(1, 8) if p not in set_positions and p not in exclude
+            ]
+        else:  # i = 6 (Position 7, 0-indexed: 6)
+            # Place LESSON-REASON, followed by STORY at 9
+            chapters[6] = "LESSON"
+            chapters[7] = "REASON"
+            set_positions = {6, 7}
+            # Exclude 5 since 6 is LESSON
+            available = [p for p in range(1, 5)]  # 1 to 4
+
+        logger.debug(
+            "Placed LESSON-REASON-STORY sequence",
             extra={
-                "required_lessons": required_lessons,
-                "available_questions": available_questions,
-                "possible_lessons": possible_lessons,
+                "sequence_positions": list(set_positions),
+                "available_positions": available,
             },
         )
 
-        # Get available positions for lessons (excluding first two, second-to-last, and last chapters)
-        available_positions = list(range(2, total_chapters - 2))
+        # Select two non-consecutive positions for remaining LESSONs
+        possible_pairs = []
+        for j in range(len(available)):
+            for k in range(j + 1, len(available)):
+                if available[k] - available[j] > 1:
+                    possible_pairs.append((available[j], available[k]))
 
-        # Only attempt to select lesson positions if we have both possible lessons and available positions
-        if possible_lessons > 0 and available_positions:
-            # Ensure we don't try to sample more positions than are available
-            possible_lessons = min(possible_lessons, len(available_positions))
+        if possible_pairs:
+            lesson_pair = random.choice(possible_pairs)
+            chapters[lesson_pair[0]] = "LESSON"
+            chapters[lesson_pair[1]] = "LESSON"
 
-            # Randomly select positions for lessons
-            lesson_positions = random.sample(available_positions, possible_lessons)
-
-            # Set selected positions to LESSON type
-            for pos in lesson_positions:
-                chapter_types[pos] = ChapterType.LESSON
-
-            logger.info(
-                "Selected lesson positions",
-                extra={
-                    "available_positions": available_positions,
-                    "selected_positions": lesson_positions,
-                    "final_chapter_sequence": [ct.value for ct in chapter_types],
-                },
+            logger.debug(
+                "Selected positions for additional LESSON chapters",
+                extra={"lesson_positions": lesson_pair},
             )
         else:
-            logger.info(
-                "No lesson positions selected",
-                extra={
-                    "reason": "no_lessons_possible"
-                    if possible_lessons == 0
-                    else "no_available_positions",
-                    "possible_lessons": possible_lessons,
-                    "available_positions_count": len(available_positions),
-                    "final_chapter_sequence": [ct.value for ct in chapter_types],
-                },
+            logger.warning(
+                "Could not find non-consecutive positions for additional LESSON chapters",
+                extra={"available_positions": available},
+            )
+
+        # Fill remaining positions with STORY
+        for p in range(1, 9):
+            if chapters[p] is None:
+                chapters[p] = "STORY"
+
+        # Convert string chapter types to ChapterType enum
+        chapter_types = []
+        for chapter_type in chapters[0:10]:  # Skip the unused 0 index
+            if chapter_type == "STORY":
+                chapter_types.append(ChapterType.STORY)
+            elif chapter_type == "LESSON":
+                chapter_types.append(ChapterType.LESSON)
+            elif chapter_type == "REASON":
+                chapter_types.append(ChapterType.REASON)
+            elif chapter_type == "CONCLUSION":
+                chapter_types.append(ChapterType.CONCLUSION)
+
+        # Validate the sequence
+        is_valid = ChapterManager.check_chapter_sequence(chapter_types)
+        if not is_valid:
+            logger.warning(
+                "Generated chapter sequence does not pass validation",
+                extra={"chapter_sequence": [ct.value.upper() for ct in chapter_types]},
             )
 
         # Add clear debug log showing final chapter sequence
         logger.debug(
             f"Final Chapter Sequence ({total_chapters} total):\n"
-            + f"[{', '.join(ct.value for ct in chapter_types)}]",
+            + f"[{', '.join(ct.value.upper() for ct in chapter_types)}]",
             extra={
                 "total_chapters": total_chapters,
-                "chapter_sequence": [ct.value for ct in chapter_types],
+                "chapter_sequence": [ct.value.upper() for ct in chapter_types],
             },
         )
 
         return chapter_types
+
+    @staticmethod
+    def check_chapter_sequence(chapter_types: List[ChapterType]) -> bool:
+        """Validate that the chapter sequence follows the required rules.
+
+        Priority Rules:
+        1. No consecutive LESSON chapters (highest priority)
+        2. At least 1 REASON chapter in every scenario (required)
+        3. Every LESSON assumes at least 3 questions available
+        4. Accept 25% of scenarios where there are two LESSON chapters (optimization tradeoff)
+
+        Additional Rules:
+        - Chapters 1 and 9 are STORY
+        - Chapter 10 is CONCLUSION
+        - REASON chapters must be preceded by LESSON and followed by STORY
+        - At least 2 LESSON chapters
+
+        Args:
+            chapter_types: List of ChapterType values to validate
+
+        Returns:
+            True if the sequence is valid, False otherwise
+        """
+        # Convert ChapterType enum to strings for easier validation
+        seq = [ct.value.upper() for ct in chapter_types]
+
+        # Priority Rule 1: Check no consecutive LESSONs (highest priority)
+        for i in range(len(seq) - 1):
+            if seq[i] == "LESSON" and seq[i + 1] == "LESSON":
+                logger.warning(
+                    "Consecutive LESSON check failed (highest priority rule)",
+                    extra={"position": i + 1},
+                )
+                return False
+
+        # Priority Rule 2: Check at least one REASON chapter (required)
+        if "REASON" not in seq:
+            logger.warning("No REASON chapter found (required rule)")
+            return False
+
+        # Check fixed positions
+        if seq[0] != "STORY" or seq[8] != "STORY" or seq[9] != "CONCLUSION":
+            logger.warning(
+                "Fixed position check failed",
+                extra={
+                    "chapter_1": seq[0],
+                    "chapter_9": seq[8],
+                    "chapter_10": seq[9],
+                },
+            )
+            return False
+
+        # Check REASON placement: LESSON before, STORY after
+        for i in range(1, len(seq) - 1):
+            if seq[i] == "REASON":
+                if seq[i - 1] != "LESSON" or seq[i + 1] != "STORY":
+                    logger.warning(
+                        "REASON placement check failed",
+                        extra={
+                            "position": i + 1,
+                            "before": seq[i - 1],
+                            "after": seq[i + 1],
+                        },
+                    )
+                    return False
+
+        # Count LESSONs (expect 3, but accept 2 or 3)
+        # Priority Rule 4: Accept 25% of scenarios where there are two LESSON chapters
+        num_lessons = seq.count("LESSON")
+        if num_lessons < 2:
+            logger.warning(
+                "Insufficient LESSON chapters",
+                extra={"lesson_count": num_lessons},
+            )
+            return False
+
+        return True
 
     @staticmethod
     def count_available_questions(lesson_topic: str) -> int:
@@ -408,7 +526,7 @@ class ChapterManager:
                 extra={
                     "story_category": story_category,
                     "non_random_elements": selected_elements["non_random_elements"],
-                    "chapter_types": [ct.value for ct in chapter_types],
+                    "chapter_types": [ct.value.upper() for ct in chapter_types],
                     "plot_twist_guidance": plot_twist_guidance,
                 },
             )
