@@ -29,7 +29,11 @@ The project is focused on implementing core Learning Odyssey features, including
     *   Second-to-last chapter: Always STORY.
     *   Last chapter: Always CONCLUSION.
     *   50% of remaining chapters, rounded down: LESSON (subject to available questions).
-    *   No consecutive LESSON chapters allowed.
+    *   **Priority Rules:**
+        * No consecutive LESSON chapters allowed (highest priority).
+        * At least 1 REASON chapter in every scenario (required).
+        * Every LESSON assumes at least 3 questions available.
+        * Accept 25% of scenarios where there are two LESSON chapters (optimization tradeoff).
     *   50% of LESSON chapters, rounded down: REASON chapters.
     *   REASON chapters only occur immediately after a LESSON chapter.
     *   STORY chapters must follow REASON chapters.

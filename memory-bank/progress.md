@@ -1,5 +1,29 @@
 # Progress Log
 
+## 2025-02-27: Chapter Sequence Optimization Tradeoff
+
+### Problem
+The chapter sequence algorithm needed to prioritize certain rules over others, particularly ensuring no consecutive LESSON chapters and at least 1 REASON chapter in every scenario, while allowing some flexibility in the number of LESSON chapters.
+
+### Requirements
+- Prioritize no consecutive LESSON chapters as the highest rule
+- Ensure at least 1 REASON chapter in every scenario
+- Assume every LESSON has at least 3 questions available
+- Accept 25% of scenarios where there are two LESSON chapters (when there should be three) in the distribution
+
+### Solution
+1. Updated the validation in `check_chapter_sequence()` to prioritize checking for no consecutive LESSON chapters and at least 1 REASON chapter
+2. Modified tests to verify the distribution of scenarios with 2 vs 3 LESSON chapters
+3. Updated documentation to reflect the new priorities
+4. Ensured the algorithm assumes at least 3 questions are available for every LESSON
+
+### Results
+The implementation successfully:
+1. Maintains the priority of no consecutive LESSON chapters
+2. Ensures at least 1 REASON chapter in every scenario
+3. Assumes 3 questions are available for every LESSON
+4. Accepts a small percentage (25%) of scenarios with 2 LESSON chapters as an optimization tradeoff
+
 ## 2025-02-27: Enhanced REASON Chapter Challenge Type Tracking
 
 ### Problem
