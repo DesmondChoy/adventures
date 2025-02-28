@@ -7,7 +7,6 @@ from app.services.llm.base import BaseLLMService
 from app.services.llm.prompt_engineering import (
     build_system_prompt,
     build_user_prompt,
-    _build_chapter_prompt,
     _build_base_prompt,
 )
 import logging
@@ -56,15 +55,10 @@ class OpenAIService(BaseLLMService):
                 state.current_chapter_number,
             )
 
-        # Build chapter prompt using the new function
-        user_prompt = _build_chapter_prompt(
-            base_prompt=base_prompt,
-            story_phase=story_phase,
-            chapter_type=chapter_type,
+        # Build user prompt using build_user_prompt function
+        user_prompt = build_user_prompt(
             state=state,
             lesson_question=question,
-            consequences_guidance=consequences_guidance,
-            num_previous_lessons=num_previous_lessons,
             previous_lessons=previous_lessons,
         )
 
@@ -157,15 +151,10 @@ class GeminiService(BaseLLMService):
                 state.current_chapter_number,
             )
 
-        # Build chapter prompt using the new function
-        user_prompt = _build_chapter_prompt(
-            base_prompt=base_prompt,
-            story_phase=story_phase,
-            chapter_type=chapter_type,
+        # Build user prompt using build_user_prompt function
+        user_prompt = build_user_prompt(
             state=state,
             lesson_question=question,
-            consequences_guidance=consequences_guidance,
-            num_previous_lessons=num_previous_lessons,
             previous_lessons=previous_lessons,
         )
 

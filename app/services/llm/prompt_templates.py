@@ -25,7 +25,7 @@ Choice C: [Third choice description]
 </CHOICES>
 
 # CRITICAL RULES
-1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices
+1. Format: Start and end with <CHOICES> tags on their own lines
 2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
 3. Content: Make each choice meaningful, distinct, and advance the plot in interesting ways"""
 
@@ -56,7 +56,7 @@ Choice C: [Third story-driven choice]
 </CHOICES>
 
 # CRITICAL RULES
-1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices
+1. Format: Start and end with <CHOICES> tags on their own lines
 2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
 3. Content: Make each choice meaningful, distinct, and advance the story in different ways
 4. Narrative Focus: All choices should be story-driven without any being labeled as "correct" or "incorrect"
@@ -102,7 +102,7 @@ The character should make one of these meaningful choices that will impact their
 
 
 def get_random_agency_category() -> str:
-    """Randomly select one agency category from the available options."""
+    """Randomly select one agency category from the available options and shuffle its items."""
     # Extract individual categories from the AGENCY_CHOICE_CATEGORIES string
     categories_text = AGENCY_CHOICE_CATEGORIES.split("# Agency Choice Categories")[1]
 
@@ -112,30 +112,33 @@ def get_random_agency_category() -> str:
     # Select one random category
     category_name, category_items = random.choice(sections)
 
-    # Format the selected category
+    # Extract items and shuffle them
     items_list = re.findall(r"- ([^\n]+)", category_items)
+    random.shuffle(items_list)  # This shuffles the list in place
+
+    # Format the shuffled items
     formatted_items = "\n".join([f"- {item}" for item in items_list])
 
     return f"""# Agency Choice: {category_name}
-Choose one of these options to offer the character:
+Here are some options in this category for your consideration. You can select from these or create similar ones that fit the theme:
 {formatted_items}
 
-Make this choice feel meaningful and consequential. The character's selection will influence their journey throughout the adventure."""
+Create meaningful choices that feel consequential. The character's selection will influence their journey throughout the adventure."""
 
 
 # First chapter agency instructions
 # -------------------------------
 
 FIRST_CHAPTER_AGENCY_INSTRUCTIONS = """# First Chapter Agency
-Include a meaningful choice that provides agency through one of the options above.
+Include meaningful choices that provide agency through options from the category above.
 
 ## Requirements
-- Present three distinct options that reflect different approaches or values
-- Describe how this choice might influence their journey
+- Present distinct options that reflect different approaches or values
+- Describe how these choices might influence the character's journey
 - Make the options fit naturally within the story world
 - End the chapter at this decision point
 
-This choice is pivotal and will impact the character throughout their journey."""
+These choices are pivotal and will impact the character throughout their journey."""
 
 
 # Storytelling techniques
@@ -367,10 +370,10 @@ The character's agency choice from Chapter 1 should play a pivotal role in this 
 2. **Growth Reflection**: Reference how it has changed or evolved, especially during reflection moments
 3. **Meaningful Choices**: Present options that leverage this agency element in different ways
 
-The choices should reflect different approaches to using their agency element:
-- Choice A: A bold, direct application of their agency element
-- Choice B: A clever, unexpected use of their agency element
-- Choice C: A thoughtful, strategic application of their agency element
+The choices should reflect different approaches to using their agency element, such as:
+- A bold, direct application of their agency element
+- A clever, unexpected use of their agency element
+- A thoughtful, strategic application of their agency element
 
 Each choice should feel valid and meaningful, with none being obviously "correct" or "incorrect."
 """
