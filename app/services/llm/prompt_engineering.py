@@ -9,6 +9,7 @@ from app.models.story import (
 )
 from app.services.llm.prompt_templates import (
     get_choice_instructions,
+    get_random_agency_category,
     REFLECT_CHOICE_FORMAT,
     REFLECTIVE_TECHNIQUES,
     BASE_PHASE_GUIDANCE,
@@ -22,6 +23,10 @@ from app.services.llm.prompt_templates import (
     REFLECT_TEMPLATE,
     CORRECT_ANSWER_CONFIG,
     INCORRECT_ANSWER_CONFIG,
+    AGENCY_GUIDANCE_CORRECT,
+    AGENCY_GUIDANCE_INCORRECT,
+    CLIMAX_AGENCY_GUIDANCE,
+    FIRST_CHAPTER_AGENCY_INSTRUCTIONS,
 )
 
 
@@ -224,6 +229,32 @@ def build_reflect_chapter_prompt(
     # Select the appropriate configuration based on whether the answer was correct
     config = CORRECT_ANSWER_CONFIG if is_correct else INCORRECT_ANSWER_CONFIG
 
+    # Determine agency guidance based on whether the answer was correct
+    agency_guidance = ""
+    if state and "agency" in state.metadata:
+        agency_guidance = (
+            AGENCY_GUIDANCE_CORRECT if is_correct else AGENCY_GUIDANCE_INCORRECT
+        )
+
+        # Log agency guidance selection
+        logger = logging.getLogger("story_app")
+        logger.debug(
+            f"Using agency guidance for {'correct' if is_correct else 'incorrect'} answer"
+        )
+
+        # Track agency evolution in metadata
+        if "agency_evolution" not in state.metadata:
+            state.metadata["agency_evolution"] = []
+
+        state.metadata["agency_evolution"].append(
+            {
+                "chapter": state.current_chapter_number,
+                "chapter_type": "REFLECT",
+                "is_correct": is_correct,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+
     # Format the template with the appropriate values
     formatted_template = REFLECT_TEMPLATE.format(
         question=lesson_question["question"],
@@ -238,6 +269,7 @@ def build_reflect_chapter_prompt(
         acknowledgment_guidance=config["acknowledgment_guidance"],
         exploration_goal=config["exploration_goal"],
         theme=state.selected_theme if state else "the story",
+        agency_guidance=agency_guidance,
         reflect_choice_format=REFLECT_CHOICE_FORMAT,
     )
 
@@ -420,6 +452,220 @@ def format_lesson_history(previous_lessons: List[LessonResponse]) -> str:
             history.append(f"- **Correct Answer**: {correct_answer}")
         history.append("")  # Add blank line between lessons
     return "\n".join(history)
+
+
+def _build_chapter_prompt(
+    base_prompt: str,
+    story_phase: str,
+    chapter_type: ChapterType,
+    state: AdventureState,
+    lesson_question: Optional[LessonQuestion] = None,
+    consequences_guidance: str = "",
+    num_previous_lessons: int = 0,
+    previous_lessons: Optional[List[LessonResponse]] = None,
+) -> str:
+    """Builds the appropriate prompt based on chapter type and state.
+
+    Args:
+        base_prompt: Base story state and history
+        story_phase: Current phase of the story (Exposition, Rising, Trials, Climax, Return)
+        chapter_type: Type of chapter to generate (LESSON, STORY, REFLECT, or CONCLUSION)
+        state: Current adventure state
+        lesson_question: Question data for lesson chapters
+        consequences_guidance: Guidance based on previous lesson outcomes
+        num_previous_lessons: Number of previous lesson chapters
+        previous_lessons: History of previous lesson responses
+    """
+    logger = logging.getLogger("story_app")
+
+    # Special handling for first chapter - include agency choice
+    if state.current_chapter_number == 1 and chapter_type == ChapterType.STORY:
+        # Get random agency category
+        agency_category = get_random_agency_category()
+
+        # Log agency category selection
+        logger.debug(
+            f"First chapter: Using agency category: {agency_category.split('# Agency Choice:')[1].split('\n')[0].strip()}"
+        )
+
+        return f"""{base_prompt}
+
+{_get_phase_guidance(story_phase, state)}
+
+{STORY_CHAPTER_INSTRUCTIONS}
+
+{agency_category}
+
+{FIRST_CHAPTER_AGENCY_INSTRUCTIONS}
+
+{get_choice_instructions(story_phase)}"""
+
+    # Handle REFLECT chapters
+    if chapter_type == ChapterType.REFLECT:
+        # A REFLECT chapter must follow a LESSON chapter
+        if not previous_lessons or len(previous_lessons) == 0:
+            raise ValueError("REFLECT chapter requires a previous LESSON")
+
+        last_lesson = previous_lessons[-1]
+        return build_reflect_chapter_prompt(
+            is_correct=last_lesson.is_correct,
+            lesson_question=last_lesson.question,
+            chosen_answer=last_lesson.chosen_answer,
+            base_prompt=base_prompt,
+            state=state,
+        )
+
+    # Special handling for climax phase - incorporate agency in a pivotal way
+    if (
+        story_phase == "Climax"
+        and "agency" in state.metadata
+        and chapter_type == ChapterType.STORY
+    ):
+        agency = state.metadata["agency"]
+        logger.debug(
+            f"Climax phase: Incorporating agency: {agency.get('type', 'unknown')}/{agency.get('name', 'unknown')}"
+        )
+
+        continuation_text = ""
+        if num_previous_lessons > 0:
+            continuation_text = f"""## Previous Lesson Impact
+{consequences_guidance}
+
+"""
+            if previous_lessons:
+                continuation_text += f"Previous lesson history:\n{format_lesson_history(previous_lessons)}\n\n"
+
+        return f"""{base_prompt}
+
+{continuation_text}{_get_phase_guidance(story_phase, state)}
+
+{STORY_CHAPTER_INSTRUCTIONS}
+
+{CLIMAX_AGENCY_GUIDANCE}
+
+# CRITICAL RULES
+1. {"The story should clearly but naturally acknowledge the impact of their previous lesson" if num_previous_lessons > 0 else "DO NOT include any lesson questions"}
+2. Build towards a natural story decision point
+3. The story choices will be provided separately - do not list them in the narrative
+4. End the scene at a moment of decision
+
+{get_choice_instructions(story_phase)}"""
+
+    # Handle lesson chapters
+    elif chapter_type == ChapterType.LESSON:
+        continuation_text = ""
+        if num_previous_lessons > 0:
+            continuation_text = f"""Continue the story, acknowledging the previous lesson{" and earlier lessons" if num_previous_lessons > 1 else ""} while leading to a new question.
+
+{consequences_guidance}
+
+"""
+            if previous_lessons:
+                continuation_text += f"Previous lesson history:\n{format_lesson_history(previous_lessons)}\n\n"
+
+        # Add agency integration guidance if available
+        agency_guidance = ""
+        if "agency" in state.metadata:
+            agency = state.metadata["agency"]
+            agency_guidance = f"""
+## Agency Connection
+The character's {agency.get("type", "choice")} ({agency.get("name", "from Chapter 1")}) should be present in this chapter, potentially:
+- Creating a situation that leads to the lesson question
+- Helping frame the educational content in a narrative context
+- Being affected by or connected to the knowledge being tested
+"""
+
+        return f"""{base_prompt}
+
+{continuation_text}{_get_phase_guidance(story_phase, state)}
+
+{agency_guidance}
+
+Continue the story naturally, weaving in a situation or moment that raises this question:
+{lesson_question["question"]}
+
+# CRITICAL RULES
+1. {"Build on the consequences of the previous lesson, showing how it connects to this new challenge" if num_previous_lessons > 0 else "Let the story flow organically towards this new challenge"}
+2. DO NOT mention or hint at any of these answer options in your narrative:
+{_format_lesson_answers(lesson_question)}
+
+{LESSON_CHAPTER_INSTRUCTIONS.replace("[Core Question]", f'"{lesson_question["question"]}"')}"""
+
+    # Handle story chapters
+    elif chapter_type == ChapterType.STORY:
+        continuation_text = ""
+        if num_previous_lessons > 0:
+            continuation_text = f"""Continue the story based on the character's previous lesson{" and earlier lessons" if num_previous_lessons > 1 else ""}.
+
+{consequences_guidance}
+
+"""
+            if previous_lessons:
+                continuation_text += f"Previous lesson history:\n{format_lesson_history(previous_lessons)}\n\n"
+
+        # Add agency integration guidance if available
+        agency_guidance = ""
+        if "agency" in state.metadata:
+            agency = state.metadata["agency"]
+            agency_guidance = f"""
+## Agency Presence
+Incorporate the character's {agency.get("type", "choice")} ({agency.get("name", "from Chapter 1")}) in a way that feels natural to this part of the story.
+It should be present and meaningful without following a predictable pattern.
+"""
+
+        return f"""{base_prompt}
+
+{continuation_text}{_get_phase_guidance(story_phase, state)}
+
+{agency_guidance}
+
+{STORY_CHAPTER_INSTRUCTIONS}
+
+# CRITICAL RULES
+1. {"The story should clearly but naturally acknowledge the impact of their previous lesson" if num_previous_lessons > 0 else "DO NOT include any lesson questions"}
+2. Build towards a natural story decision point
+3. The story choices will be provided separately - do not list them in the narrative
+4. End the scene at a moment of decision
+
+{get_choice_instructions(story_phase)}"""
+
+    # Handle conclusion chapters
+    else:  # chapter_type == ChapterType.CONCLUSION
+        continuation_text = ""
+        if num_previous_lessons > 0:
+            continuation_text = f"""Continue the story, incorporating the wisdom gained from the previous lesson{" and earlier lessons" if num_previous_lessons > 1 else ""}.
+
+{consequences_guidance}
+
+"""
+            if previous_lessons:
+                continuation_text += f"Previous lesson history:\n{format_lesson_history(previous_lessons)}\n\n"
+
+        # Add agency integration guidance if available
+        agency_guidance = ""
+        if "agency" in state.metadata:
+            agency = state.metadata["agency"]
+            agency_guidance = f"""
+## Agency Resolution
+The character's {agency.get("type", "choice")} ({agency.get("name", "from Chapter 1")}) should play a meaningful role in the conclusion:
+- Show how it has evolved throughout the journey
+- Demonstrate how it contributed to the character's growth and success
+- Provide a satisfying resolution to this aspect of the character's identity
+"""
+
+        return f"""{base_prompt}
+
+{continuation_text}{_get_phase_guidance(story_phase, state)}
+
+{agency_guidance}
+
+{CONCLUSION_CHAPTER_INSTRUCTIONS}
+
+# CRITICAL RULES
+1. This is the final chapter - provide a complete and satisfying resolution
+2. {"Demonstrate how the lessons learned have contributed to the character's growth" if num_previous_lessons > 0 else "Focus on the character's personal growth through their journey"}
+3. DO NOT include any choices or decision points
+4. End with a sense of closure while highlighting the character's transformation"""
 
 
 def process_consequences(

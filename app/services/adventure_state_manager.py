@@ -364,9 +364,57 @@ class AdventureStateManager:
                 setattr(self.state, key, value)
             raise StateValidationError(f"Failed to update state: {e}")
 
+    def update_agency_references(self, chapter_data: ChapterData) -> None:
+        """Track references to the agency element in chapters.
+
+        Args:
+            chapter_data: The chapter data to check for agency references
+        """
+        if self.state is None or "agency" not in self.state.metadata:
+            return
+
+        agency = self.state.metadata["agency"]
+        content = chapter_data.content
+
+        # Check if agency is referenced
+        agency_name = agency.get("name", "")
+        agency_type = agency.get("type", "")
+
+        has_reference = (
+            agency_name.lower() in content.lower()
+            or agency_type.lower() in content.lower()
+        )
+
+        # Track references
+        if "references" not in agency:
+            agency["references"] = []
+
+        agency["references"].append(
+            {
+                "chapter": chapter_data.chapter_number,
+                "has_reference": has_reference,
+                "chapter_type": chapter_data.chapter_type.value,
+            }
+        )
+
+        # Log warning if no reference found
+        if not has_reference:
+            logger.warning(
+                f"No reference to agency element ({agency_name}) found in chapter {chapter_data.chapter_number}"
+            )
+        else:
+            logger.debug(
+                f"Found reference to agency element ({agency_name}) in chapter {chapter_data.chapter_number}"
+            )
+
     def append_new_chapter(self, chapter_data: ChapterData) -> None:
         """Appends a new chapter to the AdventureState."""
         if self.state is None:
             raise ValueError("State not initialized.")
         logger.debug(f"Appending new chapter: {chapter_data.chapter_number}")
+
+        # Track agency references in the new chapter
+        self.update_agency_references(chapter_data)
+
+        # Append the chapter to the state
         self.state.chapters.append(chapter_data)

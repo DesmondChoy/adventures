@@ -7,6 +7,8 @@ prompt_engineering.py module to construct complete prompts for different
 chapter types and scenarios.
 """
 
+import re
+import random
 from typing import Dict
 
 # Choice format instructions
@@ -59,6 +61,82 @@ Choice C: [Third story-driven choice]
 3. Content: Make each choice meaningful, distinct, and advance the story in different ways
 4. Narrative Focus: All choices should be story-driven without any being labeled as "correct" or "incorrect"
 5. Character Growth: Each choice should reflect a different way the character might process or apply what they've learned"""
+
+# Agency choice categories
+# -----------------------
+
+AGENCY_CHOICE_CATEGORIES = """# Agency Choice Categories
+The character should make one of these meaningful choices that will impact their journey:
+
+## Magical Items to Craft
+- A Luminous Lantern that reveals hidden truths and illuminates dark places
+- A Sturdy Rope that helps overcome physical obstacles and bridges gaps
+- A Mystical Amulet that enhances intuition and provides subtle guidance
+- A Weathered Map that reveals new paths and hidden locations
+- A Pocket Watch that helps with timing and occasionally glimpses the future
+- A Healing Potion that restores strength and provides clarity of mind
+
+## Companions to Choose
+- A Wise Owl that offers knowledge and explanations
+- A Brave Fox that excels in courage and action-oriented tasks
+- A Clever Squirrel that's skilled in problem-solving and improvisation
+- A Gentle Deer that provides emotional support and finds peaceful solutions
+- A Playful Otter that brings joy and finds unexpected approaches
+- A Steadfast Turtle that offers patience and protection in difficult times
+
+## Roles or Professions
+- A Healer who can mend wounds and restore balance
+- A Scholar who values knowledge and understanding
+- A Guardian who protects others and stands against threats
+- A Pathfinder who discovers new routes and possibilities
+- A Diplomat who resolves conflicts through communication
+- A Craftsperson who builds and creates solutions
+
+## Special Abilities
+- Animal Whisperer who can communicate with creatures
+- Puzzle Master who excels at solving riddles and mysteries
+- Storyteller who charms others with words and narratives
+- Element Bender who has a special connection to natural forces
+- Dream Walker who can glimpse insights through dreams
+- Pattern Seer who notices connections others miss"""
+
+
+def get_random_agency_category() -> str:
+    """Randomly select one agency category from the available options."""
+    # Extract individual categories from the AGENCY_CHOICE_CATEGORIES string
+    categories_text = AGENCY_CHOICE_CATEGORIES.split("# Agency Choice Categories")[1]
+
+    # Split by section headers and clean up
+    sections = re.findall(r"## ([^\n]+)\n((?:- [^\n]+\n)+)", categories_text)
+
+    # Select one random category
+    category_name, category_items = random.choice(sections)
+
+    # Format the selected category
+    items_list = re.findall(r"- ([^\n]+)", category_items)
+    formatted_items = "\n".join([f"- {item}" for item in items_list])
+
+    return f"""# Agency Choice: {category_name}
+Choose one of these options to offer the character:
+{formatted_items}
+
+Make this choice feel meaningful and consequential. The character's selection will influence their journey throughout the adventure."""
+
+
+# First chapter agency instructions
+# -------------------------------
+
+FIRST_CHAPTER_AGENCY_INSTRUCTIONS = """# First Chapter Agency
+Include a meaningful choice that provides agency through one of the options above.
+
+## Requirements
+- Present three distinct options that reflect different approaches or values
+- Describe how this choice might influence their journey
+- Make the options fit naturally within the story world
+- End the chapter at this decision point
+
+This choice is pivotal and will impact the character throughout their journey."""
+
 
 # Storytelling techniques
 # ----------------------
@@ -243,6 +321,8 @@ Their answer was: "{chosen_answer}"
    - Relate to the story's theme of "{theme}"
    - Set up the next part of the adventure
 
+{agency_guidance}
+
 ## Choice Structure
 Create three story-driven choices that:
 - Feel like natural next steps in the narrative
@@ -253,6 +333,47 @@ Create three story-driven choices that:
 Each choice should set up clear narrative consequences for the next chapter without any being labeled as "correct" or "incorrect".
 
 {reflect_choice_format}"""
+
+# Agency guidance templates for REFLECT chapters
+# ---------------------------------------------
+
+AGENCY_GUIDANCE_CORRECT = """## Agency Evolution (Correct Understanding)
+The character's agency choice from Chapter 1 should evolve or be empowered by their correct understanding.
+Choose an approach that feels most natural to the narrative:
+- Revealing a new capability or aspect of their chosen item/companion/role/ability
+- Helping overcome a challenge in a meaningful way using their agency element
+- Deepening the connection between character and their agency choice
+- Providing insight or assistance that builds on their knowledge
+
+This evolution should feel organic to the story and connect naturally to their correct answer."""
+
+AGENCY_GUIDANCE_INCORRECT = """## Agency Evolution (New Understanding)
+Despite the initial misunderstanding, the character's agency choice from Chapter 1 should grow or transform through this learning experience.
+Choose an approach that feels most natural to the narrative:
+- Adapting to incorporate the new knowledge they've gained
+- Helping the character see where they went wrong
+- Providing a different perspective or approach to the problem
+- Demonstrating resilience and the value of learning from mistakes
+
+This transformation should feel organic to the story and connect naturally to their learning journey."""
+
+# Agency guidance for climax phase
+# ------------------------------
+
+CLIMAX_AGENCY_GUIDANCE = """## Climax Agency Integration
+The character's agency choice from Chapter 1 should play a pivotal role in this climactic moment:
+
+1. **Narrative Culmination**: Show how this element has been with them throughout the journey
+2. **Growth Reflection**: Reference how it has changed or evolved, especially during reflection moments
+3. **Meaningful Choices**: Present options that leverage this agency element in different ways
+
+The choices should reflect different approaches to using their agency element:
+- Choice A: A bold, direct application of their agency element
+- Choice B: A clever, unexpected use of their agency element
+- Choice C: A thoughtful, strategic application of their agency element
+
+Each choice should feel valid and meaningful, with none being obviously "correct" or "incorrect."
+"""
 
 # Template configurations for correct answers
 CORRECT_ANSWER_CONFIG = {
@@ -316,7 +437,19 @@ You are a master storyteller crafting an interactive educational story that seam
 4. Incorporate sensory details naturally to enhance immersion
 5. Apply markdown formatting judiciously: use **bold** for critical revelations or important realizations, and *italics* for character thoughts or emotional emphasis
 
+# Agency Continuity
+The character makes a pivotal choice in the first chapter (crafting an item, choosing a companion, selecting a role, or developing a special ability). This choice:
+
+1. Represents a core aspect of the character's identity and approach
+2. Must be referenced consistently throughout ALL chapters of the adventure
+3. Should evolve and develop as the character learns and grows
+4. Will play a crucial role in the climax of the story
+5. Should feel like a natural part of the narrative, not an artificial element
+
+Each chapter should include at least one meaningful reference to or use of this agency element, with its significance growing throughout the journey.
+
 # CRITICAL RULES
 1. Structure and flow: begin narrative directly (never with "Chapter X"), end at natural decision points, maintain consistent narrative elements
 2. Content development: incorporate sensory details naturally, develop theme and moral teaching organically
-3. Educational integration: balance entertainment with learning, ensure lessons feel organic to the story"""
+3. Educational integration: balance entertainment with learning, ensure lessons feel organic to the story
+4. Agency integration: weave the character's agency choice naturally throughout the story, showing its evolution and impact"""

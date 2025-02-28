@@ -4,7 +4,12 @@ from openai import AsyncOpenAI
 import google.generativeai as genai
 from app.models.story import AdventureState
 from app.services.llm.base import BaseLLMService
-from app.services.llm.prompt_engineering import build_system_prompt, build_user_prompt
+from app.services.llm.prompt_engineering import (
+    build_system_prompt,
+    build_user_prompt,
+    _build_chapter_prompt,
+    _build_base_prompt,
+)
 import logging
 from abc import ABC, abstractmethod
 
@@ -31,7 +36,37 @@ class OpenAIService(BaseLLMService):
         """Generate the chapter content (story or lesson) as a stream of chunks."""
         # Build prompts using the shared prompt engineering module
         system_prompt = build_system_prompt(state)  # Pass state instead of story_config
-        user_prompt = build_user_prompt(state, question, previous_lessons)
+
+        # Get base prompt components
+        base_prompt, story_phase, chapter_type = _build_base_prompt(state)
+
+        # Get number of previous lessons
+        num_previous_lessons = len(previous_lessons) if previous_lessons else 0
+
+        # Get consequences guidance if there are previous lessons
+        consequences_guidance = ""
+        if previous_lessons and len(previous_lessons) > 0:
+            from app.services.llm.prompt_engineering import process_consequences
+
+            last_lesson = previous_lessons[-1]
+            consequences_guidance = process_consequences(
+                last_lesson.is_correct,
+                last_lesson.question,
+                last_lesson.chosen_answer,
+                state.current_chapter_number,
+            )
+
+        # Build chapter prompt using the new function
+        user_prompt = _build_chapter_prompt(
+            base_prompt=base_prompt,
+            story_phase=story_phase,
+            chapter_type=chapter_type,
+            state=state,
+            lesson_question=question,
+            consequences_guidance=consequences_guidance,
+            num_previous_lessons=num_previous_lessons,
+            previous_lessons=previous_lessons,
+        )
 
         # Log the prompts
         logger.info(
@@ -102,7 +137,37 @@ class GeminiService(BaseLLMService):
         """Generate the chapter content (story or lesson) as a stream of chunks."""
         # Build prompts using the shared prompt engineering module
         system_prompt = build_system_prompt(state)  # Pass state instead of story_config
-        user_prompt = build_user_prompt(state, question, previous_lessons)
+
+        # Get base prompt components
+        base_prompt, story_phase, chapter_type = _build_base_prompt(state)
+
+        # Get number of previous lessons
+        num_previous_lessons = len(previous_lessons) if previous_lessons else 0
+
+        # Get consequences guidance if there are previous lessons
+        consequences_guidance = ""
+        if previous_lessons and len(previous_lessons) > 0:
+            from app.services.llm.prompt_engineering import process_consequences
+
+            last_lesson = previous_lessons[-1]
+            consequences_guidance = process_consequences(
+                last_lesson.is_correct,
+                last_lesson.question,
+                last_lesson.chosen_answer,
+                state.current_chapter_number,
+            )
+
+        # Build chapter prompt using the new function
+        user_prompt = _build_chapter_prompt(
+            base_prompt=base_prompt,
+            story_phase=story_phase,
+            chapter_type=chapter_type,
+            state=state,
+            lesson_question=question,
+            consequences_guidance=consequences_guidance,
+            num_previous_lessons=num_previous_lessons,
+            previous_lessons=previous_lessons,
+        )
 
         print("\n=== DEBUG: LLM Prompt Request ===")
         print("System Prompt:")

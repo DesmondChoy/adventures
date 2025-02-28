@@ -131,6 +131,43 @@ See progress.md for detailed change history.
 
 ## Current Considerations
 
+### Agency Implementation
+The adventure now includes a form of agency through a pivotal choice made in the first chapter:
+
+1. **First Chapter Agency Choice**
+   - User selects from one of four categories in the first chapter:
+     * Magical Item to Craft (lantern, rope, amulet, map, watch, potion)
+     * Companion to Choose (owl, fox, squirrel, deer, otter, turtle)
+     * Role or Profession (healer, scholar, guardian, pathfinder, diplomat, craftsperson)
+     * Special Ability (animal whisperer, puzzle master, storyteller, element bender, dream walker, pattern seer)
+   - Choice is stored in `state.metadata["agency"]` with:
+     * Type (item, companion, role, ability)
+     * Name (specific choice made)
+     * Description (full choice text)
+     * Properties (for tracking evolution)
+     * Growth history (for tracking changes)
+     * References (chapters where it appears)
+
+2. **Agency Continuity**
+   - The agency element is referenced throughout all chapters
+   - In REFLECT chapters, agency evolves based on correct/incorrect answers:
+     * Correct answers: Agency is empowered or reveals new capabilities
+     * Incorrect answers: Agency adapts to incorporate new knowledge
+   - In CLIMAX phase, agency plays a pivotal role with choices reflecting different ways to use it
+   - In CONCLUSION chapter, agency has a meaningful resolution showing its evolution
+
+3. **Technical Implementation**
+   - `websocket_service.py`: Detects and stores agency choice from first chapter
+   - `adventure_state_manager.py`: Tracks agency references throughout chapters
+   - `prompt_engineering.py`: Incorporates agency into chapter prompts
+   - `prompt_templates.py`: Provides templates for agency guidance
+
+4. **Agency Evolution**
+   - Agency element grows stronger through correct answers
+   - Agency element adapts through incorrect answers
+   - Agency element plays a crucial role in the climax
+   - Agency element has a satisfying resolution in the conclusion
+
 ### Prompt Engineering Improvements
 - The Story Object Method provides a more concrete approach to creating narrative bridges:
   * Uses a single visually interesting story object to connect to the educational question

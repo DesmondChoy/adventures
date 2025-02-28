@@ -1,5 +1,230 @@
 # Progress Log
 
+## 2025-02-28: Agency Implementation
+
+### Problem
+The adventure experience lacked a form of agency that would allow users to make meaningful choices that impact their journey. The first chapter choices didn't provide a sense of ownership or continuity throughout the adventure.
+
+### Requirements
+- Implement a form of agency in the first chapter through meaningful choices
+- Track the agency choice throughout the adventure
+- Evolve the agency element based on correct/incorrect answers in REFLECT chapters
+- Make the agency element play a pivotal role in the climax
+- Provide a satisfying resolution to the agency element in the conclusion
+
+### Solution
+1. Added agency choice categories in `prompt_templates.py`:
+   ```python
+   AGENCY_CHOICE_CATEGORIES = """# Agency Choice Categories
+   The character should make one of these meaningful choices that will impact their journey:
+
+   ## Magical Items to Craft
+   - A Luminous Lantern that reveals hidden truths and illuminates dark places
+   - A Sturdy Rope that helps overcome physical obstacles and bridges gaps
+   - A Mystical Amulet that enhances intuition and provides subtle guidance
+   - A Weathered Map that reveals new paths and hidden locations
+   - A Pocket Watch that helps with timing and occasionally glimpses the future
+   - A Healing Potion that restores strength and provides clarity of mind
+
+   ## Companions to Choose
+   - A Wise Owl that offers knowledge and explanations
+   - A Brave Fox that excels in courage and action-oriented tasks
+   - A Clever Squirrel that's skilled in problem-solving and improvisation
+   - A Gentle Deer that provides emotional support and finds peaceful solutions
+   - A Playful Otter that brings joy and finds unexpected approaches
+   - A Steadfast Turtle that offers patience and protection in difficult times
+
+   ## Roles or Professions
+   - A Healer who can mend wounds and restore balance
+   - A Scholar who values knowledge and understanding
+   - A Guardian who protects others and stands against threats
+   - A Pathfinder who discovers new routes and possibilities
+   - A Diplomat who resolves conflicts through communication
+   - A Craftsperson who builds and creates solutions
+
+   ## Special Abilities
+   - Animal Whisperer who can communicate with creatures
+   - Puzzle Master who excels at solving riddles and mysteries
+   - Storyteller who charms others with words and narratives
+   - Element Bender who has a special connection to natural forces
+   - Dream Walker who can glimpse insights through dreams
+   - Pattern Seer who notices connections others miss"""
+   ```
+
+2. Added agency guidance templates for different chapter types:
+   ```python
+   # Agency guidance templates for REFLECT chapters
+   AGENCY_GUIDANCE_CORRECT = """## Agency Evolution (Correct Understanding)
+   The character's agency choice from Chapter 1 should evolve or be empowered by their correct understanding.
+   Choose an approach that feels most natural to the narrative:
+   - Revealing a new capability or aspect of their chosen item/companion/role/ability
+   - Helping overcome a challenge in a meaningful way using their agency element
+   - Deepening the connection between character and their agency choice
+   - Providing insight or assistance that builds on their knowledge
+
+   This evolution should feel organic to the story and connect naturally to their correct answer."""
+
+   AGENCY_GUIDANCE_INCORRECT = """## Agency Evolution (New Understanding)
+   Despite the initial misunderstanding, the character's agency choice from Chapter 1 should grow or transform through this learning experience.
+   Choose an approach that feels most natural to the narrative:
+   - Adapting to incorporate the new knowledge they've gained
+   - Helping the character see where they went wrong
+   - Providing a different perspective or approach to the problem
+   - Demonstrating resilience and the value of learning from mistakes
+
+   This transformation should feel organic to the story and connect naturally to their learning journey."""
+
+   # Agency guidance for climax phase
+   CLIMAX_AGENCY_GUIDANCE = """## Climax Agency Integration
+   The character's agency choice from Chapter 1 should play a pivotal role in this climactic moment:
+
+   1. **Narrative Culmination**: Show how this element has been with them throughout the journey
+   2. **Growth Reflection**: Reference how it has changed or evolved, especially during reflection moments
+   3. **Meaningful Choices**: Present options that leverage this agency element in different ways
+
+   The choices should reflect different approaches to using their agency element:
+   - Choice A: A bold, direct application of their agency element
+   - Choice B: A clever, unexpected use of their agency element
+   - Choice C: A thoughtful, strategic application of their agency element
+
+   Each choice should feel valid and meaningful, with none being obviously "correct" or "incorrect."
+   """
+   ```
+
+3. Updated the system prompt to include agency continuity guidance:
+   ```markdown
+   # Agency Continuity
+   The character makes a pivotal choice in the first chapter (crafting an item, choosing a companion, selecting a role, or developing a special ability). This choice:
+
+   1. Represents a core aspect of the character's identity and approach
+   2. Must be referenced consistently throughout ALL chapters of the adventure
+   3. Should evolve and develop as the character learns and grows
+   4. Will play a crucial role in the climax of the story
+   5. Should feel like a natural part of the narrative, not an artificial element
+
+   Each chapter should include at least one meaningful reference to or use of this agency element, with its significance growing throughout the journey.
+   ```
+
+4. Added special handling for the first chapter in `prompt_engineering.py`:
+   ```python
+   # Special handling for first chapter - include agency choice
+   if state.current_chapter_number == 1 and chapter_type == ChapterType.STORY:
+       # Get random agency category
+       agency_category = get_random_agency_category()
+       
+       # Log agency category selection
+       logger.debug(f"First chapter: Using agency category: {agency_category.split('# Agency Choice:')[1].split('\n')[0].strip()}")
+       
+       return f"""{base_prompt}
+
+   {_get_phase_guidance(story_phase, state)}
+
+   {STORY_CHAPTER_INSTRUCTIONS}
+
+   {agency_category}
+
+   {FIRST_CHAPTER_AGENCY_INSTRUCTIONS}
+
+   {get_choice_instructions(story_phase)}"""
+   ```
+
+5. Added agency detection and storage in `websocket_service.py`:
+   ```python
+   # Handle first chapter agency choice
+   if previous_chapter.chapter_number == 1 and previous_chapter.chapter_type == ChapterType.STORY:
+       logger.debug("Processing first chapter agency choice")
+       
+       # Extract agency type and name from choice text
+       agency_type = ""
+       agency_name = ""
+       
+       # Determine agency type based on keywords in choice text
+       choice_lower = choice_text.lower()
+       if any(word in choice_lower for word in ["craft", "lantern", "rope", "amulet", "map", "watch", "potion"]):
+           agency_type = "item"
+           # Extract item name
+           # ...
+       elif any(word in choice_lower for word in ["owl", "fox", "squirrel", "deer", "otter", "turtle", "companion"]):
+           agency_type = "companion"
+           # Extract companion name
+           # ...
+       # ... other agency types ...
+       
+       # Store agency choice in metadata
+       state.metadata["agency"] = {
+           "type": agency_type,
+           "name": agency_name,
+           "description": choice_text,
+           "properties": {"strength": 1},
+           "growth_history": [],
+           "references": []
+       }
+   ```
+
+6. Added agency reference tracking in `adventure_state_manager.py`:
+   ```python
+   def update_agency_references(self, chapter_data: ChapterData) -> None:
+       """Track references to the agency element in chapters."""
+       if self.state is None or "agency" not in self.state.metadata:
+           return
+           
+       agency = self.state.metadata["agency"]
+       content = chapter_data.content
+       
+       # Check if agency is referenced
+       agency_name = agency.get("name", "")
+       agency_type = agency.get("type", "")
+       
+       has_reference = (
+           agency_name.lower() in content.lower() or 
+           agency_type.lower() in content.lower()
+       )
+       
+       # Track references
+       if "references" not in agency:
+           agency["references"] = []
+           
+       agency["references"].append({
+           "chapter": chapter_data.chapter_number,
+           "has_reference": has_reference,
+           "chapter_type": chapter_data.chapter_type.value
+       })
+       
+       # Log warning if no reference found
+       if not has_reference:
+           logger.warning(
+               f"No reference to agency element ({agency_name}) found in chapter {chapter_data.chapter_number}"
+           )
+   ```
+
+7. Updated the REFLECT chapter prompt to include agency guidance:
+   ```python
+   # Determine agency guidance based on whether the answer was correct
+   agency_guidance = ""
+   if state and "agency" in state.metadata:
+       agency_guidance = AGENCY_GUIDANCE_CORRECT if is_correct else AGENCY_GUIDANCE_INCORRECT
+       
+       # Track agency evolution in metadata
+       if "agency_evolution" not in state.metadata:
+           state.metadata["agency_evolution"] = []
+           
+       state.metadata["agency_evolution"].append({
+           "chapter": state.current_chapter_number,
+           "chapter_type": "REFLECT",
+           "is_correct": is_correct,
+           "timestamp": datetime.now().isoformat()
+       })
+   ```
+
+### Results
+The implementation successfully:
+1. Adds a meaningful form of agency through a first chapter choice
+2. Tracks the agency choice throughout the adventure
+3. Evolves the agency element based on correct/incorrect answers in REFLECT chapters
+4. Makes the agency element play a pivotal role in the climax
+5. Provides a satisfying resolution to the agency element in the conclusion
+6. Enhances the narrative continuity and user engagement
+
 ## 2025-02-28: Removed Obsolete CHOICE_FORMAT_INSTRUCTIONS
 
 ### Problem
