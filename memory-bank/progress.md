@@ -1,5 +1,33 @@
 # Progress Log
 
+## 2025-02-28: UI Fix - Hide "Swipe to explore" Tip on Desktop
+
+### Problem
+The "Swipe to explore" tip was showing on desktop devices, even though swiping is only a feature available on mobile devices. This created a confusing user experience on desktop where users navigate using arrow buttons or keyboard instead of swiping.
+
+### Requirements
+- Hide the "Swipe to explore" tip on desktop devices
+- Keep the tip visible on mobile devices where swiping is a relevant interaction
+- Maintain the existing functionality where the tip fades out after a few seconds or on user interaction
+
+### Solution
+Added a media query to `app/static/css/carousel.css` to hide the swipe tip on desktop devices:
+```css
+/* Hide swipe tip on desktop */
+@media (min-width: 769px) {
+    .swipe-tip {
+        display: none;
+    }
+}
+```
+
+### Results
+The implementation successfully:
+1. Hides the "Swipe to explore" tip on desktop devices (screen width > 768px)
+2. Keeps the tip visible on mobile devices (screen width ≤ 768px) where swiping is relevant
+3. Maintains the existing functionality where the tip fades out after a few seconds or when the user interacts with the carousel
+4. Improves the user experience by only showing interaction hints that are relevant to the user's device
+
 ## 2025-02-28: Lesson Chapter Prompt Improvement with Story Object Method
 
 ### Problem

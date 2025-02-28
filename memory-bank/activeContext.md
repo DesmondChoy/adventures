@@ -54,6 +54,13 @@ The project is focused on implementing core Learning Odyssey features, including
 
 ## Recent Changes
 
+### UI Fix - Hide "Swipe to explore" Tip on Desktop (2025-02-28)
+- Fixed an issue where the "Swipe to explore" tip was showing on desktop devices in `app/static/css/carousel.css`:
+  * Added a media query to hide the swipe tip on desktop devices (screen width > 768px)
+  * Kept the tip visible on mobile devices where swiping is a relevant interaction
+  * Maintained the existing functionality where the tip fades out after a few seconds or on user interaction
+  * This improves the user experience by only showing interaction hints that are relevant to the user's device
+
 ### Lesson Chapter Prompt Improvement with Story Object Method (2025-02-28)
 - Improved the lesson chapter generation prompt in `app/services/llm/prompt_templates.py` and `app/services/llm/prompt_engineering.py`:
   * Condensed the CRITICAL RULES to three succinct points for better LLM comprehension

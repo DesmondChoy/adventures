@@ -194,11 +194,11 @@
 ### Mobile Responsiveness (`app/static/css/carousel.css`)
 - Breakpoint: max-width 768px
 - Container dimensions:
-  * Desktop: 400px × 420px
+  * Desktop: 400px × 450px (updated from 420px)
   * Mobile: 320px × 360px
 - Card dimensions:
   * Desktop regular: 300px × 400px
-  * Desktop active: 340px × 453px
+  * Desktop active: 320px × 415px (updated from 340px × 453px)
   * Mobile regular: 200px × 267px
   * Mobile active: 240px × 320px
 - Typography scaling:
@@ -211,6 +211,11 @@
   * 50px swipe threshold
   * Event prevention for smooth scrolling
   * Hidden navigation arrows
+  * "Swipe to explore" tip only visible on mobile devices
+- Device-specific UI elements:
+  * Media query to hide swipe tip on desktop: `@media (min-width: 769px)`
+  * Swipe tip visible only on mobile where swiping is relevant
+  * Navigation arrows visible only on desktop
 - Content optimization:
   * Reduced padding (4px)
   * Increased line clamp (10)
