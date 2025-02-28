@@ -12,7 +12,7 @@ from app.models.story import (
 from app.services.llm.prompt_templates import (
     CHOICE_FORMAT_INSTRUCTIONS,
     get_choice_instructions,
-    REASON_CHOICE_FORMAT,
+    REFLECT_CHOICE_FORMAT,
     REFLECTIVE_TECHNIQUES,
     BASE_PHASE_GUIDANCE,
     PLOT_TWIST_GUIDANCE,
@@ -22,7 +22,7 @@ from app.services.llm.prompt_templates import (
     CORRECT_ANSWER_CONSEQUENCES,
     INCORRECT_ANSWER_CONSEQUENCES,
     SYSTEM_PROMPT_TEMPLATE,
-    REASON_CHALLENGE_TEMPLATES,
+    REFLECT_CHALLENGE_TEMPLATES,
     INCORRECT_ANSWER_TEMPLATE,
 )
 
@@ -170,7 +170,7 @@ Use this specific storytelling technique for the reflection:
 - {selected_technique}"""
 
 
-def build_reason_chapter_prompt(
+def build_reflect_chapter_prompt(
     is_correct: bool,
     lesson_question: Dict[str, Any],
     chosen_answer: str,
@@ -220,13 +220,13 @@ def build_reason_chapter_prompt(
         # Track challenge type in metadata if state is provided
         if state:
             logger = logging.getLogger("story_app")
-            logger.debug(f"Selected REASON challenge type: {challenge_type}")
+            logger.debug(f"Selected REFLECT challenge type: {challenge_type}")
 
             # Create structured history of challenge types
-            if "reason_challenge_history" not in state.metadata:
-                state.metadata["reason_challenge_history"] = []
+            if "reflect_challenge_history" not in state.metadata:
+                state.metadata["reflect_challenge_history"] = []
 
-            state.metadata["reason_challenge_history"].append(
+            state.metadata["reflect_challenge_history"].append(
                 {
                     "chapter": state.current_chapter_number,
                     "challenge_type": challenge_type,
@@ -236,10 +236,10 @@ def build_reason_chapter_prompt(
             )
 
             # Also store the most recent challenge type for easy access
-            state.metadata["last_reason_challenge_type"] = challenge_type
+            state.metadata["last_reflect_challenge_type"] = challenge_type
 
         # Use the appropriate template based on challenge type
-        template = REASON_CHALLENGE_TEMPLATES[challenge_type]
+        template = REFLECT_CHALLENGE_TEMPLATES[challenge_type]
         # Replace the reflective_techniques placeholder with our random selection
         template = template.replace("{reflective_techniques}", reflective_technique)
 
@@ -250,7 +250,7 @@ def build_reason_chapter_prompt(
                 chosen_answer=chosen_answer,
                 question=lesson_question["question"],
                 incorrect_answers=", ".join(incorrect_answers),
-                reason_choice_format=REASON_CHOICE_FORMAT,
+                reflect_choice_format=REFLECT_CHOICE_FORMAT,
             )
         }"""
     else:
@@ -266,7 +266,7 @@ def build_reason_chapter_prompt(
                 chosen_answer=chosen_answer,
                 question=lesson_question["question"],
                 correct_answer=correct_answer,
-                reason_choice_format=REASON_CHOICE_FORMAT,
+                reflect_choice_format=REFLECT_CHOICE_FORMAT,
             )
         }"""
 
@@ -286,20 +286,20 @@ def _build_chapter_prompt(
     Args:
         base_prompt: Base story state and history
         story_phase: Current phase of the story (Exposition, Rising, Trials, Climax, Return)
-        chapter_type: Type of chapter to generate (LESSON, STORY, REASON, or CONCLUSION)
+        chapter_type: Type of chapter to generate (LESSON, STORY, REFLECT, or CONCLUSION)
         lesson_question: Question data for lesson chapters
         consequences_guidance: Guidance based on previous lesson outcomes
         num_previous_lessons: Number of previous lesson chapters
         previous_lessons: History of previous lesson responses
     """
-    # Handle REASON chapters
-    if chapter_type == ChapterType.REASON:
-        # A REASON chapter must follow a LESSON chapter
+    # Handle REFLECT chapters
+    if chapter_type == ChapterType.REFLECT:
+        # A REFLECT chapter must follow a LESSON chapter
         if not previous_lessons or len(previous_lessons) == 0:
-            raise ValueError("REASON chapter requires a previous LESSON")
+            raise ValueError("REFLECT chapter requires a previous LESSON")
 
         last_lesson = previous_lessons[-1]
-        return build_reason_chapter_prompt(
+        return build_reflect_chapter_prompt(
             is_correct=last_lesson.is_correct,
             lesson_question=last_lesson.question,
             chosen_answer=last_lesson.chosen_answer,
@@ -460,14 +460,14 @@ def build_user_prompt(
 {continuation_text}"""
 
     elif (
-        chapter_type == ChapterType.REASON
+        chapter_type == ChapterType.REFLECT
         and previous_lessons
         and len(previous_lessons) > 0
     ):
-        # For reason chapters
+        # For reflectchapters
         last_lesson = previous_lessons[-1]
-        # Use the existing build_reason_chapter_prompt but extract just the instructions part
-        reason_prompt = build_reason_chapter_prompt(
+        # Use the existing build_reflect_chapter_prompt but extract just the instructions part
+        reflect_prompt = build_reflect_chapter_prompt(
             is_correct=last_lesson.is_correct,
             lesson_question=last_lesson.question,
             chosen_answer=last_lesson.chosen_answer,
@@ -475,7 +475,7 @@ def build_user_prompt(
             state=state,
         )
         # Remove the empty base prompt part if it exists
-        chapter_instructions = reason_prompt.strip()
+        chapter_instructions = reflect_prompt.strip()
 
     elif chapter_type == ChapterType.STORY:
         # For story chapters

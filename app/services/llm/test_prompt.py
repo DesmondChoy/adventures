@@ -62,7 +62,7 @@ def create_mock_state():
             ChapterType.STORY,
             ChapterType.STORY,
             ChapterType.LESSON,
-            ChapterType.REASON,
+            ChapterType.REFLECT,
             ChapterType.STORY,
             ChapterType.LESSON,
             ChapterType.STORY,

@@ -47,7 +47,7 @@ def get_choice_instructions(phase: str) -> str:
 # Keep the original for backward compatibility
 CHOICE_FORMAT_INSTRUCTIONS = get_choice_instructions("Rising")
 
-REASON_CHOICE_FORMAT = """# Choice Format
+REFLECT_CHOICE_FORMAT = """# Choice Format
 Use this EXACT format for the choices, with NO indentation and NO line breaks within choices:
 
 <CHOICES>
@@ -162,7 +162,7 @@ Create a narrative moment where the question emerges through:
 2. Make this story element:
    - Visually interesting (describe how it appears in the story world)
    - Relevant to the plot (connect it to the character's journey)
-   - Mysterious or incomplete (create a reason to seek the answer)
+   - Mysterious or incomplete (create a reflectto seek the answer)
 
 3. Include the exact question "[Core Question]" somewhere in the narrative:
    - It can be in dialogue, a character's thoughts, or written text within the story
@@ -219,10 +219,10 @@ The story should:
 - Use this as an opportunity for growth and deeper understanding
 - Connect the correction to their current situation and future challenges"""
 
-# Reason challenge templates
+# REFLECT challenge templates
 # -------------------------
 
-REASON_CHALLENGE_TEMPLATES: Dict[str, str] = {
+REFLECT_CHALLENGE_TEMPLATES: Dict[str, str] = {
     "confidence_test": """# Confidence Test Challenge
 The character has answered "{chosen_answer}" to the question: "{question}"
 Now, we need to test if they truly understand the concept or if it was just a lucky guess.
@@ -246,7 +246,7 @@ Frame it as: "Are you sure about your answer? Consider these alternatives..."
 For choices B and C, use these incorrect answers as inspiration but make them sound very plausible:
 {incorrect_answers}
 
-{reason_choice_format}""",
+{reflect_choice_format}""",
     "application": """# Application Challenge
 The character has answered "{chosen_answer}" to the question: "{question}"
 Now, we need to see if they can apply this concept in a different context.
@@ -267,7 +267,7 @@ Frame it as: "Now let's see if you can apply this knowledge to a new situation..
 - Choice B: An answer that misapplies the concept in a plausible way (incorrect)
 - Choice C: Another answer that misapplies the concept differently (incorrect)
 
-{reason_choice_format}""",
+{reflect_choice_format}""",
     "connection_making": """# Connection-Making Challenge
 The character has answered "{chosen_answer}" to the question: "{question}"
 Now, let's explore how this concept connects to broader themes and ideas.
@@ -288,7 +288,7 @@ Frame it as: "How does this knowledge connect to the bigger picture?"
 - Choice B: A connection that misunderstands either the concept or the theme (incorrect)
 - Choice C: A connection that seems logical but misses the deeper significance (incorrect)
 
-{reason_choice_format}""",
+{reflect_choice_format}""",
     "teaching_moment": """# Teaching Moment Challenge
 The character has answered "{chosen_answer}" to the question: "{question}"
 Now, let's see if they can explain this concept to someone else.
@@ -309,7 +309,7 @@ Frame it as: "How would you explain this to someone who doesn't understand?"
 - Choice B: An explanation that contains a subtle but important misconception (incorrect)
 - Choice C: An explanation that completely misunderstands the concept (incorrect)
 
-{reason_choice_format}""",
+{reflect_choice_format}""",
 }
 
 INCORRECT_ANSWER_TEMPLATE = """# Incorrect Answer Learning Opportunity
@@ -337,7 +337,7 @@ The choices must both test understanding AND advance the story:
 
 Each choice should set up clear narrative consequences for the next chapter.
 
-{reason_choice_format}"""
+{reflect_choice_format}"""
 
 # Prompt templates
 # ---------------

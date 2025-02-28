@@ -63,7 +63,7 @@ The lesson chapter generation prompt had several issues:
    2. Make this story element:
       - Visually interesting (describe how it appears in the story world)
       - Relevant to the plot (connect it to the character's journey)
-      - Mysterious or incomplete (create a reason to seek the answer)
+      - Mysterious or incomplete (create a reflectto seek the answer)
 
    3. Include the exact question "[Core Question]" somewhere in the narrative:
       - It can be in dialogue, a character's thoughts, or written text within the story
@@ -216,16 +216,16 @@ The implementation successfully:
 ## 2025-02-27: Chapter Sequence Optimization Tradeoff
 
 ### Problem
-The chapter sequence algorithm needed to prioritize certain rules over others, particularly ensuring no consecutive LESSON chapters and at least 1 REASON chapter in every scenario, while allowing some flexibility in the number of LESSON chapters.
+The chapter sequence algorithm needed to prioritize certain rules over others, particularly ensuring no consecutive LESSON chapters and at least 1 REFLECT chapter in every scenario, while allowing some flexibility in the number of LESSON chapters.
 
 ### Requirements
 - Prioritize no consecutive LESSON chapters as the highest rule
-- Ensure at least 1 REASON chapter in every scenario
+- Ensure at least 1 REFLECT chapter in every scenario
 - Assume every LESSON has at least 3 questions available
 - Accept 25% of scenarios where there are two LESSON chapters (when there should be three) in the distribution
 
 ### Solution
-1. Updated the validation in `check_chapter_sequence()` to prioritize checking for no consecutive LESSON chapters and at least 1 REASON chapter
+1. Updated the validation in `check_chapter_sequence()` to prioritize checking for no consecutive LESSON chapters and at least 1 REFLECT chapter
 2. Modified tests to verify the distribution of scenarios with 2 vs 3 LESSON chapters
 3. Updated documentation to reflect the new priorities
 4. Ensured the algorithm assumes at least 3 questions are available for every LESSON
@@ -233,14 +233,14 @@ The chapter sequence algorithm needed to prioritize certain rules over others, p
 ### Results
 The implementation successfully:
 1. Maintains the priority of no consecutive LESSON chapters
-2. Ensures at least 1 REASON chapter in every scenario
+2. Ensures at least 1 REFLECT chapter in every scenario
 3. Assumes 3 questions are available for every LESSON
 4. Accepts a small percentage (25%) of scenarios with 2 LESSON chapters as an optimization tradeoff
 
-## 2025-02-27: Enhanced REASON Chapter Challenge Type Tracking
+## 2025-02-27: Enhanced REFLECT Chapter Challenge Type Tracking
 
 ### Problem
-The `build_reason_chapter_prompt()` function in `app/services/llm/prompt_engineering.py` was improved to add variety to correct answer handling with different challenge types (confidence_test, application, connection_making, teaching_moment), but there was no way to track which challenge type was being used for debugging and analysis purposes.
+The `build_reflect_chapter_prompt()` function in `app/services/llm/prompt_engineering.py` was improved to add variety to correct answer handling with different challenge types (confidence_test, application, connection_making, teaching_moment), but there was no way to track which challenge type was being used for debugging and analysis purposes.
 
 ### Requirements
 - Remove unused `all_answers` line in the function
@@ -263,48 +263,48 @@ The `build_reason_chapter_prompt()` function in `app/services/llm/prompt_enginee
 4. Added challenge type tracking in AdventureState metadata:
    - Added an optional `state: Optional[AdventureState]` parameter to the function
    - Added code to track the challenge type in metadata when state is provided
-   - Created a structured history in `state.metadata["reason_challenge_history"]`
-   - Stored the most recent challenge type in `state.metadata["last_reason_challenge_type"]`
+   - Created a structured history in `state.metadata["reflect_challenge_history"]`
+   - Stored the most recent challenge type in `state.metadata["last_reflect_challenge_type"]`
    - Added debug logging for the selected challenge type
-5. Updated `_build_chapter_prompt()` to pass the state parameter to `build_reason_chapter_prompt()`
+5. Updated `_build_chapter_prompt()` to pass the state parameter to `build_reflect_chapter_prompt()`
 
 ### Results
 The implementation successfully:
-1. Provides more varied and engaging REASON chapters with different challenge types
+1. Provides more varied and engaging REFLECT chapters with different challenge types
 2. Tracks the selected challenge type in the AdventureState metadata for debugging
 3. Offers both detailed history and quick access to challenge type information
 4. Improves the educational experience with a more structured approach for incorrect answers
 5. Maintains compatibility with the existing system by making the state parameter optional
 
-## 2025-02-26: REASON Chapter Type Implementation
+## 2025-02-26: REFLECT Chapter Type Implementation
 
 ### Problem
-The original chapter sequence had three chapter types (STORY, LESSON, CONCLUSION) with specific rules for their placement. We needed to implement a new REASON chapter type that follows LESSON chapters to test deeper understanding and ensure correct answers weren't just lucky guesses.
+The original chapter sequence had three chapter types (STORY, LESSON, CONCLUSION) with specific rules for their placement. We needed to implement a new REFLECT chapter type that follows LESSON chapters to test deeper understanding and ensure correct answers weren't just lucky guesses.
 
 ### Requirements
-- Add a new REASON chapter type to the ChapterType enum
+- Add a new REFLECT chapter type to the ChapterType enum
 - Update chapter sequencing rules:
   - First chapter: STORY (changed from first two chapters)
   - Second-to-last chapter: STORY
   - Last chapter: CONCLUSION
   - 50% of remaining chapters, rounded down: LESSON
   - No consecutive LESSON chapters
-  - 50% of LESSON chapters, rounded down: REASON chapters
-  - REASON chapters only occur immediately after a LESSON chapter
-  - STORY chapters must follow REASON chapters
-  - Random selection of which LESSON chapters are followed by REASON chapters
+  - 50% of LESSON chapters, rounded down: REFLECT chapters
+  - REFLECT chapters only occur immediately after a LESSON chapter
+  - STORY chapters must follow REFLECT chapters
+  - Random selection of which LESSON chapters are followed by REFLECT chapters
 
 ### Solution
-1. Added REASON chapter type to ChapterType enum in `app/models/story.py`
+1. Added REFLECT chapter type to ChapterType enum in `app/models/story.py`
 2. Updated `determine_chapter_types()` in `app/services/chapter_manager.py` to implement the new rules:
    - Changed first two chapters rule to just first chapter
    - Added logic to prevent consecutive LESSON chapters
-   - Added logic to randomly select which LESSON chapters are followed by REASON chapters
-   - Ensured REASON chapters are only placed after LESSON chapters
-   - Ensured STORY chapters follow REASON chapters
+   - Added logic to randomly select which LESSON chapters are followed by REFLECT chapters
+   - Ensured REFLECT chapters are only placed after LESSON chapters
+   - Ensured STORY chapters follow REFLECT chapters
    - Implemented trimming logic to maintain the total chapter count
 
-3. Implemented `build_reason_chapter_prompt()` in `app/services/llm/prompt_engineering.py`:
+3. Implemented `build_reflect_chapter_prompt()` in `app/services/llm/prompt_engineering.py`:
    - For correct answers: Tests confidence without revealing the answer was correct
    - For incorrect answers: Provides a learning opportunity with explanation
    - Added diverse storytelling techniques for reflective moments
@@ -312,13 +312,13 @@ The original chapter sequence had three chapter types (STORY, LESSON, CONCLUSION
 
 4. Updated tests in `tests/simulations/test_chapter_type_assignment.py` to validate the new rules:
    - No consecutive LESSON chapters
-   - REASON chapters only follow LESSON chapters
-   - STORY chapters follow REASON chapters
-   - 50% of LESSON chapters (rounded down) are followed by REASON chapters
+   - REFLECT chapters only follow LESSON chapters
+   - STORY chapters follow REFLECT chapters
+   - 50% of LESSON chapters (rounded down) are followed by REFLECT chapters
 
 ### Results
 The implementation successfully:
-1. Adds the new REASON chapter type with appropriate sequencing rules
+1. Adds the new REFLECT chapter type with appropriate sequencing rules
 2. Creates a more sophisticated educational experience by testing deeper understanding
 3. Maintains the total chapter count while accommodating the new chapter type
 4. Provides different approaches for correct vs. incorrect previous answers
