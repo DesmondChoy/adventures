@@ -533,15 +533,33 @@
             initializeLessonCarousel();
         }
 
-        function startAdventure() {
-            if (!selectedLessonTopic) {
-                showError('Please select a lesson topic to begin');
-                return;
-            }
-            document.getElementById('lessonTopicScreen').classList.add('hidden');
-            document.getElementById('storyContainer').classList.remove('hidden');
-            initWebSocket();
-        }
+function startAdventure() {
+    // Validate both inputs
+    if (!selectedCategory) {
+        showError('Please select a story category to continue');
+        return;
+    }
+    
+    if (!selectedLessonTopic) {
+        showError('Please select a lesson topic to begin');
+        return;
+    }
+    
+    // Initialize state with selected options
+    manageState('initialize', {
+        storyCategory: selectedCategory,
+        lessonTopic: selectedLessonTopic
+    });
+
+    // Update UI
+    document.getElementById('lessonTopicScreen').classList.add('hidden');
+    document.getElementById('storyContainer').classList.remove('hidden');
+    document.getElementById('introText').classList.add('hidden');
+
+    // Start the adventure
+    showLoader();
+    initWebSocket();
+}
 
         // Initialize carousels on page load
         window.addEventListener('load', () => {
@@ -763,26 +781,8 @@
             initializeCarousel();
         }
 
-        // --- Event Handlers ---
-        function startAdventure() {
-            if (!selectedCategory || !selectedLessonTopic) {
-                console.error('Both story category and lesson topic must be selected');
-                return;
-            }
-
-            // Initialize state with selected options
-            manageState('initialize', {
-                storyCategory: selectedCategory,
-                lessonTopic: selectedLessonTopic
-            });
-
-            document.getElementById('lessonTopicScreen').classList.add('hidden');
-            document.getElementById('storyContainer').classList.remove('hidden');
-            document.getElementById('introText').classList.add('hidden');
-
-            showLoader();
-            initWebSocket();
-        }
+// --- Event Handlers ---
+// Note: startAdventure function is defined above
 
         // --- Initialization ---
 
