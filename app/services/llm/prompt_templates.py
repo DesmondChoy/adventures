@@ -7,6 +7,8 @@ prompt_engineering.py module to construct complete prompts for different
 chapter types and scenarios.
 """
 
+import re
+import random
 from typing import Dict
 
 # Choice format instructions
@@ -23,7 +25,7 @@ Choice C: [Third choice description]
 </CHOICES>
 
 # CRITICAL RULES
-1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices
+1. Format: Start and end with <CHOICES> tags on their own lines
 2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
 3. Content: Make each choice meaningful, distinct, and advance the plot in interesting ways"""
 
@@ -44,22 +46,100 @@ def get_choice_instructions(phase: str) -> str:
     return f"{base}\n\n{phase_guidance}"
 
 
-# Keep the original for backward compatibility
-CHOICE_FORMAT_INSTRUCTIONS = get_choice_instructions("Rising")
-
-REASON_CHOICE_FORMAT = """# Choice Format
+REFLECT_CHOICE_FORMAT = """# Choice Format
 Use this EXACT format for the choices, with NO indentation and NO line breaks within choices:
 
 <CHOICES>
-Choice A: [First option - make this the correct answer]
-Choice B: [Second option - make this incorrect]
-Choice C: [Third option - make this incorrect]
+Choice A: [First story-driven choice]
+Choice B: [Second story-driven choice]
+Choice C: [Third story-driven choice]
 </CHOICES>
 
 # CRITICAL RULES
-1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices
+1. Format: Start and end with <CHOICES> tags on their own lines
 2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
-3. Content: One choice must be correct, the other choices should be plausible but incorrect"""
+3. Content: Make each choice meaningful, distinct, and advance the story in different ways
+4. Narrative Focus: All choices should be story-driven without any being labeled as "correct" or "incorrect"
+5. Character Growth: Each choice should reflect a different way the character might process or apply what they've learned"""
+
+# Agency choice categories
+# -----------------------
+
+AGENCY_CHOICE_CATEGORIES = """# Agency Choice Categories
+The character should make one of these meaningful choices that will impact their journey:
+
+## Magical Items to Craft
+- A Luminous Lantern that reveals hidden truths and illuminates dark places
+- A Sturdy Rope that helps overcome physical obstacles and bridges gaps
+- A Mystical Amulet that enhances intuition and provides subtle guidance
+- A Weathered Map that reveals new paths and hidden locations
+- A Pocket Watch that helps with timing and occasionally glimpses the future
+- A Healing Potion that restores strength and provides clarity of mind
+
+## Companions to Choose
+- A Wise Owl that offers knowledge and explanations
+- A Brave Fox that excels in courage and action-oriented tasks
+- A Clever Squirrel that's skilled in problem-solving and improvisation
+- A Gentle Deer that provides emotional support and finds peaceful solutions
+- A Playful Otter that brings joy and finds unexpected approaches
+- A Steadfast Turtle that offers patience and protection in difficult times
+
+## Roles or Professions
+- A Healer who can mend wounds and restore balance
+- A Scholar who values knowledge and understanding
+- A Guardian who protects others and stands against threats
+- A Pathfinder who discovers new routes and possibilities
+- A Diplomat who resolves conflicts through communication
+- A Craftsperson who builds and creates solutions
+
+## Special Abilities
+- Animal Whisperer who can communicate with creatures
+- Puzzle Master who excels at solving riddles and mysteries
+- Storyteller who charms others with words and narratives
+- Element Bender who has a special connection to natural forces
+- Dream Walker who can glimpse insights through dreams
+- Pattern Seer who notices connections others miss"""
+
+
+def get_random_agency_category() -> str:
+    """Randomly select one agency category from the available options and shuffle its items."""
+    # Extract individual categories from the AGENCY_CHOICE_CATEGORIES string
+    categories_text = AGENCY_CHOICE_CATEGORIES.split("# Agency Choice Categories")[1]
+
+    # Split by section headers and clean up
+    sections = re.findall(r"## ([^\n]+)\n((?:- [^\n]+\n)+)", categories_text)
+
+    # Select one random category
+    category_name, category_items = random.choice(sections)
+
+    # Extract items and shuffle them
+    items_list = re.findall(r"- ([^\n]+)", category_items)
+    random.shuffle(items_list)  # This shuffles the list in place
+
+    # Format the shuffled items
+    formatted_items = "\n".join([f"- {item}" for item in items_list])
+
+    return f"""# Agency Choice: {category_name}
+Here are some options in this category for your consideration. You can select from these or create similar ones that fit the theme:
+{formatted_items}
+
+Create meaningful choices that feel consequential. The character's selection will influence their journey throughout the adventure."""
+
+
+# First chapter agency instructions
+# -------------------------------
+
+FIRST_CHAPTER_AGENCY_INSTRUCTIONS = """# First Chapter Agency
+Include meaningful choices that provide agency through options from the category above.
+
+## Requirements
+- Present distinct options that reflect different approaches or values
+- Describe how these choices might influence the character's journey
+- Make the options fit naturally within the story world
+- End the chapter at this decision point
+
+These choices are pivotal and will impact the character throughout their journey."""
+
 
 # Storytelling techniques
 # ----------------------
@@ -162,7 +242,7 @@ Create a narrative moment where the question emerges through:
 2. Make this story element:
    - Visually interesting (describe how it appears in the story world)
    - Relevant to the plot (connect it to the character's journey)
-   - Mysterious or incomplete (create a reason to seek the answer)
+   - Mysterious or incomplete (create a reflectto seek the answer)
 
 3. Include the exact question "[Core Question]" somewhere in the narrative:
    - It can be in dialogue, a character's thoughts, or written text within the story
@@ -219,125 +299,100 @@ The story should:
 - Use this as an opportunity for growth and deeper understanding
 - Connect the correction to their current situation and future challenges"""
 
-# Reason challenge templates
-# -------------------------
+# REFLECT templates
+# ----------------
 
-REASON_CHALLENGE_TEMPLATES: Dict[str, str] = {
-    "confidence_test": """# Confidence Test Challenge
-The character has answered "{chosen_answer}" to the question: "{question}"
-Now, we need to test if they truly understand the concept or if it was just a lucky guess.
-
-{reflective_techniques}
-
-## Scene Structure
-1. DO NOT reveal whether their answer was correct or incorrect
-2. Present a scenario where the character is challenged to reconsider their answer
-3. Make the incorrect alternatives sound compelling and plausible
-4. Test their confidence and understanding by seeing if they'll stick with their answer
-
-Present a follow-up scenario that makes the character question their original answer.
-Frame it as: "Are you sure about your answer? Consider these alternatives..."
-
-## Choice Structure
-- Choice A: Stick with the original answer ("{chosen_answer}") - this is the correct choice
-- Choice B: Switch to a different answer that sounds convincing but is incorrect
-- Choice C: Switch to another different answer that sounds convincing but is incorrect
-
-For choices B and C, use these incorrect answers as inspiration but make them sound very plausible:
-{incorrect_answers}
-
-{reason_choice_format}""",
-    "application": """# Application Challenge
-The character has answered "{chosen_answer}" to the question: "{question}"
-Now, we need to see if they can apply this concept in a different context.
+# Unified template for both correct and incorrect answers
+REFLECT_TEMPLATE = """# Narrative-Driven Reflection
+The character previously answered the question: "{question}"
+Their answer was: "{chosen_answer}"
+{correct_answer_info}
 
 {reflective_techniques}
 
-## Scene Structure
-1. DO NOT reveal whether their previous answer was correct or incorrect
-2. Present a new scenario that tests the same concept but in a different context
-3. The correct answer should apply the same reasoning as their original answer
-4. Make the incorrect alternatives sound compelling and plausible
+## Scene Structure for {answer_status}
 
-Present a new scenario that applies the same concept in a different way.
-Frame it as: "Now let's see if you can apply this knowledge to a new situation..."
+1. **NARRATIVE ACKNOWLEDGMENT**: {acknowledgment_guidance}
 
-## Choice Structure
-- Choice A: The answer that correctly applies the same concept (correct)
-- Choice B: An answer that misapplies the concept in a plausible way (incorrect)
-- Choice C: Another answer that misapplies the concept differently (incorrect)
+2. **SOCRATIC EXPLORATION**: Use questions to guide the character to {exploration_goal}:
+   - "What led you to that conclusion?"
+   - "How might this connect to [relevant story element]?"
+   - "What implications might this have for [story situation]?"
 
-{reason_choice_format}""",
-    "connection_making": """# Connection-Making Challenge
-The character has answered "{chosen_answer}" to the question: "{question}"
-Now, let's explore how this concept connects to broader themes and ideas.
+3. **STORY INTEGRATION**: Weave this reflection naturally into the ongoing narrative:
+   - Connect to the character's journey
+   - Relate to the story's theme of "{theme}"
+   - Set up the next part of the adventure
 
-{reflective_techniques}
-
-## Scene Structure
-1. DO NOT reveal whether their previous answer was correct or incorrect
-2. Present a moment where the character can connect this concept to the story's broader theme
-3. Focus on how this knowledge relates to the moral teaching or theme of the adventure
-4. Create choices that test their ability to make meaningful connections
-
-Present a reflective moment that invites deeper connections.
-Frame it as: "How does this knowledge connect to the bigger picture?"
+{agency_guidance}
 
 ## Choice Structure
-- Choice A: The connection that correctly relates the concept to the broader theme (correct)
-- Choice B: A connection that misunderstands either the concept or the theme (incorrect)
-- Choice C: A connection that seems logical but misses the deeper significance (incorrect)
+Create three story-driven choices that:
+- Feel like natural next steps in the narrative
+- Reflect different ways to process what was learned
+- Lead to different but equally valid story paths
+- Advance the plot in meaningful ways
 
-{reason_choice_format}""",
-    "teaching_moment": """# Teaching Moment Challenge
-The character has answered "{chosen_answer}" to the question: "{question}"
-Now, let's see if they can explain this concept to someone else.
+Each choice should set up clear narrative consequences for the next chapter without any being labeled as "correct" or "incorrect".
 
-{reflective_techniques}
+{reflect_choice_format}"""
 
-## Scene Structure
-1. DO NOT reveal whether their previous answer was correct or incorrect
-2. Create a situation where another character needs help understanding this concept
-3. The main character must choose how to explain it
-4. This tests if they truly understand the concept well enough to teach it
+# Agency guidance templates for REFLECT chapters
+# ---------------------------------------------
 
-Present a teaching moment where another character asks for help.
-Frame it as: "How would you explain this to someone who doesn't understand?"
+AGENCY_GUIDANCE_CORRECT = """## Agency Evolution (Correct Understanding)
+The character's agency choice from Chapter 1 should evolve or be empowered by their correct understanding.
+Choose an approach that feels most natural to the narrative:
+- Revealing a new capability or aspect of their chosen item/companion/role/ability
+- Helping overcome a challenge in a meaningful way using their agency element
+- Deepening the connection between character and their agency choice
+- Providing insight or assistance that builds on their knowledge
 
-## Choice Structure
-- Choice A: An explanation that correctly conveys the concept (correct)
-- Choice B: An explanation that contains a subtle but important misconception (incorrect)
-- Choice C: An explanation that completely misunderstands the concept (incorrect)
+This evolution should feel organic to the story and connect naturally to their correct answer."""
 
-{reason_choice_format}""",
+AGENCY_GUIDANCE_INCORRECT = """## Agency Evolution (New Understanding)
+Despite the initial misunderstanding, the character's agency choice from Chapter 1 should grow or transform through this learning experience.
+Choose an approach that feels most natural to the narrative:
+- Adapting to incorporate the new knowledge they've gained
+- Helping the character see where they went wrong
+- Providing a different perspective or approach to the problem
+- Demonstrating resilience and the value of learning from mistakes
+
+This transformation should feel organic to the story and connect naturally to their learning journey."""
+
+# Agency guidance for climax phase
+# ------------------------------
+
+CLIMAX_AGENCY_GUIDANCE = """## Climax Agency Integration
+The character's agency choice from Chapter 1 should play a pivotal role in this climactic moment:
+
+1. **Narrative Culmination**: Show how this element has been with them throughout the journey
+2. **Growth Reflection**: Reference how it has changed or evolved, especially during reflection moments
+3. **Meaningful Choices**: Present options that leverage this agency element in different ways
+
+The choices should reflect different approaches to using their agency element, such as:
+- A bold, direct application of their agency element
+- A clever, unexpected use of their agency element
+- A thoughtful, strategic application of their agency element
+
+Each choice should feel valid and meaningful, with none being obviously "correct" or "incorrect."
+"""
+
+# Template configurations for correct answers
+CORRECT_ANSWER_CONFIG = {
+    "answer_status": "Correct Answer",
+    "acknowledgment_guidance": "Create a story event that acknowledges success (character praise, reward, confidence boost)",
+    "exploration_goal": "deepen their understanding of why their answer is right and explore broader implications",
+    "correct_answer_info": "This was the correct answer.",
 }
 
-INCORRECT_ANSWER_TEMPLATE = """# Incorrect Answer Learning Opportunity
-The character answered "{chosen_answer}" to the question: "{question}"
-The correct answer was "{correct_answer}".
-
-## Scene Structure
-Create a reflective scene with this structure:
-
-1. **EDUCATIONAL REFLECTION**: Gently reveal the correct concept and why their answer wasn't right.
-
-2. **NARRATIVE DEEPENING**: Use the story environment to illustrate the concept through metaphor or direct experience.
-
-3. **"AHA MOMENT"**: Create a moment where understanding clicks for the character, changing their perspective.
-
-4. **STORY-INTEGRATED CHOICES**: Present a situation requiring application of this new knowledge.
-
-{reflective_techniques}
-
-## Choice Structure
-The choices must both test understanding AND advance the story:
-- Choice A: Apply the newly learned concept correctly (correct)
-- Choice B: Show incomplete understanding (incorrect)
-- Choice C: Fall back to the original misconception (incorrect)
-
-Each choice should set up clear narrative consequences for the next chapter.
-
-{reason_choice_format}"""
+# Template configurations for incorrect answers
+INCORRECT_ANSWER_CONFIG = {
+    "answer_status": "Incorrect Answer",
+    "acknowledgment_guidance": "Create a story event that gently corrects the mistake (character clarification, consequence of error)",
+    "exploration_goal": "discover the correct understanding through guided reflection",
+    "correct_answer_info": 'The correct answer was: "{correct_answer}".',
+}
 
 # Prompt templates
 # ---------------
@@ -385,7 +440,19 @@ You are a master storyteller crafting an interactive educational story that seam
 4. Incorporate sensory details naturally to enhance immersion
 5. Apply markdown formatting judiciously: use **bold** for critical revelations or important realizations, and *italics* for character thoughts or emotional emphasis
 
+# Agency Continuity
+The character makes a pivotal choice in the first chapter (crafting an item, choosing a companion, selecting a role, or developing a special ability). This choice:
+
+1. Represents a core aspect of the character's identity and approach
+2. Must be referenced consistently throughout ALL chapters of the adventure
+3. Should evolve and develop as the character learns and grows
+4. Will play a crucial role in the climax of the story
+5. Should feel like a natural part of the narrative, not an artificial element
+
+Each chapter should include at least one meaningful reference to or use of this agency element, with its significance growing throughout the journey.
+
 # CRITICAL RULES
 1. Structure and flow: begin narrative directly (never with "Chapter X"), end at natural decision points, maintain consistent narrative elements
 2. Content development: incorporate sensory details naturally, develop theme and moral teaching organically
-3. Educational integration: balance entertainment with learning, ensure lessons feel organic to the story"""
+3. Educational integration: balance entertainment with learning, ensure lessons feel organic to the story
+4. Agency integration: weave the character's agency choice naturally throughout the story, showing its evolution and impact"""

@@ -65,7 +65,7 @@ graph TD
 - Centralized adventure state management.
 - Chapter progression tracking.
 - Adventure length handling.
-- ChapterType enum management (LESSON/STORY/REASON/CONCLUSION).
+- ChapterType enum management (LESSON/STORY/REFLECT/CONCLUSION).
 - Question and answer tracking.
 - Narrative continuity enforcement.
 - Metadata tracking for element consistency.
@@ -116,15 +116,15 @@ graph TD
     * 50% of remaining chapters, rounded down: LESSON (subject to available questions)
     * **Priority Rules:**
       - No consecutive LESSON chapters allowed (highest priority)
-      - At least 1 REASON chapter in every scenario (required)
+      - At least 1 REFLECT chapter in every scenario (required)
       - Every LESSON assumes at least 3 questions available
       - Accept 25% of scenarios where there are two LESSON chapters (optimization tradeoff)
-    * 50% of LESSON chapters, rounded down: REASON chapters
-    * REASON chapters only occur immediately after a LESSON chapter
-    * STORY chapters must follow REASON chapters
+    * 50% of LESSON chapters, rounded down: REFLECT chapters
+    * REFLECT chapters only occur immediately after a LESSON chapter
+    * STORY chapters must follow REFLECT chapters
   - LESSON chapters limited by available questions in `lessons.csv`.
   - STORY chapters use full LLM generation with choices.
-  - REASON chapters test deeper understanding of previous LESSON chapter.
+  - REFLECT chapters test deeper understanding of previous LESSON chapter.
   - CONCLUSION chapters use full LLM generation without choices.
   - The chapter type for each chapter during the adventure is determined using `state.planned_chapter_types`.
 - Adventure flow control.
@@ -136,18 +136,16 @@ graph TD
 - **Narrative generation for all chapter types (using prompts in `app/services/llm/prompt_engineering.py`)**:
   * LESSON: Question-based narrative with educational focus
   * STORY: Choice-driven narrative with three options
-  * REASON: Follow-up to LESSON chapters to test deeper understanding
-    - For correct answers: Multiple challenge types to test understanding:
-      * `confidence_test`: Tests if they'll stick with their original answer
-      * `application`: Tests if they can apply the concept in a new scenario
-      * `connection_making`: Tests if they can connect the concept to broader themes
-      * `teaching_moment`: Tests if they can explain the concept to another character
-    - For incorrect answers: Structured educational approach:
-      * Educational reflection: Gently revealing the correct concept
-      * Narrative deepening: Using the story environment to illustrate the concept
-      * "Aha moment": Creating a moment where understanding clicks
-      * Story-integrated choices: Testing understanding while advancing the story
-    - Challenge type tracking in AdventureState metadata for debugging
+  * REFLECT: Follow-up to LESSON chapters to test deeper understanding
+    - Unified narrative-driven approach for both correct and incorrect answers
+    - Uses Socratic method to guide deeper understanding through questions:
+      * "What led you to that conclusion?"
+      * "How might this connect to [relevant story element]?"
+      * "What implications might this have for [story situation]?"
+    - Story-driven choices without labeling any as "correct" or "wrong"
+    - Each choice represents a different way the character might process what they've learned
+    - All choices lead to different but equally valid story paths
+    - Approach tracking in AdventureState metadata for debugging
     - Uses diverse storytelling techniques for reflective moments
 
 ### 7. State Management Pattern
@@ -324,6 +322,94 @@ graph TD
     - CRITICAL: Support current story phase
     - CRITICAL: Consistent with metadata tracking
 
+## Agency Pattern
+
+1. **First Chapter Agency Choice**
+   ```mermaid
+   flowchart TD
+     A[First Chapter] --> B{Agency Choice}
+     B -->|Item| C[Craft Magical Item]
+     B -->|Companion| D[Choose Animal Companion]
+     B -->|Role| E[Select Character Role]
+     B -->|Ability| F[Develop Special Ability]
+     
+     C --> G[Store in state.metadata]
+     D --> G
+     E --> G
+     F --> G
+     
+     G --> H[Track & Reference Throughout Adventure]
+   ```
+
+   - Implementation:
+     * First chapter STORY type includes agency choice categories
+     * Choice detection in `websocket_service.py`
+     * Agency storage in `state.metadata["agency"]`
+     * Structure includes type, name, description, properties, growth_history, references
+     * CRITICAL: Must be referenced in all subsequent chapters
+
+2. **Agency Evolution**
+   ```mermaid
+   flowchart TD
+     A[REFLECT Chapter] --> B{Answer Type}
+     B -->|Correct| C[Empower Agency]
+     B -->|Incorrect| D[Transform Agency]
+     
+     C --> E[New Capability]
+     C --> F[Overcome Challenge]
+     C --> G[Deepen Connection]
+     
+     D --> H[Adapt to New Knowledge]
+     D --> I[Provide New Perspective]
+     D --> J[Demonstrate Resilience]
+     
+     E --> K[Track in metadata]
+     F --> K
+     G --> K
+     H --> K
+     I --> K
+     J --> K
+   ```
+
+   - Implementation:
+     * Different guidance templates for correct vs. incorrect answers
+     * Evolution tracking in `state.metadata["agency_evolution"]`
+     * Reference validation in `update_agency_references()`
+     * CRITICAL: Evolution must feel organic to the narrative
+
+3. **Climax Integration**
+   ```mermaid
+   flowchart TD
+     A[Climax Phase] --> B[Pivotal Agency Role]
+     B --> C[Narrative Culmination]
+     B --> D[Growth Reflection]
+     B --> E[Meaningful Choices]
+     
+     E --> F[Bold Application]
+     E --> G[Clever Application]
+     E --> H[Strategic Application]
+   ```
+
+   - Implementation:
+     * Special handling in `_build_chapter_prompt()` for climax phase
+     * Agency-focused choices in `CLIMAX_AGENCY_GUIDANCE`
+     * CRITICAL: Choices must reflect different ways to use agency element
+
+4. **Technical Implementation**
+   - Detection:
+     * Keyword matching in choice text
+     * Type and name extraction
+     * Metadata storage
+   - Tracking:
+     * Chapter references
+     * Evolution history
+     * Property changes
+   - Integration:
+     * Chapter-specific guidance
+     * Phase-appropriate references
+     * Consistent presence throughout adventure
+     * CRITICAL: Must feel like a natural part of the narrative
+
 ## Narrative Continuity Pattern (`app/services/llm/prompt_engineering.py`)
 1. Story Elements Consistency:
    - Maintain selected setting throughout
@@ -424,9 +510,9 @@ graph TD
    - Last chapter: CONCLUSION (for story resolution)
    - 50% of remaining chapters, rounded down: LESSON (subject to available questions)
    - No consecutive LESSON chapters allowed
-   - 50% of LESSON chapters, rounded down: REASON chapters
-   - REASON chapters only occur immediately after a LESSON chapter
-   - STORY chapters follow REASON chapters
+   - 50% of LESSON chapters, rounded down: REFLECT chapters
+   - REFLECT chapters only occur immediately after a LESSON chapter
+   - STORY chapters follow REFLECT chapters
 3. First chapter (STORY) begins.
 4. LLM generates narrative with choices.
 5. State tracks progression.
@@ -435,18 +521,21 @@ graph TD
 1. Content source varies by chapter type:
    - Lesson: `lessons.csv` + LLM narrative with educational focus
    - Story: Full LLM generation with three choices
-   - Reason: Follow-up to LESSON chapters to test deeper understanding
-     * For correct answers: Multiple challenge types (confidence_test, application, connection_making, teaching_moment)
-     * For incorrect answers: Structured educational approach with "aha moment"
-     * Challenge type tracking in AdventureState metadata for debugging
+   - REFLECT: Follow-up to LESSON chapters to test deeper understanding
+     * Unified narrative-driven approach for both correct and incorrect answers
+     * For correct answers: Story event acknowledges success (praise, reward, confidence boost)
+     * For incorrect answers: Story event gently corrects the mistake (clarification, consequence)
+     * Uses Socratic method to guide deeper understanding through questions
+     * Story-driven choices that advance the plot in different ways
+     * Approach tracking in AdventureState metadata for debugging
      * Uses creative storytelling techniques for reflective moments
    - Conclusion: Full LLM generation without choices
 2. Narrative continuity maintained.
 3. Previous chapter consequences reflected.
 4. No repeat questions in session.
 5. No consecutive LESSON chapters allowed.
-6. REASON chapters only follow LESSON chapters.
-7. STORY chapters follow REASON chapters.
+6. REFLECT chapters only follow LESSON chapters.
+7. STORY chapters follow REFLECT chapters.
 
 ## Technical Details and Testing
 - **Question Handling:** Dynamic sampling, answer shuffling, duplicate prevention, topic management.

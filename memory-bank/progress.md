@@ -1,5 +1,428 @@
 # Progress Log
 
+## 2025-02-28: Fixed Syntax Error in F-String
+
+### Problem
+There was a syntax error in the `prompt_engineering.py` file that was preventing the application from starting:
+```
+SyntaxError: f-string expression part cannot include a backslash
+```
+
+The issue was in the agency guidance section for story chapters, where there was a trailing space followed by a newline in an f-string. In Python, when a backslash appears at the end of a line inside a string (which happens with trailing spaces), it's treated as a line continuation character. However, in f-strings, backslashes inside the expression part (inside the curly braces) are not allowed.
+
+### Requirements
+- Fix the syntax error in the f-string
+- Ensure the agency guidance is still properly formatted
+- Maintain the functionality of the agency implementation
+
+### Solution
+Removed the trailing space at the end of the line in the agency guidance section for story chapters:
+
+```python
+# Before:
+agency_guidance = f"""
+## Agency Presence
+Incorporate the character's {agency.get("type", "choice")} ({agency.get("name", "from Chapter 1")}) in a way that feels natural to this part of the story. 
+It should be present and meaningful without following a predictable pattern.
+"""
+
+# After:
+agency_guidance = f"""
+## Agency Presence
+Incorporate the character's {agency.get("type", "choice")} ({agency.get("name", "from Chapter 1")}) in a way that feels natural to this part of the story.
+It should be present and meaningful without following a predictable pattern.
+"""
+```
+
+### Results
+The implementation successfully:
+1. Fixed the syntax error in the f-string
+2. Maintained the proper formatting of the agency guidance
+3. Allowed the application to start successfully
+4. Preserved the functionality of the agency implementation
+
+## 2025-02-28: Agency Implementation
+
+### Problem
+The adventure experience lacked a form of agency that would allow users to make meaningful choices that impact their journey. The first chapter choices didn't provide a sense of ownership or continuity throughout the adventure.
+
+### Requirements
+- Implement a form of agency in the first chapter through meaningful choices
+- Track the agency choice throughout the adventure
+- Evolve the agency element based on correct/incorrect answers in REFLECT chapters
+- Make the agency element play a pivotal role in the climax
+- Provide a satisfying resolution to the agency element in the conclusion
+
+### Solution
+1. Added agency choice categories in `prompt_templates.py`:
+   ```python
+   AGENCY_CHOICE_CATEGORIES = """# Agency Choice Categories
+   The character should make one of these meaningful choices that will impact their journey:
+
+   ## Magical Items to Craft
+   - A Luminous Lantern that reveals hidden truths and illuminates dark places
+   - A Sturdy Rope that helps overcome physical obstacles and bridges gaps
+   - A Mystical Amulet that enhances intuition and provides subtle guidance
+   - A Weathered Map that reveals new paths and hidden locations
+   - A Pocket Watch that helps with timing and occasionally glimpses the future
+   - A Healing Potion that restores strength and provides clarity of mind
+
+   ## Companions to Choose
+   - A Wise Owl that offers knowledge and explanations
+   - A Brave Fox that excels in courage and action-oriented tasks
+   - A Clever Squirrel that's skilled in problem-solving and improvisation
+   - A Gentle Deer that provides emotional support and finds peaceful solutions
+   - A Playful Otter that brings joy and finds unexpected approaches
+   - A Steadfast Turtle that offers patience and protection in difficult times
+
+   ## Roles or Professions
+   - A Healer who can mend wounds and restore balance
+   - A Scholar who values knowledge and understanding
+   - A Guardian who protects others and stands against threats
+   - A Pathfinder who discovers new routes and possibilities
+   - A Diplomat who resolves conflicts through communication
+   - A Craftsperson who builds and creates solutions
+
+   ## Special Abilities
+   - Animal Whisperer who can communicate with creatures
+   - Puzzle Master who excels at solving riddles and mysteries
+   - Storyteller who charms others with words and narratives
+   - Element Bender who has a special connection to natural forces
+   - Dream Walker who can glimpse insights through dreams
+   - Pattern Seer who notices connections others miss"""
+   ```
+
+2. Added agency guidance templates for different chapter types:
+   ```python
+   # Agency guidance templates for REFLECT chapters
+   AGENCY_GUIDANCE_CORRECT = """## Agency Evolution (Correct Understanding)
+   The character's agency choice from Chapter 1 should evolve or be empowered by their correct understanding.
+   Choose an approach that feels most natural to the narrative:
+   - Revealing a new capability or aspect of their chosen item/companion/role/ability
+   - Helping overcome a challenge in a meaningful way using their agency element
+   - Deepening the connection between character and their agency choice
+   - Providing insight or assistance that builds on their knowledge
+
+   This evolution should feel organic to the story and connect naturally to their correct answer."""
+
+   AGENCY_GUIDANCE_INCORRECT = """## Agency Evolution (New Understanding)
+   Despite the initial misunderstanding, the character's agency choice from Chapter 1 should grow or transform through this learning experience.
+   Choose an approach that feels most natural to the narrative:
+   - Adapting to incorporate the new knowledge they've gained
+   - Helping the character see where they went wrong
+   - Providing a different perspective or approach to the problem
+   - Demonstrating resilience and the value of learning from mistakes
+
+   This transformation should feel organic to the story and connect naturally to their learning journey."""
+
+   # Agency guidance for climax phase
+   CLIMAX_AGENCY_GUIDANCE = """## Climax Agency Integration
+   The character's agency choice from Chapter 1 should play a pivotal role in this climactic moment:
+
+   1. **Narrative Culmination**: Show how this element has been with them throughout the journey
+   2. **Growth Reflection**: Reference how it has changed or evolved, especially during reflection moments
+   3. **Meaningful Choices**: Present options that leverage this agency element in different ways
+
+   The choices should reflect different approaches to using their agency element:
+   - Choice A: A bold, direct application of their agency element
+   - Choice B: A clever, unexpected use of their agency element
+   - Choice C: A thoughtful, strategic application of their agency element
+
+   Each choice should feel valid and meaningful, with none being obviously "correct" or "incorrect."
+   """
+   ```
+
+3. Updated the system prompt to include agency continuity guidance:
+   ```markdown
+   # Agency Continuity
+   The character makes a pivotal choice in the first chapter (crafting an item, choosing a companion, selecting a role, or developing a special ability). This choice:
+
+   1. Represents a core aspect of the character's identity and approach
+   2. Must be referenced consistently throughout ALL chapters of the adventure
+   3. Should evolve and develop as the character learns and grows
+   4. Will play a crucial role in the climax of the story
+   5. Should feel like a natural part of the narrative, not an artificial element
+
+   Each chapter should include at least one meaningful reference to or use of this agency element, with its significance growing throughout the journey.
+   ```
+
+4. Added special handling for the first chapter in `prompt_engineering.py`:
+   ```python
+   # Special handling for first chapter - include agency choice
+   if state.current_chapter_number == 1 and chapter_type == ChapterType.STORY:
+       # Get random agency category
+       agency_category = get_random_agency_category()
+       
+       # Log agency category selection
+       logger.debug(f"First chapter: Using agency category: {agency_category.split('# Agency Choice:')[1].split('\n')[0].strip()}")
+       
+       return f"""{base_prompt}
+
+   {_get_phase_guidance(story_phase, state)}
+
+   {STORY_CHAPTER_INSTRUCTIONS}
+
+   {agency_category}
+
+   {FIRST_CHAPTER_AGENCY_INSTRUCTIONS}
+
+   {get_choice_instructions(story_phase)}"""
+   ```
+
+5. Added agency detection and storage in `websocket_service.py`:
+   ```python
+   # Handle first chapter agency choice
+   if previous_chapter.chapter_number == 1 and previous_chapter.chapter_type == ChapterType.STORY:
+       logger.debug("Processing first chapter agency choice")
+       
+       # Extract agency type and name from choice text
+       agency_type = ""
+       agency_name = ""
+       
+       # Determine agency type based on keywords in choice text
+       choice_lower = choice_text.lower()
+       if any(word in choice_lower for word in ["craft", "lantern", "rope", "amulet", "map", "watch", "potion"]):
+           agency_type = "item"
+           # Extract item name
+           # ...
+       elif any(word in choice_lower for word in ["owl", "fox", "squirrel", "deer", "otter", "turtle", "companion"]):
+           agency_type = "companion"
+           # Extract companion name
+           # ...
+       # ... other agency types ...
+       
+       # Store agency choice in metadata
+       state.metadata["agency"] = {
+           "type": agency_type,
+           "name": agency_name,
+           "description": choice_text,
+           "properties": {"strength": 1},
+           "growth_history": [],
+           "references": []
+       }
+   ```
+
+6. Added agency reference tracking in `adventure_state_manager.py`:
+   ```python
+   def update_agency_references(self, chapter_data: ChapterData) -> None:
+       """Track references to the agency element in chapters."""
+       if self.state is None or "agency" not in self.state.metadata:
+           return
+           
+       agency = self.state.metadata["agency"]
+       content = chapter_data.content
+       
+       # Check if agency is referenced
+       agency_name = agency.get("name", "")
+       agency_type = agency.get("type", "")
+       
+       has_reference = (
+           agency_name.lower() in content.lower() or 
+           agency_type.lower() in content.lower()
+       )
+       
+       # Track references
+       if "references" not in agency:
+           agency["references"] = []
+           
+       agency["references"].append({
+           "chapter": chapter_data.chapter_number,
+           "has_reference": has_reference,
+           "chapter_type": chapter_data.chapter_type.value
+       })
+       
+       # Log warning if no reference found
+       if not has_reference:
+           logger.warning(
+               f"No reference to agency element ({agency_name}) found in chapter {chapter_data.chapter_number}"
+           )
+   ```
+
+7. Updated the REFLECT chapter prompt to include agency guidance:
+   ```python
+   # Determine agency guidance based on whether the answer was correct
+   agency_guidance = ""
+   if state and "agency" in state.metadata:
+       agency_guidance = AGENCY_GUIDANCE_CORRECT if is_correct else AGENCY_GUIDANCE_INCORRECT
+       
+       # Track agency evolution in metadata
+       if "agency_evolution" not in state.metadata:
+           state.metadata["agency_evolution"] = []
+           
+       state.metadata["agency_evolution"].append({
+           "chapter": state.current_chapter_number,
+           "chapter_type": "REFLECT",
+           "is_correct": is_correct,
+           "timestamp": datetime.now().isoformat()
+       })
+   ```
+
+### Results
+The implementation successfully:
+1. Adds a meaningful form of agency through a first chapter choice
+2. Tracks the agency choice throughout the adventure
+3. Evolves the agency element based on correct/incorrect answers in REFLECT chapters
+4. Makes the agency element play a pivotal role in the climax
+5. Provides a satisfying resolution to the agency element in the conclusion
+6. Enhances the narrative continuity and user engagement
+
+## 2025-02-28: Removed Obsolete CHOICE_FORMAT_INSTRUCTIONS
+
+### Problem
+The codebase contained an obsolete constant `CHOICE_FORMAT_INSTRUCTIONS` that was imported but not used in `prompt_engineering.py`. It was defined in `prompt_templates.py` with a comment "Keep the original for backward compatibility" but was no longer needed as the code had fully transitioned to using the more dynamic `get_choice_instructions(story_phase)` function.
+
+### Requirements
+- Remove unused code to improve maintainability
+- Ensure no functionality is broken by the removal
+- Maintain the `get_choice_instructions()` function that is actively used
+
+### Solution
+1. Removed the import of `CHOICE_FORMAT_INSTRUCTIONS` from `prompt_engineering.py`:
+   ```python
+   # Removed from imports:
+   CHOICE_FORMAT_INSTRUCTIONS,
+   ```
+
+2. Removed the constant definition from `prompt_templates.py`:
+   ```python
+   # Removed:
+   # Keep the original for backward compatibility
+   CHOICE_FORMAT_INSTRUCTIONS = get_choice_instructions("Rising")
+   ```
+
+3. Verified no other references to `CHOICE_FORMAT_INSTRUCTIONS` existed in the codebase by searching all Python files.
+
+### Results
+The implementation successfully:
+1. Removed an unused constant and its import, reducing potential confusion
+2. Maintained all functionality as the code was already using `get_choice_instructions()`
+3. Improved code maintainability by removing obsolete code
+4. Reduced technical debt by eliminating code that was only kept for backward compatibility
+
+## 2025-02-28: REFLECT Chapter Refactoring for Narrative Integration
+
+### Problem
+The REFLECT chapter implementation had a binary approach that felt like a detached "test" rather than part of the story:
+- For correct answers: Used multiple challenge types (confidence_test, application, connection_making, teaching_moment)
+- For incorrect answers: Used a structured four-step process (reflection, narrative deepening, "aha moment", choices)
+- In both cases, choices were structured as one correct answer and two incorrect answers, creating a "test" feeling
+
+### Requirements
+- Create a unified narrative-driven approach for both correct and incorrect answers
+- Focus on narrative integration rather than separate educational prompts
+- Make all choices story-driven without labeling any as "correct" or "wrong"
+- Maintain the educational value while making it feel like a natural part of the story
+
+### Solution
+1. Updated `REFLECT_CHOICE_FORMAT` in `prompt_templates.py` to remove the "correct/incorrect" structure:
+   ```markdown
+   # Choice Format
+   Use this EXACT format for the choices, with NO indentation and NO line breaks within choices:
+
+   <CHOICES>
+   Choice A: [First story-driven choice]
+   Choice B: [Second story-driven choice]
+   Choice C: [Third story-driven choice]
+   </CHOICES>
+
+   # CRITICAL RULES
+   1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices
+   2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
+   3. Content: Make each choice meaningful, distinct, and advance the story in different ways
+   4. Narrative Focus: All choices should be story-driven without any being labeled as "correct" or "incorrect"
+   5. Character Growth: Each choice should reflect a different way the character might process or apply what they've learned
+   ```
+
+2. Created a unified template (`REFLECT_TEMPLATE`) for both correct and incorrect answers:
+   ```markdown
+   # Narrative-Driven Reflection
+   The character previously answered the question: "{question}"
+   Their answer was: "{chosen_answer}"
+   {correct_answer_info}
+
+   {reflective_techniques}
+
+   ## Scene Structure for {answer_status}
+
+   1. **NARRATIVE ACKNOWLEDGMENT**: {acknowledgment_guidance}
+
+   2. **SOCRATIC EXPLORATION**: Use questions to guide the character to {exploration_goal}:
+      - "What led you to that conclusion?"
+      - "How might this connect to [relevant story element]?"
+      - "What implications might this have for [story situation]?"
+
+   3. **STORY INTEGRATION**: Weave this reflection naturally into the ongoing narrative:
+      - Connect to the character's journey
+      - Relate to the story's theme of "{theme}"
+      - Set up the next part of the adventure
+   ```
+
+3. Added configuration objects to customize the template based on whether the answer was correct or incorrect:
+   ```python
+   # Template configurations for correct answers
+   CORRECT_ANSWER_CONFIG = {
+       "answer_status": "Correct Answer",
+       "acknowledgment_guidance": "Create a story event that acknowledges success (character praise, reward, confidence boost)",
+       "exploration_goal": "deepen their understanding of why their answer is right and explore broader implications",
+       "correct_answer_info": "This was the correct answer.",
+   }
+
+   # Template configurations for incorrect answers
+   INCORRECT_ANSWER_CONFIG = {
+       "answer_status": "Incorrect Answer",
+       "acknowledgment_guidance": "Create a story event that gently corrects the mistake (character clarification, consequence of error)",
+       "exploration_goal": "discover the correct understanding through guided reflection",
+       "correct_answer_info": 'The correct answer was: "{correct_answer}".',
+   }
+   ```
+
+4. Updated the `build_reflect_chapter_prompt()` function to use the unified approach:
+   ```python
+   # Select the appropriate configuration based on whether the answer was correct
+   config = CORRECT_ANSWER_CONFIG if is_correct else INCORRECT_ANSWER_CONFIG
+
+   # Format the template with the appropriate values
+   formatted_template = REFLECT_TEMPLATE.format(
+       question=lesson_question["question"],
+       chosen_answer=chosen_answer,
+       correct_answer_info=config["correct_answer_info"].format(
+           correct_answer=correct_answer
+       )
+       if not is_correct
+       else config["correct_answer_info"],
+       reflective_techniques=reflective_technique,
+       answer_status=config["answer_status"],
+       acknowledgment_guidance=config["acknowledgment_guidance"],
+       exploration_goal=config["exploration_goal"],
+       theme=state.selected_theme if state else "the story",
+       reflect_choice_format=REFLECT_CHOICE_FORMAT,
+   )
+   ```
+
+5. Updated metadata tracking to use the new approach:
+   ```python
+   state.metadata["reflect_challenge_history"].append(
+       {
+           "chapter": state.current_chapter_number,
+           "is_correct": is_correct,
+           "timestamp": datetime.now().isoformat(),
+           "approach": "narrative_driven",  # New unified approach
+       }
+   )
+
+   # Also store the most recent reflection type for easy access
+   state.metadata["last_reflect_approach"] = "narrative_driven"
+   ```
+
+### Results
+The implementation successfully:
+1. Created a unified narrative-driven approach for both correct and incorrect answers
+2. Made REFLECT chapters feel like a natural part of the character's journey rather than a separate educational module
+3. Simplified the implementation while maintaining educational value
+4. Made all choices story-driven, enhancing user engagement
+5. Used the Socratic method to guide deeper understanding through questions
+6. Maintained metadata tracking for debugging purposes
+
 ## 2025-02-28: UI Fix - Hide "Swipe to explore" Tip on Desktop
 
 ### Problem
@@ -63,7 +486,7 @@ The lesson chapter generation prompt had several issues:
    2. Make this story element:
       - Visually interesting (describe how it appears in the story world)
       - Relevant to the plot (connect it to the character's journey)
-      - Mysterious or incomplete (create a reason to seek the answer)
+      - Mysterious or incomplete (create a reflectto seek the answer)
 
    3. Include the exact question "[Core Question]" somewhere in the narrative:
       - It can be in dialogue, a character's thoughts, or written text within the story
@@ -216,16 +639,16 @@ The implementation successfully:
 ## 2025-02-27: Chapter Sequence Optimization Tradeoff
 
 ### Problem
-The chapter sequence algorithm needed to prioritize certain rules over others, particularly ensuring no consecutive LESSON chapters and at least 1 REASON chapter in every scenario, while allowing some flexibility in the number of LESSON chapters.
+The chapter sequence algorithm needed to prioritize certain rules over others, particularly ensuring no consecutive LESSON chapters and at least 1 REFLECT chapter in every scenario, while allowing some flexibility in the number of LESSON chapters.
 
 ### Requirements
 - Prioritize no consecutive LESSON chapters as the highest rule
-- Ensure at least 1 REASON chapter in every scenario
+- Ensure at least 1 REFLECT chapter in every scenario
 - Assume every LESSON has at least 3 questions available
 - Accept 25% of scenarios where there are two LESSON chapters (when there should be three) in the distribution
 
 ### Solution
-1. Updated the validation in `check_chapter_sequence()` to prioritize checking for no consecutive LESSON chapters and at least 1 REASON chapter
+1. Updated the validation in `check_chapter_sequence()` to prioritize checking for no consecutive LESSON chapters and at least 1 REFLECT chapter
 2. Modified tests to verify the distribution of scenarios with 2 vs 3 LESSON chapters
 3. Updated documentation to reflect the new priorities
 4. Ensured the algorithm assumes at least 3 questions are available for every LESSON
@@ -233,14 +656,14 @@ The chapter sequence algorithm needed to prioritize certain rules over others, p
 ### Results
 The implementation successfully:
 1. Maintains the priority of no consecutive LESSON chapters
-2. Ensures at least 1 REASON chapter in every scenario
+2. Ensures at least 1 REFLECT chapter in every scenario
 3. Assumes 3 questions are available for every LESSON
 4. Accepts a small percentage (25%) of scenarios with 2 LESSON chapters as an optimization tradeoff
 
-## 2025-02-27: Enhanced REASON Chapter Challenge Type Tracking
+## 2025-02-27: Enhanced REFLECT Chapter Challenge Type Tracking
 
 ### Problem
-The `build_reason_chapter_prompt()` function in `app/services/llm/prompt_engineering.py` was improved to add variety to correct answer handling with different challenge types (confidence_test, application, connection_making, teaching_moment), but there was no way to track which challenge type was being used for debugging and analysis purposes.
+The `build_reflect_chapter_prompt()` function in `app/services/llm/prompt_engineering.py` was improved to add variety to correct answer handling with different challenge types (confidence_test, application, connection_making, teaching_moment), but there was no way to track which challenge type was being used for debugging and analysis purposes.
 
 ### Requirements
 - Remove unused `all_answers` line in the function
@@ -263,48 +686,48 @@ The `build_reason_chapter_prompt()` function in `app/services/llm/prompt_enginee
 4. Added challenge type tracking in AdventureState metadata:
    - Added an optional `state: Optional[AdventureState]` parameter to the function
    - Added code to track the challenge type in metadata when state is provided
-   - Created a structured history in `state.metadata["reason_challenge_history"]`
-   - Stored the most recent challenge type in `state.metadata["last_reason_challenge_type"]`
+   - Created a structured history in `state.metadata["reflect_challenge_history"]`
+   - Stored the most recent challenge type in `state.metadata["last_reflect_challenge_type"]`
    - Added debug logging for the selected challenge type
-5. Updated `_build_chapter_prompt()` to pass the state parameter to `build_reason_chapter_prompt()`
+5. Updated `_build_chapter_prompt()` to pass the state parameter to `build_reflect_chapter_prompt()`
 
 ### Results
 The implementation successfully:
-1. Provides more varied and engaging REASON chapters with different challenge types
+1. Provides more varied and engaging REFLECT chapters with different challenge types
 2. Tracks the selected challenge type in the AdventureState metadata for debugging
 3. Offers both detailed history and quick access to challenge type information
 4. Improves the educational experience with a more structured approach for incorrect answers
 5. Maintains compatibility with the existing system by making the state parameter optional
 
-## 2025-02-26: REASON Chapter Type Implementation
+## 2025-02-26: REFLECT Chapter Type Implementation
 
 ### Problem
-The original chapter sequence had three chapter types (STORY, LESSON, CONCLUSION) with specific rules for their placement. We needed to implement a new REASON chapter type that follows LESSON chapters to test deeper understanding and ensure correct answers weren't just lucky guesses.
+The original chapter sequence had three chapter types (STORY, LESSON, CONCLUSION) with specific rules for their placement. We needed to implement a new REFLECT chapter type that follows LESSON chapters to test deeper understanding and ensure correct answers weren't just lucky guesses.
 
 ### Requirements
-- Add a new REASON chapter type to the ChapterType enum
+- Add a new REFLECT chapter type to the ChapterType enum
 - Update chapter sequencing rules:
   - First chapter: STORY (changed from first two chapters)
   - Second-to-last chapter: STORY
   - Last chapter: CONCLUSION
   - 50% of remaining chapters, rounded down: LESSON
   - No consecutive LESSON chapters
-  - 50% of LESSON chapters, rounded down: REASON chapters
-  - REASON chapters only occur immediately after a LESSON chapter
-  - STORY chapters must follow REASON chapters
-  - Random selection of which LESSON chapters are followed by REASON chapters
+  - 50% of LESSON chapters, rounded down: REFLECT chapters
+  - REFLECT chapters only occur immediately after a LESSON chapter
+  - STORY chapters must follow REFLECT chapters
+  - Random selection of which LESSON chapters are followed by REFLECT chapters
 
 ### Solution
-1. Added REASON chapter type to ChapterType enum in `app/models/story.py`
+1. Added REFLECT chapter type to ChapterType enum in `app/models/story.py`
 2. Updated `determine_chapter_types()` in `app/services/chapter_manager.py` to implement the new rules:
    - Changed first two chapters rule to just first chapter
    - Added logic to prevent consecutive LESSON chapters
-   - Added logic to randomly select which LESSON chapters are followed by REASON chapters
-   - Ensured REASON chapters are only placed after LESSON chapters
-   - Ensured STORY chapters follow REASON chapters
+   - Added logic to randomly select which LESSON chapters are followed by REFLECT chapters
+   - Ensured REFLECT chapters are only placed after LESSON chapters
+   - Ensured STORY chapters follow REFLECT chapters
    - Implemented trimming logic to maintain the total chapter count
 
-3. Implemented `build_reason_chapter_prompt()` in `app/services/llm/prompt_engineering.py`:
+3. Implemented `build_reflect_chapter_prompt()` in `app/services/llm/prompt_engineering.py`:
    - For correct answers: Tests confidence without revealing the answer was correct
    - For incorrect answers: Provides a learning opportunity with explanation
    - Added diverse storytelling techniques for reflective moments
@@ -312,13 +735,13 @@ The original chapter sequence had three chapter types (STORY, LESSON, CONCLUSION
 
 4. Updated tests in `tests/simulations/test_chapter_type_assignment.py` to validate the new rules:
    - No consecutive LESSON chapters
-   - REASON chapters only follow LESSON chapters
-   - STORY chapters follow REASON chapters
-   - 50% of LESSON chapters (rounded down) are followed by REASON chapters
+   - REFLECT chapters only follow LESSON chapters
+   - STORY chapters follow REFLECT chapters
+   - 50% of LESSON chapters (rounded down) are followed by REFLECT chapters
 
 ### Results
 The implementation successfully:
-1. Adds the new REASON chapter type with appropriate sequencing rules
+1. Adds the new REFLECT chapter type with appropriate sequencing rules
 2. Creates a more sophisticated educational experience by testing deeper understanding
 3. Maintains the total chapter count while accommodating the new chapter type
 4. Provides different approaches for correct vs. incorrect previous answers

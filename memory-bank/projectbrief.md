@@ -9,7 +9,7 @@ Learning Odyssey is an interactive educational platform that combines dynamic st
     *   `AdventureState` as the single source of truth.
     *   WebSocket state synchronization.
     *   Dynamic adventure length via `state.story_length`.
-    *   `ChapterType` enum (LESSON/STORY/CONCLUSION).
+    *   `ChapterType` enum (LESSON/STORY/REFLECT/CONCLUSION).
     *   Complete state serialization.
     *   Error recovery mechanisms.
 
@@ -21,12 +21,16 @@ Learning Odyssey is an interactive educational platform that combines dynamic st
     *   Narrative resolution generation.
 
 3.  **Content Flow (`app/services/chapter_manager.py`):**
-    *   First two chapters: STORY type.
+    *   First chapter: STORY type.
     *   Second-to-last chapter: STORY type.
     *   Last chapter: CONCLUSION type.
-    *   50% of remaining chapters: LESSON type.
+    *   50% of remaining chapters, rounded down: LESSON type.
+    *   50% of LESSON chapters, rounded down: REFLECT chapters.
+    *   REFLECT chapters only occur immediately after a LESSON chapter.
+    *   STORY chapters must follow REFLECT chapters.
     *   LESSON chapters: `lessons.csv` + LLM.
     *   STORY chapters: Full LLM generation with choices.
+    *   REFLECT chapters: Narrative-driven reflection on previous LESSON.
     *   CONCLUSION chapters: Full LLM generation without choices.
 
 4.  **System Architecture:**

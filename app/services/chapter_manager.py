@@ -192,7 +192,7 @@ class ChapterManager:
         - Fixed length of 10 chapters
         - Chapters 1 and 9 are STORY
         - Chapter 10 is CONCLUSION
-        - Places a LESSON-REASON-STORY sequence at a random position between 2-7
+        - Places a LESSON-REFLECT-STORY sequence at a random position between 2-7
         - Selects two non-consecutive positions for additional LESSON chapters
         - Fills remaining positions with STORY
 
@@ -248,18 +248,18 @@ class ChapterManager:
             },
         )
 
-        # Randomly choose position for LESSON-REASON pair
+        # Randomly choose position for LESSON-REFLECT pair
         i = random.randint(1, 6)  # Position 2-7 (0-indexed: 1-6)
 
         logger.debug(
-            "Selected position for LESSON-REASON-STORY sequence",
+            "Selected position for LESSON-REFLECT-STORY sequence",
             extra={"position": i + 1},  # Log 1-indexed position for clarity
         )
 
         if i <= 5:  # Position 2-6 (0-indexed: 1-5)
-            # Place LESSON-REASON-STORY sequence
+            # Place LESSON-REFLECT-STORY sequence
             chapters[i] = "LESSON"
-            chapters[i + 1] = "REASON"
+            chapters[i + 1] = "REFLECT"
             chapters[i + 2] = "STORY"
             set_positions = {i, i + 1, i + 2}
             # Exclude position before i to avoid adjacent LESSONs
@@ -268,15 +268,15 @@ class ChapterManager:
                 p for p in range(1, 8) if p not in set_positions and p not in exclude
             ]
         else:  # i = 6 (Position 7, 0-indexed: 6)
-            # Place LESSON-REASON, followed by STORY at 9
+            # Place LESSON-REFLECT, followed by STORY at 9
             chapters[6] = "LESSON"
-            chapters[7] = "REASON"
+            chapters[7] = "REFLECT"
             set_positions = {6, 7}
             # Exclude 5 since 6 is LESSON
             available = [p for p in range(1, 5)]  # 1 to 4
 
         logger.debug(
-            "Placed LESSON-REASON-STORY sequence",
+            "Placed LESSON-REFLECT-STORY sequence",
             extra={
                 "sequence_positions": list(set_positions),
                 "available_positions": available,
@@ -317,8 +317,8 @@ class ChapterManager:
                 chapter_types.append(ChapterType.STORY)
             elif chapter_type == "LESSON":
                 chapter_types.append(ChapterType.LESSON)
-            elif chapter_type == "REASON":
-                chapter_types.append(ChapterType.REASON)
+            elif chapter_type == "REFLECT":
+                chapter_types.append(ChapterType.REFLECT)
             elif chapter_type == "CONCLUSION":
                 chapter_types.append(ChapterType.CONCLUSION)
 
@@ -348,14 +348,14 @@ class ChapterManager:
 
         Priority Rules:
         1. No consecutive LESSON chapters (highest priority)
-        2. At least 1 REASON chapter in every scenario (required)
+        2. At least 1 REFLECT chapter in every scenario (required)
         3. Every LESSON assumes at least 3 questions available
         4. Accept 25% of scenarios where there are two LESSON chapters (optimization tradeoff)
 
         Additional Rules:
         - Chapters 1 and 9 are STORY
         - Chapter 10 is CONCLUSION
-        - REASON chapters must be preceded by LESSON and followed by STORY
+        - REFLECT chapters must be preceded by LESSON and followed by STORY
         - At least 2 LESSON chapters
 
         Args:
@@ -376,9 +376,9 @@ class ChapterManager:
                 )
                 return False
 
-        # Priority Rule 2: Check at least one REASON chapter (required)
-        if "REASON" not in seq:
-            logger.warning("No REASON chapter found (required rule)")
+        # Priority Rule 2: Check at least one REFLECT chapter (required)
+        if "REFLECT" not in seq:
+            logger.warning("No REFLECT chapter found (required rule)")
             return False
 
         # Check fixed positions
@@ -393,12 +393,12 @@ class ChapterManager:
             )
             return False
 
-        # Check REASON placement: LESSON before, STORY after
+        # Check REFLECT placement: LESSON before, STORY after
         for i in range(1, len(seq) - 1):
-            if seq[i] == "REASON":
+            if seq[i] == "REFLECT":
                 if seq[i - 1] != "LESSON" or seq[i + 1] != "STORY":
                     logger.warning(
-                        "REASON placement check failed",
+                        "REFLECT placement check failed",
                         extra={
                             "position": i + 1,
                             "before": seq[i - 1],

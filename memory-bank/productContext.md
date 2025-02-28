@@ -45,10 +45,13 @@ Learning Odyssey solves these challenges through:
 
 4. **Adventure Progression (`app/services/chapter_manager.py`):**
     *   Chapter types follow a specific sequence:
-        *   First two chapters: STORY (setting/character development)
+        *   First chapter: STORY (setting/character development)
         *   Second-to-last chapter: STORY (pivotal choices)
         *   Last chapter: CONCLUSION (satisfying resolution)
-        *   Remaining chapters: 50% LESSON (subject to available questions)
+        *   50% of remaining chapters, rounded down: LESSON (subject to available questions)
+        *   50% of LESSON chapters, rounded down: REFLECT chapters
+        *   REFLECT chapters only occur immediately after a LESSON chapter
+        *   STORY chapters must follow REFLECT chapters
     *   **LESSON chapters:**
         *   Use questions from `lessons.csv`.
         *   Incorporate an LLM-generated narrative wrapper.
@@ -58,6 +61,12 @@ Learning Odyssey solves these challenges through:
         *   Include three narrative choices.
         *   Choices have consequences.
         *   Plot twist elements evolve naturally.
+    *   **REFLECT chapters:**
+        *   Follow-up to LESSON chapters to test deeper understanding.
+        *   Unified narrative-driven approach for both correct and incorrect answers.
+        *   Uses Socratic method to guide deeper understanding through questions.
+        *   Story-driven choices without labeling any as "correct" or "wrong".
+        *   Each choice represents a different way the character might process what they've learned.
     *   **CONCLUSION chapter:**
         *   Fully LLM-generated.
         *   No choices are required.

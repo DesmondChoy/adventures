@@ -142,6 +142,176 @@ async def process_choice(
             previous_chapter.response = story_response
             logger.debug(f"Created story response: {story_response}")
 
+            # Handle first chapter agency choice
+            if (
+                previous_chapter.chapter_number == 1
+                and previous_chapter.chapter_type == ChapterType.STORY
+            ):
+                logger.debug("Processing first chapter agency choice")
+
+                # Extract agency type and name from choice text
+                agency_type = ""
+                agency_name = ""
+
+                # Determine agency type based on keywords in choice text
+                choice_lower = choice_text.lower()
+                if any(
+                    word in choice_lower
+                    for word in [
+                        "craft",
+                        "lantern",
+                        "rope",
+                        "amulet",
+                        "map",
+                        "watch",
+                        "potion",
+                    ]
+                ):
+                    agency_type = "item"
+                    # Extract item name
+                    item_patterns = [
+                        r"luminous lantern",
+                        r"sturdy rope",
+                        r"mystical amulet",
+                        r"weathered map",
+                        r"pocket watch",
+                        r"healing potion",
+                    ]
+                    for pattern in item_patterns:
+                        if re.search(pattern, choice_lower, re.IGNORECASE):
+                            agency_name = re.search(
+                                pattern, choice_text, re.IGNORECASE
+                            ).group(0)
+                            break
+                    if not agency_name:
+                        # Generic extraction if specific patterns don't match
+                        agency_name = re.search(
+                            r"(?:a|the)\s+([^\s,\.]+(?:\s+[^\s,\.]+){0,2})",
+                            choice_text,
+                            re.IGNORECASE,
+                        )
+                        agency_name = (
+                            agency_name.group(1) if agency_name else "magical item"
+                        )
+
+                elif any(
+                    word in choice_lower
+                    for word in [
+                        "owl",
+                        "fox",
+                        "squirrel",
+                        "deer",
+                        "otter",
+                        "turtle",
+                        "companion",
+                    ]
+                ):
+                    agency_type = "companion"
+                    # Extract companion name
+                    companion_patterns = [
+                        r"wise owl",
+                        r"brave fox",
+                        r"clever squirrel",
+                        r"gentle deer",
+                        r"playful otter",
+                        r"steadfast turtle",
+                    ]
+                    for pattern in companion_patterns:
+                        if re.search(pattern, choice_lower, re.IGNORECASE):
+                            agency_name = re.search(
+                                pattern, choice_text, re.IGNORECASE
+                            ).group(0)
+                            break
+                    if not agency_name:
+                        # Generic extraction if specific patterns don't match
+                        agency_name = re.search(
+                            r"(?:a|the)\s+([^\s,\.]+(?:\s+[^\s,\.]+){0,2})",
+                            choice_text,
+                            re.IGNORECASE,
+                        )
+                        agency_name = (
+                            agency_name.group(1) if agency_name else "animal companion"
+                        )
+
+                elif any(
+                    word in choice_lower
+                    for word in [
+                        "healer",
+                        "scholar",
+                        "guardian",
+                        "pathfinder",
+                        "diplomat",
+                        "craftsperson",
+                        "role",
+                    ]
+                ):
+                    agency_type = "role"
+                    # Extract role name
+                    role_patterns = [
+                        r"healer",
+                        r"scholar",
+                        r"guardian",
+                        r"pathfinder",
+                        r"diplomat",
+                        r"craftsperson",
+                    ]
+                    for pattern in role_patterns:
+                        if re.search(pattern, choice_lower, re.IGNORECASE):
+                            agency_name = re.search(
+                                pattern, choice_text, re.IGNORECASE
+                            ).group(0)
+                            break
+                    if not agency_name:
+                        agency_name = "chosen role"
+
+                elif any(
+                    word in choice_lower
+                    for word in [
+                        "whisperer",
+                        "master",
+                        "storyteller",
+                        "bender",
+                        "walker",
+                        "seer",
+                        "ability",
+                    ]
+                ):
+                    agency_type = "ability"
+                    # Extract ability name
+                    ability_patterns = [
+                        r"animal whisperer",
+                        r"puzzle master",
+                        r"storyteller",
+                        r"element bender",
+                        r"dream walker",
+                        r"pattern seer",
+                    ]
+                    for pattern in ability_patterns:
+                        if re.search(pattern, choice_lower, re.IGNORECASE):
+                            agency_name = re.search(
+                                pattern, choice_text, re.IGNORECASE
+                            ).group(0)
+                            break
+                    if not agency_name:
+                        agency_name = "special ability"
+
+                # If we couldn't determine the type, use a generic approach
+                if not agency_type:
+                    agency_type = "choice"
+                    agency_name = "from Chapter 1"
+
+                # Store agency choice in metadata
+                state.metadata["agency"] = {
+                    "type": agency_type,
+                    "name": agency_name,
+                    "description": choice_text,
+                    "properties": {"strength": 1},
+                    "growth_history": [],
+                    "references": [],
+                }
+
+                logger.debug(f"Stored agency choice: {agency_type} - {agency_name}")
+
         state.current_chapter_id = chosen_path
 
     # Calculate new chapter number and update story phase
@@ -413,13 +583,13 @@ async def generate_chapter(
                     else f"wrong{len(story_choices) + 1}",
                 )
             )
-    elif chapter_type == ChapterType.STORY or chapter_type == ChapterType.REASON:
-        # Both STORY and REASON chapters use the same choice extraction logic
+    elif chapter_type == ChapterType.STORY or chapter_type == ChapterType.REFLECT:
+        # Both STORY and REFLECT chapters use the same choice extraction logic
         logger.debug(f"Extracting choices for {chapter_type.value} chapter")
 
-        # Add more detailed logging for REASON chapters
-        if chapter_type == ChapterType.REASON:
-            logger.debug("Processing REASON chapter choices")
+        # Add more detailed logging for REFLECT chapters
+        if chapter_type == ChapterType.REFLECT:
+            logger.debug("Processing REFLECT chapter choices")
             logger.debug(f"Content length: {len(story_content)}")
             # Log the last 200 characters to see if <CHOICES> section is present
             logger.debug(

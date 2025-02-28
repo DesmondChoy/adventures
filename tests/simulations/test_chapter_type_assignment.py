@@ -5,7 +5,7 @@ This module contains tests that verify the chapter type assignment logic
 is working correctly and consistently throughout the simulation, with
 priority given to:
 1. No consecutive LESSON chapters (highest priority)
-2. At least 1 REASON chapter in every scenario (required)
+2. At least 1 REFLECT chapter in every scenario (required)
 3. Every LESSON assumes at least 3 questions available
 4. Accept 25% of scenarios where there are two LESSON chapters (optimization tradeoff)
 """
@@ -85,17 +85,17 @@ def test_chapter_type_assignment_consistency():
             final_sequence[i] == "LESSON" and final_sequence[i - 1] == "LESSON"
         ), f"Found consecutive LESSON chapters at positions {i - 1} and {i}"
 
-    # Verify REASON chapters only follow LESSON chapters
-    reason_positions = [i for i, ct in enumerate(final_sequence) if ct == "REASON"]
-    for pos in reason_positions:
+    # Verify REFLECT chapters only follow LESSON chapters
+    reflect_positions = [i for i, ct in enumerate(final_sequence) if ct == "REFLECT"]
+    for pos in reflect_positions:
         assert pos > 0 and final_sequence[pos - 1] == "LESSON", (
-            f"REASON chapter at position {pos} does not follow a LESSON chapter"
+            f"REFLECT chapter at position {pos} does not follow a LESSON chapter"
         )
 
-    # Verify STORY chapters follow REASON chapters
-    for pos in reason_positions:
+    # Verify STORY chapters follow REFLECT chapters
+    for pos in reflect_positions:
         assert pos < len(final_sequence) - 1 and final_sequence[pos + 1] == "STORY", (
-            f"REASON chapter at position {pos} is not followed by a STORY chapter"
+            f"REFLECT chapter at position {pos} is not followed by a STORY chapter"
         )
 
 
@@ -109,9 +109,9 @@ def test_chapter_type_assignment_rules():
     3. Last chapter is CONCLUSION
     4. 50% of remaining chapters should be LESSON (or less if not enough questions)
     5. No consecutive LESSON chapters
-    6. REASON chapters only follow LESSON chapters
-    7. STORY chapters must follow REASON chapters
-    8. 50% of LESSON chapters (rounded down) should be followed by REASON chapters
+    6. REFLECT chapters only follow LESSON chapters
+    7. STORY chapters must follow REFLECT chapters
+    8. 50% of LESSON chapters (rounded down) should be followed by REFLECT chapters
     """
     # Get the latest simulation log
     log_file = get_latest_simulation_log()
@@ -148,26 +148,26 @@ def test_chapter_type_assignment_rules():
             final_sequence[i] == "LESSON" and final_sequence[i - 1] == "LESSON"
         ), f"Found consecutive LESSON chapters at positions {i - 1} and {i}"
 
-    # Rule 6: REASON chapters only follow LESSON chapters
-    reason_positions = [
-        i for i, chapter_type in enumerate(final_sequence) if chapter_type == "REASON"
+    # Rule 6: REFLECT chapters only follow LESSON chapters
+    reflect_positions = [
+        i for i, chapter_type in enumerate(final_sequence) if chapter_type == "REFLECT"
     ]
-    for pos in reason_positions:
+    for pos in reflect_positions:
         assert pos > 0 and final_sequence[pos - 1] == "LESSON", (
-            f"REASON chapter at position {pos} does not follow a LESSON chapter"
+            f"REFLECT chapter at position {pos} does not follow a LESSON chapter"
         )
 
-    # Rule 7: STORY chapters must follow REASON chapters
-    for pos in reason_positions:
+    # Rule 7: STORY chapters must follow REFLECT chapters
+    for pos in reflect_positions:
         assert pos < len(final_sequence) - 1 and final_sequence[pos + 1] == "STORY", (
-            f"REASON chapter at position {pos} is not followed by a STORY chapter"
+            f"REFLECT chapter at position {pos} is not followed by a STORY chapter"
         )
 
-    # Rule 8: 50% of LESSON chapters (rounded down) should be followed by REASON chapters
-    expected_reason_count = actual_lessons // 2
-    actual_reason_count = len(reason_positions)
-    assert actual_reason_count <= expected_reason_count, (
-        f"Too many REASON chapters: {actual_reason_count} > {expected_reason_count}"
+    # Rule 8: 50% of LESSON chapters (rounded down) should be followed by REFLECT chapters
+    expected_reflect_count = actual_lessons // 2
+    actual_reflect_count = len(reflect_positions)
+    assert actual_reflect_count <= expected_reflect_count, (
+        f"Too many REFLECT chapters: {actual_reflect_count} > {expected_reflect_count}"
     )
 
     # LESSON chapters should be in valid positions (not in fixed positions)
@@ -217,12 +217,12 @@ def test_lesson_chapter_distribution():
     # Print the LESSON count for debugging
     print(f"Number of LESSON chapters: {lesson_count}")
 
-    # Verify at least 1 REASON chapter
-    reason_count = final_sequence.count("REASON")
-    assert reason_count >= 1, "Expected at least 1 REASON chapter"
+    # Verify at least 1 REFLECT chapter
+    reflect_count = final_sequence.count("REFLECT")
+    assert reflect_count >= 1, "Expected at least 1 REFLECT chapter"
 
-    # Print the REASON count for debugging
-    print(f"Number of REASON chapters: {reason_count}")
+    # Print the REFLECT count for debugging
+    print(f"Number of REFLECT chapters: {reflect_count}")
 
 
 def test_extract_chapter_manager_logic():
@@ -278,28 +278,28 @@ def test_extract_chapter_manager_logic():
                 chapter_sequence[i] == "LESSON" and chapter_sequence[i - 1] == "LESSON"
             ), f"Found consecutive LESSON chapters at positions {i - 1} and {i}"
 
-        # Rule 6: REASON chapters only follow LESSON chapters
-        reason_positions = [
+        # Rule 6: REFLECT chapters only follow LESSON chapters
+        reflect_positions = [
             i
             for i, chapter_type in enumerate(chapter_sequence)
-            if chapter_type == "REASON"
+            if chapter_type == "REFLECT"
         ]
-        for pos in reason_positions:
+        for pos in reflect_positions:
             assert pos > 0 and chapter_sequence[pos - 1] == "LESSON", (
-                f"REASON chapter at position {pos} does not follow a LESSON chapter"
+                f"REFLECT chapter at position {pos} does not follow a LESSON chapter"
             )
 
-        # Rule 7: STORY chapters must follow REASON chapters
-        for pos in reason_positions:
+        # Rule 7: STORY chapters must follow REFLECT chapters
+        for pos in reflect_positions:
             assert (
                 pos < len(chapter_sequence) - 1 and chapter_sequence[pos + 1] == "STORY"
-            ), f"REASON chapter at position {pos} is not followed by a STORY chapter"
+            ), f"REFLECT chapter at position {pos} is not followed by a STORY chapter"
 
-        # Rule 8: 50% of LESSON chapters (rounded down) should be followed by REASON chapters
-        expected_reason_count = actual_lessons // 2
-        actual_reason_count = len(reason_positions)
-        assert actual_reason_count <= expected_reason_count, (
-            f"Too many REASON chapters: {actual_reason_count} > {expected_reason_count}"
+        # Rule 8: 50% of LESSON chapters (rounded down) should be followed by REFLECT chapters
+        expected_reflect_count = actual_lessons // 2
+        actual_reflect_count = len(reflect_positions)
+        assert actual_reflect_count <= expected_reflect_count, (
+            f"Too many REFLECT chapters: {actual_reflect_count} > {expected_reflect_count}"
         )
 
         # LESSON chapters should be in valid positions (not in fixed positions)
