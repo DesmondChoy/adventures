@@ -1,5 +1,4 @@
-from typing import Any, Dict, Optional, List, Literal, TypedDict, cast
-import math
+from typing import Any, Dict, Optional, List, TypedDict, cast
 import logging
 import random
 from app.models.story import (
@@ -7,7 +6,6 @@ from app.models.story import (
     ChapterType,
     StoryResponse,
     LessonResponse,
-    ChapterData,
 )
 from app.services.llm.prompt_templates import (
     get_choice_instructions,
@@ -244,119 +242,6 @@ def build_reflect_chapter_prompt(
     )
 
     return f"{base_prompt}\n\n{formatted_template}"
-
-
-def _build_chapter_prompt(
-    base_prompt: str,
-    story_phase: str,
-    chapter_type: ChapterType,
-    state: AdventureState,
-    lesson_question: Optional[LessonQuestion] = None,
-    consequences_guidance: str = "",
-    num_previous_lessons: int = 0,
-    previous_lessons: Optional[List[LessonResponse]] = None,
-) -> str:
-    """Builds the appropriate prompt based on chapter type and state.
-
-    Args:
-        base_prompt: Base story state and history
-        story_phase: Current phase of the story (Exposition, Rising, Trials, Climax, Return)
-        chapter_type: Type of chapter to generate (LESSON, STORY, REFLECT, or CONCLUSION)
-        lesson_question: Question data for lesson chapters
-        consequences_guidance: Guidance based on previous lesson outcomes
-        num_previous_lessons: Number of previous lesson chapters
-        previous_lessons: History of previous lesson responses
-    """
-    # Handle REFLECT chapters
-    if chapter_type == ChapterType.REFLECT:
-        # A REFLECT chapter must follow a LESSON chapter
-        if not previous_lessons or len(previous_lessons) == 0:
-            raise ValueError("REFLECT chapter requires a previous LESSON")
-
-        last_lesson = previous_lessons[-1]
-        return build_reflect_chapter_prompt(
-            is_correct=last_lesson.is_correct,
-            lesson_question=last_lesson.question,
-            chosen_answer=last_lesson.chosen_answer,
-            base_prompt=base_prompt,
-            state=state,
-        )
-
-    # Handle lesson chapters
-    elif chapter_type == ChapterType.LESSON:
-        continuation_text = ""
-        if num_previous_lessons > 0:
-            continuation_text = f"""Continue the story, acknowledging the previous lesson{" and earlier lessons" if num_previous_lessons > 1 else ""} while leading to a new question.
-
-{consequences_guidance}
-
-"""
-            if previous_lessons:
-                continuation_text += f"Previous lesson history:\n{format_lesson_history(previous_lessons)}\n\n"
-
-        return f"""{base_prompt}
-
-{continuation_text}{_get_phase_guidance(story_phase, state)}
-
-Continue the story naturally, weaving in a situation or moment that raises this question:
-{lesson_question["question"]}
-
-# CRITICAL RULES
-1. {"Build on the consequences of the previous lesson, showing how it connects to this new challenge" if num_previous_lessons > 0 else "Let the story flow organically towards this new challenge"}
-2. DO NOT mention or hint at any of these answer options in your narrative:
-{_format_lesson_answers(lesson_question)}
-
-{LESSON_CHAPTER_INSTRUCTIONS.replace("[Core Question]", f'"{lesson_question["question"]}"')}"""
-
-    # Handle story chapters
-    elif chapter_type == ChapterType.STORY:
-        continuation_text = ""
-        if num_previous_lessons > 0:
-            continuation_text = f"""Continue the story based on the character's previous lesson{" and earlier lessons" if num_previous_lessons > 1 else ""}.
-
-{consequences_guidance}
-
-"""
-            if previous_lessons:
-                continuation_text += f"Previous lesson history:\n{format_lesson_history(previous_lessons)}\n\n"
-
-        return f"""{base_prompt}
-
-{continuation_text}{_get_phase_guidance(story_phase, state)}
-
-{STORY_CHAPTER_INSTRUCTIONS}
-
-# CRITICAL RULES
-1. {"The story should clearly but naturally acknowledge the impact of their previous lesson" if num_previous_lessons > 0 else "DO NOT include any lesson questions"}
-2. Build towards a natural story decision point
-3. The story choices will be provided separately - do not list them in the narrative
-4. End the scene at a moment of decision
-
-{get_choice_instructions(story_phase)}"""
-
-    # Handle conclusion chapters
-    else:  # chapter_type == ChapterType.CONCLUSION
-        continuation_text = ""
-        if num_previous_lessons > 0:
-            continuation_text = f"""Continue the story, incorporating the wisdom gained from the previous lesson{" and earlier lessons" if num_previous_lessons > 1 else ""}.
-
-{consequences_guidance}
-
-"""
-            if previous_lessons:
-                continuation_text += f"Previous lesson history:\n{format_lesson_history(previous_lessons)}\n\n"
-
-        return f"""{base_prompt}
-
-{continuation_text}{_get_phase_guidance(story_phase, state)}
-
-{CONCLUSION_CHAPTER_INSTRUCTIONS}
-
-# CRITICAL RULES
-1. This is the final chapter - provide a complete and satisfying resolution
-2. {"Demonstrate how the lessons learned have contributed to the character's growth" if num_previous_lessons > 0 else "Focus on the character's personal growth through their journey"}
-3. DO NOT include any choices or decision points
-4. End with a sense of closure while highlighting the character's transformation"""
 
 
 def build_user_prompt(
