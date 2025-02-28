@@ -3,9 +3,10 @@
 ## Core Concepts
 
 ### Naming Conventions
-1. Chapter: Unit of progression in ChapterType enum (LESSON, STORY, or CONCLUSION)
+1. Chapter: Unit of progression in ChapterType enum (LESSON, STORY, REFLECT, or CONCLUSION)
    - LESSON: Educational content from `lessons.csv` with LLM narrative wrapper
    - STORY: Fully LLM-generated narrative content, guided by story elements from `new_stories.yaml`, with choices
+   - REFLECT: Follow-up to LESSON chapters with narrative-driven approach to test deeper understanding
    - CONCLUSION: Final chapter with no choices, providing story resolution
 2. State: Complete application state in `AdventureState` class
 3. Adventure: Overall user journey tracked in `AdventureState`
@@ -36,10 +37,15 @@
    - State changes must be logged
 
 2. Chapter Requirements:
-   - First two chapters MUST be STORY type (for setting/character development)
+   - First chapter MUST be STORY type (for setting/character development)
    - Second-to-last chapter MUST be STORY type (for pivotal choices)
    - Last chapter MUST be CONCLUSION type (for story resolution)
-   - 50% of remaining chapters MUST be LESSON type (subject to available questions)
+   - 50% of remaining chapters, rounded down, MUST be LESSON type (subject to available questions)
+   - 50% of LESSON chapters, rounded down, MUST be followed by REFLECT chapters
+   - REFLECT chapters MUST only occur immediately after a LESSON chapter
+   - STORY chapters MUST follow REFLECT chapters
+   - No consecutive LESSON chapters allowed (highest priority)
+   - At least 1 REFLECT chapter in every scenario (required)
    - No question repetition in session
    - Answer options MUST be shuffled
    - Immediate feedback required

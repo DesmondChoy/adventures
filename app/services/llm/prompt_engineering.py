@@ -10,7 +10,6 @@ from app.models.story import (
     ChapterData,
 )
 from app.services.llm.prompt_templates import (
-    CHOICE_FORMAT_INSTRUCTIONS,
     get_choice_instructions,
     REFLECT_CHOICE_FORMAT,
     REFLECTIVE_TECHNIQUES,
@@ -22,8 +21,9 @@ from app.services.llm.prompt_templates import (
     CORRECT_ANSWER_CONSEQUENCES,
     INCORRECT_ANSWER_CONSEQUENCES,
     SYSTEM_PROMPT_TEMPLATE,
-    REFLECT_CHALLENGE_TEMPLATES,
-    INCORRECT_ANSWER_TEMPLATE,
+    REFLECT_TEMPLATE,
+    CORRECT_ANSWER_CONFIG,
+    INCORRECT_ANSWER_CONFIG,
 )
 
 
@@ -177,7 +177,7 @@ def build_reflect_chapter_prompt(
     base_prompt: str,
     state: Optional[AdventureState] = None,
 ) -> str:
-    """Generate a prompt for chapters that test deeper understanding after a lesson.
+    """Generate a prompt for chapters that reflect on the previous lesson in a narrative-driven way.
 
     Args:
         is_correct: Whether the previous lesson answer was correct
@@ -187,88 +187,63 @@ def build_reflect_chapter_prompt(
         state: Optional AdventureState for tracking metadata
 
     Returns:
-        A prompt string for generating a chapter that tests deeper understanding
+        A prompt string for generating a narrative-driven reflection chapter
     """
     # Find the correct answer
     correct_answer = next(
         answer["text"] for answer in lesson_question["answers"] if answer["is_correct"]
     )
 
-    # Find incorrect answers
-    incorrect_answers = [
-        answer["text"]
-        for answer in lesson_question["answers"]
-        if not answer["is_correct"]
-    ]
-
     # Get a random reflective technique
     reflective_technique = get_random_reflective_technique()
 
-    if is_correct:
-        # For correct answers: Select from multiple challenge types
+    # Track reflection in metadata if state is provided
+    if state:
         from datetime import datetime
 
-        challenge_type = random.choice(
-            [
-                "confidence_test",  # Current approach - challenge them to stick with answer
-                "application",  # Apply concept to new scenario with same answer
-                "connection_making",  # Connect concept to broader theme/moral teaching
-                "teaching_moment",  # Character explains concept to another character
-            ]
+        logger = logging.getLogger("story_app")
+
+        # Create structured history of reflections
+        if "reflect_challenge_history" not in state.metadata:
+            state.metadata["reflect_challenge_history"] = []
+
+        state.metadata["reflect_challenge_history"].append(
+            {
+                "chapter": state.current_chapter_number,
+                "is_correct": is_correct,
+                "timestamp": datetime.now().isoformat(),
+                "approach": "narrative_driven",  # New unified approach
+            }
         )
 
-        # Track challenge type in metadata if state is provided
-        if state:
-            logger = logging.getLogger("story_app")
-            logger.debug(f"Selected REFLECT challenge type: {challenge_type}")
+        # Also store the most recent reflection type for easy access
+        state.metadata["last_reflect_approach"] = "narrative_driven"
 
-            # Create structured history of challenge types
-            if "reflect_challenge_history" not in state.metadata:
-                state.metadata["reflect_challenge_history"] = []
+        logger.debug(
+            f"Using narrative-driven REFLECT approach for {'correct' if is_correct else 'incorrect'} answer"
+        )
 
-            state.metadata["reflect_challenge_history"].append(
-                {
-                    "chapter": state.current_chapter_number,
-                    "challenge_type": challenge_type,
-                    "is_correct": is_correct,
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
+    # Select the appropriate configuration based on whether the answer was correct
+    config = CORRECT_ANSWER_CONFIG if is_correct else INCORRECT_ANSWER_CONFIG
 
-            # Also store the most recent challenge type for easy access
-            state.metadata["last_reflect_challenge_type"] = challenge_type
+    # Format the template with the appropriate values
+    formatted_template = REFLECT_TEMPLATE.format(
+        question=lesson_question["question"],
+        chosen_answer=chosen_answer,
+        correct_answer_info=config["correct_answer_info"].format(
+            correct_answer=correct_answer
+        )
+        if not is_correct
+        else config["correct_answer_info"],
+        reflective_techniques=reflective_technique,
+        answer_status=config["answer_status"],
+        acknowledgment_guidance=config["acknowledgment_guidance"],
+        exploration_goal=config["exploration_goal"],
+        theme=state.selected_theme if state else "the story",
+        reflect_choice_format=REFLECT_CHOICE_FORMAT,
+    )
 
-        # Use the appropriate template based on challenge type
-        template = REFLECT_CHALLENGE_TEMPLATES[challenge_type]
-        # Replace the reflective_techniques placeholder with our random selection
-        template = template.replace("{reflective_techniques}", reflective_technique)
-
-        return f"""{base_prompt}
-
-{
-            template.format(
-                chosen_answer=chosen_answer,
-                question=lesson_question["question"],
-                incorrect_answers=", ".join(incorrect_answers),
-                reflect_choice_format=REFLECT_CHOICE_FORMAT,
-            )
-        }"""
-    else:
-        # For incorrect answers: Learning opportunity with structured reflection
-        template = INCORRECT_ANSWER_TEMPLATE
-        # Replace the reflective_techniques placeholder with our random selection
-        template = template.replace("{reflective_techniques}", reflective_technique)
-
-        return f"""{base_prompt}
-
-{
-            template.format(
-                chosen_answer=chosen_answer,
-                question=lesson_question["question"],
-                correct_answer=correct_answer,
-                reflect_choice_format=REFLECT_CHOICE_FORMAT,
-            )
-        }"""
+    return f"{base_prompt}\n\n{formatted_template}"
 
 
 def _build_chapter_prompt(

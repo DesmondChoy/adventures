@@ -137,17 +137,15 @@ graph TD
   * LESSON: Question-based narrative with educational focus
   * STORY: Choice-driven narrative with three options
   * REFLECT: Follow-up to LESSON chapters to test deeper understanding
-    - For correct answers: Multiple challenge types to test understanding:
-      * `confidence_test`: Tests if they'll stick with their original answer
-      * `application`: Tests if they can apply the concept in a new scenario
-      * `connection_making`: Tests if they can connect the concept to broader themes
-      * `teaching_moment`: Tests if they can explain the concept to another character
-    - For incorrect answers: Structured educational approach:
-      * Educational reflection: Gently revealing the correct concept
-      * Narrative deepening: Using the story environment to illustrate the concept
-      * "Aha moment": Creating a moment where understanding clicks
-      * Story-integrated choices: Testing understanding while advancing the story
-    - Challenge type tracking in AdventureState metadata for debugging
+    - Unified narrative-driven approach for both correct and incorrect answers
+    - Uses Socratic method to guide deeper understanding through questions:
+      * "What led you to that conclusion?"
+      * "How might this connect to [relevant story element]?"
+      * "What implications might this have for [story situation]?"
+    - Story-driven choices without labeling any as "correct" or "wrong"
+    - Each choice represents a different way the character might process what they've learned
+    - All choices lead to different but equally valid story paths
+    - Approach tracking in AdventureState metadata for debugging
     - Uses diverse storytelling techniques for reflective moments
 
 ### 7. State Management Pattern
@@ -436,9 +434,12 @@ graph TD
    - Lesson: `lessons.csv` + LLM narrative with educational focus
    - Story: Full LLM generation with three choices
    - REFLECT: Follow-up to LESSON chapters to test deeper understanding
-     * For correct answers: Multiple challenge types (confidence_test, application, connection_making, teaching_moment)
-     * For incorrect answers: Structured educational approach with "aha moment"
-     * Challenge type tracking in AdventureState metadata for debugging
+     * Unified narrative-driven approach for both correct and incorrect answers
+     * For correct answers: Story event acknowledges success (praise, reward, confidence boost)
+     * For incorrect answers: Story event gently corrects the mistake (clarification, consequence)
+     * Uses Socratic method to guide deeper understanding through questions
+     * Story-driven choices that advance the plot in different ways
+     * Approach tracking in AdventureState metadata for debugging
      * Uses creative storytelling techniques for reflective moments
    - Conclusion: Full LLM generation without choices
 2. Narrative continuity maintained.

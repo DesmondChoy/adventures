@@ -44,22 +44,21 @@ def get_choice_instructions(phase: str) -> str:
     return f"{base}\n\n{phase_guidance}"
 
 
-# Keep the original for backward compatibility
-CHOICE_FORMAT_INSTRUCTIONS = get_choice_instructions("Rising")
-
 REFLECT_CHOICE_FORMAT = """# Choice Format
 Use this EXACT format for the choices, with NO indentation and NO line breaks within choices:
 
 <CHOICES>
-Choice A: [First option - make this the correct answer]
-Choice B: [Second option - make this incorrect]
-Choice C: [Third option - make this incorrect]
+Choice A: [First story-driven choice]
+Choice B: [Second story-driven choice]
+Choice C: [Third story-driven choice]
 </CHOICES>
 
 # CRITICAL RULES
 1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices
 2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
-3. Content: One choice must be correct, the other choices should be plausible but incorrect"""
+3. Content: Make each choice meaningful, distinct, and advance the story in different ways
+4. Narrative Focus: All choices should be story-driven without any being labeled as "correct" or "incorrect"
+5. Character Growth: Each choice should reflect a different way the character might process or apply what they've learned"""
 
 # Storytelling techniques
 # ----------------------
@@ -219,125 +218,57 @@ The story should:
 - Use this as an opportunity for growth and deeper understanding
 - Connect the correction to their current situation and future challenges"""
 
-# REFLECT challenge templates
-# -------------------------
+# REFLECT templates
+# ----------------
 
-REFLECT_CHALLENGE_TEMPLATES: Dict[str, str] = {
-    "confidence_test": """# Confidence Test Challenge
-The character has answered "{chosen_answer}" to the question: "{question}"
-Now, we need to test if they truly understand the concept or if it was just a lucky guess.
-
-{reflective_techniques}
-
-## Scene Structure
-1. DO NOT reveal whether their answer was correct or incorrect
-2. Present a scenario where the character is challenged to reconsider their answer
-3. Make the incorrect alternatives sound compelling and plausible
-4. Test their confidence and understanding by seeing if they'll stick with their answer
-
-Present a follow-up scenario that makes the character question their original answer.
-Frame it as: "Are you sure about your answer? Consider these alternatives..."
-
-## Choice Structure
-- Choice A: Stick with the original answer ("{chosen_answer}") - this is the correct choice
-- Choice B: Switch to a different answer that sounds convincing but is incorrect
-- Choice C: Switch to another different answer that sounds convincing but is incorrect
-
-For choices B and C, use these incorrect answers as inspiration but make them sound very plausible:
-{incorrect_answers}
-
-{reflect_choice_format}""",
-    "application": """# Application Challenge
-The character has answered "{chosen_answer}" to the question: "{question}"
-Now, we need to see if they can apply this concept in a different context.
+# Unified template for both correct and incorrect answers
+REFLECT_TEMPLATE = """# Narrative-Driven Reflection
+The character previously answered the question: "{question}"
+Their answer was: "{chosen_answer}"
+{correct_answer_info}
 
 {reflective_techniques}
 
-## Scene Structure
-1. DO NOT reveal whether their previous answer was correct or incorrect
-2. Present a new scenario that tests the same concept but in a different context
-3. The correct answer should apply the same reasoning as their original answer
-4. Make the incorrect alternatives sound compelling and plausible
+## Scene Structure for {answer_status}
 
-Present a new scenario that applies the same concept in a different way.
-Frame it as: "Now let's see if you can apply this knowledge to a new situation..."
+1. **NARRATIVE ACKNOWLEDGMENT**: {acknowledgment_guidance}
 
-## Choice Structure
-- Choice A: The answer that correctly applies the same concept (correct)
-- Choice B: An answer that misapplies the concept in a plausible way (incorrect)
-- Choice C: Another answer that misapplies the concept differently (incorrect)
+2. **SOCRATIC EXPLORATION**: Use questions to guide the character to {exploration_goal}:
+   - "What led you to that conclusion?"
+   - "How might this connect to [relevant story element]?"
+   - "What implications might this have for [story situation]?"
 
-{reflect_choice_format}""",
-    "connection_making": """# Connection-Making Challenge
-The character has answered "{chosen_answer}" to the question: "{question}"
-Now, let's explore how this concept connects to broader themes and ideas.
-
-{reflective_techniques}
-
-## Scene Structure
-1. DO NOT reveal whether their previous answer was correct or incorrect
-2. Present a moment where the character can connect this concept to the story's broader theme
-3. Focus on how this knowledge relates to the moral teaching or theme of the adventure
-4. Create choices that test their ability to make meaningful connections
-
-Present a reflective moment that invites deeper connections.
-Frame it as: "How does this knowledge connect to the bigger picture?"
+3. **STORY INTEGRATION**: Weave this reflection naturally into the ongoing narrative:
+   - Connect to the character's journey
+   - Relate to the story's theme of "{theme}"
+   - Set up the next part of the adventure
 
 ## Choice Structure
-- Choice A: The connection that correctly relates the concept to the broader theme (correct)
-- Choice B: A connection that misunderstands either the concept or the theme (incorrect)
-- Choice C: A connection that seems logical but misses the deeper significance (incorrect)
+Create three story-driven choices that:
+- Feel like natural next steps in the narrative
+- Reflect different ways to process what was learned
+- Lead to different but equally valid story paths
+- Advance the plot in meaningful ways
 
-{reflect_choice_format}""",
-    "teaching_moment": """# Teaching Moment Challenge
-The character has answered "{chosen_answer}" to the question: "{question}"
-Now, let's see if they can explain this concept to someone else.
-
-{reflective_techniques}
-
-## Scene Structure
-1. DO NOT reveal whether their previous answer was correct or incorrect
-2. Create a situation where another character needs help understanding this concept
-3. The main character must choose how to explain it
-4. This tests if they truly understand the concept well enough to teach it
-
-Present a teaching moment where another character asks for help.
-Frame it as: "How would you explain this to someone who doesn't understand?"
-
-## Choice Structure
-- Choice A: An explanation that correctly conveys the concept (correct)
-- Choice B: An explanation that contains a subtle but important misconception (incorrect)
-- Choice C: An explanation that completely misunderstands the concept (incorrect)
-
-{reflect_choice_format}""",
-}
-
-INCORRECT_ANSWER_TEMPLATE = """# Incorrect Answer Learning Opportunity
-The character answered "{chosen_answer}" to the question: "{question}"
-The correct answer was "{correct_answer}".
-
-## Scene Structure
-Create a reflective scene with this structure:
-
-1. **EDUCATIONAL REFLECTION**: Gently reveal the correct concept and why their answer wasn't right.
-
-2. **NARRATIVE DEEPENING**: Use the story environment to illustrate the concept through metaphor or direct experience.
-
-3. **"AHA MOMENT"**: Create a moment where understanding clicks for the character, changing their perspective.
-
-4. **STORY-INTEGRATED CHOICES**: Present a situation requiring application of this new knowledge.
-
-{reflective_techniques}
-
-## Choice Structure
-The choices must both test understanding AND advance the story:
-- Choice A: Apply the newly learned concept correctly (correct)
-- Choice B: Show incomplete understanding (incorrect)
-- Choice C: Fall back to the original misconception (incorrect)
-
-Each choice should set up clear narrative consequences for the next chapter.
+Each choice should set up clear narrative consequences for the next chapter without any being labeled as "correct" or "incorrect".
 
 {reflect_choice_format}"""
+
+# Template configurations for correct answers
+CORRECT_ANSWER_CONFIG = {
+    "answer_status": "Correct Answer",
+    "acknowledgment_guidance": "Create a story event that acknowledges success (character praise, reward, confidence boost)",
+    "exploration_goal": "deepen their understanding of why their answer is right and explore broader implications",
+    "correct_answer_info": "This was the correct answer.",
+}
+
+# Template configurations for incorrect answers
+INCORRECT_ANSWER_CONFIG = {
+    "answer_status": "Incorrect Answer",
+    "acknowledgment_guidance": "Create a story event that gently corrects the mistake (character clarification, consequence of error)",
+    "exploration_goal": "discover the correct understanding through guided reflection",
+    "correct_answer_info": 'The correct answer was: "{correct_answer}".',
+}
 
 # Prompt templates
 # ---------------

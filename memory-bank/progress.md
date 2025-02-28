@@ -1,5 +1,162 @@
 # Progress Log
 
+## 2025-02-28: Removed Obsolete CHOICE_FORMAT_INSTRUCTIONS
+
+### Problem
+The codebase contained an obsolete constant `CHOICE_FORMAT_INSTRUCTIONS` that was imported but not used in `prompt_engineering.py`. It was defined in `prompt_templates.py` with a comment "Keep the original for backward compatibility" but was no longer needed as the code had fully transitioned to using the more dynamic `get_choice_instructions(story_phase)` function.
+
+### Requirements
+- Remove unused code to improve maintainability
+- Ensure no functionality is broken by the removal
+- Maintain the `get_choice_instructions()` function that is actively used
+
+### Solution
+1. Removed the import of `CHOICE_FORMAT_INSTRUCTIONS` from `prompt_engineering.py`:
+   ```python
+   # Removed from imports:
+   CHOICE_FORMAT_INSTRUCTIONS,
+   ```
+
+2. Removed the constant definition from `prompt_templates.py`:
+   ```python
+   # Removed:
+   # Keep the original for backward compatibility
+   CHOICE_FORMAT_INSTRUCTIONS = get_choice_instructions("Rising")
+   ```
+
+3. Verified no other references to `CHOICE_FORMAT_INSTRUCTIONS` existed in the codebase by searching all Python files.
+
+### Results
+The implementation successfully:
+1. Removed an unused constant and its import, reducing potential confusion
+2. Maintained all functionality as the code was already using `get_choice_instructions()`
+3. Improved code maintainability by removing obsolete code
+4. Reduced technical debt by eliminating code that was only kept for backward compatibility
+
+## 2025-02-28: REFLECT Chapter Refactoring for Narrative Integration
+
+### Problem
+The REFLECT chapter implementation had a binary approach that felt like a detached "test" rather than part of the story:
+- For correct answers: Used multiple challenge types (confidence_test, application, connection_making, teaching_moment)
+- For incorrect answers: Used a structured four-step process (reflection, narrative deepening, "aha moment", choices)
+- In both cases, choices were structured as one correct answer and two incorrect answers, creating a "test" feeling
+
+### Requirements
+- Create a unified narrative-driven approach for both correct and incorrect answers
+- Focus on narrative integration rather than separate educational prompts
+- Make all choices story-driven without labeling any as "correct" or "wrong"
+- Maintain the educational value while making it feel like a natural part of the story
+
+### Solution
+1. Updated `REFLECT_CHOICE_FORMAT` in `prompt_templates.py` to remove the "correct/incorrect" structure:
+   ```markdown
+   # Choice Format
+   Use this EXACT format for the choices, with NO indentation and NO line breaks within choices:
+
+   <CHOICES>
+   Choice A: [First story-driven choice]
+   Choice B: [Second story-driven choice]
+   Choice C: [Third story-driven choice]
+   </CHOICES>
+
+   # CRITICAL RULES
+   1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices
+   2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
+   3. Content: Make each choice meaningful, distinct, and advance the story in different ways
+   4. Narrative Focus: All choices should be story-driven without any being labeled as "correct" or "incorrect"
+   5. Character Growth: Each choice should reflect a different way the character might process or apply what they've learned
+   ```
+
+2. Created a unified template (`REFLECT_TEMPLATE`) for both correct and incorrect answers:
+   ```markdown
+   # Narrative-Driven Reflection
+   The character previously answered the question: "{question}"
+   Their answer was: "{chosen_answer}"
+   {correct_answer_info}
+
+   {reflective_techniques}
+
+   ## Scene Structure for {answer_status}
+
+   1. **NARRATIVE ACKNOWLEDGMENT**: {acknowledgment_guidance}
+
+   2. **SOCRATIC EXPLORATION**: Use questions to guide the character to {exploration_goal}:
+      - "What led you to that conclusion?"
+      - "How might this connect to [relevant story element]?"
+      - "What implications might this have for [story situation]?"
+
+   3. **STORY INTEGRATION**: Weave this reflection naturally into the ongoing narrative:
+      - Connect to the character's journey
+      - Relate to the story's theme of "{theme}"
+      - Set up the next part of the adventure
+   ```
+
+3. Added configuration objects to customize the template based on whether the answer was correct or incorrect:
+   ```python
+   # Template configurations for correct answers
+   CORRECT_ANSWER_CONFIG = {
+       "answer_status": "Correct Answer",
+       "acknowledgment_guidance": "Create a story event that acknowledges success (character praise, reward, confidence boost)",
+       "exploration_goal": "deepen their understanding of why their answer is right and explore broader implications",
+       "correct_answer_info": "This was the correct answer.",
+   }
+
+   # Template configurations for incorrect answers
+   INCORRECT_ANSWER_CONFIG = {
+       "answer_status": "Incorrect Answer",
+       "acknowledgment_guidance": "Create a story event that gently corrects the mistake (character clarification, consequence of error)",
+       "exploration_goal": "discover the correct understanding through guided reflection",
+       "correct_answer_info": 'The correct answer was: "{correct_answer}".',
+   }
+   ```
+
+4. Updated the `build_reflect_chapter_prompt()` function to use the unified approach:
+   ```python
+   # Select the appropriate configuration based on whether the answer was correct
+   config = CORRECT_ANSWER_CONFIG if is_correct else INCORRECT_ANSWER_CONFIG
+
+   # Format the template with the appropriate values
+   formatted_template = REFLECT_TEMPLATE.format(
+       question=lesson_question["question"],
+       chosen_answer=chosen_answer,
+       correct_answer_info=config["correct_answer_info"].format(
+           correct_answer=correct_answer
+       )
+       if not is_correct
+       else config["correct_answer_info"],
+       reflective_techniques=reflective_technique,
+       answer_status=config["answer_status"],
+       acknowledgment_guidance=config["acknowledgment_guidance"],
+       exploration_goal=config["exploration_goal"],
+       theme=state.selected_theme if state else "the story",
+       reflect_choice_format=REFLECT_CHOICE_FORMAT,
+   )
+   ```
+
+5. Updated metadata tracking to use the new approach:
+   ```python
+   state.metadata["reflect_challenge_history"].append(
+       {
+           "chapter": state.current_chapter_number,
+           "is_correct": is_correct,
+           "timestamp": datetime.now().isoformat(),
+           "approach": "narrative_driven",  # New unified approach
+       }
+   )
+
+   # Also store the most recent reflection type for easy access
+   state.metadata["last_reflect_approach"] = "narrative_driven"
+   ```
+
+### Results
+The implementation successfully:
+1. Created a unified narrative-driven approach for both correct and incorrect answers
+2. Made REFLECT chapters feel like a natural part of the character's journey rather than a separate educational module
+3. Simplified the implementation while maintaining educational value
+4. Made all choices story-driven, enhancing user engagement
+5. Used the Socratic method to guide deeper understanding through questions
+6. Maintained metadata tracking for debugging purposes
+
 ## 2025-02-28: UI Fix - Hide "Swipe to explore" Tip on Desktop
 
 ### Problem

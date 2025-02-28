@@ -11,9 +11,10 @@ The project is focused on implementing core Learning Odyssey features, including
         *   LESSON chapters: `lessons.csv` + LLM narrative wrapper.
         *   STORY chapters: Full LLM generation with choices.
         *   REFLECT chapters: Follow-up to LESSON chapters to test deeper understanding.
-            * For correct answers: Multiple challenge types (confidence_test, application, connection_making, teaching_moment)
-            * For incorrect answers: Structured educational reflection with "aha moment"
-            * Challenge type tracking in AdventureState metadata for debugging
+            * Unified narrative-driven approach for both correct and incorrect answers
+            * Story-driven choices without labeling any as "correct" or "wrong"
+            * Uses Socratic method to guide deeper understanding through questions
+            * Approach tracking in AdventureState metadata for debugging
         *   CONCLUSION chapters: Full LLM generation without choices.
     *   Narrative continuity via prompt engineering.
 
@@ -53,6 +54,24 @@ The project is focused on implementing core Learning Odyssey features, including
     * Progress tracking visualization.
 
 ## Recent Changes
+
+### REFLECT Chapter Refactoring for Narrative Integration (2025-02-28)
+- Refactored the REFLECT chapter implementation in `app/services/llm/prompt_templates.py` and `app/services/llm/prompt_engineering.py`:
+  * Created a unified narrative-driven approach for both correct and incorrect answers
+  * Updated `REFLECT_CHOICE_FORMAT` to remove the "correct/incorrect" structure
+  * Created a unified template (`REFLECT_TEMPLATE`) with configuration objects for different answer types
+  * Made all choices story-driven without labeling any as "correct" or "wrong"
+  * Used the Socratic method to guide deeper understanding through questions
+  * Updated metadata tracking to use the new approach
+  * This makes REFLECT chapters feel like a natural part of the character's journey rather than a separate educational module
+
+### Removed Obsolete CHOICE_FORMAT_INSTRUCTIONS (2025-02-28)
+- Removed the obsolete `CHOICE_FORMAT_INSTRUCTIONS` constant:
+  * Removed the import from `prompt_engineering.py`
+  * Removed the constant definition from `prompt_templates.py`
+  * Verified no other references existed in the codebase
+  * The code was already using the more dynamic `get_choice_instructions(story_phase)` function
+  * This improves code maintainability by removing unused code
 
 ### UI Fix - Hide "Swipe to explore" Tip on Desktop (2025-02-28)
 - Fixed an issue where the "Swipe to explore" tip was showing on desktop devices in `app/static/css/carousel.css`:
