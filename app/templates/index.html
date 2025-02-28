@@ -253,14 +253,16 @@
         const stateManager = new AdventureStateManager();
         const wsManager = new WebSocketManager();
         let storyWebSocket;
-        let currentRotation = 0;
         let selectedCategory = '';
-        let currentLessonRotation = 0;
         let selectedLessonTopic = '';
-        let currentIndex = 0;
-        let currentLessonIndex = 0;
         const totalCategories = parseInt("{{ story_categories|length }}");
         const totalLessonTopics = parseInt("{{ lesson_topics|length }}");
+
+        // Global variables for carousel state
+        let currentRotation = 0;
+        let currentLessonRotation = 0;
+        let currentIndex = 0;
+        let currentLessonIndex = 0;
         const rotationAngle = 360 / totalCategories;
         const lessonRotationAngle = 360 / totalLessonTopics;
 
@@ -282,7 +284,7 @@
         }
 
         function updateActiveCard() {
-            const cards = document.getElementsByClassName('carousel-card');
+            const cards = document.getElementById('categoryCarousel').getElementsByClassName('carousel-card');
             Array.from(cards).forEach((card, index) => {
                 card.classList.remove('active');
                 if (index === currentIndex) {
@@ -351,7 +353,7 @@
             } else if (event.key === 'ArrowRight') {
                 rotateCarousel('next');
             } else if (event.key === 'Enter') {
-                const cards = document.getElementsByClassName('carousel-card');
+                const cards = document.getElementById('categoryCarousel').getElementsByClassName('carousel-card');
                 const activeCard = cards[currentIndex];
                 if (activeCard) {
                     selectCategory(activeCard.dataset.category);
@@ -364,7 +366,7 @@
             document.getElementById('storyCategory').value = categoryId;
             
             // Remove selected class from all cards and add to the chosen one
-            const cards = document.getElementsByClassName('carousel-card');
+            const cards = document.getElementById('categoryCarousel').getElementsByClassName('carousel-card');
             Array.from(cards).forEach(card => {
                 card.classList.remove('selected', 'selecting');
                 if (card.dataset.category === categoryId) {
@@ -392,7 +394,7 @@
         }
 
         function updateActiveLessonCard() {
-            const cards = document.getElementsByClassName('carousel-card');
+            const cards = document.getElementById('lessonCarousel').getElementsByClassName('carousel-card');
             Array.from(cards).forEach((card, index) => {
                 card.classList.remove('active');
                 if (index === currentLessonIndex) {
@@ -450,6 +452,11 @@
                     }
                 }
             }
+
+            // Mobile-specific fix for active card scaling
+            if (window.innerWidth <= 768) {
+                fixMobileActiveCardScaling();
+            }
         }
 
         function handleLessonKeyPress(event) {
@@ -458,7 +465,7 @@
             } else if (event.key === 'ArrowRight') {
                 rotateLessonCarousel('next');
             } else if (event.key === 'Enter') {
-                const cards = document.getElementsByClassName('carousel-card');
+                const cards = document.getElementById('lessonCarousel').getElementsByClassName('carousel-card');
                 const activeCard = cards[currentLessonIndex];
                 if (activeCard) {
                     selectLessonTopic(activeCard.dataset.topic);
@@ -471,7 +478,7 @@
             document.getElementById('lessonTopic').value = topic;
             
             // Remove selected class from all cards and add to the chosen one
-            const cards = document.getElementsByClassName('carousel-card');
+            const cards = document.getElementById('lessonCarousel').getElementsByClassName('carousel-card');
             Array.from(cards).forEach(card => {
                 card.classList.remove('selected', 'selecting');
                 if (card.dataset.topic === topic) {
@@ -479,6 +486,24 @@
                     setTimeout(() => card.classList.remove('selecting'), 300);
                 }
             });
+        }
+
+        // Mobile-specific fix for active card scaling
+        function fixMobileActiveCardScaling() {
+            // This function only runs on mobile devices
+            if (window.innerWidth > 768) return;
+            
+            // Ensure the active card on the second page has the correct scaling
+            const lessonCards = document.getElementById('lessonCarousel').getElementsByClassName('carousel-card');
+            const activeCard = lessonCards[currentLessonIndex];
+            
+            if (activeCard) {
+                // Remove active class from all cards
+                Array.from(lessonCards).forEach(card => card.classList.remove('active'));
+                
+                // Add active class to the current card
+                activeCard.classList.add('active');
+            }
         }
 
         // --- Navigation Functions ---
@@ -503,6 +528,8 @@
             }
             document.getElementById('storyCategoryScreen').classList.add('hidden');
             document.getElementById('lessonTopicScreen').classList.remove('hidden');
+            
+            // Initialize the lesson carousel
             initializeLessonCarousel();
         }
 
@@ -723,12 +750,17 @@
             // Reset selections
             document.getElementById('storyCategory').value = '';
             document.getElementById('lessonTopic').value = '';
+            selectedCategory = '';
+            selectedLessonTopic = '';
             
-            // Reset carousel selections
+            // Reset carousel selections and re-initialize the category carousel
             const cards = document.getElementsByClassName('carousel-card');
             Array.from(cards).forEach(card => {
-                card.classList.remove('selected', 'selecting');
+                card.classList.remove('selected', 'selecting', 'active');
             });
+            
+            // Re-initialize the category carousel
+            initializeCarousel();
         }
 
         // --- Event Handlers ---

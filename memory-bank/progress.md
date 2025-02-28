@@ -1,5 +1,69 @@
 # Progress Log
 
+## 2025-02-28: Lesson Chapter Prompt Improvement with Story Object Method
+
+### Problem
+The lesson chapter generation prompt had several issues:
+1. The narrative often didn't explicitly reference the question being asked, making it difficult for users to answer correctly
+2. The thematic bridge between the story world and educational content felt forced and disconnected
+3. The instructions were overly complex and difficult for the LLM to follow consistently
+
+### Requirements
+- Ensure the exact question is included verbatim in the narrative
+- Create a more intuitive way to bridge between the story world and educational questions
+- Simplify the instructions for better LLM comprehension
+- Allow more flexibility in where the question appears in the narrative
+
+### Solution
+1. Condensed the CRITICAL RULES to three succinct points in `prompt_templates.py`:
+   ```markdown
+   # CRITICAL RULES
+   1. NEVER mention any answer options in your narrative, but DO include the exact question "[Core Question]" verbatim somewhere in the story.
+   2. Create ONE visually interesting story object (artifact, phenomenon, pattern, or map) that naturally connects to the question and makes it relevant to the character's journey.
+   3. Make the question feel like a natural part of the story world, with clear stakes for why answering it matters to the characters.
+   ```
+
+2. Implemented the "Story Object Method" for creating narrative bridges:
+   ```markdown
+   ## Narrative Bridge - The Story Object Method
+   1. Identify ONE story object or element that can naturally connect to the [Core Question]:
+      - For historical questions: Something that preserves or reveals the past
+      - For scientific questions: Something that demonstrates or relates to natural phenomena
+      - For mathematical questions: Something involving patterns, quantities, or relationships
+      - For geographical questions: Something that represents places or spatial relationships
+
+   2. Make this story element:
+      - Visually interesting (describe how it appears in the story world)
+      - Relevant to the plot (connect it to the character's journey)
+      - Mysterious or incomplete (create a reason to seek the answer)
+
+   3. Include the exact question "[Core Question]" somewhere in the narrative:
+      - It can be in dialogue, a character's thoughts, or written text within the story
+      - The question should feel natural in context
+      - The narrative should build toward this question, making it feel important
+   ```
+
+3. Modified the `_build_chapter_prompt` function in `prompt_engineering.py` to replace the [Core Question] placeholder with the actual question:
+   ```python
+   {LESSON_CHAPTER_INSTRUCTIONS.replace("[Core Question]", f'"{lesson_question["question"]}"')}
+   ```
+
+4. Updated the USER_PROMPT_TEMPLATE to be consistent with the new approach:
+   ```markdown
+   # CRITICAL RULES
+   For LESSON chapters: Include the exact question verbatim, but NEVER mention any answer options.
+   ```
+
+### Results
+The implementation successfully:
+1. Ensures the exact question appears verbatim in the narrative so users know what they're being asked
+2. Creates a more intuitive approach using a single concrete story object as the bridge
+3. Provides more flexibility in where the question can appear for more natural narrative flow
+4. Simplifies the instructions for better LLM comprehension
+5. Maintains the core requirement that answer options are never mentioned
+
+This approach should result in lesson chapters that feel more organic and integrated while still clearly presenting the educational question to the user.
+
 ## 2025-02-27: Phase-Specific Choice Instructions Implementation
 
 ### Problem
