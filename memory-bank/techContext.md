@@ -131,6 +131,38 @@
     - Story category and lesson topic via URL
     - Not included in validated_state
     - Used for initial state setup only
+    
+  * Agency Implementation:
+    - First chapter agency choice:
+      * Special handling in `_build_chapter_prompt()` for first chapter
+      * Agency choice categories in `prompt_templates.py`
+      * Agency detection in `websocket_service.py` using keyword matching
+      * Storage in `state.metadata["agency"]` with structure:
+        ```json
+        {
+          "type": "item|companion|role|ability",
+          "name": "specific choice name",
+          "description": "full choice text",
+          "properties": {"strength": 1},
+          "growth_history": [],
+          "references": []
+        }
+        ```
+    - Agency tracking:
+      * Reference validation in `update_agency_references()`
+      * Warning logs for chapters without agency references
+      * Evolution tracking in `state.metadata["agency_evolution"]`
+      * Property updates based on REFLECT chapter outcomes
+    - Agency evolution:
+      * Different templates for correct vs. incorrect answers
+      * Special handling for climax phase
+      * Agency-focused choices in climax
+      * Satisfying resolution in conclusion
+    - Technical considerations:
+      * Agency must be referenced in all chapters
+      * Evolution must feel organic to the narrative
+      * Agency plays pivotal role in climax
+      * Agency has meaningful resolution in conclusion
 
 ### LLM Integration (`app/services/llm/`)
 * Provider abstraction layer

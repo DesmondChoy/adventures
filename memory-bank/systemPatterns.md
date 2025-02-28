@@ -322,6 +322,94 @@ graph TD
     - CRITICAL: Support current story phase
     - CRITICAL: Consistent with metadata tracking
 
+## Agency Pattern
+
+1. **First Chapter Agency Choice**
+   ```mermaid
+   flowchart TD
+     A[First Chapter] --> B{Agency Choice}
+     B -->|Item| C[Craft Magical Item]
+     B -->|Companion| D[Choose Animal Companion]
+     B -->|Role| E[Select Character Role]
+     B -->|Ability| F[Develop Special Ability]
+     
+     C --> G[Store in state.metadata]
+     D --> G
+     E --> G
+     F --> G
+     
+     G --> H[Track & Reference Throughout Adventure]
+   ```
+
+   - Implementation:
+     * First chapter STORY type includes agency choice categories
+     * Choice detection in `websocket_service.py`
+     * Agency storage in `state.metadata["agency"]`
+     * Structure includes type, name, description, properties, growth_history, references
+     * CRITICAL: Must be referenced in all subsequent chapters
+
+2. **Agency Evolution**
+   ```mermaid
+   flowchart TD
+     A[REFLECT Chapter] --> B{Answer Type}
+     B -->|Correct| C[Empower Agency]
+     B -->|Incorrect| D[Transform Agency]
+     
+     C --> E[New Capability]
+     C --> F[Overcome Challenge]
+     C --> G[Deepen Connection]
+     
+     D --> H[Adapt to New Knowledge]
+     D --> I[Provide New Perspective]
+     D --> J[Demonstrate Resilience]
+     
+     E --> K[Track in metadata]
+     F --> K
+     G --> K
+     H --> K
+     I --> K
+     J --> K
+   ```
+
+   - Implementation:
+     * Different guidance templates for correct vs. incorrect answers
+     * Evolution tracking in `state.metadata["agency_evolution"]`
+     * Reference validation in `update_agency_references()`
+     * CRITICAL: Evolution must feel organic to the narrative
+
+3. **Climax Integration**
+   ```mermaid
+   flowchart TD
+     A[Climax Phase] --> B[Pivotal Agency Role]
+     B --> C[Narrative Culmination]
+     B --> D[Growth Reflection]
+     B --> E[Meaningful Choices]
+     
+     E --> F[Bold Application]
+     E --> G[Clever Application]
+     E --> H[Strategic Application]
+   ```
+
+   - Implementation:
+     * Special handling in `_build_chapter_prompt()` for climax phase
+     * Agency-focused choices in `CLIMAX_AGENCY_GUIDANCE`
+     * CRITICAL: Choices must reflect different ways to use agency element
+
+4. **Technical Implementation**
+   - Detection:
+     * Keyword matching in choice text
+     * Type and name extraction
+     * Metadata storage
+   - Tracking:
+     * Chapter references
+     * Evolution history
+     * Property changes
+   - Integration:
+     * Chapter-specific guidance
+     * Phase-appropriate references
+     * Consistent presence throughout adventure
+     * CRITICAL: Must feel like a natural part of the narrative
+
 ## Narrative Continuity Pattern (`app/services/llm/prompt_engineering.py`)
 1. Story Elements Consistency:
    - Maintain selected setting throughout
