@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional, List, Literal, TypedDict, cast
 import math
 import logging
+import random
 from app.models.story import (
     AdventureState,
     ChapterType,
@@ -10,6 +11,7 @@ from app.models.story import (
 )
 from app.services.llm.prompt_templates import (
     CHOICE_FORMAT_INSTRUCTIONS,
+    get_choice_instructions,
     REASON_CHOICE_FORMAT,
     REFLECTIVE_TECHNIQUES,
     BASE_PHASE_GUIDANCE,
@@ -44,13 +46,12 @@ class LessonHistory(TypedDict):
 
 
 def _format_lesson_answers(lesson_question: LessonQuestion) -> str:
-    """Format the lesson answers section consistently."""
+    """Format the lesson answers section consistently using markdown."""
     # Get the answers in their randomized order
     answers = [answer["text"] for answer in lesson_question["answers"]]
-    return f"""The lesson answers that will be presented separately are:
-- {answers[0]}
-- {answers[1]}
-- {answers[2]}"""
+    return f"""- **Option A**: {answers[0]}
+- **Option B**: {answers[1]}
+- **Option C**: {answers[2]}"""
 
 
 def _get_phase_guidance(story_phase: str, state: AdventureState) -> str:
@@ -91,14 +92,18 @@ def build_system_prompt(state: AdventureState) -> str:
     )
 
 
-def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
-    """Creates the base prompt with story state information."""
+def _build_base_prompt(state: AdventureState) -> tuple[str, str, str]:
+    """Creates the base prompt with story state information.
+
+    Returns:
+        A tuple containing (formatted_story_history, story_phase, chapter_type)
+    """
     # Build chapter history with decisions and outcomes
     chapter_history: list[str] = []
 
     for chapter in state.chapters:  # type: ChapterData
         # Add chapter number with proper formatting
-        chapter_history.append(f"Chapter {chapter.chapter_number}:\n")
+        chapter_history.append(f"## Chapter {chapter.chapter_number}\n")
 
         # Add the chapter content
         chapter_history.append(f"{chapter.content.strip()}\n")
@@ -116,10 +121,10 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
             )
             chapter_history.extend(
                 [
-                    f"\nLesson Question: {lesson_response.question['question']}\n",
-                    f"Student's Answer: {lesson_response.chosen_answer}\n",
-                    f"Outcome: {'Correct' if lesson_response.is_correct else 'Incorrect'}\n",
-                    f"Correct Answer: {correct_answer}\n",
+                    f"\n**Lesson Question**: {lesson_response.question['question']}\n",
+                    f"**Student's Answer**: {lesson_response.chosen_answer}\n",
+                    f"**Outcome**: {'Correct' if lesson_response.is_correct else 'Incorrect'}\n",
+                    f"**Correct Answer**: {correct_answer}\n",
                 ]
             )
 
@@ -128,7 +133,7 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
             story_response = cast(
                 StoryResponse, chapter.response
             )  # Type cast since we know it's a StoryResponse
-            chapter_history.append(f"\nChoice Made: {story_response.choice_text}\n")
+            chapter_history.append(f"\n**Choice Made**: {story_response.choice_text}\n")
 
         # Add separator between chapters
         if len(state.chapters) > 1 and chapter != state.chapters[-1]:
@@ -137,18 +142,32 @@ def _build_base_prompt(state: AdventureState) -> tuple[str, str]:
     # Get story phase from state
     story_phase = state.current_storytelling_phase
 
-    # Build the base prompt with complete history
-    base_prompt = (
-        f"Current story state:\n"
-        f"- Chapter: {state.current_chapter_number} of {state.story_length}\n"
-        f"- ChapterType: {state.planned_chapter_types[state.current_chapter_number - 1]}\n"
-        f"- Story Phase: {story_phase}\n"
-        f"- Lesson Progress: {state.correct_lesson_answers}/{state.total_lessons} lessons answered correctly\n\n"
-        f"Complete Story History:\n"  # Single newline for clean formatting
-        f"{''.join(filter(None, chapter_history))}"  # filter(None) removes empty strings
-    )
+    # Get current chapter type
+    chapter_type = state.planned_chapter_types[state.current_chapter_number - 1]
 
-    return base_prompt, story_phase
+    # Format the story history
+    formatted_story_history = "".join(
+        filter(None, chapter_history)
+    )  # filter(None) removes empty strings
+
+    return formatted_story_history, story_phase, chapter_type
+
+
+def get_random_reflective_technique() -> str:
+    """Randomly select one reflective technique from the available options."""
+    # Extract individual techniques from the REFLECTIVE_TECHNIQUES string
+    techniques_text = REFLECTIVE_TECHNIQUES.split(
+        "Create a reflective moment using one of these storytelling techniques:"
+    )[1]
+    # Split by bullet points and clean up
+    techniques_list = [t.strip() for t in techniques_text.split("-") if t.strip()]
+
+    # Select one random technique
+    selected_technique = random.choice(techniques_list)
+
+    return f"""# Reflective Technique
+Use this specific storytelling technique for the reflection:
+- {selected_technique}"""
 
 
 def build_reason_chapter_prompt(
@@ -182,9 +201,11 @@ def build_reason_chapter_prompt(
         if not answer["is_correct"]
     ]
 
+    # Get a random reflective technique
+    reflective_technique = get_random_reflective_technique()
+
     if is_correct:
         # For correct answers: Select from multiple challenge types
-        import random
         from datetime import datetime
 
         challenge_type = random.choice(
@@ -218,27 +239,33 @@ def build_reason_chapter_prompt(
             state.metadata["last_reason_challenge_type"] = challenge_type
 
         # Use the appropriate template based on challenge type
+        template = REASON_CHALLENGE_TEMPLATES[challenge_type]
+        # Replace the reflective_techniques placeholder with our random selection
+        template = template.replace("{reflective_techniques}", reflective_technique)
+
         return f"""{base_prompt}
 
 {
-            REASON_CHALLENGE_TEMPLATES[challenge_type].format(
+            template.format(
                 chosen_answer=chosen_answer,
                 question=lesson_question["question"],
-                reflective_techniques=REFLECTIVE_TECHNIQUES,
                 incorrect_answers=", ".join(incorrect_answers),
                 reason_choice_format=REASON_CHOICE_FORMAT,
             )
         }"""
     else:
         # For incorrect answers: Learning opportunity with structured reflection
+        template = INCORRECT_ANSWER_TEMPLATE
+        # Replace the reflective_techniques placeholder with our random selection
+        template = template.replace("{reflective_techniques}", reflective_technique)
+
         return f"""{base_prompt}
 
 {
-            INCORRECT_ANSWER_TEMPLATE.format(
+            template.format(
                 chosen_answer=chosen_answer,
                 question=lesson_question["question"],
                 correct_answer=correct_answer,
-                reflective_techniques=REFLECTIVE_TECHNIQUES,
                 reason_choice_format=REASON_CHOICE_FORMAT,
             )
         }"""
@@ -296,14 +323,15 @@ def _build_chapter_prompt(
 
 {continuation_text}{_get_phase_guidance(story_phase, state)}
 
-Continue the story naturally, weaving in a situation or moment that raises this core question:
+Continue the story naturally, weaving in a situation or moment that raises this question:
 {lesson_question["question"]}
 
-CRITICAL INSTRUCTIONS:
+# CRITICAL RULES
 1. {"Build on the consequences of the previous lesson, showing how it connects to this new challenge" if num_previous_lessons > 0 else "Let the story flow organically towards this new challenge"}
-{LESSON_CHAPTER_INSTRUCTIONS}
+2. DO NOT mention or hint at any of these answer options in your narrative:
+{_format_lesson_answers(lesson_question)}
 
-{_format_lesson_answers(lesson_question)}"""
+{LESSON_CHAPTER_INSTRUCTIONS.replace("[Core Question]", f'"{lesson_question["question"]}"')}"""
 
     # Handle story chapters
     elif chapter_type == ChapterType.STORY:
@@ -323,13 +351,13 @@ CRITICAL INSTRUCTIONS:
 
 {STORY_CHAPTER_INSTRUCTIONS}
 
-IMPORTANT:
+# CRITICAL RULES
 1. {"The story should clearly but naturally acknowledge the impact of their previous lesson" if num_previous_lessons > 0 else "DO NOT include any lesson questions"}
 2. Build towards a natural story decision point
 3. The story choices will be provided separately - do not list them in the narrative
 4. End the scene at a moment of decision
 
-{CHOICE_FORMAT_INSTRUCTIONS}"""
+{get_choice_instructions(story_phase)}"""
 
     # Handle conclusion chapters
     else:  # chapter_type == ChapterType.CONCLUSION
@@ -349,7 +377,7 @@ IMPORTANT:
 
 {CONCLUSION_CHAPTER_INSTRUCTIONS}
 
-IMPORTANT:
+# CRITICAL RULES
 1. This is the final chapter - provide a complete and satisfying resolution
 2. {"Demonstrate how the lessons learned have contributed to the character's growth" if num_previous_lessons > 0 else "Focus on the character's personal growth through their journey"}
 3. DO NOT include any choices or decision points
@@ -362,7 +390,10 @@ def build_user_prompt(
     previous_lessons: Optional[List[LessonResponse]] = None,
 ) -> str:
     """Create a user prompt that includes story state and current requirements."""
-    base_prompt, story_phase = _build_base_prompt(state)
+    from app.services.llm.prompt_templates import USER_PROMPT_TEMPLATE
+
+    # Get base prompt components
+    story_history, story_phase, current_chapter_type = _build_base_prompt(state)
 
     # Debug logging for previous lessons
     logger = logging.getLogger("story_app")
@@ -398,30 +429,126 @@ def build_user_prompt(
             logger.debug(f"Generated consequences: {consequences_guidance}")
             logger.debug("===================================\n")
 
-    # Determine chapter properties
-    current_chapter_type = state.planned_chapter_types[state.current_chapter_number - 1]
+    # Determine chapter type and get appropriate instructions
     chapter_type = ChapterType.LESSON if lesson_question else current_chapter_type
 
-    # Build the chapter prompt
-    return _build_chapter_prompt(
-        base_prompt=base_prompt,
-        story_phase=story_phase,
+    # Get phase guidance
+    phase_guidance = _get_phase_guidance(story_phase, state)
+
+    # Get chapter-specific instructions
+    if chapter_type == ChapterType.LESSON and lesson_question:
+        # For lesson chapters
+        continuation_text = ""
+        if num_previous_lessons > 0:
+            continuation_text = f"""## Previous Lesson Impact
+{consequences_guidance}
+
+"""
+            if previous_lessons:
+                continuation_text += (
+                    f"### Lesson History\n{format_lesson_history(previous_lessons)}\n\n"
+                )
+
+        chapter_instructions = f"""{LESSON_CHAPTER_INSTRUCTIONS}
+
+## Core Question
+{lesson_question["question"]}
+
+### Available Answers
+{_format_lesson_answers(lesson_question)}
+
+{continuation_text}"""
+
+    elif (
+        chapter_type == ChapterType.REASON
+        and previous_lessons
+        and len(previous_lessons) > 0
+    ):
+        # For reason chapters
+        last_lesson = previous_lessons[-1]
+        # Use the existing build_reason_chapter_prompt but extract just the instructions part
+        reason_prompt = build_reason_chapter_prompt(
+            is_correct=last_lesson.is_correct,
+            lesson_question=last_lesson.question,
+            chosen_answer=last_lesson.chosen_answer,
+            base_prompt="",  # Empty base prompt since we're just extracting instructions
+            state=state,
+        )
+        # Remove the empty base prompt part if it exists
+        chapter_instructions = reason_prompt.strip()
+
+    elif chapter_type == ChapterType.STORY:
+        # For story chapters
+        continuation_text = ""
+        if num_previous_lessons > 0:
+            continuation_text = f"""## Previous Lesson Impact
+{consequences_guidance}
+
+"""
+            if previous_lessons:
+                continuation_text += (
+                    f"### Lesson History\n{format_lesson_history(previous_lessons)}\n\n"
+                )
+
+        chapter_instructions = f"""{STORY_CHAPTER_INSTRUCTIONS}
+
+{continuation_text}
+
+{get_choice_instructions(story_phase)}"""
+
+    else:  # chapter_type == ChapterType.CONCLUSION
+        # For conclusion chapters
+        continuation_text = ""
+        if num_previous_lessons > 0:
+            continuation_text = f"""## Previous Lesson Impact
+{consequences_guidance}
+
+"""
+            if previous_lessons:
+                continuation_text += (
+                    f"### Lesson History\n{format_lesson_history(previous_lessons)}\n\n"
+                )
+
+        chapter_instructions = f"""{CONCLUSION_CHAPTER_INSTRUCTIONS}
+
+{continuation_text}"""
+
+    # Create additional guidance with proper formatting
+    additional_guidance = ""
+    if num_previous_lessons > 0:
+        guidance_points = ["Build on the consequences of the previous lesson"]
+        if num_previous_lessons > 1:
+            guidance_points.append(
+                "Show how previous lessons have impacted the character"
+            )
+
+        formatted_points = "\n".join(
+            [f"{i + 1}. {point}" for i, point in enumerate(guidance_points)]
+        )
+        additional_guidance = f"## Continuity Guidance\n{formatted_points}"
+
+    # Format the final prompt using the template
+    return USER_PROMPT_TEMPLATE.format(
+        chapter_number=state.current_chapter_number,
+        story_length=state.story_length,
         chapter_type=chapter_type,
-        state=state,
-        lesson_question=lesson_question,
-        consequences_guidance=consequences_guidance,
-        num_previous_lessons=num_previous_lessons,
-        previous_lessons=previous_lessons,
+        story_phase=story_phase,
+        correct_lessons=state.correct_lesson_answers,
+        total_lessons=state.total_lessons,
+        story_history=story_history,
+        phase_guidance=phase_guidance,
+        chapter_instructions=chapter_instructions,
+        additional_guidance=additional_guidance,
     )
 
 
 def format_lesson_history(previous_lessons: List[LessonResponse]) -> str:
-    """Format the lesson history for inclusion in the prompt."""
+    """Format the lesson history for inclusion in the prompt using markdown."""
     history = []
     for i, lesson in enumerate(previous_lessons, 1):
-        history.append(f"Lesson {i}: {lesson.question['question']}")
+        history.append(f"#### Lesson {i}: {lesson.question['question']}")
         history.append(
-            f"Chosen: {lesson.chosen_answer} ({'Correct' if lesson.is_correct else 'Incorrect'})"
+            f"- **Chosen Answer**: {lesson.chosen_answer} ({'✓ Correct' if lesson.is_correct else '✗ Incorrect'})"
         )
         if not lesson.is_correct:
             # Find the correct answer from the answers array
@@ -430,7 +557,7 @@ def format_lesson_history(previous_lessons: List[LessonResponse]) -> str:
                 for answer in lesson.question["answers"]
                 if answer["is_correct"]
             )
-            history.append(f"Correct Answer: {correct_answer}")
+            history.append(f"- **Correct Answer**: {correct_answer}")
         history.append("")  # Add blank line between lessons
     return "\n".join(history)
 

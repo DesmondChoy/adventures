@@ -54,6 +54,47 @@ The project is focused on implementing core Learning Odyssey features, including
 
 ## Recent Changes
 
+### UI Fix - Hide "Swipe to explore" Tip on Desktop (2025-02-28)
+- Fixed an issue where the "Swipe to explore" tip was showing on desktop devices in `app/static/css/carousel.css`:
+  * Added a media query to hide the swipe tip on desktop devices (screen width > 768px)
+  * Kept the tip visible on mobile devices where swiping is a relevant interaction
+  * Maintained the existing functionality where the tip fades out after a few seconds or on user interaction
+  * This improves the user experience by only showing interaction hints that are relevant to the user's device
+
+### Lesson Chapter Prompt Improvement with Story Object Method (2025-02-28)
+- Improved the lesson chapter generation prompt in `app/services/llm/prompt_templates.py` and `app/services/llm/prompt_engineering.py`:
+  * Condensed the CRITICAL RULES to three succinct points for better LLM comprehension
+  * Implemented the "Story Object Method" for creating more intuitive narrative bridges
+  * Added requirement to include the exact question verbatim in the narrative
+  * Provided more flexibility in where the question can appear for more natural flow
+  * Updated the USER_PROMPT_TEMPLATE to be consistent with the new approach
+  * Modified the `_build_chapter_prompt` function to replace the [Core Question] placeholder with the actual question
+  * This addresses issues where the narrative didn't explicitly reference the question being asked, making it difficult for users to answer correctly
+
+### Phase-Specific Choice Instructions Implementation (2025-02-27)
+- Implemented phase-specific choice instructions in `app/services/llm/prompt_templates.py` and `app/services/llm/prompt_engineering.py`:
+  * Created `BASE_CHOICE_FORMAT` with common choice format instructions
+  * Added `CHOICE_PHASE_GUIDANCE` dictionary with appropriate guidance for each phase:
+    - Exposition: "Character Establishment: Choices should reveal character traits and establish initial direction"
+    - Rising: "Plot Development: Choices should subtly hint at the emerging plot twist"
+    - Trials: "Challenge Response: Choices should show different approaches to mounting challenges"
+    - Climax: "Critical Decision: Choices should represent pivotal decisions with significant consequences"
+    - Return: "Resolution: Choices should reflect the character's growth and transformation"
+  * Implemented `get_choice_instructions(phase)` function to get appropriate instructions for a given phase
+  * Updated `prompt_engineering.py` to use phase-specific instructions
+  * Created a test script to verify the implementation
+  * Fixed inconsistency where plot twist guidance was incorrectly appearing in Exposition phase
+  * Ensured plot twist guidance only appears in appropriate phases (Rising, Trials, Climax)
+
+### LLM Prompt Optimization with Markdown Structure (2025-02-27)
+- Restructured LLM prompts in `app/services/llm/prompt_templates.py` and `app/services/llm/prompt_engineering.py`:
+  * Implemented markdown-based structure for better organization and readability
+  * Created clear visual hierarchy with headings and subheadings
+  * Enhanced formatting for lesson answers and lesson history
+  * Fixed continuity guidance formatting issue that was causing empty bullet points
+  * Created a test script to verify the new prompt structure
+  * Improved the overall clarity and effectiveness of prompts for all chapter types
+
 ### Enhanced REASON Chapter Implementation (2025-02-27)
 - Improved `build_reason_chapter_prompt()` in `app/services/llm/prompt_engineering.py`:
   * Added variety to correct answer handling with different challenge types:
@@ -70,6 +111,14 @@ The project is focused on implementing core Learning Odyssey features, including
 See progress.md for detailed change history.
 
 ## Current Considerations
+
+### Prompt Engineering Improvements
+- The Story Object Method provides a more concrete approach to creating narrative bridges:
+  * Uses a single visually interesting story object to connect to the educational question
+  * Makes the connection between story world and educational content more intuitive
+  * Provides open-ended guidance for different question types (historical, scientific, mathematical, geographical)
+  * Ensures the exact question appears verbatim in the narrative
+  * Allows more flexibility in where the question appears for more natural narrative flow
 
 ### State Management System (`app/services/adventure_state_manager.py`)
 - Primary focus:
@@ -92,7 +141,7 @@ See progress.md for detailed change history.
   * Initialization timestamp
   * Element consistency tracking
   * Previous hints tracking
-  * REASON challenge type tracking (new)
+  * REASON challenge type tracking
 - This provides a flexible way to store additional information without changing the core data model
 
 ### Simulation Framework (`tests/simulations/story_simulation.py`)
@@ -128,19 +177,6 @@ See progress.md for detailed change history.
   * Implements robust retry logic for connection failures
   * Functions as intended for both data generation and basic verification
   * Validates element consistency and tracks plot twist development
-
-- Recent optimizations (2025-02-25):
-  * Fixed story length to match codebase (constant 10 chapters)
-  * Removed real-time content streaming for testing efficiency
-  * Enhanced logging with standardized prefixes for automated parsing:
-    - `CHAPTER_TYPE:` - Logs chapter types (STORY, LESSON, CONCLUSION)
-    - `CHOICE:` - Logs user choice selections
-    - `LESSON:` - Logs lesson answer correctness
-    - `STATS:` - Logs story completion statistics
-  * Added content preview logging for better traceability
-  * Updated documentation with detailed implementation information
-  * Renamed README.md to SIMULATION_GUIDE.md for clarity
-  * Clarified the simulation's role as a data generation tool rather than a test suite
 
 - Test integration:
   * Both test files analyze the simulation output from different perspectives

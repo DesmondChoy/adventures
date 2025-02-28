@@ -1,5 +1,218 @@
 # Progress Log
 
+## 2025-02-28: UI Fix - Hide "Swipe to explore" Tip on Desktop
+
+### Problem
+The "Swipe to explore" tip was showing on desktop devices, even though swiping is only a feature available on mobile devices. This created a confusing user experience on desktop where users navigate using arrow buttons or keyboard instead of swiping.
+
+### Requirements
+- Hide the "Swipe to explore" tip on desktop devices
+- Keep the tip visible on mobile devices where swiping is a relevant interaction
+- Maintain the existing functionality where the tip fades out after a few seconds or on user interaction
+
+### Solution
+Added a media query to `app/static/css/carousel.css` to hide the swipe tip on desktop devices:
+```css
+/* Hide swipe tip on desktop */
+@media (min-width: 769px) {
+    .swipe-tip {
+        display: none;
+    }
+}
+```
+
+### Results
+The implementation successfully:
+1. Hides the "Swipe to explore" tip on desktop devices (screen width > 768px)
+2. Keeps the tip visible on mobile devices (screen width ≤ 768px) where swiping is relevant
+3. Maintains the existing functionality where the tip fades out after a few seconds or when the user interacts with the carousel
+4. Improves the user experience by only showing interaction hints that are relevant to the user's device
+
+## 2025-02-28: Lesson Chapter Prompt Improvement with Story Object Method
+
+### Problem
+The lesson chapter generation prompt had several issues:
+1. The narrative often didn't explicitly reference the question being asked, making it difficult for users to answer correctly
+2. The thematic bridge between the story world and educational content felt forced and disconnected
+3. The instructions were overly complex and difficult for the LLM to follow consistently
+
+### Requirements
+- Ensure the exact question is included verbatim in the narrative
+- Create a more intuitive way to bridge between the story world and educational questions
+- Simplify the instructions for better LLM comprehension
+- Allow more flexibility in where the question appears in the narrative
+
+### Solution
+1. Condensed the CRITICAL RULES to three succinct points in `prompt_templates.py`:
+   ```markdown
+   # CRITICAL RULES
+   1. NEVER mention any answer options in your narrative, but DO include the exact question "[Core Question]" verbatim somewhere in the story.
+   2. Create ONE visually interesting story object (artifact, phenomenon, pattern, or map) that naturally connects to the question and makes it relevant to the character's journey.
+   3. Make the question feel like a natural part of the story world, with clear stakes for why answering it matters to the characters.
+   ```
+
+2. Implemented the "Story Object Method" for creating narrative bridges:
+   ```markdown
+   ## Narrative Bridge - The Story Object Method
+   1. Identify ONE story object or element that can naturally connect to the [Core Question]:
+      - For historical questions: Something that preserves or reveals the past
+      - For scientific questions: Something that demonstrates or relates to natural phenomena
+      - For mathematical questions: Something involving patterns, quantities, or relationships
+      - For geographical questions: Something that represents places or spatial relationships
+
+   2. Make this story element:
+      - Visually interesting (describe how it appears in the story world)
+      - Relevant to the plot (connect it to the character's journey)
+      - Mysterious or incomplete (create a reason to seek the answer)
+
+   3. Include the exact question "[Core Question]" somewhere in the narrative:
+      - It can be in dialogue, a character's thoughts, or written text within the story
+      - The question should feel natural in context
+      - The narrative should build toward this question, making it feel important
+   ```
+
+3. Modified the `_build_chapter_prompt` function in `prompt_engineering.py` to replace the [Core Question] placeholder with the actual question:
+   ```python
+   {LESSON_CHAPTER_INSTRUCTIONS.replace("[Core Question]", f'"{lesson_question["question"]}"')}
+   ```
+
+4. Updated the USER_PROMPT_TEMPLATE to be consistent with the new approach:
+   ```markdown
+   # CRITICAL RULES
+   For LESSON chapters: Include the exact question verbatim, but NEVER mention any answer options.
+   ```
+
+### Results
+The implementation successfully:
+1. Ensures the exact question appears verbatim in the narrative so users know what they're being asked
+2. Creates a more intuitive approach using a single concrete story object as the bridge
+3. Provides more flexibility in where the question can appear for more natural narrative flow
+4. Simplifies the instructions for better LLM comprehension
+5. Maintains the core requirement that answer options are never mentioned
+
+This approach should result in lesson chapters that feel more organic and integrated while still clearly presenting the educational question to the user.
+
+## 2025-02-27: Phase-Specific Choice Instructions Implementation
+
+### Problem
+The choice format instructions in the Learning Odyssey application included guidance about plot twists in all story phases, including the Exposition phase. However, according to the plot twist development pattern, plot twist elements should only be introduced starting from the Rising phase, not in the Exposition phase.
+
+### Requirements
+- Ensure plot twist guidance only appears in appropriate phases (Rising, Trials, Climax)
+- Create phase-specific choice instructions for each story phase
+- Maintain consistent format and structure across all phases
+- Implement a clean, maintainable solution that integrates with existing systems
+- Create a test script to verify the implementation
+
+### Solution
+1. Modified `prompt_templates.py` to implement phase-specific choice instructions:
+   ```python
+   # Base choice format (common elements for all phases)
+   BASE_CHOICE_FORMAT = """# Choice Format
+   Use this EXACT format for the choices, with NO indentation and NO line breaks within choices:
+   
+   <CHOICES>
+   Choice A: [First choice description]
+   Choice B: [Second choice description]
+   Choice C: [Third choice description]
+   </CHOICES>
+   
+   ## Rules
+   1. Format: Start and end with <CHOICES> tags on their own lines, with exactly three choices
+   2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
+   3. Content: Make each choice meaningful, distinct, and advance the plot in interesting ways"""
+   
+   # Phase-specific choice guidance
+   CHOICE_PHASE_GUIDANCE: Dict[str, str] = {
+       "Exposition": "4. Character Establishment: Choices should reveal character traits and establish initial direction",
+       "Rising": "4. Plot Development: Choices should subtly hint at the emerging plot twist",
+       "Trials": "4. Challenge Response: Choices should show different approaches to mounting challenges",
+       "Climax": "4. Critical Decision: Choices should represent pivotal decisions with significant consequences",
+       "Return": "4. Resolution: Choices should reflect the character's growth and transformation"
+   }
+   
+   def get_choice_instructions(phase: str) -> str:
+       """Get the appropriate choice instructions for a given story phase."""
+       base = BASE_CHOICE_FORMAT
+       phase_guidance = CHOICE_PHASE_GUIDANCE.get(phase, CHOICE_PHASE_GUIDANCE["Rising"])
+       return f"{base}\n\n{phase_guidance}"
+   
+   # Keep the original for backward compatibility
+   CHOICE_FORMAT_INSTRUCTIONS = get_choice_instructions("Rising")
+   ```
+
+2. Updated `prompt_engineering.py` to use the new phase-specific instructions:
+   ```python
+   # In the imports section, added:
+   from app.services.llm.prompt_templates import get_choice_instructions
+   
+   # In _build_chapter_prompt function, replaced:
+   {CHOICE_FORMAT_INSTRUCTIONS}
+   
+   # With:
+   {get_choice_instructions(story_phase)}
+   
+   # Also updated build_user_prompt function similarly
+   ```
+
+3. Created a test script `app/services/llm/test_phase_choice_instructions.py` to verify the implementation:
+   - Tests each phase to ensure it gets the appropriate choice instructions
+   - Verifies that the plot twist guidance only appears in Rising, Trials, and Climax phases
+   - Confirms that the fallback behavior works correctly for unknown phases
+
+### Results
+The implementation successfully:
+1. Ensures plot twist guidance only appears in appropriate phases (Rising, Trials, Climax)
+2. Provides phase-appropriate guidance for each story phase:
+   - Exposition: Focus on character establishment
+   - Rising: Subtle hints at the plot twist
+   - Trials: Different approaches to challenges
+   - Climax: Pivotal decisions with consequences
+   - Return: Character growth and transformation
+3. Maintains consistent format and structure across all phases
+4. Integrates cleanly with the existing prompt engineering system
+5. Provides backward compatibility through the original CHOICE_FORMAT_INSTRUCTIONS constant
+6. Verifies correct behavior through comprehensive testing
+
+## 2025-02-27: LLM Prompt Optimization with Markdown Structure
+
+### Problem
+The LLM prompts in the Learning Odyssey application were lengthy and not optimally structured, making them harder to parse for both humans and the LLM. Additionally, there was a formatting issue in the continuity guidance section that was causing empty bullet points when there was only one previous lesson.
+
+### Requirements
+- Restructure LLM prompts to be more organized and readable
+- Create a clear visual hierarchy with markdown headings and subheadings
+- Enhance formatting for lesson answers and lesson history
+- Fix the continuity guidance formatting issue
+- Create a test script to verify the new prompt structure
+- Improve the overall clarity and effectiveness of prompts for all chapter types
+
+### Solution
+1. Restructured the system prompt and user prompt templates in `app/services/llm/prompt_templates.py` to use markdown headings and formatting
+2. Enhanced the formatting of lesson answers and lesson history in `app/services/llm/prompt_engineering.py`
+3. Fixed the continuity guidance formatting issue in `build_user_prompt()` by using a more robust approach:
+   ```python
+   additional_guidance = ""
+   if num_previous_lessons > 0:
+       guidance_points = ["Build on the consequences of the previous lesson"]
+       if num_previous_lessons > 1:
+           guidance_points.append("Show how previous lessons have impacted the character")
+       
+       formatted_points = "\n".join([f"{i+1}. {point}" for i, point in enumerate(guidance_points)])
+       additional_guidance = f"## Continuity Guidance\n{formatted_points}"
+   ```
+4. Created a test script `app/services/llm/test_prompt.py` to verify the new prompt structure
+5. Improved the overall clarity and effectiveness of prompts for all chapter types
+
+### Results
+The implementation successfully:
+1. Created a more organized and readable prompt structure using markdown
+2. Established a clear visual hierarchy with headings and subheadings
+3. Enhanced the formatting of lesson answers and lesson history
+4. Fixed the continuity guidance formatting issue
+5. Verified the new prompt structure with a test script
+6. Improved the overall clarity and effectiveness of prompts for all chapter types
+
 ## 2025-02-27: Chapter Sequence Optimization Tradeoff
 
 ### Problem
