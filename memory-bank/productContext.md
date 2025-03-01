@@ -79,6 +79,11 @@ Learning Odyssey solves these challenges through:
     *   Generates narratives using LLM.
     *   Ensures no question repetition.
     *   Implements a consequence system.
+    *   Visual content generation:
+        *   Generates images for Chapter 1 agency choices
+        *   Uses Gemini Imagen API for high-quality illustrations
+        *   Enhances user engagement with visual representations
+        *   Asynchronous processing to maintain performance
     *   Story elements management:
         *   Non-random elements (name, description, tone)
         *   Random narrative and sensory elements

@@ -12,6 +12,49 @@
     <link rel="stylesheet" href="/static/css/carousel.css">
     <style>
         /* Any remaining non-typography styles can stay here */
+        
+        /* Choice image styles */
+        .choice-image-container {
+            transition: all 0.3s ease-in-out;
+            max-height: 200px;
+            overflow: hidden;
+            margin-top: 0.75rem;
+            border-radius: 0.5rem;
+        }
+
+        .choice-image-container img {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            border-radius: 0.5rem;
+        }
+
+        .choice-card {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .choice-content {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        @media (min-width: 768px) {
+            .choice-content {
+                flex-direction: row;
+            }
+            
+            .choice-text {
+                flex: 2;
+                padding-right: 1rem;
+            }
+            
+            .choice-image-container {
+                flex: 1;
+                margin-top: 0;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -627,11 +670,67 @@ function startAdventure() {
                     appendStoryText(data.content);
                 } else if (data.type === 'story_complete') {
                     displayStats(data.state);
+                } else if (data.type === 'choice_image_update') {
+                    // Handle image updates for choices
+                    updateChoiceWithImage(data.choice_index, data.image_data);
                 }
             } catch (e) {
                 // Assume it's plain text if JSON parsing fails
                 hideLoader();
                 appendStoryText(event.data);
+            }
+        }
+
+        // Function to update a choice with an image
+        function updateChoiceWithImage(choiceIndex, imageData) {
+            const choicesContainer = document.getElementById('choicesContainer');
+            const choiceButtons = choicesContainer.querySelectorAll('button.choice-card');
+            
+            if (choiceIndex >= 0 && choiceIndex < choiceButtons.length) {
+                const choiceButton = choiceButtons[choiceIndex];
+                
+                // Create image element if it doesn't exist
+                let imageContainer = choiceButton.querySelector('.choice-image-container');
+                if (!imageContainer) {
+                    const contentDiv = choiceButton.querySelector('.choice-content');
+                    
+                    if (!contentDiv) {
+                        // If we don't have the new structure, create it
+                        const oldContent = choiceButton.innerHTML;
+                        choiceButton.innerHTML = '';
+                        
+                        const newContentDiv = document.createElement('div');
+                        newContentDiv.className = 'choice-content';
+                        
+                        const textDiv = document.createElement('div');
+                        textDiv.className = 'choice-text';
+                        textDiv.innerHTML = oldContent;
+                        
+                        imageContainer = document.createElement('div');
+                        imageContainer.className = 'choice-image-container';
+                        
+                        newContentDiv.appendChild(textDiv);
+                        newContentDiv.appendChild(imageContainer);
+                        choiceButton.appendChild(newContentDiv);
+                    } else {
+                        // If we have the content div but no image container
+                        imageContainer = document.createElement('div');
+                        imageContainer.className = 'choice-image-container';
+                        contentDiv.appendChild(imageContainer);
+                    }
+                }
+                
+                // Add or update image
+                imageContainer.innerHTML = `<img src="data:image/jpeg;base64,${imageData}" alt="Illustration of choice" class="w-full h-auto rounded-lg">`;
+                imageContainer.style.display = 'block';
+                
+                // Add fade-in animation
+                const img = imageContainer.querySelector('img');
+                img.style.opacity = '0';
+                img.style.transition = 'opacity 0.5s ease-in-out';
+                setTimeout(() => {
+                    img.style.opacity = '1';
+                }, 50);
             }
         }
 
@@ -904,16 +1003,28 @@ function startAdventure() {
                 
                 button.className = baseClasses.join(' ');
                 
-                // Create inner content wrapper for better organization
+                // Create content wrapper with text and image areas
                 const contentWrapper = document.createElement('div');
-                contentWrapper.className = 'relative z-10';
+                contentWrapper.className = 'choice-content';
+                
+                // Create text container
+                const textContainer = document.createElement('div');
+                textContainer.className = 'choice-text';
                 
                 // Add main choice text
                 const textElement = document.createElement('p');
                 textElement.className = 'text-gray-800 text-lg font-medium group-hover:text-gray-900 transition-colors duration-300';
                 textElement.textContent = choice.text;
                 
-                contentWrapper.appendChild(textElement);
+                textContainer.appendChild(textElement);
+                contentWrapper.appendChild(textContainer);
+                
+                // Create image container (initially empty)
+                const imageContainer = document.createElement('div');
+                imageContainer.className = 'choice-image-container';
+                imageContainer.style.display = 'none'; // Hide until image is loaded
+                contentWrapper.appendChild(imageContainer);
+                
                 button.appendChild(contentWrapper);
 
                 button.onclick = (e) => {

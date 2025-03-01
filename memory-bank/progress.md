@@ -1,5 +1,80 @@
 # Progress Log
 
+## 2025-03-01: Standardized Image Generation Service Configuration
+
+### Problem
+The `ImageGenerationService` was using a different configuration pattern than the `GeminiService` in the LLM integration. This inconsistency made the codebase harder to maintain and understand.
+
+### Requirements
+- Align the `ImageGenerationService` configuration with the `GeminiService` pattern
+- Standardize environment variable usage across services
+- Improve error handling and logging
+- Ensure compatibility with the existing WebSocket service
+
+### Solution
+1. Updated the environment variable from `GEMINI_API_KEY` to `GOOGLE_API_KEY` to match the GeminiService:
+   ```python
+   # Before
+   self.api_key = os.getenv("GEMINI_API_KEY")
+   if not self.api_key:
+       logger.warning("GEMINI_API_KEY not found in environment variables")
+   self.client = genai.Client(api_key=self.api_key)
+   
+   # After
+   api_key = os.getenv("GOOGLE_API_KEY")
+   if not api_key:
+       logger.warning("GOOGLE_API_KEY is not set in environment variables!")
+   genai.configure(api_key=api_key)
+   ```
+
+2. Modified the image generation method to use the configured API directly:
+   ```python
+   # Before
+   response = self.client.models.generate_images(
+       model=self.model,
+       prompt=prompt,
+       config=types.GenerateImagesConfig(
+           number_of_images=1,
+       ),
+   )
+   
+   # After
+   response = genai.generate_images(
+       model=self.model,
+       prompt=prompt,
+       generation_config=types.GenerateImagesConfig(
+           number_of_images=1,
+       ),
+   )
+   ```
+
+3. Added enhanced debug logging similar to GeminiService:
+   ```python
+   logger.debug("\n=== DEBUG: Image Generation Request ===")
+   logger.debug(f"Prompt: {prompt}")
+   logger.debug(f"Model: {self.model}")
+   logger.debug("========================\n")
+   ```
+
+4. Updated the response handling to match the expected structure:
+   ```python
+   # Before
+   if response.generated_images:
+       image = Image.open(BytesIO(response.generated_images[0].image.image_bytes))
+   
+   # After
+   if response.images:
+       image = Image.open(BytesIO(response.images[0].bytes))
+   ```
+
+### Results
+The implementation successfully:
+1. Aligned the `ImageGenerationService` configuration with the `GeminiService` pattern
+2. Standardized environment variable usage to `GOOGLE_API_KEY` across services
+3. Improved error handling and logging for better debugging
+4. Maintained compatibility with the existing WebSocket service
+5. Made the codebase more consistent and easier to maintain
+
 ## 2025-02-28: Fixed Syntax Error in F-String
 
 ### Problem
