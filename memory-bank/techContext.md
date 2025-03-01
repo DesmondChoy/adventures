@@ -178,6 +178,20 @@
   - Element consistency validation
   - Narrative continuity enforcement
 
+### Image Generation (`app/services/image_generation_service.py`)
+* Gemini Imagen API integration
+* Asynchronous processing
+* Base64 image encoding for WebSocket transmission
+* Error handling with retries and exponential backoff
+* Prompt enhancement for better image quality
+* Environment configuration:
+  - Uses GOOGLE_API_KEY environment variable
+  - Shares API key with GeminiService
+* Integration with WebSocket service:
+  - Generates images for Chapter 1 agency choices
+  - Sends images asynchronously as they become available
+  - Maintains text streaming performance
+
 ### Story Elements (`app/services/chapter_manager.py`)
 * Comprehensive element selection
 * Metadata tracking for consistency

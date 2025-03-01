@@ -3,6 +3,7 @@ from fastapi import WebSocket
 import asyncio
 import logging
 import re
+from app.services.image_generation_service import ImageGenerationService
 from app.models.story import (
     ChapterType,
     ChapterContent,
@@ -26,6 +27,7 @@ PARAGRAPH_DELAY = 0.1  # Delay between paragraphs
 logger = logging.getLogger("story_app")
 llm_service = LLMService()
 chapter_manager = ChapterManager()
+image_service = ImageGenerationService()
 
 
 async def process_choice(
@@ -381,6 +383,28 @@ async def stream_and_send_chapter(
         r"^Chapter\s+\d+:\s*", "", chapter_content.content, flags=re.MULTILINE
     ).strip()
 
+    # Get chapter type for current chapter
+    current_chapter_number = len(state.chapters)
+    chapter_type = state.planned_chapter_types[current_chapter_number - 1]
+    if not isinstance(chapter_type, ChapterType):
+        chapter_type = ChapterType(chapter_type)
+
+    # Start image generation for Chapter 1 agency choices
+    image_tasks = []
+    if current_chapter_number == 1 and chapter_type == ChapterType.STORY:
+        logger.info("Starting image generation for Chapter 1 agency choices")
+
+        # Start async image generation for each choice
+        for i, choice in enumerate(chapter_content.choices):
+            # Create a more descriptive prompt for better image generation
+            prompt = image_service.enhance_prompt(choice.text)
+            image_tasks.append(
+                (i, asyncio.create_task(image_service.generate_image_async(prompt)))
+            )
+            logger.debug(
+                f"Started image generation task for choice {i + 1}: {choice.text}"
+            )
+
     # Split content into paragraphs and stream
     paragraphs = [p.strip() for p in content_to_stream.split("\n\n") if p.strip()]
     for paragraph in paragraphs:
@@ -390,12 +414,6 @@ async def stream_and_send_chapter(
             await asyncio.sleep(WORD_DELAY)
         await websocket.send_text("\n\n")
         await asyncio.sleep(PARAGRAPH_DELAY)
-
-    # Get chapter type for current chapter
-    current_chapter_number = len(state.chapters)
-    chapter_type = state.planned_chapter_types[current_chapter_number - 1]
-    if not isinstance(chapter_type, ChapterType):
-        chapter_type = ChapterType(chapter_type)
 
     # Send complete chapter data with choices included
     chapter_data = {
@@ -434,6 +452,31 @@ async def stream_and_send_chapter(
             ],
         }
     )
+
+    # If we have image tasks, wait for them to complete and send updates
+    if image_tasks:
+        logger.info(
+            f"Waiting for {len(image_tasks)} image generation tasks to complete"
+        )
+        for i, task in image_tasks:
+            try:
+                image_data = await task
+                if image_data:
+                    logger.info(f"Image generated for choice {i + 1}, sending update")
+                    # Send image update for this choice
+                    await websocket.send_json(
+                        {
+                            "type": "choice_image_update",
+                            "choice_index": i,
+                            "image_data": image_data,
+                        }
+                    )
+                else:
+                    logger.warning(f"No image data generated for choice {i + 1}")
+            except Exception as e:
+                logger.error(
+                    f"Error waiting for image generation task {i + 1}: {str(e)}"
+                )
 
 
 async def send_story_complete(

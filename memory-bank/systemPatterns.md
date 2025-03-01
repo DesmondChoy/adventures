@@ -10,6 +10,7 @@ graph TD
     ASM <--> CM[Chapter Manager]
     CM <--> LLM[LLM Service]
     CM <--> DB[(Database)]
+    WSS <--> IMG[Image Generation Service]
 
     subgraph Client Side
         LP[localStorage] <--> CSM[Client State Manager]
@@ -25,6 +26,7 @@ graph TD
         ASM
         CM
         LLM
+        IMG
     end
 
     subgraph Routing
@@ -34,6 +36,7 @@ graph TD
     subgraph Content Sources
         CSV[lessons.csv] --> CM
         LLM --> CM
+        IMG --> WSS
     end
 ```
 
@@ -265,8 +268,54 @@ graph TD
 - LLM-generated narratives (via `app/services/llm/prompt_engineering.py`).
 - LLM-generated story choices (via `app/services/llm/prompt_engineering.py`).
 - LLM-generated conclusions (via `app/services/llm/prompt_engineering.py`).
+- Image generation for Chapter 1 agency choices (via `app/services/image_generation_service.py`).
 - Narrative continuity enforcement.
 - Consequence handling.
+
+### 10. Image Generation Pattern (`app/services/image_generation_service.py`)
+```mermaid
+flowchart TD
+    A[Chapter 1 STORY] --> B[User Makes Agency Choice]
+    B --> C[WebSocket Service]
+    C --> D[Start Async Image Generation]
+    D --> E[Generate Images for All Choices]
+    E --> F[Send Images as They Complete]
+    F --> G[Client Updates UI with Images]
+    
+    subgraph "Asynchronous Processing"
+        D
+        E
+        F
+    end
+    
+    subgraph "Client-Side Handling"
+        G --> H[Fade In Images]
+        G --> I[Responsive Layout Adjustment]
+    end
+```
+
+- **Implementation Details:**
+  * Asynchronous processing to maintain text streaming performance
+  * Gemini Imagen API integration for high-quality illustrations
+  * Prompt enhancement for better image quality
+  * Error handling with retries and exponential backoff
+  * Base64 image encoding for WebSocket transmission
+  * Progressive enhancement (text first, images as they become available)
+  * Responsive design for both desktop and mobile views
+
+- **Integration with WebSocket Service:**
+  * Image generation starts after Chapter 1 content is streamed
+  * Each choice gets a corresponding image
+  * Images are sent to client as they become available
+  * Client handles image updates through the `choice_image_update` message type
+  * Fallback to text-only if image generation fails
+
+- **Technical Considerations:**
+  * Environment configuration uses `GOOGLE_API_KEY` (shared with GeminiService)
+  * Configurable retry mechanism for API failures
+  * Detailed logging for debugging
+  * Memory management for large image data
+  * Graceful degradation if image service is unavailable
 
 ## Story Elements Pattern
 1.  Element Selection from `new_stories.yaml`:

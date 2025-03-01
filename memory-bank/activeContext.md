@@ -55,6 +55,15 @@ The project is focused on implementing core Learning Odyssey features, including
 
 ## Recent Changes
 
+### Standardized Image Generation Service Configuration (2025-03-01)
+- Updated the `ImageGenerationService` in `app/services/image_generation_service.py` to match the GeminiService pattern:
+  * Changed environment variable from `GEMINI_API_KEY` to `GOOGLE_API_KEY` for consistency
+  * Updated API initialization to use `genai.configure()` instead of creating a client directly
+  * Modified the image generation method to use the configured API
+  * Added enhanced debug logging similar to GeminiService
+  * Updated response handling to match the expected structure
+  * This standardization makes the codebase more consistent and easier to maintain
+
 ### REFLECT Chapter Refactoring for Narrative Integration (2025-02-28)
 - Refactored the REFLECT chapter implementation in `app/services/llm/prompt_templates.py` and `app/services/llm/prompt_engineering.py`:
   * Created a unified narrative-driven approach for both correct and incorrect answers
@@ -130,6 +139,18 @@ The project is focused on implementing core Learning Odyssey features, including
 See progress.md for detailed change history.
 
 ## Current Considerations
+
+### Image Generation for Chapter 1 Agency Choices
+- The application now generates images for Chapter 1 agency choices:
+  * Images are generated asynchronously after the chapter content is streamed
+  * Each choice gets a corresponding image that visually represents the option
+  * Images are sent to the client as they become available
+  * The client updates the UI with images using a fade-in animation
+  * The implementation uses the Gemini Imagen API for high-quality illustrations
+  * Prompt enhancement improves image quality and relevance
+  * Error handling with retries ensures reliability
+  * Progressive enhancement ensures text is always available first
+  * Responsive design adapts image display for both desktop and mobile
 
 ### Agency Implementation
 The adventure now includes a form of agency through a pivotal choice made in the first chapter:
