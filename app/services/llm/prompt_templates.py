@@ -9,7 +9,200 @@ chapter types and scenarios.
 
 import re
 import random
-from typing import Dict
+from typing import Dict, Tuple
+
+# System Prompt Template
+# ---------------------
+
+SYSTEM_PROMPT_TEMPLATE = """# Storyteller Role
+You are a master storyteller crafting an interactive educational story that seamlessly blends narrative and learning.
+
+# Story Elements
+- **Setting**: {setting_types}
+- **Character**: {character_archetypes}
+- **Rule**: {story_rules}
+- **Theme**: {selected_theme}
+- **Moral Teaching**: {selected_moral_teaching}
+- **Sensory Details**:
+  - Visual: {visuals}
+  - Sound: {sounds}
+  - Scent: {smells}
+
+# Storytelling Approach & Agency Integration
+1. Maintain narrative consistency with meaningful consequences for decisions
+2. Seamlessly integrate educational content while developing theme/moral teaching organically
+3. Structure content with multiple paragraphs and blank lines for readability
+4. Incorporate sensory details naturally to enhance immersion
+5. The character's pivotal first-chapter choice (item, companion, role, or ability):
+   - Represents a core aspect of their identity
+   - Must be referenced consistently throughout ALL chapters
+   - Should evolve as the character learns and grows
+   - Will play a crucial role in the story's climax
+   - Should feel like a natural part of the narrative
+
+# CRITICAL RULES
+1. **Narrative Structure**: Begin directly (never with "Chapter X"), end at natural decision points, maintain consistent elements
+2. **Content Development**: Incorporate sensory details naturally, develop theme organically, balance entertainment with learning
+3. **Educational Integration**: Ensure lessons feel organic to the story, never forced or artificial
+4. **Agency Integration**: Weave the character's pivotal choice naturally throughout, showing its evolution and impact
+5. **Choice Format**: Use <CHOICES> tags, format as "Choice [A/B/C]: [description]" on single lines, make choices meaningful and distinct"""
+
+# User Prompt Templates
+# --------------------
+
+# First Chapter Prompt Template
+FIRST_CHAPTER_PROMPT = """# Current Context
+- Chapter: {chapter_number} of {story_length}
+- Type: {chapter_type}
+- Phase: {story_phase}
+- Progress: {correct_lessons}/{total_lessons} lessons correct
+
+# Story History
+{story_history}
+
+# Chapter Development Guidelines
+1. **Exposition Focus**: {exposition_focus}
+2. **Character Introduction**: Establish the protagonist through vivid sensory details
+3. **World Building**: Create an immersive setting using the sensory elements
+4. **Decision Point**: Build naturally to a pivotal choice that will shape the character's journey
+
+# Agency Options: {agency_category_name}
+{agency_options}
+
+# Choice Format Specification
+<CHOICES>
+Choice A: [Option that reveals character traits and establishes initial direction]
+Choice B: [Option that offers a different approach or value system]
+Choice C: [Option that presents an alternative path with unique consequences]
+</CHOICES>"""
+
+# Story Chapter Prompt Template
+STORY_CHAPTER_PROMPT = """# Current Context
+- Chapter: {chapter_number} of {story_length}
+- Type: {chapter_type}
+- Phase: {story_phase}
+- Progress: {correct_lessons}/{total_lessons} lessons correct
+
+# Story History
+{story_history}
+
+# Chapter Development Guidelines
+1. **Exposition Focus**: {exposition_focus}
+2. **Previous Impact**: {consequences_guidance if consequences_guidance else "Continue the narrative journey"}
+{lesson_history if lesson_history else ""}
+{agency_guidance}
+
+# Story Chapter Instructions
+1. Follow directly from the previous chapter content
+2. Take into account previous choices made in the story
+3. Create meaningful consequences for these decisions
+4. Focus on character development and plot progression
+5. Build towards a natural story decision point
+6. End the scene at a moment of decision
+
+{plot_twist_guidance}
+
+# Choice Format Specification
+<CHOICES>
+Choice A: [First meaningful option]
+Choice B: [Second meaningful option]
+Choice C: [Third meaningful option]
+</CHOICES>"""
+
+# Lesson Chapter Prompt Template
+LESSON_CHAPTER_PROMPT = """# Current Context
+- Chapter: {chapter_number} of {story_length}
+- Type: {chapter_type}
+- Phase: {story_phase}
+- Progress: {correct_lessons}/{total_lessons} lessons correct
+
+# Story History
+{story_history}
+
+# Chapter Development Guidelines
+1. **Exposition Focus**: {exposition_focus}
+2. **Previous Impact**: {consequences_guidance if consequences_guidance else "Introduce a new learning opportunity"}
+{lesson_history if lesson_history else ""}
+{agency_guidance}
+
+# Lesson Chapter Instructions
+1. **Core Question Integration**: Include this exact question in your narrative: "{question}"
+2. **Story Object Method**: Create ONE visually interesting element that naturally connects to the question
+3. **Narrative Integration**: Make the question feel like a natural part of the character's journey
+4. **Educational Context**: Establish clear stakes for why answering matters to the characters
+
+# Available Answers
+{formatted_answers}"""
+
+# Reflect Chapter Prompt Template
+REFLECT_CHAPTER_PROMPT = """# Current Context
+- Chapter: {chapter_number} of {story_length}
+- Type: {chapter_type}
+- Phase: {story_phase}
+- Progress: {correct_lessons}/{total_lessons} lessons correct
+
+# Story History
+{story_history}
+
+# Chapter Development Guidelines
+1. **Exposition Focus**: {exposition_focus}
+2. **Reflection Purpose**: Process the previous lesson's understanding
+
+# Narrative-Driven Reflection
+The character previously answered: "{question}" with "{chosen_answer}" ({answer_status})
+{correct_answer_info}
+
+{reflective_technique}
+
+## Scene Structure
+1. **Narrative Acknowledgment**: {acknowledgment_guidance}
+2. **Socratic Exploration**: Guide the character to {exploration_goal} through thoughtful questions
+3. **Story Integration**: Connect this reflection to the ongoing narrative and theme of "{theme}"
+{agency_guidance}
+
+## Choice Structure
+Create three story-driven choices that reflect different ways to process what was learned.
+Each choice should advance the plot in meaningful ways without being labeled as "correct" or "incorrect".
+
+# Choice Format Specification
+<CHOICES>
+Choice A: [First story-driven choice]
+Choice B: [Second story-driven choice]
+Choice C: [Third story-driven choice]
+</CHOICES>
+
+# CRITICAL RULES
+1. Format: Start and end with <CHOICES> tags on their own lines
+2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
+3. Content: Make each choice meaningful, distinct, and advance the story in different ways
+4. Narrative Focus: All choices should be story-driven without any being labeled as "correct" or "incorrect"
+5. Character Growth: Each choice should reflect a different way the character might process or apply what they've learned"""
+
+# Conclusion Chapter Prompt Template
+CONCLUSION_CHAPTER_PROMPT = """# Current Context
+- Chapter: {chapter_number} of {story_length}
+- Type: {chapter_type}
+- Phase: {story_phase}
+- Progress: {correct_lessons}/{total_lessons} lessons correct
+
+# Story History
+{story_history}
+
+# Chapter Development Guidelines
+1. **Exposition Focus**: {exposition_focus}
+2. **Conclusion Purpose**: Provide a satisfying resolution to the journey
+{lesson_history if lesson_history else ""}
+
+# Conclusion Chapter Instructions
+1. **Resolution Focus**: Provide a complete and satisfying resolution to all plot threads
+2. **Character Growth**: Show how the journey and choices have transformed the character
+3. **Educational Integration**: Incorporate wisdom gained from the educational journey
+4. **Agency Resolution**: {agency_resolution_guidance}
+
+# CRITICAL RULES
+1. This is the final chapter - provide a complete and satisfying conclusion
+2. DO NOT include any choices or decision points
+3. End with a sense of closure while highlighting transformation"""
 
 # Choice format instructions
 # --------------------------
@@ -46,6 +239,7 @@ def get_choice_instructions(phase: str) -> str:
     return f"{base}\n\n{phase_guidance}"
 
 
+# Reflect choice format
 REFLECT_CHOICE_FORMAT = """# Choice Format
 Use this EXACT format for the choices, with NO indentation and NO line breaks within choices:
 
@@ -65,95 +259,74 @@ Choice C: [Third story-driven choice]
 # Agency choice categories
 # -----------------------
 
-AGENCY_CHOICE_CATEGORIES = """# Agency Choice Categories
-The character should make one of these meaningful choices that will impact their journey:
 
-## Magical Items to Craft
-- A Luminous Lantern that reveals hidden truths and illuminates dark places
-- A Sturdy Rope that helps overcome physical obstacles and bridges gaps
-- A Mystical Amulet that enhances intuition and provides subtle guidance
-- A Weathered Map that reveals new paths and hidden locations
-- A Pocket Watch that helps with timing and occasionally glimpses the future
-- A Healing Potion that restores strength and provides clarity of mind
+def get_agency_category() -> Tuple[str, str]:
+    """Randomly select one agency category and return its name and formatted options."""
+    # Categories with their options (more concise descriptions)
+    categories = {
+        "Magical Items to Craft": [
+            "Luminous Lantern - reveals hidden truths and illuminates dark places",
+            "Sturdy Rope - overcomes physical obstacles and bridges gaps",
+            "Mystical Amulet - enhances intuition and provides subtle guidance",
+            "Weathered Map - reveals new paths and hidden locations",
+            "Pocket Watch - helps with timing and glimpses possible futures",
+            "Healing Potion - restores strength and provides clarity of mind",
+        ],
+        "Companions to Choose": [
+            "Wise Owl - offers knowledge and explanations",
+            "Brave Fox - excels in courage and action-oriented tasks",
+            "Clever Squirrel - skilled in problem-solving and improvisation",
+            "Gentle Deer - provides emotional support and peaceful solutions",
+            "Playful Otter - brings joy and finds unexpected approaches",
+            "Steadfast Turtle - offers patience and protection in difficult times",
+        ],
+        "Roles or Professions": [
+            "Healer - mends wounds and restores balance",
+            "Scholar - values knowledge and understanding",
+            "Guardian - protects others and stands against threats",
+            "Pathfinder - discovers new routes and possibilities",
+            "Diplomat - resolves conflicts through communication",
+            "Craftsperson - builds and creates solutions",
+        ],
+        "Special Abilities": [
+            "Animal Whisperer - communicates with creatures",
+            "Puzzle Master - excels at solving riddles and mysteries",
+            "Storyteller - charms others with words and narratives",
+            "Element Bender - connects with natural forces",
+            "Dream Walker - glimpses insights through dreams",
+            "Pattern Seer - notices connections others miss",
+        ],
+    }
 
-## Companions to Choose
-- A Wise Owl that offers knowledge and explanations
-- A Brave Fox that excels in courage and action-oriented tasks
-- A Clever Squirrel that's skilled in problem-solving and improvisation
-- A Gentle Deer that provides emotional support and finds peaceful solutions
-- A Playful Otter that brings joy and finds unexpected approaches
-- A Steadfast Turtle that offers patience and protection in difficult times
+    # Select a random category
+    category_name = random.choice(list(categories.keys()))
 
-## Roles or Professions
-- A Healer who can mend wounds and restore balance
-- A Scholar who values knowledge and understanding
-- A Guardian who protects others and stands against threats
-- A Pathfinder who discovers new routes and possibilities
-- A Diplomat who resolves conflicts through communication
-- A Craftsperson who builds and creates solutions
+    # Get and shuffle the options for this category
+    options = categories[category_name]
+    random.shuffle(options)
 
-## Special Abilities
-- Animal Whisperer who can communicate with creatures
-- Puzzle Master who excels at solving riddles and mysteries
-- Storyteller who charms others with words and narratives
-- Element Bender who has a special connection to natural forces
-- Dream Walker who can glimpse insights through dreams
-- Pattern Seer who notices connections others miss"""
+    # Format the options more concisely
+    formatted_options = "\n".join([f"- {option}" for option in options])
 
-
-def get_random_agency_category() -> str:
-    """Randomly select one agency category from the available options and shuffle its items."""
-    # Extract individual categories from the AGENCY_CHOICE_CATEGORIES string
-    categories_text = AGENCY_CHOICE_CATEGORIES.split("# Agency Choice Categories")[1]
-
-    # Split by section headers and clean up
-    sections = re.findall(r"## ([^\n]+)\n((?:- [^\n]+\n)+)", categories_text)
-
-    # Select one random category
-    category_name, category_items = random.choice(sections)
-
-    # Extract items and shuffle them
-    items_list = re.findall(r"- ([^\n]+)", category_items)
-    random.shuffle(items_list)  # This shuffles the list in place
-
-    # Format the shuffled items
-    formatted_items = "\n".join([f"- {item}" for item in items_list])
-
-    return f"""# Agency Choice: {category_name}
-Here are some options in this category for your consideration. You can select from these or create similar ones that fit the theme:
-{formatted_items}
-
-Create meaningful choices that feel consequential. The character's selection will influence their journey throughout the adventure."""
+    return category_name, formatted_options
 
 
-# First chapter agency instructions
-# -------------------------------
+# Phase-specific exposition focus
+# ------------------------------
 
-FIRST_CHAPTER_AGENCY_INSTRUCTIONS = """# First Chapter Agency
-Include meaningful choices that provide agency through options from the category above.
-
-## Requirements
-- Present distinct options that reflect different approaches or values
-- Describe how these choices might influence the character's journey
-- Make the options fit naturally within the story world
-- End the chapter at this decision point
-
-These choices are pivotal and will impact the character throughout their journey."""
+EXPOSITION_FOCUS = {
+    "Exposition": "Introduce the ordinary world and establish normalcy that will soon be disrupted",
+    "Rising": "Show the character's first steps into a changing world with new challenges",
+    "Trials": "Present mounting challenges that test the character's resolve",
+    "Climax": "Build tension toward a critical moment of truth and transformation",
+    "Return": "Reflect on growth and transformation as the journey nears completion",
+}
 
 
-# Storytelling techniques
-# ----------------------
+def get_exposition_focus(phase: str) -> str:
+    """Get the appropriate exposition focus for the given story phase."""
+    return EXPOSITION_FOCUS.get(phase, EXPOSITION_FOCUS["Exposition"])
 
-REFLECTIVE_TECHNIQUES = """# Reflective Techniques
-Create a reflective moment using one of these storytelling techniques:
-- A vivid dream or vision that symbolically represents the concept
-- A conversation with a wise mentor, guide, or symbolic character
-- A magical environment that transforms to represent understanding
-- A memory palace or special location that appears for reflection
-- An object (mirror, book, crystal) that reveals deeper truths
-- A flashback that gains new meaning with current knowledge
-- Heightened senses that reveal previously hidden aspects of reality
-- A parallel storyline that converges to provide insight"""
 
 # Phase guidance
 # -------------
@@ -217,242 +390,80 @@ PLOT_TWIST_GUIDANCE: Dict[str, str] = {
     ),
 }
 
-# Chapter-specific instructions
-# ----------------------------
+# Storytelling techniques
+# ----------------------
 
-LESSON_CHAPTER_INSTRUCTIONS = """# Lesson Chapter Instructions
-Create a narrative moment where the question emerges through:
-- Character's internal thoughts or observations
-- Natural dialogue between characters
-- A challenge or obstacle that needs to be overcome
-- An important decision that needs to be made
+REFLECTIVE_TECHNIQUES = [
+    "A vivid dream or vision that symbolically represents the concept",
+    "A conversation with a wise mentor, guide, or symbolic character",
+    "A magical environment that transforms to represent understanding",
+    "A memory palace or special location that appears for reflection",
+    "An object (mirror, book, crystal) that reveals deeper truths",
+    "A flashback that gains new meaning with current knowledge",
+    "Heightened senses that reveal previously hidden aspects of reality",
+    "A parallel storyline that converges to provide insight",
+]
 
-# CRITICAL RULES
-1. NEVER mention any answer options in your narrative, but DO include the exact question "[Core Question]" verbatim somewhere in the story.
-2. Create ONE visually interesting story object (artifact, phenomenon, pattern, or map) that naturally connects to the question and makes it relevant to the character's journey.
-3. Make the question feel like a natural part of the story world, with clear stakes for why answering it matters to the characters.
 
-## Narrative Bridge - The Story Object Method
-1. Identify ONE story object or element that can naturally connect to the [Core Question]:
-   - For historical questions: Something that preserves or reveals the past
-   - For scientific questions: Something that demonstrates or relates to natural phenomena
-   - For mathematical questions: Something involving patterns, quantities, or relationships
-   - For geographical questions: Something that represents places or spatial relationships
+def get_reflective_technique() -> str:
+    """Select a random reflective technique."""
+    technique = random.choice(REFLECTIVE_TECHNIQUES)
+    return f"""# Reflective Technique
+Use this specific storytelling technique for the reflection:
+- {technique}"""
 
-2. Make this story element:
-   - Visually interesting (describe how it appears in the story world)
-   - Relevant to the plot (connect it to the character's journey)
-   - Mysterious or incomplete (create a reflectto seek the answer)
-
-3. Include the exact question "[Core Question]" somewhere in the narrative:
-   - It can be in dialogue, a character's thoughts, or written text within the story
-   - The question should feel natural in context
-   - The narrative should build toward this question, making it feel important
-
-## Key Requirements
-1. The question should feel like a natural part of the character's journey, not an artificial insert
-2. Ensure the context makes it clear why answering this question matters to the story
-3. End at a moment that makes the user want to engage with the question
-4. The system will handle the formal presentation of the question separately
-
-**Remember**: Make the question feel like an organic part of the character's journey rather than an educational insert."""
-
-STORY_CHAPTER_INSTRUCTIONS = """# Story Chapter Instructions
-Continue the story by:
-1. Following directly from the previous chapter content
-2. Taking into account the previous choices made in the story
-3. Creating meaningful consequences for these decisions
-4. Focusing on character development and plot progression
-
-# CRITICAL RULES
-1. Build towards a natural story decision point
-2. The story choices will be provided separately - do not list them in the narrative
-3. End the scene at a moment of decision"""
-
-CONCLUSION_CHAPTER_INSTRUCTIONS = """# Conclusion Chapter Instructions
-Write the conclusion of the story by:
-1. Following directly from the pivotal choice made in the previous chapter
-2. Resolving all remaining plot threads and character arcs
-3. Showing how the character's journey and choices have led to this moment
-4. Providing a satisfying ending that reflects the consequences of their decisions
-5. Incorporating the wisdom gained from their educational journey
-
-# CRITICAL RULES
-1. This is the final chapter - provide a complete and satisfying resolution
-2. DO NOT include any choices or decision points
-3. End with a sense of closure while highlighting the character's transformation"""
 
 # Consequences guidance templates
 # ------------------------------
 
-CORRECT_ANSWER_CONSEQUENCES = """## Correct Answer Consequences
-The story should:
-- Acknowledge that the character correctly identified {correct_answer} as the answer
-- Show how this understanding of {question} connects to their current situation
-- Use this success to build confidence for future challenges"""
+CORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
+- Show how understanding {question} connects to their current situation
+- Build confidence from this success that carries into future challenges
+- Integrate this knowledge naturally into the character's approach"""
 
-INCORRECT_ANSWER_CONSEQUENCES = """## Incorrect Answer Consequences
-The story should:
-- Acknowledge that the character answered {chosen_answer}
-- Explain that {correct_answer} was the correct answer
-- Show how this misunderstanding of {question} leads to a valuable learning moment
-- Use this as an opportunity for growth and deeper understanding
-- Connect the correction to their current situation and future challenges"""
+INCORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
+- Acknowledge the misunderstanding about {question}
+- Create a valuable learning moment from this correction
+- Show how this new understanding affects their approach to challenges"""
 
-# REFLECT templates
-# ----------------
+# Agency guidance templates
+# ------------------------
 
-# Unified template for both correct and incorrect answers
-REFLECT_TEMPLATE = """# Narrative-Driven Reflection
-The character previously answered the question: "{question}"
-Their answer was: "{chosen_answer}"
-{correct_answer_info}
-
-{reflective_techniques}
-
-## Scene Structure for {answer_status}
-
-1. **NARRATIVE ACKNOWLEDGMENT**: {acknowledgment_guidance}
-
-2. **SOCRATIC EXPLORATION**: Use questions to guide the character to {exploration_goal}:
-   - "What led you to that conclusion?"
-   - "How might this connect to [relevant story element]?"
-   - "What implications might this have for [story situation]?"
-
-3. **STORY INTEGRATION**: Weave this reflection naturally into the ongoing narrative:
-   - Connect to the character's journey
-   - Relate to the story's theme of "{theme}"
-   - Set up the next part of the adventure
-
-{agency_guidance}
-
-## Choice Structure
-Create three story-driven choices that:
-- Feel like natural next steps in the narrative
-- Reflect different ways to process what was learned
-- Lead to different but equally valid story paths
-- Advance the plot in meaningful ways
-
-Each choice should set up clear narrative consequences for the next chapter without any being labeled as "correct" or "incorrect".
-
-{reflect_choice_format}"""
-
-# Agency guidance templates for REFLECT chapters
-# ---------------------------------------------
-
-AGENCY_GUIDANCE_CORRECT = """## Agency Evolution (Correct Understanding)
-The character's agency choice from Chapter 1 should evolve or be empowered by their correct understanding.
-Choose an approach that feels most natural to the narrative:
-- Revealing a new capability or aspect of their chosen item/companion/role/ability
-- Helping overcome a challenge in a meaningful way using their agency element
-- Deepening the connection between character and their agency choice
-- Providing insight or assistance that builds on their knowledge
-
-This evolution should feel organic to the story and connect naturally to their correct answer."""
-
-AGENCY_GUIDANCE_INCORRECT = """## Agency Evolution (New Understanding)
-Despite the initial misunderstanding, the character's agency choice from Chapter 1 should grow or transform through this learning experience.
-Choose an approach that feels most natural to the narrative:
-- Adapting to incorporate the new knowledge they've gained
-- Helping the character see where they went wrong
-- Providing a different perspective or approach to the problem
-- Demonstrating resilience and the value of learning from mistakes
-
-This transformation should feel organic to the story and connect naturally to their learning journey."""
-
-# Agency guidance for climax phase
-# ------------------------------
-
-CLIMAX_AGENCY_GUIDANCE = """## Climax Agency Integration
-The character's agency choice from Chapter 1 should play a pivotal role in this climactic moment:
-
-1. **Narrative Culmination**: Show how this element has been with them throughout the journey
-2. **Growth Reflection**: Reference how it has changed or evolved, especially during reflection moments
-3. **Meaningful Choices**: Present options that leverage this agency element in different ways
-
-The choices should reflect different approaches to using their agency element, such as:
-- A bold, direct application of their agency element
-- A clever, unexpected use of their agency element
-- A thoughtful, strategic application of their agency element
-
-Each choice should feel valid and meaningful, with none being obviously "correct" or "incorrect."
-"""
-
-# Template configurations for correct answers
-CORRECT_ANSWER_CONFIG = {
-    "answer_status": "Correct Answer",
-    "acknowledgment_guidance": "Create a story event that acknowledges success (character praise, reward, confidence boost)",
-    "exploration_goal": "deepen their understanding of why their answer is right and explore broader implications",
-    "correct_answer_info": "This was the correct answer.",
+AGENCY_GUIDANCE = {
+    "correct": """## Agency Evolution
+The character's {agency_type} ({agency_name}) should evolve through this correct understanding:
+- Reveal a new capability or aspect of their agency element
+- Use it to overcome a challenge in a meaningful way
+- Deepen the connection between character and their agency choice""",
+    "incorrect": """## Agency Evolution
+The character's {agency_type} ({agency_name}) should adapt through this learning experience:
+- Incorporate the new knowledge they've gained
+- Provide a different perspective on the problem
+- Demonstrate resilience and growth through the challenge""",
+    "climax": """## Climax Agency Integration
+The character's {agency_type} ({agency_name}) should play a pivotal role:
+1. Show how it has evolved throughout the journey
+2. Present choices that leverage this element in different ways:
+   - A bold, direct application
+   - A clever, unexpected use
+   - A thoughtful, strategic approach""",
+    "conclusion": """Show how it has evolved throughout the journey, contributed to growth and success, and reaches a satisfying resolution""",
 }
 
-# Template configurations for incorrect answers
-INCORRECT_ANSWER_CONFIG = {
-    "answer_status": "Incorrect Answer",
-    "acknowledgment_guidance": "Create a story event that gently corrects the mistake (character clarification, consequence of error)",
-    "exploration_goal": "discover the correct understanding through guided reflection",
-    "correct_answer_info": 'The correct answer was: "{correct_answer}".',
+# Reflect configuration
+# -------------------
+
+REFLECT_CONFIG = {
+    "correct": {
+        "answer_status": "Correct",
+        "acknowledgment_guidance": "Create a story event that acknowledges success",
+        "exploration_goal": "deepen their understanding and explore broader implications",
+        "correct_answer_info": "This was the correct answer.",
+    },
+    "incorrect": {
+        "answer_status": "Incorrect",
+        "acknowledgment_guidance": "Create a story event that gently corrects the mistake",
+        "exploration_goal": "discover the correct understanding through guided reflection",
+        "correct_answer_info": 'The correct answer was: "{correct_answer}".',
+    },
 }
-
-# Prompt templates
-# ---------------
-
-USER_PROMPT_TEMPLATE = """# Current Context
-- Chapter: {chapter_number} of {story_length}
-- Type: {chapter_type}
-- Phase: {story_phase}
-- Progress: {correct_lessons}/{total_lessons} lessons correct
-
-# CRITICAL RULES
-For LESSON chapters: Include the exact question verbatim, but NEVER mention any answer options.
-
-# Story History
-{story_history}
-
-{phase_guidance}
-
-{chapter_instructions}
-
-{additional_guidance}
-"""
-
-# System prompt template
-# ---------------------
-
-SYSTEM_PROMPT_TEMPLATE = """# Storyteller Role
-You are a master storyteller crafting an interactive educational story that seamlessly blends narrative and learning.
-
-# Story Elements
-- **Setting**: {setting_types}
-- **Character**: {character_archetypes}
-- **Rule**: {story_rules}
-- **Theme**: {selected_theme}
-- **Moral Teaching**: {selected_moral_teaching}
-- **Sensory Details**:
-  - Visual: {visuals}
-  - Sound: {sounds}
-  - Scent: {smells}
-
-# Storytelling Approach
-1. Maintain narrative consistency and create meaningful consequences for user decisions
-2. Seamlessly integrate lesson elements and develop theme/moral teaching organically
-3. Structure content with multiple paragraphs and blank lines for readability
-4. Incorporate sensory details naturally to enhance immersion
-5. Apply markdown formatting judiciously: use **bold** for critical revelations or important realizations, and *italics* for character thoughts or emotional emphasis
-
-# Agency Continuity
-The character makes a pivotal choice in the first chapter (crafting an item, choosing a companion, selecting a role, or developing a special ability). This choice:
-
-1. Represents a core aspect of the character's identity and approach
-2. Must be referenced consistently throughout ALL chapters of the adventure
-3. Should evolve and develop as the character learns and grows
-4. Will play a crucial role in the climax of the story
-5. Should feel like a natural part of the narrative, not an artificial element
-
-Each chapter should include at least one meaningful reference to or use of this agency element, with its significance growing throughout the journey.
-
-# CRITICAL RULES
-1. Structure and flow: begin narrative directly (never with "Chapter X"), end at natural decision points, maintain consistent narrative elements
-2. Content development: incorporate sensory details naturally, develop theme and moral teaching organically
-3. Educational integration: balance entertainment with learning, ensure lessons feel organic to the story
-4. Agency integration: weave the character's agency choice naturally throughout the story, showing its evolution and impact"""

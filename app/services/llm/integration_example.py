@@ -1,19 +1,19 @@
 """
-Integration example for streamlined prompts.
+Integration example for prompt engineering.
 
-This module demonstrates how to integrate the streamlined prompts into the
-existing LLM service in the Learning Odyssey application.
+This module demonstrates how to integrate the prompt engineering functions
+into the existing LLM service in the Learning Odyssey application.
 """
 
 from typing import Optional, Dict, Any, List, Tuple
 import logging
 from app.models.story import AdventureState, ChapterType
 from app.services.llm.prompt_engineering import (
+    build_prompt,
     build_system_prompt,
     build_user_prompt,
     LessonQuestion,
 )
-from app.services.llm.streamlined_prompt_engineering import build_streamlined_prompt
 
 
 def generate_llm_prompts(
@@ -21,11 +21,10 @@ def generate_llm_prompts(
     lesson_question: Optional[LessonQuestion] = None,
     previous_lessons: Optional[List[Dict[str, Any]]] = None,
 ) -> Tuple[str, str]:
-    """Generate system and user prompts for LLM, using streamlined prompts for first chapter.
+    """Generate system and user prompts for LLM.
 
-    This function demonstrates how to integrate the streamlined prompts into the
-    existing LLM service. It uses the streamlined prompts for the first chapter
-    and falls back to the original prompts for other chapters.
+    This function demonstrates how to use the prompt engineering functions
+    to generate prompts for the LLM service.
 
     Args:
         state: The current adventure state
@@ -37,25 +36,14 @@ def generate_llm_prompts(
     """
     logger = logging.getLogger("llm_service")
 
-    # For the first chapter, use the streamlined prompts
-    if (
-        state.current_chapter_number == 1
-        and state.planned_chapter_types[0] == ChapterType.STORY
-    ):
-        logger.info("Using streamlined prompts for first chapter")
-        return build_streamlined_prompt(state, lesson_question, previous_lessons)
-
-    # For other chapters, use the original prompts
-    logger.info(f"Using original prompts for chapter {state.current_chapter_number}")
-    system_prompt = build_system_prompt(state)
-    user_prompt = build_user_prompt(state, lesson_question, previous_lessons)
-
-    return system_prompt, user_prompt
+    # Use the build_prompt function to generate both system and user prompts
+    logger.info(f"Generating prompts for chapter {state.current_chapter_number}")
+    return build_prompt(state, lesson_question, previous_lessons)
 
 
 # Example usage in an LLM provider class
 class ExampleLLMProvider:
-    """Example LLM provider that demonstrates integration of streamlined prompts."""
+    """Example LLM provider that demonstrates integration of prompt engineering."""
 
     def __init__(self):
         self.logger = logging.getLogger("example_llm_provider")
@@ -66,7 +54,7 @@ class ExampleLLMProvider:
         lesson_question: Optional[LessonQuestion] = None,
         previous_lessons: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
-        """Generate content using the appropriate prompts based on chapter number."""
+        """Generate content using the prompt engineering functions."""
         # Generate prompts using the integrated function
         system_prompt, user_prompt = generate_llm_prompts(
             state, lesson_question, previous_lessons
@@ -94,24 +82,23 @@ class ExampleLLMProvider:
 """
 # In app/services/llm/providers.py
 
-from app.services.llm.streamlined_prompt_engineering import build_streamlined_prompt
+from app.services.llm.prompt_engineering import build_prompt
 
 class GeminiService(LLMService):
     # ... existing code ...
     
-    async def generate_content(
+    async def generate_chapter_stream(
         self,
         state: AdventureState,
         lesson_question: Optional[Dict[str, Any]] = None,
         previous_lessons: Optional[List[Dict[str, Any]]] = None,
-    ) -> str:
-        # For the first chapter, use the streamlined prompts
-        if state.current_chapter_number == 1 and state.planned_chapter_types[0] == ChapterType.STORY:
-            system_prompt, user_prompt = build_streamlined_prompt(state, lesson_question, previous_lessons)
-        else:
-            # For other chapters, use the original prompts
-            system_prompt = build_system_prompt(state)
-            user_prompt = build_user_prompt(state, lesson_question, previous_lessons)
+    ) -> AsyncGenerator[str, None]:
+        # Generate prompts using the build_prompt function
+        system_prompt, user_prompt = build_prompt(
+            state=state,
+            lesson_question=lesson_question,
+            previous_lessons=previous_lessons,
+        )
         
         # ... rest of the existing code ...
 """
