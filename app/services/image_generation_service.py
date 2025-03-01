@@ -67,15 +67,13 @@ class ImageGenerationService:
                 response = self.client.models.generate_images(
                     model=self.model_name,
                     prompt=prompt,
-                    config=GenerateImagesConfig(
-                        number_of_images=1,
-                    ),
+                    config=GenerateImagesConfig(number_of_images=1),
                 )
 
                 # Log response structure for debugging
                 logger.debug("\n=== DEBUG: Image Generation Response ===")
                 logger.debug(f"Response type: {type(response)}")
-                logger.debug(f"Response attributes: {dir(response)}")
+                # logger.debug(f"Response attributes: {dir(response)}")
                 if hasattr(response, "generated_images"):
                     logger.debug(
                         f"Generated images count: {len(response.generated_images)}"
@@ -84,9 +82,9 @@ class ImageGenerationService:
                         logger.debug(
                             f"First image type: {type(response.generated_images[0])}"
                         )
-                        logger.debug(
-                            f"First image attributes: {dir(response.generated_images[0])}"
-                        )
+                        # logger.debug(
+                        #     f"First image attributes: {dir(response.generated_images[0])}"
+                        # )
                 logger.debug("========================\n")
 
                 # Extract image data from response
@@ -115,14 +113,44 @@ class ImageGenerationService:
 
         return None
 
-    def enhance_prompt(self, original_prompt):
+    def enhance_prompt(self, original_prompt, adventure_state=None):
         """Enhance a basic prompt to get better image generation results.
 
         Args:
             original_prompt: The basic text prompt
+            adventure_state: Optional AdventureState object containing story elements
 
         Returns:
-            Enhanced prompt with style guidance
+            Enhanced prompt with style guidance and story elements
         """
-        # Add style guidance for better, more consistent results
-        return f"Fantasy illustration of {original_prompt} in a children's storybook style, vibrant colors, detailed, whimsical, digital art"
+        # Base style guidance
+        base_style = "vibrant colors, detailed, whimsical, digital art"
+
+        # If adventure_state is provided, incorporate setting and visual details
+        if (
+            adventure_state
+            and hasattr(adventure_state, "selected_narrative_elements")
+            and hasattr(adventure_state, "selected_sensory_details")
+        ):
+            # Extract setting and visual details if available
+            setting = adventure_state.selected_narrative_elements.get(
+                "setting_types", ""
+            )
+            visual = adventure_state.selected_sensory_details.get("visuals", "")
+
+            # Build prompt components with proper comma separation
+            components = ["Fantasy illustration of " + original_prompt]
+
+            if setting:
+                components.append(f"in a {setting} setting")
+
+            if visual:
+                components.append(f"with {visual}")
+
+            components.append(base_style)
+
+            # Join all components with commas
+            return ", ".join(components)
+
+        # Default enhancement if no adventure_state is provided
+        return f"Fantasy illustration of {original_prompt}, {base_style}"

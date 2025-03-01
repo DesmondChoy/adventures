@@ -396,8 +396,8 @@ async def stream_and_send_chapter(
 
         # Start async image generation for each choice
         for i, choice in enumerate(chapter_content.choices):
-            # Create a more descriptive prompt for better image generation
-            prompt = image_service.enhance_prompt(choice.text)
+            # Create a more descriptive prompt for better image generation with story elements
+            prompt = image_service.enhance_prompt(choice.text, state)
             image_tasks.append(
                 (i, asyncio.create_task(image_service.generate_image_async(prompt)))
             )
