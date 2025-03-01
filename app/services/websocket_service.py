@@ -407,7 +407,20 @@ async def stream_and_send_chapter(
 
     # Split content into paragraphs and stream
     paragraphs = [p.strip() for p in content_to_stream.split("\n\n") if p.strip()]
-    for paragraph in paragraphs:
+
+    # Check for dialogue patterns that might be affected by streaming
+    for i, paragraph in enumerate(paragraphs):
+        # Check if this paragraph starts with a dialogue verb that might indicate a missing character name
+        if i == 0 and re.match(
+            r"^(chirped|said|whispered|shouted|called|murmured|exclaimed|replied|asked|answered|responded)\b",
+            paragraph,
+        ):
+            logger.warning(
+                "Detected paragraph starting with dialogue verb - possible missing character name"
+            )
+            # We'll log this but continue processing normally
+
+        # Stream the paragraph word by word
         words = paragraph.split()
         for word in words:
             await websocket.send_text(word + " ")
@@ -473,10 +486,13 @@ async def stream_and_send_chapter(
                     )
                 else:
                     logger.warning(f"No image data generated for choice {i + 1}")
+                    # Could implement a fallback here if needed
+                    # For example, use a placeholder image or skip image display
             except Exception as e:
                 logger.error(
                     f"Error waiting for image generation task {i + 1}: {str(e)}"
                 )
+                # Log the error but continue processing other tasks
 
 
 async def send_story_complete(
@@ -495,7 +511,20 @@ async def send_story_complete(
     # Stream the content first
     content_to_stream = final_chapter.content
     paragraphs = [p.strip() for p in content_to_stream.split("\n\n") if p.strip()]
-    for paragraph in paragraphs:
+
+    # Check for dialogue patterns that might be affected by streaming
+    for i, paragraph in enumerate(paragraphs):
+        # Check if this paragraph starts with a dialogue verb that might indicate a missing character name
+        if i == 0 and re.match(
+            r"^(chirped|said|whispered|shouted|called|murmured|exclaimed|replied|asked|answered|responded)\b",
+            paragraph,
+        ):
+            logger.warning(
+                "Detected conclusion chapter starting with dialogue verb - possible missing character name"
+            )
+            # We'll log this but continue processing normally
+
+        # Stream the paragraph word by word
         words = paragraph.split()
         for i in range(0, len(words), WORD_BATCH_SIZE):
             batch = " ".join(words[i : i + WORD_BATCH_SIZE])
@@ -607,6 +636,17 @@ async def generate_chapter(
             previous_lessons,
         ):
             story_content += chunk
+
+        # Check for dialogue formatting issues in the generated content
+        if re.match(
+            r"^(chirped|said|whispered|shouted|called|murmured|exclaimed|replied|asked|answered|responded)\b",
+            story_content.strip(),
+        ):
+            logger.warning(
+                "Generated content starts with dialogue verb - possible missing character name"
+            )
+            # Log the issue but continue processing normally
+
     except Exception as e:
         logger.error("\n=== ERROR: LLM Request Failed ===")
         logger.error(f"Error type: {type(e).__name__}")

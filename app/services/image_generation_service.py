@@ -24,7 +24,7 @@ class ImageGenerationService:
         # Create a client with the API key
         self.client = genai.Client(api_key=api_key)
 
-    async def generate_image_async(self, prompt, retries=2):
+    async def generate_image_async(self, prompt, retries=5):
         """Generate image asynchronously and return as base64 string.
 
         Args:
@@ -44,7 +44,7 @@ class ImageGenerationService:
             logger.error(f"Image generation failed: {str(e)}")
             return None
 
-    def _generate_image(self, prompt, retries=2):
+    def _generate_image(self, prompt, retries=5):
         """Internal method to call Gemini API.
 
         Args:
@@ -74,7 +74,10 @@ class ImageGenerationService:
                 logger.debug("\n=== DEBUG: Image Generation Response ===")
                 logger.debug(f"Response type: {type(response)}")
                 # logger.debug(f"Response attributes: {dir(response)}")
-                if hasattr(response, "generated_images"):
+                if (
+                    hasattr(response, "generated_images")
+                    and response.generated_images is not None
+                ):
                     logger.debug(
                         f"Generated images count: {len(response.generated_images)}"
                     )
@@ -85,6 +88,8 @@ class ImageGenerationService:
                         # logger.debug(
                         #     f"First image attributes: {dir(response.generated_images[0])}"
                         # )
+                else:
+                    logger.debug("No generated_images attribute or it is None")
                 logger.debug("========================\n")
 
                 # Extract image data from response

@@ -182,7 +182,11 @@
 * Gemini Imagen API integration
 * Asynchronous processing
 * Base64 image encoding for WebSocket transmission
-* Error handling with retries and exponential backoff
+* Enhanced error handling:
+  - Increased retries from 2 to 5 for better reliability
+  - Robust null checking to prevent "NoneType has no len()" errors
+  - Exponential backoff with 2^attempt seconds between retries
+  - Detailed logging for debugging API responses
 * Prompt enhancement for better image quality
 * Environment configuration:
   - Uses GOOGLE_API_KEY environment variable
@@ -190,6 +194,7 @@
 * Integration with WebSocket service:
   - Generates images for Chapter 1 agency choices
   - Sends images asynchronously as they become available
+  - Gracefully handles failed image generation without crashing
   - Maintains text streaming performance
 
 ### Story Elements (`app/services/chapter_manager.py`)

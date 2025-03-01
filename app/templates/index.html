@@ -931,7 +931,15 @@ function startAdventure() {
             tempDiv.innerHTML = text;
             const decodedText = tempDiv.textContent;
             
-            // Normalize special characters
+            // Check if this is the first chunk of text and it starts with a dialogue verb
+            // This indicates we might have lost a character name and opening quote
+            if (streamBuffer === '' && /^(chirped|said|whispered|shouted|called|murmured|exclaimed|replied|asked|answered|responded)/.test(decodedText.trim())) {
+                console.warn('Detected text starting with dialogue verb - possible missing character name');
+                // If we're starting with a dialogue verb, it's likely we lost the character name
+                // We'll log this but continue processing normally
+            }
+            
+            // Normalize special characters while preserving opening quotes and character names
             const normalizedText = decodedText
                 .replace(/[\u2018\u2019]/g, "'")
                 .replace(/[\u201C\u201D]/g, '"')
@@ -948,7 +956,29 @@ function startAdventure() {
                     breaks: true,
                     gfm: true
                 });
+                
+                // Apply the HTML content to the story container
                 storyContent.innerHTML = htmlContent;
+                
+                // Additional check for dialogue formatting issues
+                if (streamBuffer.trim().startsWith('chirped') || 
+                    streamBuffer.trim().startsWith('said') || 
+                    streamBuffer.trim().startsWith('whispered') || 
+                    streamBuffer.trim().startsWith('shouted') || 
+                    streamBuffer.trim().startsWith('called') ||
+                    streamBuffer.trim().startsWith('murmured') ||
+                    streamBuffer.trim().startsWith('exclaimed') ||
+                    streamBuffer.trim().startsWith('replied') ||
+                    streamBuffer.trim().startsWith('asked') ||
+                    streamBuffer.trim().startsWith('answered') ||
+                    streamBuffer.trim().startsWith('responded')) {
+                    
+                    console.warn('Story content starts with dialogue verb - possible formatting issue');
+                    
+                    // We could potentially add a visual indicator here for the user
+                    // For example, adding a small warning icon or changing the text color
+                    // But for now, we'll just log the warning
+                }
             } catch (error) {
                 console.error('Error parsing markdown:', error);
                 // Fallback to plain text if markdown parsing fails

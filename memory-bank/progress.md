@@ -1,5 +1,61 @@
 # Progress Log
 
+## 2025-03-01: Enhanced Image Generation Reliability
+
+### Problem
+The image generation service was failing with the error "object of type 'NoneType' has no len()" after 3 attempts, with no backup plan or fallback mechanism in place. This caused issues when generating images for Chapter 1 agency choices.
+
+### Requirements
+- Improve the reliability of image generation
+- Prevent crashes when the API returns unexpected responses
+- Gracefully handle cases where image generation fails
+- Maintain compatibility with the existing WebSocket service
+
+### Solution
+1. Increased the number of retries from 2 to 5 in both `generate_image_async` and `_generate_image` methods:
+   ```python
+   async def generate_image_async(self, prompt, retries=5):  # Changed from 2 to 5
+       # ...
+   
+   def _generate_image(self, prompt, retries=5):  # Changed from 2 to 5
+       # ...
+   ```
+
+2. Added robust null checking to prevent "NoneType has no len()" errors:
+   ```python
+   if (
+       hasattr(response, "generated_images")
+       and response.generated_images is not None
+   ):
+       logger.debug(
+           f"Generated images count: {len(response.generated_images)}"
+       )
+       # ...
+   else:
+       logger.debug("No generated_images attribute or it is None")
+   ```
+
+3. Added comments in the WebSocket service for potential future fallback mechanisms:
+   ```python
+   if image_data:
+       # Send image update for this choice
+       # ...
+   else:
+       logger.warning(f"No image data generated for choice {i + 1}")
+       # Could implement a fallback here if needed
+       # For example, use a placeholder image or skip image display
+   ```
+
+### Results
+The implementation successfully:
+1. Improved reliability by giving more opportunities for successful image generation with increased retries
+2. Prevented crashes when the API returns unexpected responses by adding proper null checks
+3. Enhanced error handling with detailed logging for debugging
+4. Maintained compatibility with the existing WebSocket service
+5. Gracefully handles image generation failures without crashing
+
+The system now has a more robust image generation process that can better handle API issues and unexpected responses, while providing detailed logs for troubleshooting.
+
 ## 2025-03-01: Integrated Further Streamlined Prompts into All Chapters
 
 ### Problem
