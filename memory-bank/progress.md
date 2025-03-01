@@ -1,42 +1,79 @@
 # Progress Log
 
-## 2025-03-02: Removed Redundant Exposition Focus Code
+## 2025-03-02: Removed Duplicate Phase Guidance in Prompt Templates
 
 ### Problem
-The codebase contained a redundant `EXPOSITION_FOCUS` dictionary and `get_exposition_focus()` function in `app/services/llm/prompt_templates.py`. This functionality was already provided by the phase guidance system through the `_get_phase_guidance()` function, which was recently reintegrated into the prompt engineering system.
+In the prompt templates, the complete phase guidance (including the "Focus" line) was being prepended to all prompts in `build_user_prompt()`. However, each chapter building function was also extracting just the "Focus" line from that same phase guidance and including it as the first item in the "Chapter Development Guidelines" section. This created redundancy where the same information was being shown twice in the prompts.
 
 ### Requirements
-- Remove the redundant `EXPOSITION_FOCUS` dictionary and `get_exposition_focus()` function
-- Update all references to use the phase guidance system instead
-- Maintain the same functionality for exposition focus in all chapter types
+- Remove the duplication of phase guidance information in the prompts
+- Maintain the same functionality for all chapter types
 - Improve code maintainability by eliminating redundancy
+- Reduce token usage in prompts
 
 ### Solution
-1. Removed the `EXPOSITION_FOCUS` dictionary and `get_exposition_focus()` function from `prompt_templates.py`:
+1. Removed the "Exposition Focus: {exposition_focus}" line from all prompt templates in `app/services/llm/prompt_templates.py`:
    ```python
-   # Removed:
-   EXPOSITION_FOCUS = {
-       "Exposition": "Introduce the ordinary world and establish normalcy that will soon be disrupted",
-       "Rising": "Show the character's first steps into a changing world with new challenges",
-       "Trials": "Present mounting challenges that test the character's resolve",
-       "Climax": "Build tension toward a critical moment of truth and transformation",
-       "Return": "Reflect on growth and transformation as the journey nears completion",
-   }
+   # Before:
+   # Chapter Development Guidelines
+   1. Exposition Focus: {exposition_focus}
+   2. Character Introduction: Establish the protagonist through vivid sensory details
+   3. World Building: Create an immersive setting using the sensory elements
+   4. Decision Point: Build naturally to a pivotal choice that will shape the character's journey
 
-   def get_exposition_focus(phase: str) -> str:
-       """Get the appropriate exposition focus for the given story phase."""
-       return EXPOSITION_FOCUS.get(phase, EXPOSITION_FOCUS["Exposition"])
+   # After:
+   # Chapter Development Guidelines
+   1. Character Introduction: Establish the protagonist through vivid sensory details
+   2. World Building: Create an immersive setting using the sensory elements
+   3. Decision Point: Build naturally to a pivotal choice that will shape the character's journey
    ```
 
-2. Updated all chapter prompt building functions in `prompt_engineering.py` to extract the exposition focus from the phase guidance:
+2. Renumbered the remaining guidelines in each template to maintain sequential numbering.
+
+3. Removed the code that extracts the exposition focus in all chapter building functions in `app/services/llm/prompt_engineering.py`:
    ```python
+   # Before:
    # Extract exposition focus from phase guidance
    phase_guidance = _get_phase_guidance(story_phase, state)
    # Use the first line of the Focus section from phase guidance
    exposition_focus = phase_guidance.split("- Focus:")[1].split("\n")[0].strip()
+
+   # After:
+   # Get phase guidance
+   phase_guidance = _get_phase_guidance(story_phase, state)
    ```
 
-3. Applied this change to all chapter types:
+4. Removed the exposition_focus parameter from the template .format() calls:
+   ```python
+   # Before:
+   return FIRST_CHAPTER_PROMPT.format(
+       chapter_number=state.current_chapter_number,
+       story_length=state.story_length,
+       chapter_type=ChapterType.STORY,
+       story_phase=story_phase,
+       correct_lessons=state.correct_lesson_answers,
+       total_lessons=state.total_lessons,
+       story_history=story_history,
+       exposition_focus=exposition_focus,
+       agency_category_name=agency_category_name,
+       agency_options=agency_options,
+   )
+
+   # After:
+   return FIRST_CHAPTER_PROMPT.format(
+       chapter_number=state.current_chapter_number,
+       story_length=state.story_length,
+       chapter_type=ChapterType.STORY,
+       story_phase=story_phase,
+       correct_lessons=state.correct_lesson_answers,
+       total_lessons=state.total_lessons,
+       story_history=story_history,
+       agency_category_name=agency_category_name,
+       agency_options=agency_options,
+   )
+   ```
+
+5. Applied this change to all chapter types:
    - `build_first_chapter_prompt()`
    - `build_story_chapter_prompt()`
    - `build_lesson_chapter_prompt()`
@@ -45,11 +82,12 @@ The codebase contained a redundant `EXPOSITION_FOCUS` dictionary and `get_exposi
 
 ### Results
 The implementation successfully:
-1. Removed redundant code that duplicated functionality
-2. Maintained the same exposition focus functionality across all chapter types
-3. Improved code maintainability by centralizing the phase guidance logic
-4. Reduced the risk of inconsistencies between different guidance systems
-5. Made the codebase more maintainable by eliminating redundancy
+1. Eliminated redundancy where the same information was being shown twice in the prompts
+2. Maintained the same functionality for all chapter types
+3. Improved code maintainability by removing unnecessary code
+4. Reduced token usage in prompts by removing duplicate information
+5. Made the codebase more maintainable by simplifying the prompt templates
+6. Kept the phase guidance information available through the prepended phase guidance block
 
 ## 2025-03-02: Reintegrated Phase Guidance in Prompt Engineering
 

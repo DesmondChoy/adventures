@@ -159,6 +159,69 @@ graph TD
   * Hierarchical organization for improved readability
   * CRITICAL: Maintain consistent structure across all prompt templates
 
+- **Prompt Flow Architecture**:
+```mermaid
+flowchart TD
+    subgraph Main_Functions
+        build_prompt --> build_system_prompt
+        build_prompt --> build_user_prompt
+    end
+    
+    subgraph User_Prompt_Builder
+        build_user_prompt -->|Get phase guidance|get_phase_guidance
+        build_user_prompt --> ChapterSelector{Chapter Type?}
+        build_user_prompt --> |"Prepend phase guidance\n(no duplication)"|FinalUserPrompt
+        
+        ChapterSelector -->|STORY Ch.1| build_first_chapter_prompt
+        ChapterSelector -->|STORY Ch.2+| build_story_chapter_prompt
+        ChapterSelector -->|LESSON| build_lesson_chapter_prompt
+        ChapterSelector -->|REFLECT| build_reflect_chapter_prompt
+        ChapterSelector -->|CONCLUSION| build_conclusion_chapter_prompt
+    end
+    
+    subgraph Chapter_Builders
+        build_first_chapter_prompt --> build_base_prompt
+        build_story_chapter_prompt --> build_base_prompt
+        build_lesson_chapter_prompt --> build_base_prompt
+        build_reflect_chapter_prompt --> build_base_prompt
+        build_conclusion_chapter_prompt --> build_base_prompt
+        
+        build_first_chapter_prompt --> |Format using|FIRST_CHAPTER_PROMPT
+        build_story_chapter_prompt --> |Format using|STORY_CHAPTER_PROMPT
+        build_lesson_chapter_prompt --> |Format using|LESSON_CHAPTER_PROMPT
+        build_reflect_chapter_prompt --> |Format using|REFLECT_CHAPTER_PROMPT
+        build_conclusion_chapter_prompt --> |Format using|CONCLUSION_CHAPTER_PROMPT
+    end
+    
+    subgraph Helper_Functions
+        build_base_prompt --> |Returns|story_history
+        build_base_prompt --> |Returns|story_phase
+        build_base_prompt --> |Returns|chapter_type
+        
+        get_phase_guidance --> BASE_PHASE_GUIDANCE
+        get_phase_guidance --> |If applicable|PLOT_TWIST_GUIDANCE
+        
+        build_first_chapter_prompt --> get_agency_category
+        build_story_chapter_prompt --> |If needed|process_consequences
+        build_lesson_chapter_prompt --> format_lesson_answers
+        build_reflect_chapter_prompt --> get_reflective_technique
+    end
+    
+    subgraph Templates["prompt_templates.py"]
+        SYSTEM_PROMPT_TEMPLATE
+        FIRST_CHAPTER_PROMPT
+        STORY_CHAPTER_PROMPT
+        LESSON_CHAPTER_PROMPT
+        REFLECT_CHAPTER_PROMPT
+        CONCLUSION_CHAPTER_PROMPT
+        BASE_PHASE_GUIDANCE
+        PLOT_TWIST_GUIDANCE
+    end
+    
+    build_system_prompt --> SYSTEM_PROMPT_TEMPLATE
+    build_system_prompt --> SystemPrompt
+```
+
 - **Instruction Integration**:
   * Group related instructions under relevant sections
   * Place instructions directly with the content they modify

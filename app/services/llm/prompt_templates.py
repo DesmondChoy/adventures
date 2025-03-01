@@ -61,10 +61,9 @@ FIRST_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. Exposition Focus: {exposition_focus}
-2. Character Introduction: Establish the protagonist through vivid sensory details
-3. World Building: Create an immersive setting using the sensory elements
-4. Decision Point: Build naturally to a pivotal choice that will shape the character's journey
+1. Character Introduction: Establish the protagonist through vivid sensory details
+2. World Building: Create an immersive setting using the sensory elements
+3. Decision Point: Build naturally to a pivotal choice that will shape the character's journey
 
 # Agency Options: {agency_category_name}
 {agency_options}
@@ -89,8 +88,7 @@ STORY_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. Exposition Focus: {exposition_focus}
-2. Previous Impact: {consequences_guidance}
+1. Previous Impact: {consequences_guidance}
 {lesson_history}
 {agency_guidance}
 
@@ -122,8 +120,7 @@ LESSON_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. Exposition Focus: {exposition_focus}
-2. Previous Impact: {consequences_guidance}
+1. Previous Impact: {consequences_guidance}
 {lesson_history}
 {agency_guidance}
 
@@ -152,8 +149,7 @@ REFLECT_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. Exposition Focus: {exposition_focus}
-2. Reflection Purpose: Process the previous lesson's understanding
+1. Reflection Purpose: Process the previous lesson's understanding
 
 # Narrative-Driven Reflection
 The character previously answered: "{question}" with "{chosen_answer}" ({answer_status})
@@ -196,8 +192,7 @@ CONCLUSION_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. Exposition Focus: {exposition_focus}
-2. Conclusion Purpose: Provide a satisfying resolution to the journey
+1. Conclusion Purpose: Provide a satisfying resolution to the journey
 {lesson_history}
 
 # Conclusion Chapter Instructions
@@ -351,7 +346,7 @@ You are a master storyteller crafting an interactive educational story that seam
 # Storytelling Approach & Agency Integration
 1. Maintain narrative consistency with meaningful consequences for decisions
 2. Seamlessly integrate educational content while developing theme/moral teaching organically
-3. Structure content with multiple paragraphs and blank lines for readability
+3. Format responses with clear paragraph breaks and utilize Markdown syntax judiciously
 4. Incorporate sensory details naturally to enhance immersion
 5. The character's pivotal first-chapter choice (item, companion, role, or ability):
    - Represents a core aspect of their identity
@@ -381,10 +376,9 @@ FIRST_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. Exposition Focus: {exposition_focus}
-2. Character Introduction: Establish the protagonist through vivid sensory details
-3. World Building: Create an immersive setting using the sensory elements
-4. Decision Point: Build naturally to a pivotal choice that will shape the character's journey
+1. Character Introduction: Establish the protagonist through vivid sensory details
+2. World Building: Create an immersive setting using the sensory elements
+3. Decision Point: Build naturally to a pivotal choice that will shape the character's journey
 
 # Agency Options: {agency_category_name}
 {agency_options}
@@ -409,8 +403,7 @@ STORY_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. Exposition Focus: {exposition_focus}
-2. Previous Impact: {consequences_guidance}
+1. Previous Impact: {consequences_guidance}
 {lesson_history}
 {agency_guidance}
 
@@ -442,8 +435,7 @@ LESSON_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. Exposition Focus: {exposition_focus}
-2. Previous Impact: {consequences_guidance}
+1. Previous Impact: {consequences_guidance}
 {lesson_history}
 {agency_guidance}
 
@@ -472,8 +464,7 @@ REFLECT_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. Exposition Focus: {exposition_focus}
-2. Reflection Purpose: Process the previous lesson's understanding
+1. Reflection Purpose: Process the previous lesson's understanding
 
 # Narrative-Driven Reflection
 The character previously answered: "{question}" with "{chosen_answer}" ({answer_status})
@@ -516,8 +507,7 @@ CONCLUSION_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. Exposition Focus: {exposition_focus}
-2. Conclusion Purpose: Provide a satisfying resolution to the journey
+1. Conclusion Purpose: Provide a satisfying resolution to the journey
 {lesson_history}
 
 # Conclusion Chapter Instructions
