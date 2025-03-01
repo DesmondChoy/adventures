@@ -1,5 +1,5 @@
-import google.generativeai as genai
-from google.generativeai import types
+from google import genai
+from google.genai.types import GenerateImagesConfig
 from PIL import Image
 from io import BytesIO
 import base64
@@ -16,11 +16,13 @@ class ImageGenerationService:
 
     def __init__(self):
         """Initialize Gemini service with the specified model."""
-        self.model = "imagen-3.0-generate-002"
+        self.model_name = "imagen-3.0-generate-002"
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             logger.warning("GOOGLE_API_KEY is not set in environment variables!")
-        genai.configure(api_key=api_key)
+
+        # Create a client with the API key
+        self.client = genai.Client(api_key=api_key)
 
     async def generate_image_async(self, prompt, retries=2):
         """Generate image asynchronously and return as base64 string.
@@ -58,21 +60,43 @@ class ImageGenerationService:
                 logger.info(f"Generating image for prompt: {prompt}")
                 logger.debug("\n=== DEBUG: Image Generation Request ===")
                 logger.debug(f"Prompt: {prompt}")
-                logger.debug(f"Model: {self.model}")
+                logger.debug(f"Model: {self.model_name}")
                 logger.debug("========================\n")
 
-                # Generate image using the configured API
-                response = genai.generate_images(
-                    model=self.model,
+                # Generate image using the client's models interface
+                response = self.client.models.generate_images(
+                    model=self.model_name,
                     prompt=prompt,
-                    generation_config=types.GenerateImagesConfig(
+                    config=GenerateImagesConfig(
                         number_of_images=1,
                     ),
                 )
 
-                if response.images:
+                # Log response structure for debugging
+                logger.debug("\n=== DEBUG: Image Generation Response ===")
+                logger.debug(f"Response type: {type(response)}")
+                logger.debug(f"Response attributes: {dir(response)}")
+                if hasattr(response, "generated_images"):
+                    logger.debug(
+                        f"Generated images count: {len(response.generated_images)}"
+                    )
+                    if response.generated_images:
+                        logger.debug(
+                            f"First image type: {type(response.generated_images[0])}"
+                        )
+                        logger.debug(
+                            f"First image attributes: {dir(response.generated_images[0])}"
+                        )
+                logger.debug("========================\n")
+
+                # Extract image data from response
+                if response.generated_images:
                     # Convert to base64
-                    image = Image.open(BytesIO(response.images[0].bytes))
+                    image_bytes = response.generated_images[0].image.image_bytes
+                    logger.debug(
+                        f"Found image data with size: {len(image_bytes)} bytes"
+                    )
+                    image = Image.open(BytesIO(image_bytes))
                     buffered = BytesIO()
                     image.save(buffered, format="JPEG")
                     img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
