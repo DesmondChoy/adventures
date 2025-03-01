@@ -580,32 +580,45 @@ def build_user_prompt(
     # Determine chapter type
     chapter_type = state.planned_chapter_types[state.current_chapter_number - 1]
 
+    # Get story phase
+    story_phase = state.current_storytelling_phase
+
+    # Get phase guidance
+    phase_guidance = _get_phase_guidance(story_phase, state)
+
     # Build the appropriate user prompt based on chapter type
+    prompt = ""
     if chapter_type == ChapterType.STORY:
         if state.current_chapter_number == 1:
             # For the first chapter, use the first chapter prompt
-            return build_first_chapter_prompt(state)
+            prompt = build_first_chapter_prompt(state)
         else:
             # For other story chapters, use the story chapter prompt
-            return build_story_chapter_prompt(state, previous_lessons)
+            prompt = build_story_chapter_prompt(state, previous_lessons)
     elif chapter_type == ChapterType.LESSON and lesson_question:
         # For lesson chapters, use the lesson chapter prompt
-        return build_lesson_chapter_prompt(state, lesson_question, previous_lessons)
+        prompt = build_lesson_chapter_prompt(state, lesson_question, previous_lessons)
     elif (
         chapter_type == ChapterType.REFLECT
         and previous_lessons
         and len(previous_lessons) > 0
     ):
         # For reflect chapters, use the reflect chapter prompt
-        return build_reflect_chapter_prompt(state, previous_lessons[-1])
+        prompt = build_reflect_chapter_prompt(state, previous_lessons[-1])
     elif chapter_type == ChapterType.CONCLUSION:
         # For conclusion chapters, use the conclusion chapter prompt
-        return build_conclusion_chapter_prompt(state, previous_lessons)
+        prompt = build_conclusion_chapter_prompt(state, previous_lessons)
     else:
         # This should never happen, but just in case
         logger = logging.getLogger("story_app")
         logger.error(f"Unsupported chapter type: {chapter_type}")
         raise ValueError(f"Unsupported chapter type: {chapter_type}")
+
+    # Add phase guidance to the prompt if available
+    if phase_guidance:
+        prompt = f"{phase_guidance}\n\n{prompt}"
+
+    return prompt
 
 
 def build_prompt(

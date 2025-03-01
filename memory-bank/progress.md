@@ -1,5 +1,125 @@
 # Progress Log
 
+## 2025-03-02: Reintegrated Phase Guidance in Prompt Engineering
+
+### Problem
+The `_get_phase_guidance()` function in `app/services/llm/prompt_engineering.py` was defined but not being used in the codebase. This function provides important phase-specific guidance for the LLM, including plot twist development across different story phases, which is a key part of the narrative continuity pattern.
+
+### Requirements
+- Reintegrate the `_get_phase_guidance()` function into the prompt engineering system
+- Ensure phase guidance is applied consistently across all chapter types
+- Maintain the existing chapter-specific prompt functions
+- Improve code maintainability by centralizing phase guidance logic
+- Align with the "Narrative Continuity Pattern" and "Plot Twist Integration" sections in the system patterns
+
+### Solution
+1. Kept the original `_get_phase_guidance()` function unchanged:
+   ```python
+   def _get_phase_guidance(story_phase: str, state: AdventureState) -> str:
+       """Get the appropriate guidance based on the Journey Quest story phase.
+
+       Args:
+           story_phase: Current phase of the story
+           state: Current adventure state containing story elements
+       """
+       # Get base guidance for the phase
+       base_guidance_text = BASE_PHASE_GUIDANCE.get(story_phase, "")
+
+       # Add plot twist guidance for applicable phases
+       if story_phase in PLOT_TWIST_GUIDANCE:
+           plot_twist_text = PLOT_TWIST_GUIDANCE[story_phase].format(
+               plot_twist=state.selected_plot_twist
+           )
+           return f"{base_guidance_text}\n\n{plot_twist_text}"
+
+       return base_guidance_text
+   ```
+
+2. Modified the `build_user_prompt()` function to get phase guidance and prepend it to all chapter prompts:
+   ```python
+   def build_user_prompt(
+       state: AdventureState,
+       lesson_question: Optional[LessonQuestion] = None,
+       previous_lessons: Optional[List[LessonResponse]] = None,
+   ) -> str:
+       """Create a user prompt that includes story state and current requirements."""
+       # Determine chapter type
+       chapter_type = state.planned_chapter_types[state.current_chapter_number - 1]
+
+       # Get story phase
+       story_phase = state.current_storytelling_phase
+
+       # Get phase guidance
+       phase_guidance = _get_phase_guidance(story_phase, state)
+
+       # Build the appropriate user prompt based on chapter type
+       prompt = ""
+       if chapter_type == ChapterType.STORY:
+           if state.current_chapter_number == 1:
+               # For the first chapter, use the first chapter prompt
+               prompt = build_first_chapter_prompt(state)
+           else:
+               # For other story chapters, use the story chapter prompt
+               prompt = build_story_chapter_prompt(state, previous_lessons)
+       elif chapter_type == ChapterType.LESSON and lesson_question:
+           # For lesson chapters, use the lesson chapter prompt
+           prompt = build_lesson_chapter_prompt(state, lesson_question, previous_lessons)
+       elif (
+           chapter_type == ChapterType.REFLECT
+           and previous_lessons
+           and len(previous_lessons) > 0
+       ):
+           # For reflect chapters, use the reflect chapter prompt
+           prompt = build_reflect_chapter_prompt(state, previous_lessons[-1])
+       elif chapter_type == ChapterType.CONCLUSION:
+           # For conclusion chapters, use the conclusion chapter prompt
+           prompt = build_conclusion_chapter_prompt(state, previous_lessons)
+       else:
+           # This should never happen, but just in case
+           logger = logging.getLogger("story_app")
+           logger.error(f"Unsupported chapter type: {chapter_type}")
+           raise ValueError(f"Unsupported chapter type: {chapter_type}")
+
+       # Add phase guidance to the prompt if available
+       if phase_guidance:
+           prompt = f"{phase_guidance}\n\n{prompt}"
+
+       return prompt
+   ```
+
+3. Maintained the original chapter-specific prompt functions without modification:
+   - `build_first_chapter_prompt()`
+   - `build_story_chapter_prompt()`
+   - `build_lesson_chapter_prompt()`
+   - `build_reflect_chapter_prompt()`
+   - `build_conclusion_chapter_prompt()`
+
+### Results
+The implementation successfully:
+
+1. **Reintegrated Phase Guidance**:
+   - The `_get_phase_guidance()` function is now used in the prompt engineering system
+   - Phase guidance is applied consistently across all chapter types
+   - The guidance provides important context for the LLM about the current storytelling phase
+
+2. **Improved Code Maintainability**:
+   - Centralized phase guidance logic in one place
+   - Kept the chapter-specific prompt functions focused on their core responsibilities
+   - Made future modifications to phase guidance easier to implement
+
+3. **Enhanced Narrative Continuity**:
+   - Provided consistent phase-specific guidance across all chapters
+   - Ensured proper plot twist development across different story phases
+   - Aligned with the system patterns documented in the memory bank
+
+4. **Maintained Existing Functionality**:
+   - Preserved all chapter type handling
+   - Kept all agency integration features
+   - Maintained all metadata tracking
+   - Retained all utility functions
+
+The reintegration of the `_get_phase_guidance()` function has improved the prompt engineering system by ensuring that phase-specific guidance, including plot twist development, is consistently applied across all chapter types, enhancing the narrative continuity of the adventure.
+
 ## 2025-03-01: Enhanced Image Generation Reliability
 
 ### Problem

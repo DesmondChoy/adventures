@@ -55,6 +55,19 @@ The project is focused on implementing core Learning Odyssey features, including
 
 ## Recent Changes
 
+### Reintegrated Phase Guidance in Prompt Engineering (2025-03-02)
+- Reintegrated the `_get_phase_guidance()` function in `app/services/llm/prompt_engineering.py`:
+  * Modified `build_user_prompt()` to get phase guidance and prepend it to all chapter prompts
+  * Maintained the original chapter-specific prompt functions without modification
+  * Ensured phase guidance is applied consistently across all chapter types
+  * Improved code maintainability by centralizing phase guidance logic
+  * This function provides important context for the LLM about the current storytelling phase:
+    - Narrative focus and goals for the current phase
+    - Emotional tone appropriate for the phase
+    - Sensory integration guidance
+    - Plot twist development instructions when applicable
+  * The implementation aligns with the "Narrative Continuity Pattern" and "Plot Twist Integration" sections in the system patterns
+
 ### Implemented Streamlined and Further Streamlined LLM Prompts (2025-03-01)
 - Created and integrated streamlined prompt templates for Chapter 1 in `app/services/llm/`:
   * Created `streamlined_prompt_templates.py` and `further_streamlined_prompt_templates.py` with optimized templates

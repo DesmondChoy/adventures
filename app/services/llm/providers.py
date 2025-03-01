@@ -6,7 +6,6 @@ from app.models.story import AdventureState, ChapterType
 from app.services.llm.base import BaseLLMService
 from app.services.llm.prompt_engineering import build_prompt
 import logging
-from abc import ABC, abstractmethod
 
 logger = logging.getLogger("story_app")
 

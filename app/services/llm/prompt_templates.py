@@ -18,12 +18,12 @@ SYSTEM_PROMPT_TEMPLATE = """# Storyteller Role
 You are a master storyteller crafting an interactive educational story that seamlessly blends narrative and learning.
 
 # Story Elements
-- **Setting**: {setting_types}
-- **Character**: {character_archetypes}
-- **Rule**: {story_rules}
-- **Theme**: {selected_theme}
-- **Moral Teaching**: {selected_moral_teaching}
-- **Sensory Details**:
+- Setting: {setting_types}
+- Character: {character_archetypes}
+- Rule: {story_rules}
+- Theme: {selected_theme}
+- Moral Teaching: {selected_moral_teaching}
+- Sensory Details:
   - Visual: {visuals}
   - Sound: {sounds}
   - Scent: {smells}
@@ -41,11 +41,11 @@ You are a master storyteller crafting an interactive educational story that seam
    - Should feel like a natural part of the narrative
 
 # CRITICAL RULES
-1. **Narrative Structure**: Begin directly (never with "Chapter X"), end at natural decision points, maintain consistent elements
-2. **Content Development**: Incorporate sensory details naturally, develop theme organically, balance entertainment with learning
-3. **Educational Integration**: Ensure lessons feel organic to the story, never forced or artificial
-4. **Agency Integration**: Weave the character's pivotal choice naturally throughout, showing its evolution and impact
-5. **Choice Format**: Use <CHOICES> tags, format as "Choice [A/B/C]: [description]" on single lines, make choices meaningful and distinct"""
+1. Narrative Structure: Begin directly (never with "Chapter X"), end at natural decision points, maintain consistent elements
+2. Content Development: Incorporate sensory details naturally, develop theme organically, balance entertainment with learning
+3. Educational Integration: Ensure lessons feel organic to the story, never forced or artificial
+4. Agency Integration: Weave the character's pivotal choice naturally throughout, showing its evolution and impact
+5. Choice Format: Use <CHOICES> tags, format as "Choice [A/B/C]: [description]" on single lines, make choices meaningful and distinct"""
 
 # User Prompt Templates
 # --------------------
@@ -61,10 +61,10 @@ FIRST_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. **Exposition Focus**: {exposition_focus}
-2. **Character Introduction**: Establish the protagonist through vivid sensory details
-3. **World Building**: Create an immersive setting using the sensory elements
-4. **Decision Point**: Build naturally to a pivotal choice that will shape the character's journey
+1. Exposition Focus: {exposition_focus}
+2. Character Introduction: Establish the protagonist through vivid sensory details
+3. World Building: Create an immersive setting using the sensory elements
+4. Decision Point: Build naturally to a pivotal choice that will shape the character's journey
 
 # Agency Options: {agency_category_name}
 {agency_options}
@@ -89,8 +89,8 @@ STORY_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. **Exposition Focus**: {exposition_focus}
-2. **Previous Impact**: {consequences_guidance}
+1. Exposition Focus: {exposition_focus}
+2. Previous Impact: {consequences_guidance}
 {lesson_history}
 {agency_guidance}
 
@@ -122,22 +122,24 @@ LESSON_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. **Exposition Focus**: {exposition_focus}
-2. **Previous Impact**: {consequences_guidance}
+1. Exposition Focus: {exposition_focus}
+2. Previous Impact: {consequences_guidance}
 {lesson_history}
 {agency_guidance}
 
 # Lesson Chapter Instructions
-1. **Core Question Integration**: Include this exact question in your narrative: "{question}"
-2. **Story Object Method**: Create ONE visually interesting element that naturally connects to the question
-3. **Narrative Integration**: Make the question feel like a natural part of the character's journey
-4. **Educational Context**: Establish clear stakes for why answering matters to the characters
+1. Core Question Integration: Include this exact question in your narrative: "{question}"
+2. Story Object Method: Create ONE visually interesting element that naturally connects to the question
+3. Narrative Integration: Make the question feel like a natural part of the character's journey
+4. Educational Context: Establish clear stakes for why answering matters to the characters
 
 # Available Answers
 {formatted_answers}
 
-# CRITICAL INSTRUCTION
-# DO NOT include any choices or <CHOICES> tags in LESSON chapters. The options above are provided for information only and will be handled by the application."""
+
+DO NOT:
+- Mention/Reference any of the available answers in the narrative
+- Include any choices or <CHOICES> tags in LESSON chapters. The options above are provided for information only and will be handled by the application."""
 
 # Reflect Chapter Prompt Template
 REFLECT_CHAPTER_PROMPT = """# Current Context
@@ -150,8 +152,8 @@ REFLECT_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. **Exposition Focus**: {exposition_focus}
-2. **Reflection Purpose**: Process the previous lesson's understanding
+1. Exposition Focus: {exposition_focus}
+2. Reflection Purpose: Process the previous lesson's understanding
 
 # Narrative-Driven Reflection
 The character previously answered: "{question}" with "{chosen_answer}" ({answer_status})
@@ -160,9 +162,9 @@ The character previously answered: "{question}" with "{chosen_answer}" ({answer_
 {reflective_technique}
 
 ## Scene Structure
-1. **Narrative Acknowledgment**: {acknowledgment_guidance}
-2. **Socratic Exploration**: Guide the character to {exploration_goal} through thoughtful questions
-3. **Story Integration**: Connect this reflection to the ongoing narrative and theme of "{theme}"
+1. Narrative Acknowledgment: {acknowledgment_guidance}
+2. Socratic Exploration: Guide the character to {exploration_goal} through thoughtful questions
+3. Story Integration: Connect this reflection to the ongoing narrative and theme of "{theme}"
 {agency_guidance}
 
 ## Choice Structure
@@ -194,15 +196,15 @@ CONCLUSION_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. **Exposition Focus**: {exposition_focus}
-2. **Conclusion Purpose**: Provide a satisfying resolution to the journey
+1. Exposition Focus: {exposition_focus}
+2. Conclusion Purpose: Provide a satisfying resolution to the journey
 {lesson_history}
 
 # Conclusion Chapter Instructions
-1. **Resolution Focus**: Provide a complete and satisfying resolution to all plot threads
-2. **Character Growth**: Show how the journey and choices have transformed the character
-3. **Educational Integration**: Incorporate wisdom gained from the educational journey
-4. **Agency Resolution**: {agency_resolution_guidance}
+1. Resolution Focus: Provide a complete and satisfying resolution to all plot threads
+2. Character Growth: Show how the journey and choices have transformed the character
+3. Educational Integration: Incorporate wisdom gained from the educational journey
+4. Agency Resolution: {agency_resolution_guidance}
 
 # CRITICAL RULES
 1. This is the final chapter - provide a complete and satisfying conclusion
@@ -339,38 +341,38 @@ def get_exposition_focus(phase: str) -> str:
 BASE_PHASE_GUIDANCE: Dict[str, str] = {
     "Exposition": (
         "# Phase Guidance: Exposition\n"
-        "- **Focus**: Introduction, setting the scene, establishing the character's ordinary world\n"
-        "- **Narrative Goals**: Introduce the main character, the setting, and the initial situation\n"
-        "- **Emotional Tone**: Intriguing, inviting, a sense of normalcy that will soon be disrupted\n"
-        "- **Sensory Integration**: Establish the world through vivid sensory details"
+        "- Focus: Introduction, setting the scene, establishing the character's ordinary world\n"
+        "- Narrative Goals: Introduce the main character, the setting, and the initial situation\n"
+        "- Emotional Tone: Intriguing, inviting, a sense of normalcy that will soon be disrupted\n"
+        "- Sensory Integration: Establish the world through vivid sensory details"
     ),
     "Rising": (
         "# Phase Guidance: Rising Action\n"
-        "- **Focus**: Character begins their journey, facing initial challenges\n"
-        "- **Narrative Goals**: Develop the plot and introduce early obstacles\n"
-        "- **Emotional Tone**: Excitement, anticipation, building momentum\n"
-        "- **Sensory Integration**: Use sensory details to highlight new experiences"
+        "- Focus: Character begins their journey, facing initial challenges\n"
+        "- Narrative Goals: Develop the plot and introduce early obstacles\n"
+        "- Emotional Tone: Excitement, anticipation, building momentum\n"
+        "- Sensory Integration: Use sensory details to highlight new experiences"
     ),
     "Trials": (
         "# Phase Guidance: Trials\n"
-        "- **Focus**: Character faces significant challenges and setbacks\n"
-        "- **Narrative Goals**: Test resolve, increase stakes, deepen learning\n"
-        "- **Emotional Tone**: Tension, determination, growing uncertainty\n"
-        "- **Sensory Integration**: Intensify sensory details during key moments"
+        "- Focus: Character faces significant challenges and setbacks\n"
+        "- Narrative Goals: Test resolve, increase stakes, deepen learning\n"
+        "- Emotional Tone: Tension, determination, growing uncertainty\n"
+        "- Sensory Integration: Intensify sensory details during key moments"
     ),
     "Climax": (
         "# Phase Guidance: Climax\n"
-        "- **Focus**: Character confronts the main conflict and revelations\n"
-        "- **Narrative Goals**: Deliver exciting resolution and transformation\n"
-        "- **Emotional Tone**: Intense excitement, high stakes, breakthrough moments\n"
-        "- **Sensory Integration**: Peak sensory experience during crucial scenes"
+        "- Focus: Character confronts the main conflict and revelations\n"
+        "- Narrative Goals: Deliver exciting resolution and transformation\n"
+        "- Emotional Tone: Intense excitement, high stakes, breakthrough moments\n"
+        "- Sensory Integration: Peak sensory experience during crucial scenes"
     ),
     "Return": (
         "# Phase Guidance: Return\n"
-        "- **Focus**: Character integrates their experiences and growth\n"
-        "- **Narrative Goals**: Show transformation and provide closure\n"
-        "- **Emotional Tone**: Reflective, peaceful, sense of completion\n"
-        "- **Sensory Integration**: Use sensory details to highlight the character's new perspective"
+        "- Focus: Character integrates their experiences and growth\n"
+        "- Narrative Goals: Show transformation and provide closure\n"
+        "- Emotional Tone: Reflective, peaceful, sense of completion\n"
+        "- Sensory Integration: Use sensory details to highlight the character's new perspective"
     ),
 }
 
