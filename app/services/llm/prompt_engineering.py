@@ -8,7 +8,6 @@ complete prompts for different chapter types and scenarios.
 
 from typing import Any, Dict, Optional, List, TypedDict, cast, Tuple
 import logging
-import random
 from datetime import datetime
 from app.models.story import (
     AdventureState,
@@ -23,18 +22,17 @@ from app.services.llm.prompt_templates import (
     LESSON_CHAPTER_PROMPT,
     REFLECT_CHAPTER_PROMPT,
     CONCLUSION_CHAPTER_PROMPT,
-    get_choice_instructions,
-    get_agency_category,
     REFLECT_CHOICE_FORMAT,
-    REFLECTIVE_TECHNIQUES,
     BASE_PHASE_GUIDANCE,
     PLOT_TWIST_GUIDANCE,
-    get_exposition_focus,
-    get_reflective_technique,
     CORRECT_ANSWER_CONSEQUENCES,
     INCORRECT_ANSWER_CONSEQUENCES,
     AGENCY_GUIDANCE,
     REFLECT_CONFIG,
+    get_choice_instructions,
+    get_agency_category,
+    get_exposition_focus,
+    get_reflective_technique,
 )
 
 

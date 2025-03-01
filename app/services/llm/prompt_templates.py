@@ -71,10 +71,12 @@ FIRST_CHAPTER_PROMPT = """# Current Context
 
 # Choice Format Specification
 <CHOICES>
-Choice A: [Option that reveals character traits and establishes initial direction]
-Choice B: [Option that offers a different approach or value system]
-Choice C: [Option that presents an alternative path with unique consequences]
-</CHOICES>"""
+Choice A: [Select one of the {agency_category_name} options above and incorporate it into a meaningful choice]
+Choice B: [Select a different {agency_category_name} option from above and incorporate it into a meaningful choice]
+Choice C: [Select a third {agency_category_name} option from above and incorporate it into a meaningful choice]
+</CHOICES>
+
+Each choice MUST directly correspond to one of the specific {agency_category_name} options listed above. Do not create generic choices - each choice should clearly reference one of the provided agency options."""
 
 # Story Chapter Prompt Template
 STORY_CHAPTER_PROMPT = """# Current Context

@@ -151,6 +151,63 @@ graph TD
     - Approach tracking in AdventureState metadata for debugging
     - Uses diverse storytelling techniques for reflective moments
 
+### 7. Prompt Engineering Pattern (`app/services/llm/prompt_templates.py`)
+- **Prompt Structure and Organization**:
+  * Modular template design with separate templates for different chapter types
+  * Consistent section ordering across templates
+  * Clear delineation between system and user prompts
+  * Hierarchical organization for improved readability
+  * CRITICAL: Maintain consistent structure across all prompt templates
+
+- **Instruction Integration**:
+  * Group related instructions under relevant sections
+  * Place instructions directly with the content they modify
+  * Avoid creating separate sections for critical instructions
+  * CRITICAL: Instructions must be clear, concise, and contextually relevant
+  * Example: Agency choice instructions in first chapter:
+    ```
+    # Choice Format Specification
+    <CHOICES>
+    Choice A: [Select one of the {agency_category_name} options above and incorporate it into a meaningful choice]
+    Choice B: [Select a different {agency_category_name} option from above and incorporate it into a meaningful choice]
+    Choice C: [Select a third {agency_category_name} option from above and incorporate it into a meaningful choice]
+    </CHOICES>
+
+    Each choice MUST directly correspond to one of the specific {agency_category_name} options listed above. Do not create generic choices - each choice should clearly reference one of the provided agency options.
+    ```
+
+- **Avoiding Prompt Bloat**:
+  * Common causes:
+    - Redundant instructions across different sections
+    - Overly verbose explanations
+    - Multiple sections addressing the same concern
+    - Accumulation of ad-hoc fixes without refactoring
+    - Excessive formatting instructions that could be consolidated
+    - Separate "CRITICAL" sections for related instructions
+    - Repetitive emphasis markers (bold, caps, etc.)
+  * Prevention strategies:
+    - Regular prompt audits to identify and remove redundancies
+    - Consolidate similar instructions across templates
+    - Focus on essential instructions that drive desired outcomes
+    - Maintain balance between clarity and conciseness
+    - CRITICAL: Consider token count impact of prompt design decisions
+
+- **CRITICAL Section Management**:
+  * Problem: Excessive use of "CRITICAL" prefixed sections contributes to prompt bloat
+  * Solution: Integrate critical instructions within relevant content sections
+  * Implementation:
+    - Reserve "CRITICAL RULES" for system-level instructions only
+    - Incorporate chapter-specific critical instructions within relevant sections
+    - Use emphasis (bold, italics) sparingly and consistently
+    - CRITICAL: Maintain clear distinction between general guidance and critical requirements
+
+- **Maintenance Workflow**:
+  * Document all prompt changes with rationale
+  * Test changes with multiple scenarios
+  * Monitor LLM response quality after changes
+  * Implement A/B testing for significant changes
+  * CRITICAL: Version control for prompt templates to track changes and effects
+
 ### 7. State Management Pattern
 - Centralized AdventureState:
   * Single source of truth for all state
