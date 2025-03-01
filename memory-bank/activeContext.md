@@ -55,6 +55,14 @@ The project is focused on implementing core Learning Odyssey features, including
 
 ## Recent Changes
 
+### Removed Redundant Exposition Focus Code (2025-03-02)
+- Removed the redundant `EXPOSITION_FOCUS` dictionary and `get_exposition_focus()` function from `app/services/llm/prompt_templates.py`:
+  * This functionality was already provided by the phase guidance system through `_get_phase_guidance()`
+  * Updated all chapter prompt building functions to extract exposition focus from phase guidance
+  * Improved code maintainability by eliminating redundancy
+  * Reduced the risk of inconsistencies between different guidance systems
+  * The implementation maintains the same exposition focus functionality across all chapter types
+
 ### Reintegrated Phase Guidance in Prompt Engineering (2025-03-02)
 - Reintegrated the `_get_phase_guidance()` function in `app/services/llm/prompt_engineering.py`:
   * Modified `build_user_prompt()` to get phase guidance and prepend it to all chapter prompts

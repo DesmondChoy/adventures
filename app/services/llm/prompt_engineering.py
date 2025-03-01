@@ -31,7 +31,6 @@ from app.services.llm.prompt_templates import (
     REFLECT_CONFIG,
     get_choice_instructions,
     get_agency_category,
-    get_exposition_focus,
     get_reflective_technique,
 )
 
@@ -215,8 +214,10 @@ def build_first_chapter_prompt(state: AdventureState) -> str:
     # Get base prompt components
     story_history, story_phase, _ = _build_base_prompt(state)
 
-    # Get exposition focus for the current phase
-    exposition_focus = get_exposition_focus(story_phase)
+    # Extract exposition focus from phase guidance
+    phase_guidance = _get_phase_guidance(story_phase, state)
+    # Use the first line of the Focus section from phase guidance
+    exposition_focus = phase_guidance.split("- Focus:")[1].split("\n")[0].strip()
 
     # Get random agency category
     agency_category_name, agency_options = get_agency_category()
@@ -252,8 +253,10 @@ def build_story_chapter_prompt(
     # Get base prompt components
     story_history, story_phase, _ = _build_base_prompt(state)
 
-    # Get exposition focus for the current phase
-    exposition_focus = get_exposition_focus(story_phase)
+    # Extract exposition focus from phase guidance
+    phase_guidance = _get_phase_guidance(story_phase, state)
+    # Use the first line of the Focus section from phase guidance
+    exposition_focus = phase_guidance.split("- Focus:")[1].split("\n")[0].strip()
 
     # Get consequences guidance if there are previous lessons
     if previous_lessons and len(previous_lessons) > 0:
@@ -343,8 +346,10 @@ def build_lesson_chapter_prompt(
     # Format lesson answers
     formatted_answers = _format_lesson_answers(lesson_question)
 
-    # Get exposition focus for the current phase
-    exposition_focus = get_exposition_focus(story_phase)
+    # Extract exposition focus from phase guidance
+    phase_guidance = _get_phase_guidance(story_phase, state)
+    # Use the first line of the Focus section from phase guidance
+    exposition_focus = phase_guidance.split("- Focus:")[1].split("\n")[0].strip()
 
     # Get consequences guidance if there are previous lessons
     if previous_lessons and len(previous_lessons) > 0:
@@ -423,8 +428,10 @@ def build_reflect_chapter_prompt(
     # Select the appropriate configuration
     config = REFLECT_CONFIG["correct"] if is_correct else REFLECT_CONFIG["incorrect"]
 
-    # Get exposition focus for the current phase
-    exposition_focus = get_exposition_focus(story_phase)
+    # Extract exposition focus from phase guidance
+    phase_guidance = _get_phase_guidance(story_phase, state)
+    # Use the first line of the Focus section from phase guidance
+    exposition_focus = phase_guidance.split("- Focus:")[1].split("\n")[0].strip()
 
     # Get agency guidance if available
     agency_guidance = ""
@@ -517,8 +524,10 @@ def build_conclusion_chapter_prompt(
     # Get base prompt components
     story_history, story_phase, _ = _build_base_prompt(state)
 
-    # Get exposition focus for the current phase
-    exposition_focus = get_exposition_focus(story_phase)
+    # Extract exposition focus from phase guidance
+    phase_guidance = _get_phase_guidance(story_phase, state)
+    # Use the first line of the Focus section from phase guidance
+    exposition_focus = phase_guidance.split("- Focus:")[1].split("\n")[0].strip()
 
     # Get consequences guidance if there are previous lessons
     consequences_guidance = ""

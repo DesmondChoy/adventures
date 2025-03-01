@@ -1,5 +1,56 @@
 # Progress Log
 
+## 2025-03-02: Removed Redundant Exposition Focus Code
+
+### Problem
+The codebase contained a redundant `EXPOSITION_FOCUS` dictionary and `get_exposition_focus()` function in `app/services/llm/prompt_templates.py`. This functionality was already provided by the phase guidance system through the `_get_phase_guidance()` function, which was recently reintegrated into the prompt engineering system.
+
+### Requirements
+- Remove the redundant `EXPOSITION_FOCUS` dictionary and `get_exposition_focus()` function
+- Update all references to use the phase guidance system instead
+- Maintain the same functionality for exposition focus in all chapter types
+- Improve code maintainability by eliminating redundancy
+
+### Solution
+1. Removed the `EXPOSITION_FOCUS` dictionary and `get_exposition_focus()` function from `prompt_templates.py`:
+   ```python
+   # Removed:
+   EXPOSITION_FOCUS = {
+       "Exposition": "Introduce the ordinary world and establish normalcy that will soon be disrupted",
+       "Rising": "Show the character's first steps into a changing world with new challenges",
+       "Trials": "Present mounting challenges that test the character's resolve",
+       "Climax": "Build tension toward a critical moment of truth and transformation",
+       "Return": "Reflect on growth and transformation as the journey nears completion",
+   }
+
+   def get_exposition_focus(phase: str) -> str:
+       """Get the appropriate exposition focus for the given story phase."""
+       return EXPOSITION_FOCUS.get(phase, EXPOSITION_FOCUS["Exposition"])
+   ```
+
+2. Updated all chapter prompt building functions in `prompt_engineering.py` to extract the exposition focus from the phase guidance:
+   ```python
+   # Extract exposition focus from phase guidance
+   phase_guidance = _get_phase_guidance(story_phase, state)
+   # Use the first line of the Focus section from phase guidance
+   exposition_focus = phase_guidance.split("- Focus:")[1].split("\n")[0].strip()
+   ```
+
+3. Applied this change to all chapter types:
+   - `build_first_chapter_prompt()`
+   - `build_story_chapter_prompt()`
+   - `build_lesson_chapter_prompt()`
+   - `build_reflect_chapter_prompt()`
+   - `build_conclusion_chapter_prompt()`
+
+### Results
+The implementation successfully:
+1. Removed redundant code that duplicated functionality
+2. Maintained the same exposition focus functionality across all chapter types
+3. Improved code maintainability by centralizing the phase guidance logic
+4. Reduced the risk of inconsistencies between different guidance systems
+5. Made the codebase more maintainable by eliminating redundancy
+
 ## 2025-03-02: Reintegrated Phase Guidance in Prompt Engineering
 
 ### Problem
