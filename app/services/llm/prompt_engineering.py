@@ -258,7 +258,6 @@ def build_story_chapter_prompt(
     exposition_focus = get_exposition_focus(story_phase)
 
     # Get consequences guidance if there are previous lessons
-    consequences_guidance = ""
     if previous_lessons and len(previous_lessons) > 0:
         last_lesson = previous_lessons[-1]
         consequences_guidance = process_consequences(
@@ -267,6 +266,8 @@ def build_story_chapter_prompt(
             last_lesson.chosen_answer,
             state.current_chapter_number,
         )
+    else:
+        consequences_guidance = "Continue the narrative journey"
 
     # Format lesson history if available
     lesson_history = ""
@@ -348,7 +349,6 @@ def build_lesson_chapter_prompt(
     exposition_focus = get_exposition_focus(story_phase)
 
     # Get consequences guidance if there are previous lessons
-    consequences_guidance = ""
     if previous_lessons and len(previous_lessons) > 0:
         last_lesson = previous_lessons[-1]
         consequences_guidance = process_consequences(
@@ -357,6 +357,8 @@ def build_lesson_chapter_prompt(
             last_lesson.chosen_answer,
             state.current_chapter_number,
         )
+    else:
+        consequences_guidance = "Introduce a new learning opportunity"
 
     # Format lesson history if available
     lesson_history = ""

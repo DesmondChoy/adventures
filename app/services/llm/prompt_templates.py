@@ -88,8 +88,8 @@ STORY_CHAPTER_PROMPT = """# Current Context
 
 # Chapter Development Guidelines
 1. **Exposition Focus**: {exposition_focus}
-2. **Previous Impact**: {consequences_guidance if consequences_guidance else "Continue the narrative journey"}
-{lesson_history if lesson_history else ""}
+2. **Previous Impact**: {consequences_guidance}
+{lesson_history}
 {agency_guidance}
 
 # Story Chapter Instructions
@@ -121,8 +121,8 @@ LESSON_CHAPTER_PROMPT = """# Current Context
 
 # Chapter Development Guidelines
 1. **Exposition Focus**: {exposition_focus}
-2. **Previous Impact**: {consequences_guidance if consequences_guidance else "Introduce a new learning opportunity"}
-{lesson_history if lesson_history else ""}
+2. **Previous Impact**: {consequences_guidance}
+{lesson_history}
 {agency_guidance}
 
 # Lesson Chapter Instructions
@@ -132,7 +132,10 @@ LESSON_CHAPTER_PROMPT = """# Current Context
 4. **Educational Context**: Establish clear stakes for why answering matters to the characters
 
 # Available Answers
-{formatted_answers}"""
+{formatted_answers}
+
+# CRITICAL INSTRUCTION
+# DO NOT include any choices or <CHOICES> tags in LESSON chapters. The options above are provided for information only and will be handled by the application."""
 
 # Reflect Chapter Prompt Template
 REFLECT_CHAPTER_PROMPT = """# Current Context
@@ -191,7 +194,7 @@ CONCLUSION_CHAPTER_PROMPT = """# Current Context
 # Chapter Development Guidelines
 1. **Exposition Focus**: {exposition_focus}
 2. **Conclusion Purpose**: Provide a satisfying resolution to the journey
-{lesson_history if lesson_history else ""}
+{lesson_history}
 
 # Conclusion Chapter Instructions
 1. **Resolution Focus**: Provide a complete and satisfying resolution to all plot threads
