@@ -50,7 +50,6 @@ You are a master storyteller crafting an interactive educational story that seam
 # User Prompt Templates
 # --------------------
 
-# First Chapter Prompt Template
 FIRST_CHAPTER_PROMPT = """# Current Context
 - Chapter: {chapter_number} of {story_length}
 - Type: {chapter_type}
@@ -77,7 +76,6 @@ Choice C: [Select a third {agency_category_name} option from above and incorpora
 
 Each choice MUST directly correspond to one of the specific {agency_category_name} options listed above. Do not create generic choices - each choice should clearly reference one of the provided agency options."""
 
-# Story Chapter Prompt Template
 STORY_CHAPTER_PROMPT = """# Current Context
 - Chapter: {chapter_number} of {story_length}
 - Type: {chapter_type}
@@ -92,13 +90,8 @@ STORY_CHAPTER_PROMPT = """# Current Context
 {lesson_history}
 {agency_guidance}
 
-# Story Chapter Instructions
-1. Follow directly from the previous chapter content
-2. Take into account previous choices made in the story
-3. Create meaningful consequences for these decisions
-4. Focus on character development and plot progression
-5. Build towards a natural story decision point
-6. End the scene at a moment of decision
+# Current Chapter Emphasis
+- Focus on character development and plot progression
 
 {plot_twist_guidance}
 
@@ -109,7 +102,6 @@ Choice B: [Second meaningful option]
 Choice C: [Third meaningful option]
 </CHOICES>"""
 
-# Lesson Chapter Prompt Template
 LESSON_CHAPTER_PROMPT = """# Current Context
 - Chapter: {chapter_number} of {story_length}
 - Type: {chapter_type}
@@ -124,7 +116,7 @@ LESSON_CHAPTER_PROMPT = """# Current Context
 {lesson_history}
 {agency_guidance}
 
-# Lesson Chapter Instructions
+# Current Chapter Emphasis
 1. Core Question Integration: Include this exact question in your narrative: "{question}"
 2. Story Object Method: Create ONE visually interesting element that naturally connects to the question
 3. Narrative Integration: Make the question feel like a natural part of the character's journey
@@ -138,7 +130,6 @@ DO NOT:
 - Mention/Reference any of the available answers in the narrative
 - Include any choices or <CHOICES> tags in LESSON chapters. The options above are provided for information only and will be handled by the application."""
 
-# Reflect Chapter Prompt Template
 REFLECT_CHAPTER_PROMPT = """# Current Context
 - Chapter: {chapter_number} of {story_length}
 - Type: {chapter_type}
@@ -151,7 +142,8 @@ REFLECT_CHAPTER_PROMPT = """# Current Context
 # Chapter Development Guidelines
 1. Reflection Purpose: Process the previous lesson's understanding
 
-# Narrative-Driven Reflection
+# Current Chapter Emphasis
+This is an opportunity for to apply Narrative-Driven Reflection. 
 The character previously answered: "{question}" with "{chosen_answer}" ({answer_status})
 {correct_answer_info}
 
@@ -181,7 +173,6 @@ Choice C: [Third story-driven choice]
 4. Narrative Focus: All choices should be story-driven without any being labeled as "correct" or "incorrect"
 5. Character Growth: Each choice should reflect a different way the character might process or apply what they've learned"""
 
-# Conclusion Chapter Prompt Template
 CONCLUSION_CHAPTER_PROMPT = """# Current Context
 - Chapter: {chapter_number} of {story_length}
 - Type: {chapter_type}
@@ -195,16 +186,14 @@ CONCLUSION_CHAPTER_PROMPT = """# Current Context
 1. Conclusion Purpose: Provide a satisfying resolution to the journey
 {lesson_history}
 
-# Conclusion Chapter Instructions
-1. Resolution Focus: Provide a complete and satisfying resolution to all plot threads
-2. Character Growth: Show how the journey and choices have transformed the character
-3. Educational Integration: Incorporate wisdom gained from the educational journey
-4. Agency Resolution: {agency_resolution_guidance}
-
-# CRITICAL RULES
+# Current Chapter Emphasis
 1. This is the final chapter - provide a complete and satisfying conclusion
-2. DO NOT include any choices or decision points
-3. End with a sense of closure while highlighting transformation"""
+2. Resolution Focus: Provide a complete and satisfying resolution to all plot threads
+3. Character Growth: Show how the journey and choices have transformed the character
+4. Educational Integration: Incorporate wisdom gained from the educational journey
+5. Agency Resolution: {agency_resolution_guidance} 
+6. DO NOT include any choices or decision points
+7. End with a sense of closure while highlighting transformation"""
 
 # Choice format instructions
 # --------------------------
@@ -437,15 +426,15 @@ INCORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
 
 AGENCY_GUIDANCE = {
     "correct": """## Agency Evolution
-The character's {agency_type} ({agency_name}) should evolve through this correct understanding:
-- Reveal a new capability or aspect of their agency element
-- Use it to overcome a challenge in a meaningful way
-- Deepen the connection between character and their agency choice""",
+The character's {agency_type} ({agency_name}) should evolve through this correct understanding by:
+- Revealing a new capability or aspect of their agency element OR
+- Using it to overcome a challenge in a meaningful way OR
+- Deepening the connection between character and their agency choice""",
     "incorrect": """## Agency Evolution
-The character's {agency_type} ({agency_name}) should adapt through this learning experience:
-- Incorporate the new knowledge they've gained
-- Provide a different perspective on the problem
-- Demonstrate resilience and growth through the challenge""",
+The character's {agency_type} ({agency_name}) should adapt through this learning experience by:
+- Incorporating the new knowledge they've gained  OR
+- Providing a different perspective on the problem
+- Demonstrating resilience and growth through the challenge""",
     "climax": """## Climax Agency Integration
 The character's {agency_type} ({agency_name}) should play a pivotal role:
 1. Show how it has evolved throughout the journey
