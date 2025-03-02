@@ -274,6 +274,11 @@ def get_agency_category() -> Tuple[str, str]:
             "Weathered Map - reveals new paths and hidden locations [with moving ink and shimmering locations]",
             "Pocket Watch - helps with timing and glimpses possible futures [with constellation dial and glowing hands]",
             "Healing Potion - restores strength and provides clarity of mind [crystal vial with swirling iridescent liquid]",
+            "Singing Bells - creates harmonious music that soothes troubled hearts [cluster of colorful crystal bells that glow and float in mid-air]",
+            "Transforming Clay - shapes into whatever you imagine [rainbow-colored clay that shimmers when touched and leaves stardust trails]",
+            "Invisibility Cloak - makes the wearer blend into surroundings [shimmering fabric that reflects its environment like water with silver thread edges]",
+            "Bottomless Backpack - holds impossible amounts of treasures [patchwork bag with magical symbols and items occasionally peeking out]",
+            "Whispering Quill - writes messages that fly to distant friends [feather pen with color-changing ink and tiny translucent wings]",
         ],
         "Companions to Choose": [
             "Wise Owl - offers knowledge and explanations [with spectacle-like markings and glowing blue eyes]",
@@ -282,6 +287,11 @@ def get_agency_category() -> Tuple[str, str]:
             "Gentle Deer - provides emotional support and peaceful solutions [with luminous antlers that bloom with flowers]",
             "Playful Otter - brings joy and finds unexpected approaches [with aquamarine fur and pearl necklace]",
             "Steadfast Turtle - offers patience and protection in difficult times [with crystal-embedded shell and ancient eyes]",
+            "Tiny Dragon - breathes helpful magical flames and offers fierce loyalty [iridescent scales, butterfly wings, and friendly purple eyes]",
+            "Starlight Butterfly - illuminates dark places and finds hidden paths [wings that glow like constellations with trailing stardust]",
+            "Friendly Shadow - sneaks into tight spaces and provides camouflage [shifting dark form with playful glowing eyes and misty edges]",
+            "Crystal Hedgehog - senses danger and collects valuable treasures [gemstone spines that change color with mood and tiny spectacles]",
+            "Bubble Dolphin - travels through water and air with equal grace [translucent body with rainbow highlights and a trail of magical bubbles]",
         ],
         "Roles or Professions": [
             "Healer - mends wounds and restores balance [flowing robes, medicinal herbs, and a glowing crystal staff]",
@@ -290,6 +300,11 @@ def get_agency_category() -> Tuple[str, str]:
             "Pathfinder - discovers new routes and possibilities [weathered explorer's outfit, glowing compass and constellation map]",
             "Diplomat - resolves conflicts through communication [elegant attire with ceremonial medallion and glowing scroll case]",
             "Craftsperson - builds and creates solutions [leather apron with magical tools and intricate glowing creations]",
+            "Explorer - discovers hidden paths and ancient secrets [weathered hat with collection of magical maps and glowing compass]",
+            "Musician - weaves magic through melodies that transform the world [flowing outfit with musical note patterns and instrument that radiates colored light]",
+            "Dream-Keeper - collects and protects important memories [star-speckled robes with dream-catcher designs and bag of glowing memory orbs]",
+            "Inventor - creates gadgets to solve impossible problems [goggles with multiple lenses, tool belt with miniature inventions, and blueprint scrolls]",
+            "Alchemist - transforms and combines elements to create wonders [colorful potion bottles, bubbling cauldron, and lab coat with mystical symbols]",
         ],
         "Special Abilities": [
             "Animal Whisperer - communicates with creatures [spiraling nature patterns on skin and surrounded by various forest creatures]",
@@ -298,6 +313,11 @@ def get_agency_category() -> Tuple[str, str]:
             "Element Bender - connects with natural forces [hands surrounded by swirling water, fire, earth and air]",
             "Dream Walker - glimpses insights through dreams [misty aura and star-like particles that trail behind]",
             "Pattern Seer - notices connections others miss [eyes reflecting intricate geometric designs and fingertips that trace glowing connections]",
+            "Size Shifter - grows or shrinks at will [body surrounded by expanding/contracting magical circles and glowing outlines]",
+            "Light Weaver - creates shapes and creatures from light [hands trailing ribbons of colorful light that form into animals and objects]",
+            "Gravity Dancer - floats, flies and moves with incredible grace [feet hovering above ground with swirling air currents and glittering dust beneath]",
+            "Season Spinner - creates pockets of different weather and seasons [hair and clothing that shift between seasonal colors with swirling leaves and snowflakes]",
+            "Time Pauser - creates moments where time stands still [surrounded by frozen moments and clock symbols with hourglass-shaped aura]",
         ],
     }
 

@@ -394,10 +394,55 @@ async def stream_and_send_chapter(
     if current_chapter_number == 1 and chapter_type == ChapterType.STORY:
         logger.info("Starting image generation for Chapter 1 agency choices")
 
+        # Attempt to extract original agency options from the prompt templates
+        from app.services.llm.prompt_templates import get_agency_category
+
+        # Get all possible agency categories and options for lookup
+        agency_lookup = {}
+        try:
+            for _ in range(10):  # Try a few times to ensure we capture all categories
+                category_name, formatted_options = get_agency_category()
+                options_list = formatted_options.split("\n")
+                for option in options_list:
+                    if option.startswith("- "):
+                        option = option[2:]  # Remove "- " prefix
+                        # Create a simplified key for matching
+                        key = re.sub(r"\s*\[.*?\]", "", option).lower()
+                        # Store the original option with visual details
+                        agency_lookup[key] = option
+        except Exception as e:
+            logger.error(f"Error building agency lookup: {e}")
+
+        logger.debug(f"Built agency lookup with {len(agency_lookup)} entries")
+
         # Start async image generation for each choice
         for i, choice in enumerate(chapter_content.choices):
-            # Create a more descriptive prompt for better image generation with story elements
-            prompt = image_service.enhance_prompt(choice.text, state)
+            # Try to find if this choice corresponds to an agency option
+            # by looking for agency names in the choice text
+            original_option = None
+            choice_text = choice.text.lower()
+
+            # Look for matches in our agency lookup
+            for key, option in agency_lookup.items():
+                # Extract the name part (before the first " - ")
+                name_match = re.search(r"^([^-]+)", key)
+                if name_match and name_match.group(1).strip() in choice_text:
+                    original_option = option
+                    logger.debug(
+                        f"Found matching agency option for choice {i + 1}: {original_option}"
+                    )
+                    break
+
+            # Use the original option with visual details if found, otherwise use the choice text
+            if original_option:
+                prompt = image_service.enhance_prompt(original_option, state)
+                logger.debug(
+                    f"Using original agency option for image: {original_option}"
+                )
+            else:
+                prompt = image_service.enhance_prompt(choice.text, state)
+                logger.debug(f"No match found, using choice text: {choice.text}")
+
             image_tasks.append(
                 (i, asyncio.create_task(image_service.generate_image_async(prompt)))
             )
