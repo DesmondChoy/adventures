@@ -426,17 +426,17 @@ INCORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
 
 AGENCY_GUIDANCE = {
     "correct": """## Agency Evolution
-The character's {agency_type} ({agency_name}) should evolve through this correct understanding by:
+Agency choice made in Chapter 1 should evolve through this correct understanding by:
 - Revealing a new capability or aspect of their agency element OR
 - Using it to overcome a challenge in a meaningful way OR
 - Deepening the connection between character and their agency choice""",
     "incorrect": """## Agency Evolution
-The character's {agency_type} ({agency_name}) should adapt through this learning experience by:
+Agency choice made in Chapter 1 should adapt through this learning experience by:
 - Incorporating the new knowledge they've gained  OR
 - Providing a different perspective on the problem
 - Demonstrating resilience and growth through the challenge""",
     "climax": """## Climax Agency Integration
-The character's {agency_type} ({agency_name}) should play a pivotal role:
+Agency choice made in Chapter 1 should play a pivotal role:
 1. Show how it has evolved throughout the journey
 2. Present choices that leverage this element in different ways:
    - A bold, direct application
