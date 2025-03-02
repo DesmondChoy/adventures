@@ -27,6 +27,12 @@
 
 ## Recent Changes
 
+### Image Generation Gender Consistency (2025-03-02)
+- Modified `enhance_prompt()` in `image_generation_service.py` to accept choice text parameter
+- Updated `stream_and_send_chapter()` in `websocket_service.py` to pass choice text to image generation
+- Incorporated narrative text with gender indicators directly into image prompts
+- Improved consistency between narrative protagonist (female) and generated images
+
 ### Streamlined Prompts for All Chapters (2025-03-01)
 - Extended streamlined approach to all chapter types in `prompt_templates.py` and `prompt_engineering.py`
 - Created unified `build_prompt()` function for all chapter types

@@ -8,6 +8,7 @@ complete prompts for different chapter types and scenarios.
 
 from typing import Any, Dict, Optional, List, TypedDict, cast, Tuple
 import logging
+import re
 from datetime import datetime
 from app.models.story import (
     AdventureState,
@@ -63,7 +64,10 @@ def _format_lesson_answers(lesson_question: LessonQuestion) -> str:
 
 
 def _get_phase_guidance(story_phase: str, state: AdventureState) -> str:
-    """Get the appropriate guidance based on the Journey Quest story phase.
+    """Get the base phase guidance for the current story phase.
+
+    This function returns only the base guidance without plot twist guidance,
+    as plot twist guidance is handled separately in story chapter prompts.
 
     Args:
         story_phase: Current phase of the story
@@ -71,14 +75,6 @@ def _get_phase_guidance(story_phase: str, state: AdventureState) -> str:
     """
     # Get base guidance for the phase
     base_guidance_text = BASE_PHASE_GUIDANCE.get(story_phase, "")
-
-    # Add plot twist guidance for applicable phases
-    if story_phase in PLOT_TWIST_GUIDANCE:
-        plot_twist_text = PLOT_TWIST_GUIDANCE[story_phase].format(
-            plot_twist=state.selected_plot_twist
-        )
-        return f"{base_guidance_text}\n\n{plot_twist_text}"
-
     return base_guidance_text
 
 
@@ -214,11 +210,11 @@ def build_first_chapter_prompt(state: AdventureState) -> str:
     # Get base prompt components
     story_history, story_phase, _ = _build_base_prompt(state)
 
-    # Get phase guidance
-    phase_guidance = _get_phase_guidance(story_phase, state)
-
     # Get random agency category
     agency_category_name, agency_options = get_agency_category()
+
+    # Clean options by removing visual details in brackets directly
+    cleaned_agency_options = re.sub(r"\s*\[.*?\]\s*", " ", agency_options)
 
     # Log agency category selection
     logger = logging.getLogger("story_app")
@@ -233,7 +229,7 @@ def build_first_chapter_prompt(state: AdventureState) -> str:
         total_lessons=state.total_lessons,
         story_history=story_history,
         agency_category_name=agency_category_name,
-        agency_options=agency_options,
+        agency_options=cleaned_agency_options,
     )
 
 
@@ -249,9 +245,6 @@ def build_story_chapter_prompt(
     """
     # Get base prompt components
     story_history, story_phase, _ = _build_base_prompt(state)
-
-    # Get phase guidance
-    phase_guidance = _get_phase_guidance(story_phase, state)
 
     # Get consequences guidance if there are previous lessons
     if previous_lessons and len(previous_lessons) > 0:
@@ -340,9 +333,6 @@ def build_lesson_chapter_prompt(
     # Format lesson answers
     formatted_answers = _format_lesson_answers(lesson_question)
 
-    # Get phase guidance
-    phase_guidance = _get_phase_guidance(story_phase, state)
-
     # Get consequences guidance if there are previous lessons
     if previous_lessons and len(previous_lessons) > 0:
         last_lesson = previous_lessons[-1]
@@ -418,9 +408,6 @@ def build_reflect_chapter_prompt(
 
     # Select the appropriate configuration
     config = REFLECT_CONFIG["correct"] if is_correct else REFLECT_CONFIG["incorrect"]
-
-    # Get phase guidance
-    phase_guidance = _get_phase_guidance(story_phase, state)
 
     # Get agency guidance if available
     agency_guidance = ""
@@ -511,9 +498,6 @@ def build_conclusion_chapter_prompt(
     """
     # Get base prompt components
     story_history, story_phase, _ = _build_base_prompt(state)
-
-    # Get phase guidance
-    phase_guidance = _get_phase_guidance(story_phase, state)
 
     # Get consequences guidance if there are previous lessons
     consequences_guidance = ""

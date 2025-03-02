@@ -6,6 +6,7 @@ import base64
 import os
 import asyncio
 import logging
+import re
 import time
 
 logger = logging.getLogger("story_app")
@@ -118,16 +119,29 @@ class ImageGenerationService:
 
         return None
 
-    def enhance_prompt(self, original_prompt, adventure_state=None):
+    def enhance_prompt(self, original_prompt, adventure_state=None, choice_text=None):
         """Enhance a basic prompt to get better image generation results.
 
         Args:
             original_prompt: The basic text prompt
             adventure_state: Optional AdventureState object containing story elements
+            choice_text: Optional text of the selected choice to include in the prompt
 
         Returns:
             Enhanced prompt with style guidance and story elements
         """
+        # Extract only the name (everything before the first " - " or "[")
+        name = original_prompt.split(" - ")[0].split("[")[0].strip()
+
+        # Extract visual details from square brackets if present
+        visual_details = ""
+        bracket_match = re.search(r"\[(.*?)\]", original_prompt)
+        if bracket_match:
+            visual_details = bracket_match.group(1)
+            logger.debug(f"Extracted visual details: {visual_details}")
+
+        logger.debug(f"Extracted name: {name}")
+
         # Base style guidance
         base_style = "vibrant colors, detailed, whimsical, digital art"
 
@@ -144,7 +158,19 @@ class ImageGenerationService:
             visual = adventure_state.selected_sensory_details.get("visuals", "")
 
             # Build prompt components with proper comma separation
-            components = ["Fantasy illustration of " + original_prompt]
+            components = [f"Fantasy illustration of {name}"]
+
+            if visual_details:
+                components.append(visual_details)
+
+            # Add the choice text directly if provided
+            if choice_text:
+                # Clean up the choice text (remove "Choice X: " prefix if present)
+                if choice_text.startswith("Choice ") and ": " in choice_text:
+                    clean_choice = choice_text.split(": ", 1)[1]
+                else:
+                    clean_choice = choice_text
+                components.append(clean_choice)
 
             if setting:
                 components.append(f"in a {setting} setting")
@@ -158,4 +184,19 @@ class ImageGenerationService:
             return ", ".join(components)
 
         # Default enhancement if no adventure_state is provided
-        return f"Fantasy illustration of {original_prompt}, {base_style}"
+        components = [f"Fantasy illustration of {name}"]
+
+        if visual_details:
+            components.append(visual_details)
+
+        # Add the choice text directly if provided
+        if choice_text:
+            # Clean up the choice text (remove "Choice X: " prefix if present)
+            if choice_text.startswith("Choice ") and ": " in choice_text:
+                clean_choice = choice_text.split(": ", 1)[1]
+            else:
+                clean_choice = choice_text
+            components.append(clean_choice)
+
+        components.append(base_style)
+        return ", ".join(components)

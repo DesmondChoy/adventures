@@ -1,6 +1,24 @@
 # Progress Log
 
+## 2025-03-02: Image Generation Gender Consistency
+
+### Fixed Character Gender Inconsistency in Image Generation
+- Problem: Image model was generating male characters for agency roles (e.g., Craftsperson) despite female protagonist in narrative
+- Solution:
+  * Modified `enhance_prompt()` in `image_generation_service.py` to accept and incorporate choice text from narrative
+  * Updated `stream_and_send_chapter()` in `websocket_service.py` to pass choice text to image generation
+  * Directly included narrative text with gender indicators (e.g., "Elara", "herself") in image prompts
+- Result: Generated images maintain gender consistency with narrative, properly depicting female protagonist
+
 ## 2025-03-02: Prompt Template Optimizations
+
+### Fixed Duplicate Plot Twist Guidance
+- Problem: Plot twist guidance was being duplicated in Chapter 2 prompts
+- Solution:
+  * Modified `_get_phase_guidance()` to return only base phase guidance without plot twist guidance
+  * Maintained separate plot twist guidance in `build_story_chapter_prompt()` with the `{plot_twist_guidance}` placeholder
+  * Updated docstring to clarify the function's more specific purpose
+- Result: Eliminated duplicate "Plot Twist Development" sections in story chapter prompts
 
 ### Removed Duplicate Phase Guidance
 - Problem: Phase guidance was duplicated in prompts (prepended in `build_user_prompt()` and extracted in chapter builders)
