@@ -6,6 +6,7 @@ import base64
 import os
 import asyncio
 import logging
+import re
 import time
 
 logger = logging.getLogger("story_app")
@@ -128,6 +129,18 @@ class ImageGenerationService:
         Returns:
             Enhanced prompt with style guidance and story elements
         """
+        # Extract visual details from square brackets if present
+        visual_details = ""
+        cleaned_prompt = original_prompt
+        bracket_match = re.search(r"\[(.*?)\]", original_prompt)
+
+        if bracket_match:
+            visual_details = bracket_match.group(1)
+            # Remove the bracketed part for the main prompt
+            cleaned_prompt = re.sub(r"\s*\[.*?\]", "", original_prompt)
+            logger.debug(f"Extracted visual details: {visual_details}")
+            logger.debug(f"Cleaned prompt: {cleaned_prompt}")
+
         # Base style guidance
         base_style = "vibrant colors, detailed, whimsical, digital art"
 
@@ -144,7 +157,11 @@ class ImageGenerationService:
             visual = adventure_state.selected_sensory_details.get("visuals", "")
 
             # Build prompt components with proper comma separation
-            components = ["Fantasy illustration of " + original_prompt]
+            components = ["Fantasy illustration of " + cleaned_prompt]
+
+            # Add extracted visual details if available
+            if visual_details:
+                components.append(visual_details)
 
             if setting:
                 components.append(f"in a {setting} setting")
@@ -158,4 +175,11 @@ class ImageGenerationService:
             return ", ".join(components)
 
         # Default enhancement if no adventure_state is provided
-        return f"Fantasy illustration of {original_prompt}, {base_style}"
+        prompt_components = ["Fantasy illustration of " + cleaned_prompt]
+
+        # Add extracted visual details if available
+        if visual_details:
+            prompt_components.append(visual_details)
+
+        prompt_components.append(base_style)
+        return ", ".join(prompt_components)
