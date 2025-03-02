@@ -1,5 +1,15 @@
 # Progress Log
 
+## 2025-03-02: Image Generation Gender Consistency
+
+### Fixed Character Gender Inconsistency in Image Generation
+- Problem: Image model was generating male characters for agency roles (e.g., Craftsperson) despite female protagonist in narrative
+- Solution:
+  * Modified `enhance_prompt()` in `image_generation_service.py` to accept and incorporate choice text from narrative
+  * Updated `stream_and_send_chapter()` in `websocket_service.py` to pass choice text to image generation
+  * Directly included narrative text with gender indicators (e.g., "Elara", "herself") in image prompts
+- Result: Generated images maintain gender consistency with narrative, properly depicting female protagonist
+
 ## 2025-03-02: Prompt Template Optimizations
 
 ### Fixed Duplicate Plot Twist Guidance

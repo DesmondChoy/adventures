@@ -435,12 +435,14 @@ async def stream_and_send_chapter(
 
             # Use the original option with visual details if found, otherwise use the choice text
             if original_option:
-                prompt = image_service.enhance_prompt(original_option, state)
+                prompt = image_service.enhance_prompt(
+                    original_option, state, choice.text
+                )
                 logger.debug(
                     f"Using original agency option for image: {original_option}"
                 )
             else:
-                prompt = image_service.enhance_prompt(choice.text, state)
+                prompt = image_service.enhance_prompt(choice.text, state, choice.text)
                 logger.debug(f"No match found, using choice text: {choice.text}")
 
             image_tasks.append(

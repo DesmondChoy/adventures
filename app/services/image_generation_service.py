@@ -119,12 +119,13 @@ class ImageGenerationService:
 
         return None
 
-    def enhance_prompt(self, original_prompt, adventure_state=None):
+    def enhance_prompt(self, original_prompt, adventure_state=None, choice_text=None):
         """Enhance a basic prompt to get better image generation results.
 
         Args:
             original_prompt: The basic text prompt
             adventure_state: Optional AdventureState object containing story elements
+            choice_text: Optional text of the selected choice to include in the prompt
 
         Returns:
             Enhanced prompt with style guidance and story elements
@@ -162,6 +163,15 @@ class ImageGenerationService:
             if visual_details:
                 components.append(visual_details)
 
+            # Add the choice text directly if provided
+            if choice_text:
+                # Clean up the choice text (remove "Choice X: " prefix if present)
+                if choice_text.startswith("Choice ") and ": " in choice_text:
+                    clean_choice = choice_text.split(": ", 1)[1]
+                else:
+                    clean_choice = choice_text
+                components.append(clean_choice)
+
             if setting:
                 components.append(f"in a {setting} setting")
 
@@ -178,6 +188,15 @@ class ImageGenerationService:
 
         if visual_details:
             components.append(visual_details)
+
+        # Add the choice text directly if provided
+        if choice_text:
+            # Clean up the choice text (remove "Choice X: " prefix if present)
+            if choice_text.startswith("Choice ") and ": " in choice_text:
+                clean_choice = choice_text.split(": ", 1)[1]
+            else:
+                clean_choice = choice_text
+            components.append(clean_choice)
 
         components.append(base_style)
         return ", ".join(components)
