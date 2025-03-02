@@ -210,9 +210,6 @@ def build_first_chapter_prompt(state: AdventureState) -> str:
     # Get base prompt components
     story_history, story_phase, _ = _build_base_prompt(state)
 
-    # Get phase guidance
-    phase_guidance = _get_phase_guidance(story_phase, state)
-
     # Get random agency category
     agency_category_name, agency_options = get_agency_category()
 
@@ -248,9 +245,6 @@ def build_story_chapter_prompt(
     """
     # Get base prompt components
     story_history, story_phase, _ = _build_base_prompt(state)
-
-    # Get phase guidance
-    phase_guidance = _get_phase_guidance(story_phase, state)
 
     # Get consequences guidance if there are previous lessons
     if previous_lessons and len(previous_lessons) > 0:
@@ -339,9 +333,6 @@ def build_lesson_chapter_prompt(
     # Format lesson answers
     formatted_answers = _format_lesson_answers(lesson_question)
 
-    # Get phase guidance
-    phase_guidance = _get_phase_guidance(story_phase, state)
-
     # Get consequences guidance if there are previous lessons
     if previous_lessons and len(previous_lessons) > 0:
         last_lesson = previous_lessons[-1]
@@ -417,9 +408,6 @@ def build_reflect_chapter_prompt(
 
     # Select the appropriate configuration
     config = REFLECT_CONFIG["correct"] if is_correct else REFLECT_CONFIG["incorrect"]
-
-    # Get phase guidance
-    phase_guidance = _get_phase_guidance(story_phase, state)
 
     # Get agency guidance if available
     agency_guidance = ""
@@ -510,9 +498,6 @@ def build_conclusion_chapter_prompt(
     """
     # Get base prompt components
     story_history, story_phase, _ = _build_base_prompt(state)
-
-    # Get phase guidance
-    phase_guidance = _get_phase_guidance(story_phase, state)
 
     # Get consequences guidance if there are previous lessons
     consequences_guidance = ""
