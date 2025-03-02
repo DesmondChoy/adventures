@@ -1,127 +1,84 @@
 # Architectural Decisions
 
-## Caching Constraints
+## Technical Constraints
 
-### Why Traditional Caching Won't Work
-Our story generation system has fundamental constraints that make traditional caching approaches (like those used in e-readers or video streaming) ineffective:
+### Sequential Generation Requirements
 
-1. **LLM-Dependent Content Generation**
-```mermaid
-flowchart TD
-    A[User Makes Choice] --> B[Send to Server]
-    B --> C[LLM Generates Next Chapter]
-    C --> D[Based on:]
-    D --> E[Previous Chapters]
-    D --> F[User's Choice]
-    D --> G[Story Context]
-    D --> H[Educational Goals]
-```
+Learning Odyssey requires sequential chapter generation due to:
 
-**Key Constraints:**
-- Each chapter requires real-time LLM generation
-- Content depends on previous chapters and choices
-- Cannot pre-generate or predict next chapters
-- Must maintain server connection for content generation
+1. **Sequential Dependency**
+   * Each chapter requires prior chapters to be complete
+   * Narrative builds upon previous events and choices
+   * Adventure must be generated in real-time
+   * Pre-caching future content not possible
 
-2. **Dynamic Content Requirements**
-```mermaid
-flowchart TD
-    A[Story State] --> B{Chapter Type}
-    B -->|LESSON| C[Adapt to User's Understanding]
-    B -->|STORY| D[React to Previous Choices]
-    B -->|CONCLUSION| E[Wrap Up All Threads]
-    C --> F[Cannot Cache]
-    D --> F
-    E --> F
-```
-
-**Key Constraints:**
-- Story progression is choice-dependent
-- Each choice affects subsequent chapter content
-- Educational content adapts to user responses
-- State must be maintained server-side
+2. **Exponential Path Growth**
+   * Each choice point multiplies possible paths
+   * Theoretically possible to pre-generate all branches
+   * Quickly becomes impractical as adventure length increases
+   * 3 choices per STORY chapter × binary LESSON outcomes = exponential growth
 
 3. **State Dependencies**
-```mermaid
-flowchart TD
-    A[Chapter Generation] --> B[Requires:]
-    B --> C[Complete History]
-    B --> D[User Choices]
-    B --> E[Learning Progress]
-    B --> F[Story Elements]
-    B --> G[Plot Development]
-```
+   * `AdventureState` tracks complete history
+   * User choices affect narrative direction
+   * Educational progress influences content
+   * Agency evolution requires continuous tracking
 
-**Key Constraints:**
-- Each new chapter depends on complete history
-- Cannot predict which path user will choose
-- Must track educational progress
-- Need to maintain narrative consistency
+## Implementation Solutions
 
-### What We Can Do Instead
+1. **State Persistence (`app/templates/index.html`)**
+   ```javascript
+   class AdventureStateManager {
+       STORAGE_KEY = 'adventure_state';
+       // Uses localStorage for persistence
+       // Maintains complete chapter history
+   }
+   ```
+   * Complete chapter history in localStorage
+   * User choices preserved across sessions
+   * Learning progress tracked
+   * Agency evolution history maintained
 
-1. **State Persistence**
-```mermaid
-flowchart TD
-    A[Client State] --> B[localStorage]
-    B --> C[Stores:]
-    C --> D[Chapter History]
-    C --> E[User Choices]
-    C --> F[Learning Progress]
-    C --> G[Story Elements]
-```
+2. **Connection Management (`app/templates/index.html`)**
+   ```javascript
+   class WebSocketManager {
+       // Properties
+       reconnectAttempts: number;
+       maxReconnectAttempts: number = 5;
+       
+       // Methods
+       calculateBackoff(): number {
+           // Exponential: 1s to 30s
+       }
+   }
+   ```
+   * Exponential backoff (1s to 30s)
+   * Maximum 5 reconnection attempts
+   * Automatic state restoration
+   * Silent recovery attempts
 
-2. **Connection Management**
-```mermaid
-flowchart TD
-    A[Connection Lost] --> B[Save State]
-    B --> C[Attempt Reconnect]
-    C -->|Success| D[Resume from Last State]
-    C -->|Fail| E[Retry with Backoff]
-```
+3. **Error Recovery (`app/services/adventure_state_manager.py`)**
+   ```python
+   def update_state(self, state_data: dict) -> None:
+       # Preserves progress during errors
+       # Implements automatic recovery
+   ```
+   * Progress preservation during errors
+   * Automatic recovery attempts
+   * Clear user feedback
+   * Graceful degradation
+   * Image generation fallbacks
 
-3. **Error Recovery**
-```mermaid
-flowchart TD
-    A[Error Occurs] --> B[Save Progress]
-    B --> C[Attempt Recovery]
-    C -->|Success| D[Resume Story]
-    C -->|Fail| E[Show Clear Message]
-```
+## Technical Impact
 
-## Implementation Impact
+### Client-Side Requirements
+- Complete state history in localStorage
+- Robust connection management
+- Reconnection with exponential backoff
+- Progressive enhancement for images
 
-### Client-Side
-- Must maintain complete state history
-- Cannot rely on caching for content
-- Need robust connection management
-- Must handle reconnection gracefully
-
-### Server-Side
-- Must maintain session state
-- Cannot pre-generate content
-- Need efficient state restoration
-- Must validate restored state
-
-### User Experience
-- Cannot work offline
-- Must handle connection drops
-- Need clear error messages
-- Should attempt silent recovery
-
-## Future Considerations
-
-1. **Connection Quality Management**
-- Monitor connection strength
-- Warn before likely disconnections
-- Save state more frequently when connection weak
-
-2. **HTTP Fallback**
-- Consider HTTP fallback for critical operations
-- Maintain at least basic functionality
-- Ensure state consistency
-
-3. **Progressive Enhancement**
-- Start with basic functionality
-- Add features based on connection
-- Maintain core story experience
+### Server-Side Requirements
+- Efficient state restoration
+- Validated state handling
+- Consistent chapter sequencing
+- Proper error boundaries

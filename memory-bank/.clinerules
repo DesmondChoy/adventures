@@ -4,12 +4,13 @@
 
 ### Naming Conventions
 1. Chapter: Unit of progression in ChapterType enum (LESSON, STORY, REFLECT, or CONCLUSION)
-   - LESSON: Educational content from `lessons.csv` with LLM narrative wrapper
-   - STORY: Fully LLM-generated narrative content, guided by story elements from `new_stories.yaml`, with choices
+   - LESSON: Educational content from `lessons.csv` with LLM narrative wrapper using Story Object Method
+   - STORY: Fully LLM-generated narrative content with choices, first chapter includes agency choice
    - REFLECT: Follow-up to LESSON chapters with narrative-driven approach to test deeper understanding
    - CONCLUSION: Final chapter with no choices, providing story resolution
 2. State: Complete application state in `AdventureState` class
 3. Adventure: Overall user journey tracked in `AdventureState`
+4. Agency: User's first chapter choice that evolves throughout the adventure
 
 ### File Organization (`app/`)
 1. Core application code:
@@ -19,6 +20,7 @@
      * Routing: `routers/websocket_router.py`
      * Business logic: `services/websocket_service.py`
    - Chapter management: `services/chapter_manager.py`
+   - Image generation: `services/image_generation_service.py`
 2. Content sources:
    - Lesson database: `data/lessons.csv`
    - Story templates: `data/new_stories.yaml`
@@ -35,9 +37,10 @@
    - Dynamic story length via `state.story_length` (between 5 and 10 chapters)
    - Type hints required for all state properties
    - State changes must be logged
+   - Agency choice MUST be stored in `state.metadata["agency"]`
 
 2. Chapter Requirements:
-   - First chapter MUST be STORY type (for setting/character development)
+   - First chapter MUST be STORY type with agency choice
    - Second-to-last chapter MUST be STORY type (for pivotal choices)
    - Last chapter MUST be CONCLUSION type (for story resolution)
    - 50% of remaining chapters, rounded down, MUST be LESSON type (subject to available questions)
@@ -51,6 +54,21 @@
    - Immediate feedback required
    - Error recovery for failed state updates
 
+3. Agency Implementation:
+   - First chapter MUST include agency choice from four categories
+   - Agency MUST be referenced in all subsequent chapters
+   - Agency MUST evolve in REFLECT chapters based on answers
+   - Agency MUST play pivotal role in climax phase
+   - Agency MUST have meaningful resolution in conclusion
+   - Agency references MUST be tracked with `update_agency_references()`
+
+4. Image Generation:
+   - Use `GOOGLE_API_KEY` environment variable
+   - Implement 5 retries with exponential backoff
+   - Add robust null checking for API responses
+   - Handle failed generation gracefully
+   - Use asynchronous processing to maintain performance
+
 ## Development Workflow
 
 ### Code Changes
@@ -58,17 +76,8 @@
 2. Answer shuffling requires validation
 3. State changes need synchronization
 4. WebSocket changes need connection tests
-
-### Note: 2025-02-18
-   - Story simulations should be run due to recent changes:
-      * New chapter logic implementation (CONCLUSION type, updated sequencing)
-      * Fixed `random.sample` error in `chapter_manager.py` when no questions available
-      * Updated UI to handle CONCLUSION chapters
-      * Enhanced prompt engineering for CONCLUSION narrative
-   - Additional changes:
-      * Updated story length options and constraints (5-10 chapters)
-      * Fixed issue with missing choices in the first two chapters
-      * Implemented comprehensive fix for "Chapter X:" prefixes in generated content
+5. Prompt changes need token usage evaluation
+6. Image generation changes need error handling tests
 
 ### Testing Requirements
 Run story simulation on changes to:
@@ -76,6 +85,7 @@ Run story simulation on changes to:
    - `app/routers/websocket_router.py`
    - `app/services/websocket_service.py`
    - `app/services/chapter_manager.py`
+   - `app/services/image_generation_service.py`
    - `app/models/story.py`
    - `app/init_data.py`
    - `app/data/new_stories.yaml`
@@ -103,6 +113,7 @@ Run story simulation on changes to:
 6. Verify response handling in `websocket_service.py`.
 7. Check error recovery in `adventure_state_manager.py`.
 8. Monitor state consistency.
+9. Verify agency tracking in `state.metadata["agency"]`.
 
 ### Response Chain
 1. Verify question format in `websocket_service.py`.
@@ -113,6 +124,7 @@ Run story simulation on changes to:
 6. Verify response creation in `websocket_service.py`.
 7. Check error handling.
 8. Monitor state consistency.
+9. Verify agency evolution in REFLECT chapters.
 
 ### Prompt Debugging
 1. Verify State Passing:
@@ -127,6 +139,20 @@ Run story simulation on changes to:
    - Review complete prompt output.
    - Check for missing context.
    - Verify continuity elements.
+   - Confirm agency references.
+
+### Image Generation Debugging
+1. Verify API Configuration:
+   - Check `GOOGLE_API_KEY` environment variable.
+   - Confirm API initialization in `image_generation_service.py`.
+2. Check Request Flow:
+   - Trace prompt construction.
+   - Verify API call parameters.
+   - Check response handling.
+3. Analyze Error Handling:
+   - Verify retry mechanism.
+   - Check null response handling.
+   - Confirm fallback behavior.
 
 ## Error Handling
 
@@ -171,28 +197,17 @@ Run story simulation on changes to:
 - Maintain data consistency.
 - Monitor processing health.
 
-#### Cross-Component Errors
-- Coordinate error recovery between `websocket_router.py` and `websocket_service.py`.
-- Maintain state synchronization.
-- Handle timing issues.
-- Log error chains.
-- Implement retry strategies.
-- Ensure message ordering.
-- Preserve transaction integrity.
-- Monitor system boundaries.
-
-### Prompt Errors
-- Log complete prompt content in `prompt_engineering.py`.
-- Track missing state data in `prompt_engineering.py`.
-- Monitor continuity breaks in `prompt_engineering.py`.
-- Validate data flow in `prompt_engineering.py`.
-- Handle question errors.
-- Recover from failures.
-- Ensure consistency.
-- Monitor error patterns.
+### Image Generation Errors
+- Handle API failures in `image_generation_service.py`.
+- Implement retry mechanism with exponential backoff.
+- Add robust null checking for responses.
+- Provide graceful degradation when images fail.
+- Log detailed error information.
+- Maintain text streaming performance.
 
 ## Documentation
 
 - Type hints are required for all functions.
 - Docstrings are mandatory for all classes and functions.
 - State changes must be logged.
+- Agency references must be tracked.

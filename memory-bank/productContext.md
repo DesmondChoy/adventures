@@ -15,103 +15,60 @@ Learning Odyssey solves these challenges through:
 2. User-selected topics and adventure length
 3. LLM-generated narrative choices and resolutions
 4. Real-time state synchronization
-5. Consistent story elements and plot development
+5. Agency system with meaningful character choices
 
 ## User Experience and Features
 
-1. **Initial Setup (`app/routers/web.py`):**
-   - Users select a topic and adventure length on the landing page
-   - `ChapterManager` determines the chapter sequence
-   - The first two chapters are always STORY type for world-building
-   - The last chapter is always CONCLUSION type for resolution
+1. **Educational Journey:**
+   - Users select a setting and lesson topic
+   - Make a pivotal agency choice in the first chapter that evolves throughout the journey
+   - See visual representations of agency choices through AI-generated images
+   - Every adventure is unique based on choices and educational responses
 
-2. **Content Delivery (`app/services/websocket_service.py`):**
+2. **Content Delivery:**
    - Word-by-word streaming creates natural reading experience
-   - Markdown formatting enhances text presentation:
-     * Emphasis for important concepts
-     * Strong emphasis for key points
-     * Code blocks for technical content
-   - Controlled pacing through timing delays:
-     * Brief pauses between words
-     * Longer pauses between paragraphs
-   - Real-time rendering with proper formatting
+   - Markdown formatting enhances text presentation
+   - Progressive enhancement (text first, images as they become available)
+   - Responsive design for both desktop and mobile
 
-3. **Interactive Elements:**
-   - Dynamic choice presentation
-   - Real-time progress tracking
-   - Immediate feedback on selections
-   - Smooth transitions between chapters
-   - Clean state management
+3. **Chapter Types:**
+   - **STORY Chapters:**
+     * First chapter: Sets up the world and provides agency choice with images
+     * Second-to-last chapter: Provides pivotal choices near the climax
+     * Other STORY chapters: Advance the narrative with meaningful choices
+   
+   - **LESSON Chapters:**
+     * Uses questions from `lessons.csv` with narrative wrapper
+     * Incorporates educational content naturally using Story Object Method
+     * Answers impact future chapters
+   
+   - **REFLECT Chapters:**
+     * Follow LESSON chapters to test deeper understanding
+     * Unified narrative-driven approach for both correct and incorrect answers
+     * Uses Socratic method to guide deeper understanding
+     * Evolves the user's agency choice based on their responses
+   
+   - **CONCLUSION Chapter:**
+     * Always the final chapter
+     * Resolves all narrative threads
+     * Provides a satisfying resolution to the agency journey
 
-4. **Adventure Progression (`app/services/chapter_manager.py`):**
-    *   Chapter types follow a specific sequence:
-        *   First chapter: STORY (setting/character development)
-        *   Second-to-last chapter: STORY (pivotal choices)
-        *   Last chapter: CONCLUSION (satisfying resolution)
-        *   50% of remaining chapters, rounded down: LESSON (subject to available questions)
-        *   50% of LESSON chapters, rounded down: REFLECT chapters
-        *   REFLECT chapters only occur immediately after a LESSON chapter
-        *   STORY chapters must follow REFLECT chapters
-    *   **LESSON chapters:**
-        *   Use questions from `lessons.csv`.
-        *   Incorporate an LLM-generated narrative wrapper.
-        *   Answers impact future chapters.
-    *   **STORY chapters:**
-        *   Fully LLM-generated.
-        *   Include three narrative choices.
-        *   Choices have consequences.
-        *   Plot twist elements evolve naturally.
-    *   **REFLECT chapters:**
-        *   Follow-up to LESSON chapters to test deeper understanding.
-        *   Unified narrative-driven approach for both correct and incorrect answers.
-        *   Uses Socratic method to guide deeper understanding through questions.
-        *   Story-driven choices without labeling any as "correct" or "wrong".
-        *   Each choice represents a different way the character might process what they've learned.
-    *   **CONCLUSION chapter:**
-        *   Fully LLM-generated.
-        *   No choices are required.
-        *   Resolves all plot threads.
-        *   Provides a "Return to Landing Page" option.
+4. **Agency System:**
+   - First chapter choice from four categories:
+     * Magical Items to Craft (lantern, rope, amulet, map, watch, potion)
+     * Companions to Choose (owl, fox, squirrel, deer, otter, turtle)
+     * Roles or Professions (healer, scholar, guardian, pathfinder, diplomat, craftsperson)
+     * Special Abilities (animal whisperer, puzzle master, storyteller, element bender, dream walker, pattern seer)
+   - Agency evolves throughout the adventure:
+     * Correct answers: Agency is empowered or reveals new capabilities
+     * Incorrect answers: Agency adapts to incorporate new knowledge
+   - Agency plays pivotal role in climax phase
+   - Agency has meaningful resolution in conclusion
 
-5.  **Content Management (`app/data/`):**
-    *   Utilizes a lesson database (`lessons.csv`).
-    *   Uses story templates (`new_stories.yaml`).
-    *   Generates narratives using LLM.
-    *   Ensures no question repetition.
-    *   Implements a consequence system.
-    *   Visual content generation:
-        *   Generates images for Chapter 1 agency choices
-        *   Uses Gemini Imagen API for high-quality illustrations
-        *   Enhances user engagement with visual representations
-        *   Asynchronous processing to maintain performance
-    *   Story elements management:
-        *   Non-random elements (name, description, tone)
-        *   Random narrative and sensory elements
-        *   Phase-specific plot twist development
-        *   Element consistency tracking
-        *   Enhanced error validation
-
-6.  **Chapter Structure (`app/services/chapter_manager.py`):**
-    *   Optimized for engagement and learning:
-        *   Strong opening with two STORY chapters.
-        *   Balanced LESSON distribution.
-        *   Climactic choice near the end.
-        *   Satisfying CONCLUSION.
-    *   Maintains narrative continuity.
-    *   Implements a choice impact system.
-    *   Plot twist progression:
-        *   Subtle hints in early phases
-        *   Building tension in middle phases
-        *   Full revelation in climax phase
-
-7.  **State Management (`app/models/story.py`):**
-    *   Centralized `AdventureState`.
-    *   Real-time synchronization.
-    *   Complete state tracking.
-    *   Error recovery.
-    *   Cross-provider LLM support.
-    *   Metadata tracking:
-        *   Element consistency
-        *   Plot twist development
-        *   Story phase guidance
-        *   Enhanced validation
+5. **Technical Features:**
+   - Real-time WebSocket state management
+   - Client-side persistence with localStorage
+   - Connection management with exponential backoff
+   - Provider-agnostic LLM integration
+   - Asynchronous image generation
+   - Comprehensive error handling and recovery

@@ -10,18 +10,17 @@ This app aims to promote learning and curiosity by weaving together educational 
 1. **Educational Journey**
    - Choose your setting and lesson topic
    - Every adventure is unique and choices (story paths or correct/incorrect answers) affects the narrative
-   - Characters in the story encourage curiousity and learning
+   - Characters in the story encourage curiosity and learning
+   - Make a pivotal agency choice in the first chapter that evolves throughout your journey
+   - See visual representations of your agency choices through AI-generated images
    - WIP: Users can upload their own settings and/or lesson topics.
 
 2. **Technical Innovation**
-   - LLM-powered dynamic storytelling
-   - Real-time WebSocket state management
-   - Provider-agnostic AI integration
-   - Robust error recovery system
-   - Client-side state persistence with localStorage
-   - Connection management with exponential backoff (1s to 30s, max 5 attempts)
-   - Element consistency tracking via metadata
-   - Plot twist development across story phases
+   - LLM-powered dynamic storytelling with agency system and AI-generated images
+   - Real-time WebSocket state management with robust error recovery and connection handling
+   - Provider-agnostic AI integration with standardized configuration
+   - Advanced narrative techniques (Story Object Method, phase-specific guidance, plot twist development)
+   - Comprehensive state tracking with client-side persistence and metadata management
 
 ## Architecture Overview
 
@@ -34,6 +33,7 @@ graph TD
     ASM <--> CM[Chapter Manager]
     CM <--> LLM[LLM Service]
     CM <--> DB[(Database)]
+    WSS <--> IMG[Image Generation Service]
 
     subgraph Client Side
         LP[localStorage] <--> CSM[Client State Manager]
@@ -49,6 +49,7 @@ graph TD
         ASM
         CM
         LLM
+        IMG
     end
 
     subgraph Routing
@@ -58,35 +59,16 @@ graph TD
     subgraph Content Sources
         CSV[lessons.csv] --> CM
         LLM --> CM
+        IMG --> WSS
     end
 ```
 
 ## Tech Stack
 
-- **Backend**: FastAPI, Python 3.x
-  - Real-time WebSocket communication
-  - Structured logging system
-  - Middleware stack for request tracking
-  - State management and synchronization
-
-- **AI Integration**: 
-  - Provider-agnostic implementation with GPT-4o / Gemini support
-
-- **Architecture**:
-  - WebSocket for real-time updates
-  - SQLAlchemy with SQLite
-  - Modern web interface
-  - Comprehensive error handling
-
-- **Frontend**:
-  - Modular CSS organization:
-    * typography.css: Typography system with educational focus
-    * theme.css: Color variables and theme management
-    * carousel.css: 3D carousel component
-  - 3D carousel with card flip animation
-  - Mobile-responsive design
-  - Word-by-word content streaming
-  - Markdown formatting support
+- **Backend**: FastAPI, Python 3.x with WebSocket communication, structured logging, and middleware for request tracking
+- **AI Integration**: Provider-agnostic implementation supporting GPT-4o/Gemini for text and Gemini Imagen for image generation
+- **Architecture**: Real-time WebSocket updates, SQLite database, comprehensive error handling, and asynchronous processing
+- **Frontend**: Modular CSS organization, 3D carousel with animations, responsive design, word-by-word content streaming with Markdown support, and progressive enhancement for images
 
 ## Setup
 
@@ -104,9 +86,10 @@ graph TD
    ```
 4. Create a `.env` file with required environment variables:
    ```
-   # Choose one of these API keys based on your preferred provider
-   OPENAI_API_KEY=your_openai_key
+   # API key for LLM and image generation (both use the same key with Google)
    GOOGLE_API_KEY=your_google_key
+   # Or alternatively use OpenAI for LLM (image generation still requires Google)
+   OPENAI_API_KEY=your_openai_key
    ```
 5. Run the application:
    ```bash
@@ -126,11 +109,12 @@ app/
 ├── services/          
 │   ├── adventure_state_manager.py # State management and validation
 │   ├── chapter_manager.py         # Content flow control
+│   ├── image_generation_service.py # AI image generation for agency choices
 │   ├── websocket_service.py       # WebSocket business logic
-│   └── llm/                       # LLM integration services
+│   └── llm/                       # LLM integration with prompt engineering
 ├── data/              
 │   ├── lessons.csv                # Educational content
-│   └── new_stories.yaml           # Story templates
+│   └── new_stories.yaml           # Story templates and elements
 ├── middleware/                    # Custom middleware components
 ├── templates/                     # HTML templates
 ├── static/
@@ -150,87 +134,20 @@ The project structure reflects our focus on:
 
 ## Testing
 
-### Simulation Framework
+The project includes a comprehensive testing framework focused on end-to-end validation:
 
-- **Story Simulation (`tests/simulations/story_simulation.py`)**:
-  - Automated adventure progression with random choices
-  - Comprehensive DEBUG-level logging for validation
-  - Real-time WebSocket communication testing
-  - Robust error handling with retry mechanisms
-  - Standardized log prefixes for automated parsing:
-    * `CHAPTER_TYPE:` - Logs chapter types (STORY, LESSON, CONCLUSION)
-    * `CHOICE:` - Logs user choice selections
-    * `LESSON:` - Logs lesson answer correctness
-    * `STATS:` - Logs story completion statistics
-
-### Test Files
-
-- **Functionality Testing (`tests/simulations/test_simulation_functionality.py`)**:
-  - Verifies chapter sequences (STORY/LESSON/CONCLUSION ordering)
-  - Validates lesson ratio (approximately 50% of flexible chapters)
-  - Checks lesson success rate calculations
-  - Tests state transition consistency
-
-- **Error Handling Testing (`tests/simulations/test_simulation_errors.py`)**:
-  - Verifies error detection and classification
-  - Tests logging level configuration
-  - Validates error recovery mechanisms
-  - Checks for absence of critical errors
-
-### Running Tests
+- **Simulation Framework**: Automated adventure progression with random choices, comprehensive logging, and standardized prefixes for parsing (`CHAPTER_TYPE`, `CHOICE`, `LESSON`, `STATS`)
+- **Test Coverage**: Functionality testing (chapter sequences, lesson ratios, state transitions) and error handling (detection, recovery, logging)
+- **Running Tests**: Simple command-line interface with options for full workflow, specific story/topic testing, or analysis of existing logs
 
 ```bash
 # Run the complete workflow (server, simulation, tests)
 python tests/simulations/run_simulation_tests.py
-
-# Run with specific story category and lesson topic
-python tests/simulations/run_simulation_tests.py --category "enchanted_forest_tales" --topic "Farm Animals"
-
-# Skip simulation and just run tests on existing logs
-python tests/simulations/run_simulation_tests.py --tests-only
 ```
 
 
 ## Technical Constraints
 
-### Caching Constraints
+Learning Odyssey faces unique caching constraints due to its sequential storytelling nature. Each chapter requires the prior chapter to be complete before it can be generated, as the narrative builds upon previous events and choices. This means the entire adventure must be generated sequentially in real-time, with no ability to pre-cache future content. While theoretically possible to pre-generate all possible branches, this approach quickly becomes impractical as the adventure length and number of choices increase—each additional choice point exponentially multiplies the number of possible paths. Since each user's path through the story is unique based on their choices and educational responses, the system cannot feasibly pre-generate all potential outcomes, making traditional caching approaches ineffective.
 
-The application has fundamental constraints that make traditional caching approaches ineffective:
-
-1. **LLM-Dependent Content Generation**
-   - Each chapter requires real-time LLM generation
-   - Content depends on previous chapters and choices
-   - Cannot pre-generate or predict next chapters
-   - Must maintain server connection for content generation
-
-2. **Dynamic Content Requirements**
-   - Story progression is choice-dependent
-   - Each choice affects subsequent chapter content
-   - Educational content adapts to user responses
-   - State must be maintained server-side
-
-3. **State Dependencies**
-   - Each new chapter depends on complete history
-   - Cannot predict which path user will choose
-   - Must track educational progress
-   - Need to maintain narrative consistency
-
-### Implementation Solutions
-
-1. **State Persistence**
-   - Client-side state stored in localStorage
-   - Complete chapter history maintained
-   - User choices preserved
-   - Learning progress tracked
-
-2. **Connection Management**
-   - Exponential backoff for reconnection (1s to 30s)
-   - Maximum 5 reconnection attempts
-   - Automatic state restoration on reconnect
-   - Silent recovery attempts
-
-3. **Error Recovery**
-   - Progress preservation during errors
-   - Automatic recovery attempts
-   - Clear user feedback
-   - Graceful degradation
+To address these sequential generation challenges, we've implemented several solutions. Client-side state persistence using localStorage maintains the complete chapter history and user choices, ensuring continuity even during connection issues. Our connection management system employs exponential backoff (1s to 30s) with automatic state restoration to maintain the narrative flow. For error recovery, we prioritize preserving the user's progress and implement graceful degradation with fallbacks for features like image generation, ensuring the educational journey can continue even when certain components encounter issues.

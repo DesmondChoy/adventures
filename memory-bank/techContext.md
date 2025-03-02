@@ -3,328 +3,142 @@
 ## Technology Stack
 
 ### Backend
-[Previous backend section remains unchanged...]
+- **FastAPI Framework**
+  * Real-time WebSocket communication
+  * Structured logging system
+  * Middleware stack for request tracking
+  * State management and synchronization
+
+### AI Integration
+- **Provider-Agnostic Implementation**
+  * `app/services/llm/providers.py`: Supports GPT-4o/Gemini
+  * `app/services/image_generation_service.py`: Gemini Imagen API
+  * Standardized Google API configuration across services
+  * Environment variables:
+    ```
+    GOOGLE_API_KEY=your_google_key  # Used for both LLM and image generation
+    OPENAI_API_KEY=your_openai_key  # Optional alternative for LLM only
+    ```
 
 ### Frontend
-- **State Management**: AdventureStateManager
-  - Uses localStorage for persistence
-  - Independent of cookies
-  - Complete state tracking
-  - Automatic recovery
-  - CRITICAL: Cannot cache future content (LLM dependent)
+- **State Management**
+  ```javascript
+  // app/templates/index.html
+  class AdventureStateManager {
+      STORAGE_KEY = 'adventure_state';
+      // Uses localStorage for persistence
+      // Maintains complete chapter history
+  }
+  ```
 
-- **Connection Management**: WebSocketManager
-  - Exponential backoff (1s to 30s)
-  - Maximum 5 reconnection attempts
-  - Automatic state restoration
-  - Silent recovery attempts
-  - Connection health monitoring
+- **Connection Management**
+  ```javascript
+  // app/templates/index.html
+  class WebSocketManager {
+      reconnectAttempts = 0;
+      maxReconnectAttempts = 5;
+      
+      calculateBackoff() {
+          // Exponential: 1s to 30s
+      }
+  }
+  ```
 
-- **Error Handling**
-  - Clear user feedback
-  - Graceful degradation
-  - Automatic recovery attempts
-  - Progress preservation
-  - CRITICAL: Must maintain server connection
+- **UI Components**
+  * Modular CSS organization (`app/static/css/`)
+  * 3D carousel with animations (`carousel.css`)
+  * Typography system with educational focus (`typography.css`)
+  * Word-by-word content streaming with Markdown support
+  * Progressive enhancement for images
 
-### Dependencies
-[Previous dependencies section remains unchanged...]
+## Core Data Structures
 
-## Development Setup
-[Previous development setup section remains unchanged...]
-
-## Technical Considerations
-
-### State Management System
-- **Client-Side State (`app/templates/index.html`)**
-  * AdventureStateManager class:
-    ```javascript
-    class AdventureStateManager {
-        STORAGE_KEY = 'adventure_state';
-        // Methods: saveState, loadState, clearState
-        // Uses localStorage for persistence
-        // Maintains complete chapter history
-    }
-    ```
-  * WebSocketManager class:
-    ```javascript
-    class WebSocketManager {
-        // Properties
-        stateManager: AdventureStateManager;
-        connection: WebSocket | null;
-        reconnectAttempts: number;
-        maxReconnectAttempts: number;
-        
-        // Methods
-        handleDisconnect(): Promise<void>;
-        calculateBackoff(): number;
-        reconnect(): Promise<void>;
-        setupConnectionHandlers(): void;
-    }
-    ```
-  * State Structure:
-    ```typescript
-    interface AdventureState {
-        storyCategory: string;
-        lessonTopic: string;
-        story_length: number;
-        current_chapter_id: string;
-        chapters: ChapterData[];
-        selected_narrative_elements: Record<string, string>;
-        selected_sensory_details: Record<string, string>;
-        selected_theme: string;
-        selected_moral_teaching: string;
-        selected_plot_twist: string;
-        metadata: Record<string, any>;
-        current_storytelling_phase: string;
-    }
-    ```
-  * Storage Considerations:
-    - localStorage preferred over sessionStorage
-    - Not affected by cookie settings
-    - Typically 5-10MB limit
-    - Persists across browser sessions
-  * Centralized manageState function:
-    - initialize: Sets up new story state
-    - update: Modifies existing state
-    - reset: Clears all state
-  * Session storage persistence
-  * Fixed story length (10 chapters)
-  * Screen state management
-  * Carousel selection tracking
-  * Progress monitoring
-  * WebSocket synchronization
-
-- **Server-Side State (`app/models/story.py`)**
-  * Real-time WebSocket synchronization
-  * Complete state serialization
-  * Fixed story length (10 chapters)
-  * Error recovery system
-  * Critical state preservation:
-    - Narrative elements
-    - Sensory details
-    - Theme and moral teaching
-    - Plot twist and phase guidance
-    - Metadata for consistency
-  * State Update Handling:
-    - Critical response preservation for LESSON chapters
-    - Proper chapter type determination from planned_chapter_types
-    - Robust handling of existing vs new chapters:
-      * Existing chapters: preserve responses, update content only
-      * New chapters: set appropriate response based on type
-    - State consistency through sorted chapter ordering
-    - Enhanced error handling with detailed logging
-    - CRITICAL: Cannot recreate responses from client data
-
-  * LESSON Chapter Requirements:
-    - Must call process_consequences() after every LESSON chapter
-    - Function generates narrative guidance based on:
-      * Whether answer was correct (is_correct)
-      * The lesson question
-      * The chosen answer
-      * Current chapter number
-    - Critical for story continuity and educational impact
-    - Influences subsequent chapter generation
-    - CRITICAL: Skipping this step breaks the educational narrative flow
-  
-  * URL parameters handling:
-    - Story category and lesson topic via URL
-    - Not included in validated_state
-    - Used for initial state setup only
+### AdventureState (`app/models/story.py`)
+```python
+class AdventureState:
+    # Core properties
+    story_length: int
+    current_chapter_number: int
+    planned_chapter_types: List[ChapterType]
+    current_storytelling_phase: str
     
-  * Agency Implementation:
-    - First chapter agency choice:
-      * Special handling in `_build_chapter_prompt()` for first chapter
-      * Agency choice categories in `prompt_templates.py`
-      * Agency detection in `websocket_service.py` using keyword matching
-      * Storage in `state.metadata["agency"]` with structure:
-        ```json
-        {
-          "type": "item|companion|role|ability",
-          "name": "specific choice name",
-          "description": "full choice text",
-          "properties": {"strength": 1},
-          "growth_history": [],
-          "references": []
-        }
-        ```
-    - Agency tracking:
-      * Reference validation in `update_agency_references()`
-      * Warning logs for chapters without agency references
-      * Evolution tracking in `state.metadata["agency_evolution"]`
-      * Property updates based on REFLECT chapter outcomes
-    - Agency evolution:
-      * Different templates for correct vs. incorrect answers
-      * Special handling for climax phase
-      * Agency-focused choices in climax
-      * Satisfying resolution in conclusion
-    - Technical considerations:
-      * Agency must be referenced in all chapters
-      * Evolution must feel organic to the narrative
-      * Agency plays pivotal role in climax
-      * Agency has meaningful resolution in conclusion
+    # Content elements
+    selected_narrative_elements: Dict[str, str]
+    selected_sensory_details: Dict[str, str]
+    selected_theme: str
+    selected_moral_teaching: str
+    selected_plot_twist: str
+    
+    # Tracking
+    metadata: Dict[str, Any]  # Stores agency, challenge history, etc.
+    chapters: List[ChapterData]
+```
+
+### ChapterType Enum (`app/models/story.py`)
+```python
+class ChapterType(str, Enum):
+    STORY = "STORY"
+    LESSON = "LESSON"
+    REFLECT = "REFLECT"
+    CONCLUSION = "CONCLUSION"
+```
+
+## Key Services
+
+### Chapter Manager (`app/services/chapter_manager.py`)
+- Determines chapter sequence based on adventure length
+- Enforces chapter type rules (no consecutive LESSON chapters, etc.)
+- Samples questions from `lessons.csv` for LESSON chapters
+- Validates question availability
+
+### WebSocket Service (`app/services/websocket_service.py`)
+- Processes user choices and generates responses
+- Manages chapter content generation
+- Handles streaming of content to client
+- Coordinates with ImageGenerationService for agency choice images
 
 ### LLM Integration (`app/services/llm/`)
-* Provider abstraction layer
-* Response standardization
-* Rate limiting implementation
-* Error handling system
-* State handling requirements:
-  - Must pass complete AdventureState
-  - Direct attribute access for prompts
-  - Story config used only for setup
-* Enhanced features:
-  - Phase-specific plot twist guidance
-  - Element consistency validation
-  - Narrative continuity enforcement
+- `providers.py`: Provider abstraction layer
+- `prompt_engineering.py`: Builds prompts for all chapter types
+- `prompt_templates.py`: Defines templates for different chapter types
+- `base.py`: Abstract base classes for LLM providers
 
 ### Image Generation (`app/services/image_generation_service.py`)
-* Gemini Imagen API integration
-* Asynchronous processing
-* Base64 image encoding for WebSocket transmission
-* Enhanced error handling:
-  - Increased retries from 2 to 5 for better reliability
-  - Robust null checking to prevent "NoneType has no len()" errors
-  - Exponential backoff with 2^attempt seconds between retries
-  - Detailed logging for debugging API responses
-* Prompt enhancement for better image quality
-* Environment configuration:
-  - Uses GOOGLE_API_KEY environment variable
-  - Shares API key with GeminiService
-* Integration with WebSocket service:
-  - Generates images for Chapter 1 agency choices
-  - Sends images asynchronously as they become available
-  - Gracefully handles failed image generation without crashing
-  - Maintains text streaming performance
+- Asynchronous processing with `generate_image_async()`
+- 5 retries with exponential backoff
+- Robust null checking and error handling
+- Base64 encoding for WebSocket transmission
 
-### Story Elements (`app/services/chapter_manager.py`)
-* Comprehensive element selection
-* Metadata tracking for consistency
-* Phase-specific plot twist guidance
-* Enhanced error handling with recovery
+## Agency Implementation
 
-## UI Components
+### First Chapter Choice
+- Four categories in `prompt_templates.py`:
+  * Magical Items to Craft
+  * Companions to Choose
+  * Roles or Professions
+  * Special Abilities
 
-### Carousel Component
-- **Location**: `app/static/css/carousel.css`
-- **Description**: A reusable 3D carousel component with smooth transitions, animations, and card flipping functionality
-- **Features**:
-  - 3D perspective rotation
-  - Active card expansion (340px width vs 300px base)
-  - Infinite glowing animation on active cards
-  - Card flip animation on selection
-  - Portrait orientation (3:4 aspect ratio)
-  - Responsive navigation controls
-  - Smooth transitions using cubic-bezier timing
-- **States**:
-  - Default: 300x400px, 0.3 opacity
-  - Active: 340x453px, glowing animation, full opacity
-  - Selected: Triggers card flip animation
-  - Front face: Full-width image display
-  - Back face: Title and description content
-- **Customization**:
-  - Uses theme colors (indigo-600)
-  - Configurable card dimensions
-  - Modular structure for reuse
-  - Image handling with object-fit
-- **Technical Details**:
-  - Uses CSS transform-style: preserve-3d
-  - Hardware-accelerated animations
-  - Will-change optimization for performance
-  - Backdrop-filter for glass effect
-  - Backface visibility hidden for 3D rendering
-  - Two-sided card implementation
-- **Image Requirements**:
-  - Location: `app/static/images/categories/`
-  - Naming: Matches category IDs
-  - Aspect ratio: 3:4 (portrait)
-  - Min resolution: 680x906px
-  - Format: JPG/WebP
-  - Content: Theme-appropriate and child-friendly
+### Agency Tracking
+```python
+# app/services/adventure_state_manager.py
+def update_agency_references(self, chapter_data: ChapterData) -> None:
+    # Tracks references to agency element in chapters
+    # Warns if no reference found
+```
 
-### Mobile Responsiveness (`app/static/css/carousel.css`)
-- Breakpoint: max-width 768px
-- Container dimensions:
-  * Desktop: 400px × 450px (updated from 420px)
-  * Mobile: 320px × 360px
-- Card dimensions:
-  * Desktop regular: 300px × 400px
-  * Desktop active: 320px × 415px (updated from 340px × 453px)
-  * Mobile regular: 200px × 267px
-  * Mobile active: 240px × 320px
-- Typography scaling:
-  * Desktop title: 1.25rem
-  * Desktop description: 0.95rem
-  * Mobile title: 0.85rem
-  * Mobile description: 0.75rem
-- Touch interaction:
-  * Swipe gesture navigation
-  * 50px swipe threshold
-  * Event prevention for smooth scrolling
-  * Hidden navigation arrows
-  * "Swipe to explore" tip only visible on mobile devices
-- Device-specific UI elements:
-  * Media query to hide swipe tip on desktop: `@media (min-width: 769px)`
-  * Swipe tip visible only on mobile where swiping is relevant
-  * Navigation arrows visible only on desktop
-- Content optimization:
-  * Reduced padding (4px)
-  * Increased line clamp (10)
-  * Tighter line height (1.35)
-  * Maintained aspect ratios
+### Agency Evolution
+- REFLECT chapters: Agency evolves based on correct/incorrect answers
+- CLIMAX phase: Agency plays pivotal role in choices
+- CONCLUSION: Agency has meaningful resolution
 
-## Text Rendering and Streaming
+## Testing Framework
 
-### Typography System (`app/static/css/typography.css`)
-- Modular typography system using CSS variables
-- Primary font: Andika (optimized for educational content)
-- Standardized font sizes and weights:
-  * Content text: 1.2rem
-  * Small text: 0.875rem
-  * Base: 1rem
-  * Large: 1.125rem
-  * Extra large: 1.25rem
-  * 2XL: 1.5rem
-  * 4XL: 2.25rem
-- Consistent typography across:
-  * Streaming content
-  * Choice buttons
-  * Form elements
-  * Headers
-  * Stats display
-- Educational considerations:
-  * Enhanced readability with 1.7 line height
-  * Medium font weight (500) for clarity
-  * Subtle letter spacing (0.01em)
-  * Optimized contrast with carefully selected colors
+### Simulation (`tests/simulations/story_simulation.py`)
+- Generates structured log data with standardized prefixes
+- Automated adventure progression with random choices
+- Real-time WebSocket communication testing
 
-### Markdown Support
-- Implementation using marked.js library
-- Real-time markdown parsing during streaming
-- Support for:
-  * Emphasis (*italic*)
-  * Strong emphasis (**bold**)
-  * Code blocks (inline and multi-line)
-  * Line breaks and paragraphs
-- Fallback to plain text if parsing fails
-- Preserves streaming functionality while rendering markdown
-
-### Streaming Architecture
-- Word-by-word streaming for natural reading flow
-- WebSocket-based real-time delivery
-- Optimized timing:
-  * 0.02s delay between words
-  * 0.1s delay between paragraphs
-- Buffer management for markdown rendering
-- Smooth scrolling as content streams
-- Maintains proper whitespace and formatting
-
-### UX Considerations
-- Natural reading pace through controlled delays
-- Immediate visual feedback for markdown elements
-- Preserved line breaks and paragraph structure
-- Consistent formatting throughout streaming
-- Graceful fallback for parsing errors
-- Clean state management between chapters
-
-[Rest of the content remains unchanged...]
+### Test Files
+- `test_simulation_functionality.py`: Verifies chapter sequences, ratios
+- `test_simulation_errors.py`: Tests error handling and recovery
+- `run_simulation_tests.py`: Orchestrates server, simulation, and tests
