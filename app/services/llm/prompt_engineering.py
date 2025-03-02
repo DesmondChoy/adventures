@@ -63,7 +63,10 @@ def _format_lesson_answers(lesson_question: LessonQuestion) -> str:
 
 
 def _get_phase_guidance(story_phase: str, state: AdventureState) -> str:
-    """Get the appropriate guidance based on the Journey Quest story phase.
+    """Get the base phase guidance for the current story phase.
+
+    This function returns only the base guidance without plot twist guidance,
+    as plot twist guidance is handled separately in story chapter prompts.
 
     Args:
         story_phase: Current phase of the story
@@ -71,14 +74,6 @@ def _get_phase_guidance(story_phase: str, state: AdventureState) -> str:
     """
     # Get base guidance for the phase
     base_guidance_text = BASE_PHASE_GUIDANCE.get(story_phase, "")
-
-    # Add plot twist guidance for applicable phases
-    if story_phase in PLOT_TWIST_GUIDANCE:
-        plot_twist_text = PLOT_TWIST_GUIDANCE[story_phase].format(
-            plot_twist=state.selected_plot_twist
-        )
-        return f"{base_guidance_text}\n\n{plot_twist_text}"
-
     return base_guidance_text
 
 
