@@ -8,6 +8,7 @@ complete prompts for different chapter types and scenarios.
 
 from typing import Any, Dict, Optional, List, TypedDict, cast, Tuple
 import logging
+import re
 from datetime import datetime
 from app.models.story import (
     AdventureState,
@@ -215,6 +216,9 @@ def build_first_chapter_prompt(state: AdventureState) -> str:
     # Get random agency category
     agency_category_name, agency_options = get_agency_category()
 
+    # Clean options by removing visual details in brackets directly
+    cleaned_agency_options = re.sub(r"\s*\[.*?\]\s*", " ", agency_options)
+
     # Log agency category selection
     logger = logging.getLogger("story_app")
     logger.debug(f"First chapter: Using agency category: {agency_category_name}")
@@ -228,7 +232,7 @@ def build_first_chapter_prompt(state: AdventureState) -> str:
         total_lessons=state.total_lessons,
         story_history=story_history,
         agency_category_name=agency_category_name,
-        agency_options=agency_options,
+        agency_options=cleaned_agency_options,
     )
 
 
