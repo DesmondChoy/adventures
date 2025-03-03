@@ -140,7 +140,16 @@ class ImageGenerationService:
             visual_details = bracket_match.group(1)
             logger.debug(f"Extracted visual details: {visual_details}")
 
-        logger.debug(f"Extracted name: {name}")
+        # Check if the name is actually a full choice text starting with "As a..."
+        # This happens when the choice text is passed as original_prompt
+        as_a_match = re.match(r"As a (\w+\s*\w*)", name)
+        if as_a_match:
+            # Extract just the agency name from the choice text
+            agency_name = as_a_match.group(1).strip()
+            logger.debug(f"Extracted agency name from choice text: {agency_name}")
+            name = agency_name
+
+        logger.debug(f"Using name for prompt: {name}")
 
         # Base style guidance
         base_style = "vibrant colors, detailed, whimsical, digital art"
@@ -158,10 +167,45 @@ class ImageGenerationService:
             visual = adventure_state.selected_sensory_details.get("visuals", "")
 
             # Build prompt components with proper comma separation
-            components = [f"Fantasy illustration of {name}"]
+            components = []
 
+            # Start with the name and visual details
             if visual_details:
-                components.append(visual_details)
+                # Use proper formatting for visual details in square brackets
+                components.append(f"Fantasy illustration of {name} [{visual_details}]")
+            else:
+                # If no visual details found in the original prompt, try to find them in the agency lookup
+                from app.services.llm.prompt_templates import categories
+
+                try:
+                    # Look for the agency name in all categories
+                    for category_options in categories.values():
+                        for option in category_options:
+                            option_name = option.split("[")[0].strip().lower()
+                            if (
+                                name.lower() == option_name
+                                or name.lower() in option_name
+                            ):
+                                # Extract visual details from the option
+                                option_visual_match = re.search(r"\[(.*?)\]", option)
+                                if option_visual_match:
+                                    option_visual_details = option_visual_match.group(1)
+                                    logger.debug(
+                                        f"Found visual details from categories: {option_visual_details}"
+                                    )
+                                    components.append(
+                                        f"Fantasy illustration of {name} [{option_visual_details}]"
+                                    )
+                                    break
+                        else:
+                            continue
+                        break
+                    else:
+                        # If no match found, use just the name
+                        components.append(f"Fantasy illustration of {name}")
+                except Exception as e:
+                    logger.error(f"Error looking up visual details: {e}")
+                    components.append(f"Fantasy illustration of {name}")
 
             # Add the choice text directly if provided
             if choice_text:
@@ -184,10 +228,13 @@ class ImageGenerationService:
             return ", ".join(components)
 
         # Default enhancement if no adventure_state is provided
-        components = [f"Fantasy illustration of {name}"]
+        components = []
 
+        # Start with the name and visual details
         if visual_details:
-            components.append(visual_details)
+            components.append(f"Fantasy illustration of {name} [{visual_details}]")
+        else:
+            components.append(f"Fantasy illustration of {name}")
 
         # Add the choice text directly if provided
         if choice_text:

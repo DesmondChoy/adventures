@@ -246,24 +246,50 @@ async def stream_and_send_chapter(
     if current_chapter_number == 1 and chapter_type == ChapterType.STORY:
         logger.info("Starting image generation for Chapter 1 agency choices")
 
-        # Attempt to extract original agency options from the prompt templates
+        # Get direct access to all agency options from prompt_templates
         from app.services.llm.prompt_templates import get_agency_category
 
-        # Get all possible agency categories and options for lookup
+        # Create a comprehensive dictionary of all agency options
         agency_lookup = {}
         try:
-            for _ in range(10):  # Try a few times to ensure we capture all categories
-                category_name, formatted_options = get_agency_category()
-                options_list = formatted_options.split("\n")
-                for option in options_list:
-                    if option.startswith("- "):
-                        option = option[2:]  # Remove "- " prefix
-                        # Create a simplified key for matching
-                        key = re.sub(r"\s*\[.*?\]", "", option).lower()
-                        # Store the original option with visual details
-                        agency_lookup[key] = option
+            # Access the categories dictionary directly from prompt_templates
+            from app.services.llm.prompt_templates import categories
+
+            # Build a complete lookup of all agency options
+            for category_name, options in categories.items():
+                for option in options:
+                    # Extract the name (before the first '[')
+                    name = option.split("[")[0].strip()
+                    # Store the full option with visual details
+                    agency_lookup[name.lower()] = option
+
+                    # Also store variations to improve matching
+                    # For example, "Brave Fox" should match "Fox" as well
+                    if " " in name:
+                        parts = name.split(" ")
+                        for part in parts:
+                            if (
+                                len(part) > 3
+                            ):  # Only use meaningful parts (avoid "the", "of", etc.)
+                                agency_lookup[part.lower()] = option
         except Exception as e:
             logger.error(f"Error building agency lookup: {e}")
+            # Fallback to the original method if direct access fails
+            try:
+                for _ in range(
+                    10
+                ):  # Try a few times to ensure we capture all categories
+                    category_name, formatted_options, _ = get_agency_category()
+                    options_list = formatted_options.split("\n")
+                    for option in options_list:
+                        if option.startswith("- "):
+                            option = option[2:]  # Remove "- " prefix
+                            # Create a simplified key for matching
+                            key = re.sub(r"\s*\[.*?\]", "", option).lower()
+                            # Store the original option with visual details
+                            agency_lookup[key] = option
+            except Exception as e2:
+                logger.error(f"Error in fallback agency lookup: {e2}")
 
         logger.debug(f"Built agency lookup with {len(agency_lookup)} entries")
 
@@ -274,16 +300,70 @@ async def stream_and_send_chapter(
             original_option = None
             choice_text = choice.text.lower()
 
-            # Look for matches in our agency lookup
-            for key, option in agency_lookup.items():
-                # Extract the name part (before the first " - ")
-                name_match = re.search(r"^([^-]+)", key)
-                if name_match and name_match.group(1).strip() in choice_text:
-                    original_option = option
+            # Extract agency name from choice text if it starts with "As a..."
+            agency_name = ""
+            as_a_match = re.match(r"As a (\w+\s*\w*)", choice_text)
+            if as_a_match:
+                agency_name = as_a_match.group(1).strip().lower()
+                logger.debug(f"Extracted agency name from choice text: {agency_name}")
+
+            # Try to find the agency option directly from categories
+            try:
+                from app.services.llm.prompt_templates import categories
+
+                # First try direct match with the extracted agency name
+                if agency_name:
+                    for category_options in categories.values():
+                        for option in category_options:
+                            option_name = option.split("[")[0].strip().lower()
+                            if agency_name == option_name or agency_name in option_name:
+                                original_option = option
+                                logger.debug(
+                                    f"Found direct match in categories for '{agency_name}'"
+                                )
+                                break
+                        else:
+                            continue
+                        break
+
+                # If no match found with agency name, try matching with the full choice text
+                if not original_option:
+                    for category_options in categories.values():
+                        for option in category_options:
+                            option_name = option.split("[")[0].strip().lower()
+                            if option_name in choice_text.lower():
+                                original_option = option
+                                logger.debug(
+                                    f"Found match in choice text: '{option_name}'"
+                                )
+                                break
+                        else:
+                            continue
+                        break
+            except Exception as e:
+                logger.error(f"Error accessing categories: {e}")
+
+                # Fall back to the agency_lookup if direct category access fails
+                if agency_name and agency_name in agency_lookup:
+                    original_option = agency_lookup[agency_name]
                     logger.debug(
-                        f"Found matching agency option for choice {i + 1}: {original_option}"
+                        f"Fallback: Found direct match for agency name '{agency_name}' in lookup"
                     )
-                    break
+                else:
+                    # Try partial matching if direct match fails
+                    for key, option in agency_lookup.items():
+                        # If we have an agency name from "As a...", prioritize matching that
+                        if agency_name and agency_name in key:
+                            original_option = option
+                            logger.debug(
+                                f"Fallback: Found partial match for agency name '{agency_name}' in key '{key}'"
+                            )
+                            break
+                        # Otherwise try to find any match in the choice text
+                        elif key in choice_text.lower():
+                            original_option = option
+                            logger.debug(f"Fallback: Found key '{key}' in choice text")
+                            break
 
             # Use the original option with visual details if found, otherwise use the choice text
             if original_option:
