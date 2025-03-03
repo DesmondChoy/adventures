@@ -122,9 +122,13 @@ Run story simulation on changes to:
 4. Confirm state updates in `adventure_state_manager.py`.
 5. Test question handling in `websocket_service.py`.
 6. Verify response creation in `websocket_service.py`.
-7. Check error handling.
-8. Monitor state consistency.
-9. Verify agency evolution in REFLECT chapters.
+7. Check "chapter" prefix removal in `websocket_service.py`:
+   - Verify regex pattern `r"^Chapter(?:\s+\d+)?:?\s*"` catches all variations
+   - Confirm removal in `process_choice()`, `stream_and_send_chapter()`, and `generate_chapter()`
+   - Check capitalization of first letter after removal
+8. Check error handling.
+9. Monitor state consistency.
+10. Verify agency evolution in REFLECT chapters.
 
 ### Prompt Debugging
 1. Verify State Passing:

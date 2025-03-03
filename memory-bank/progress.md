@@ -1,5 +1,15 @@
 # Progress Log
 
+## 2025-03-03: LLM Response Formatting Improvement
+
+### Fixed "Chapter" Prefix in LLM Responses
+- Problem: Despite system prompt instructions not to begin with "Chapter X", some LLM responses still started with the word "chapter"
+- Solution:
+  * Updated regex pattern in three locations within `websocket_service.py` to catch both numbered and unnumbered chapter prefixes
+  * Changed pattern from `r"^Chapter\s+\d+:\s*"` to `r"^Chapter(?:\s+\d+)?:?\s*"`
+  * Applied the fix in `process_choice()`, `stream_and_send_chapter()`, and `generate_chapter()` functions
+- Result: All variations of "chapter" prefixes (with or without numbers) are now removed before content is streamed to users
+
 ## 2025-03-03: Image Generation Visual Details Fix
 
 ### Fixed Missing Visual Details in Agency Choice Images

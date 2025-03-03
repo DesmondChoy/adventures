@@ -27,6 +27,12 @@
 
 ## Recent Changes
 
+### LLM Response Formatting Improvement (2025-03-03)
+- Fixed issue with LLM responses sometimes beginning with "chapter" despite system prompt instructions
+- Updated regex pattern in `websocket_service.py` to catch and remove both numbered and unnumbered chapter prefixes
+- Changed pattern from `r"^Chapter\s+\d+:\s*"` to `r"^Chapter(?:\s+\d+)?:?\s*"`
+- Applied fix in three key locations in the processing pipeline to ensure consistent formatting
+
 ### Image Generation Visual Details Fix (2025-03-03)
 - Fixed issue with visual details not being included in image generation prompts for agency choices
 - Exposed `categories` dictionary in `prompt_templates.py` for direct access by other modules

@@ -183,6 +183,17 @@ flowchart TD
   * Paragraph breaks (0.1s delay)
   * Markdown formatting support
   * Buffer management for partial content
+  * "Chapter" prefix removal with regex pattern `r"^Chapter(?:\s+\d+)?:?\s*"`
+
+- **Content Processing Flow**:
+```mermaid
+flowchart TD
+    LLM[LLM Service] -->|Raw response| WSS[WebSocket Service]
+    WSS -->|Remove chapter prefix| clean_content
+    clean_content -->|Split into paragraphs| paragraphs
+    paragraphs -->|Split into words| words
+    words -->|Stream with delay| Client
+```
 
 ### 7. Prompt Engineering Pattern (`app/services/llm/prompt_templates.py`)
 - **Prompt Structure and Organization**:

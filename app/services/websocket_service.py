@@ -189,7 +189,10 @@ async def process_choice(
         new_chapter = ChapterData(
             chapter_number=len(state.chapters) + 1,
             content=re.sub(
-                r"^Chapter\s+\d+:\s*", "", chapter_content.content, flags=re.MULTILINE
+                r"^Chapter(?:\s+\d+)?:?\s*",
+                "",
+                chapter_content.content,
+                flags=re.MULTILINE,
             ).strip(),
             chapter_type=chapter_type,
             response=None,
@@ -230,9 +233,9 @@ async def stream_and_send_chapter(
         sampled_question: The question data (if any)
         state: The current state
     """
-    # Remove any "Chapter X:" prefix before streaming
+    # Remove any "Chapter X:" prefix or just "Chapter" prefix before streaming
     content_to_stream = re.sub(
-        r"^Chapter\s+\d+:\s*", "", chapter_content.content, flags=re.MULTILINE
+        r"^Chapter(?:\s+\d+)?:?\s*", "", chapter_content.content, flags=re.MULTILINE
     ).strip()
 
     # Get chapter type for current chapter
@@ -675,9 +678,9 @@ async def generate_chapter(
             # Extract choices text and clean up story content
             choices_text = choices_match.group(1).strip()
             story_content = story_content[: choices_match.start()].strip()
-            # Remove any "Chapter X:" prefix, including any whitespace after it
+            # Remove any "Chapter X:" prefix or just "Chapter" prefix, including any whitespace after it
             story_content = re.sub(
-                r"^Chapter\s+\d+:\s*", "", story_content, flags=re.MULTILINE
+                r"^Chapter(?:\s+\d+)?:?\s*", "", story_content, flags=re.MULTILINE
             ).strip()
 
             # Initialize choices array
