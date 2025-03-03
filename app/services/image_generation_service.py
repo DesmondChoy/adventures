@@ -170,9 +170,7 @@ class ImageGenerationService:
             and hasattr(adventure_state, "selected_sensory_details")
         ):
             # Extract setting and visual details if available
-            setting = adventure_state.selected_narrative_elements.get(
-                "setting_types", ""
-            )
+            setting = adventure_state.selected_narrative_elements.get("settings", "")
             visual = adventure_state.selected_sensory_details.get("visuals", "")
 
             # Build prompt components with proper comma separation

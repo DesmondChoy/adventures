@@ -27,6 +27,18 @@
 
 ## Recent Changes
 
+### Renamed `setting_types` to `settings` and Removed `story_rules` (2025-03-03)
+- Problem: Needed to simplify the data model and update field naming for clarity
+- Solution:
+  * Renamed `setting_types` to `settings` in all story categories in `app/data/new_stories.yaml`
+  * Removed all `story_rules` sections from each story category in `app/data/new_stories.yaml`
+  * Updated the validator in `app/models/story.py` to use `settings` instead of `setting_types` and removed `story_rules` from required categories
+  * Modified `app/services/chapter_manager.py` to update the required categories and selection logic
+  * Updated references in `app/services/llm/prompt_engineering.py` to use `settings` instead of `setting_types` and removed references to `story_rules`
+  * Updated the `SYSTEM_PROMPT_TEMPLATE` in `app/services/llm/prompt_templates.py` to use `settings` and removed the `story_rules` line
+  * Updated `app/services/image_generation_service.py` to use `settings` instead of `setting_types`
+- Result: Simplified data model while maintaining core functionality; system now uses `settings` instead of `setting_types` and no longer requires or uses `story_rules` in narrative generation
+
 ### Removed Unused `character_archetypes` Field (2025-03-03)
 - Removed the unused `character_archetypes` field from story categories
 - Updated `app/data/new_stories.yaml` to remove the `character_archetypes` sections from each story category

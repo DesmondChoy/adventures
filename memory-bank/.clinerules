@@ -69,6 +69,12 @@
    - Handle failed generation gracefully
    - Use asynchronous processing to maintain performance
 
+5. Data Model:
+   - Story categories in `new_stories.yaml` MUST include `settings` (renamed from `setting_types`)
+   - `story_rules` field has been removed from the data model
+   - Required narrative elements are now only `settings` (validator updated in `story.py`)
+   - System prompt template uses `settings` but no longer includes `story_rules`
+
 ## Development Workflow
 
 ### Code Changes
@@ -154,7 +160,7 @@ Run story simulation on changes to:
    - Verify API call parameters.
    - Check response handling.
 3. Analyze Error Handling:
-   - Verify retry mechanism.
+   - Verify retry mechanism (5 retries with exponential backoff).
    - Check null response handling.
    - Confirm fallback behavior.
 4. Agency Choice Visual Details:
@@ -166,6 +172,10 @@ Run story simulation on changes to:
      * Match with full choice text
      * Fallback to agency_lookup if direct category access fails
    - Check final prompt format includes visual details in square brackets.
+5. Gender Consistency:
+   - Verify choice text is passed to `enhance_prompt()`.
+   - Check that narrative text with gender indicators is incorporated in image prompts.
+   - Confirm generated images maintain gender consistency with narrative.
 
 ## Error Handling
 

@@ -4,18 +4,12 @@ story_categories:
     description: "A radiant celebration where every moment shimmers with laughter and bright spectacle. Lanterns, parades, and vibrant costumes invite endless wonder."
 
     narrative_elements:
-      setting_types:
+      settings:
         - "Glowing rainbow streets decorated with floating paper lanterns"
         - "Gigantic kaleidoscope tents where colors shift with each step"
         - "Illuminated bridges arched over canals of sparkling water"
         - "Hidden garden paths lit by luminescent flowers and tiny fireflies"
         - "Grand fireworks arena with a sky full of dancing lights"
-      story_rules:
-        - "Kindness and cooperation amplify the festival's shimmering magic"
-        - "Each day brings new color challenges that spark creativity"
-        - "Selfish acts cause lanterns to dim and colors to fade"
-        - "Only those who share joy can unlock hidden festival secrets"
-        - "Friendship glows brightest when facing nighttime surprises"
       themes:
         - "Celebrating diversity through the brilliant spectrum of colors"
         - "Uniting communities by sharing stories and music"
@@ -60,18 +54,12 @@ story_categories:
     description: "A dazzling realm of acrobats, clowns, and magical wonders. Children can explore whimsical rides and hidden secrets amid colorful tents."
 
     narrative_elements:
-      setting_types:
+      settings:
         - "grand big top tent glowing with rainbow spotlights"
         - "mysterious fortune teller's wagon filled with crystal trinkets"
         - "enchanted carousel where painted creatures come to life at night"
         - "hidden backstage corridors bustling with secret rehearsals"
         - "towering Ferris wheel offering breathtaking starry views"
-      story_rules:
-        - "Helping a friend in need always unlocks a new attraction or clue"
-        - "Honesty during challenges can earn magical carnival tickets"
-        - "Kindness towards animals ensures you gain their playful cooperation"
-        - "Teamwork amplifies the fun and thwarts hidden mischief"
-        - "Every ride holds a lesson for those brave enough to explore"
       themes:
         - "Overcoming fears through friendship and creative thinking"
         - "Discovering hidden talents by embracing curiosity"
@@ -116,18 +104,12 @@ story_categories:
     description: "A realm where ancient trees whisper secrets and magical creatures wander unseen. It's a place of wonder, courage, and hidden surprises."
 
     narrative_elements:
-      setting_types:
+      settings:
         - "towering mushroom groves that glow at night"
         - "crystal-clear fairy ponds shimmering with moonbeams"
         - "enchanted tree villages hidden in twisting branches"
         - "glittering cobblestone paths that shift underfoot"
         - "sunlit clearings where gentle woodland creatures gather"
-      story_rules:
-        - "Every visitor must treat nature with respect and care"
-        - "Random acts of kindness can unlock hidden paths or rewards"
-        - "Magic flows from harmony and disappears when misused"
-        - "Sharing knowledge strengthens the entire woodland community"
-        - "An unbreakable pledge binds true friends across time"
       themes:
         - "Friendship formed through shared adventures"
         - "Personal growth discovered by overcoming fears"

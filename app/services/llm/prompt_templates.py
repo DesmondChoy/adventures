@@ -20,8 +20,7 @@ You expertly weave moments of humor, surprise, and gentle tension throughout you
 Your stories unfold at a rhythm that sustains interest—alternating between exciting action, thoughtful discovery, and moments of reflection—while ensuring learning emerges organically from the characters' experiences rather than from direct instruction.
 
 # Story Elements
-- Setting: {setting_types}
-- Rule: {story_rules}
+- Setting: {settings}
 - Theme: {selected_theme}
 - Moral Teaching: {selected_moral_teaching}
 - Sensory Details:
@@ -283,7 +282,7 @@ categories = {
         "Animal Whisperer [a figure with leafy green tattoos swirling on their arms, encircled by chatting birds and hopping rabbits] - Gain the gift of chatting with deer, calling birds to sing, and listening to the forest's whispers to uncover its mysteries.",
         "Element Bender [a swirling figure with hands sparking flames, splashing water, tossing earth, and twirling breezes in a dance] - Acquire the power to shape fire into stars, bend rivers to bridges, and spin air into whirlwinds to sweep away trouble.",
         "Storyteller [a dreamy figure with a giant book glowing with golden words that leap into shimmering pictures above] - Receive the talent to weave tales so real you can step inside them, bringing heroes and dragons to life with every word you speak.",
-        "Size Shifter [a figure haloed by sparkling rings, stretching to touch clouds or shrinking to ride a ladybug's back] - Gain the ability to grow huge to cross mountains or shrink tiny to sneak through keyholes, always just the right size for the moment.",
+        "Size Shifter [a figure stretching to touch clouds, another figure shrinking to ride a ladybug's back] - Gain the ability to grow huge to cross mountains or shrink tiny to sneak through keyholes, always just the right size for the moment.",
         "Light Weaver [a figure with fingers trailing ribbons of ruby, sapphire, and emerald light, weaving them into glowing shapes] - Acquire the skill to spin light into crowns, bridges, or butterflies, brightening the world with every colorful twist you make.",
     ],
 }
