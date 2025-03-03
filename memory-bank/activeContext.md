@@ -27,6 +27,14 @@
 
 ## Recent Changes
 
+### Image Generation Visual Details Fix (2025-03-03)
+- Fixed issue with visual details not being included in image generation prompts for agency choices
+- Exposed `categories` dictionary in `prompt_templates.py` for direct access by other modules
+- Enhanced `enhance_prompt()` in `image_generation_service.py` to better extract agency names from choice text
+- Added fallback mechanism to look up visual details directly from the `categories` dictionary
+- Improved matching logic in `websocket_service.py` to find the correct agency option with visual details
+- Implemented multi-stage matching approach for more accurate agency option identification
+
 ### Image Generation Gender Consistency (2025-03-02)
 - Modified `enhance_prompt()` in `image_generation_service.py` to accept choice text parameter
 - Updated `stream_and_send_chapter()` in `websocket_service.py` to pass choice text to image generation

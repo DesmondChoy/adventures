@@ -153,6 +153,15 @@ Run story simulation on changes to:
    - Verify retry mechanism.
    - Check null response handling.
    - Confirm fallback behavior.
+4. Agency Choice Visual Details:
+   - Verify `categories` dictionary is exposed in `prompt_templates.py`.
+   - Check agency name extraction from "As a..." choice texts in `enhance_prompt()`.
+   - Confirm visual details extraction from square brackets.
+   - Verify multi-stage matching approach in `websocket_service.py`:
+     * Direct match with extracted agency name
+     * Match with full choice text
+     * Fallback to agency_lookup if direct category access fails
+   - Check final prompt format includes visual details in square brackets.
 
 ## Error Handling
 

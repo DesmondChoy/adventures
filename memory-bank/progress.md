@@ -1,5 +1,20 @@
 # Progress Log
 
+## 2025-03-03: Image Generation Visual Details Fix
+
+### Fixed Missing Visual Details in Agency Choice Images
+- Problem: Visual details in square brackets were not being included in image generation prompts for agency choices
+- Root Cause:
+  * `categories` dictionary in `prompt_templates.py` wasn't directly accessible
+  * Agency name extraction in `image_generation_service.py` wasn't properly handling the "As a..." format
+  * Matching logic in `websocket_service.py` wasn't effectively finding the correct agency option with visual details
+- Solution:
+  * Exposed `categories` dictionary at the module level in `prompt_templates.py`
+  * Enhanced `enhance_prompt()` to extract agency names from "As a..." choice texts
+  * Added fallback mechanism to look up visual details directly from the `categories` dictionary
+  * Implemented multi-stage matching approach in `websocket_service.py` for more accurate agency option identification
+- Result: Image generation prompts now correctly include visual details in square brackets, producing more accurate and consistent images for agency choices
+
 ## 2025-03-02: Image Generation Gender Consistency
 
 ### Fixed Character Gender Inconsistency in Image Generation

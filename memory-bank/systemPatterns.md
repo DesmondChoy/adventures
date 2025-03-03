@@ -100,6 +100,48 @@ graph TD
   * 5 retries with exponential backoff
   * Base64 encoding for WebSocket transmission
   * Progressive enhancement (text first, images as available)
+  * Enhanced prompt construction with `enhance_prompt()`
+  * Visual details extraction from agency options
+
+- **Agency Choice Image Generation Pattern**
+```mermaid
+flowchart TD
+    subgraph WebSocketService
+        stream_and_send_chapter --> |"For Chapter 1\nSTORY type"| build_agency_lookup
+        build_agency_lookup --> |"Import categories\ndirectly"| categories[prompt_templates.py\ncategories dictionary]
+        build_agency_lookup --> |"Create lookup\nwith variations"| agency_lookup
+        stream_and_send_chapter --> |"For each choice"| extract_agency_name
+        extract_agency_name --> |"From 'As a...'\nformat"| agency_name
+        extract_agency_name --> find_agency_option
+        find_agency_option --> |"Try direct match\nwith agency name"| categories
+        find_agency_option --> |"Try match with\nfull choice text"| categories
+        find_agency_option --> |"Fallback to\nagency_lookup"| agency_lookup
+        find_agency_option --> |"If found"| original_option
+        find_agency_option --> |"If not found"| use_choice_text
+        original_option --> enhance_prompt
+        use_choice_text --> enhance_prompt
+    end
+    
+    subgraph ImageGenerationService
+        enhance_prompt --> extract_name
+        extract_name --> |"Handle 'As a...'\nformat"| clean_name
+        enhance_prompt --> extract_visual_details
+        extract_visual_details --> |"From square\nbrackets"| visual_details
+        enhance_prompt --> |"If no visual details\nin original prompt"| lookup_visual_details
+        lookup_visual_details --> |"Import categories\ndirectly"| categories
+        lookup_visual_details --> |"Find matching\nagency option"| found_visual_details
+        clean_name --> build_components
+        visual_details --> build_components
+        found_visual_details --> build_components
+        build_components --> |"Join with commas"| final_prompt
+        final_prompt --> generate_image_async
+    end
+    
+    generate_image_async --> |"Async processing"| _generate_image
+    _generate_image --> |"API call with\n5 retries"| image_data
+    image_data --> |"Base64 encoded"| WebSocketService
+    WebSocketService --> |"Send to client"| Client[Web Client]
+```
 
 ## Key Patterns
 
