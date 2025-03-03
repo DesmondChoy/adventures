@@ -86,7 +86,6 @@ def build_system_prompt(state: AdventureState) -> str:
     """
     return SYSTEM_PROMPT_TEMPLATE.format(
         setting_types=state.selected_narrative_elements["setting_types"],
-        character_archetypes=state.selected_narrative_elements["character_archetypes"],
         story_rules=state.selected_narrative_elements["story_rules"],
         selected_theme=state.selected_theme,
         selected_moral_teaching=state.selected_moral_teaching,

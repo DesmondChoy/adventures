@@ -21,7 +21,6 @@ Your stories unfold at a rhythm that sustains interest—alternating between exc
 
 # Story Elements
 - Setting: {setting_types}
-- Character: {character_archetypes}
 - Rule: {story_rules}
 - Theme: {selected_theme}
 - Moral Teaching: {selected_moral_teaching}

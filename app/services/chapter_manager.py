@@ -61,7 +61,7 @@ def select_random_elements(
     )
 
     # 2. Select and validate required narrative elements
-    required_categories = {"setting_types", "character_archetypes", "story_rules"}
+    required_categories = {"setting_types", "story_rules"}
     narrative_elements = {}
 
     try:

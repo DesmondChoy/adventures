@@ -116,7 +116,7 @@ class AdventureState(BaseModel):
     @field_validator("selected_narrative_elements")
     @classmethod
     def validate_narrative_elements(cls, v: Dict[str, str]) -> Dict[str, str]:
-        required_categories = {"setting_types", "character_archetypes", "story_rules"}
+        required_categories = {"setting_types", "story_rules"}
         if not all(category in v for category in required_categories):
             raise ValueError(
                 f"Missing required narrative elements: {required_categories - v.keys()}"

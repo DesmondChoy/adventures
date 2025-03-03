@@ -1,5 +1,17 @@
 # Progress Log
 
+## 2025-03-03: Removed Unused `character_archetypes` Field
+
+### Removed Unnecessary `character_archetypes` Field from Story Categories
+- Problem: The `character_archetypes` field in story categories wasn't being effectively utilized in the narrative generation
+- Solution:
+  * Removed the `character_archetypes` sections from each story category in `app/data/new_stories.yaml`
+  * Modified `app/models/story.py` to remove `character_archetypes` from the required categories in the `validate_narrative_elements` validator
+  * Updated `app/services/chapter_manager.py` to remove `character_archetypes` from the required categories in the `select_random_elements` function
+  * Removed the `character_archetypes` line from the system prompt template in `app/services/llm/prompt_templates.py`
+  * Removed the `character_archetypes` parameter from the system prompt formatting in `app/services/llm/prompt_engineering.py`
+- Result: Simplified data model and prompt structure while maintaining narrative quality with other elements like settings, rules, themes, and sensory details
+
 ## 2025-03-03: Removed Unused `tone` Field
 
 ### Removed Unnecessary `tone` Field from Story Categories

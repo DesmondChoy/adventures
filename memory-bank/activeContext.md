@@ -27,6 +27,14 @@
 
 ## Recent Changes
 
+### Removed Unused `character_archetypes` Field (2025-03-03)
+- Removed the unused `character_archetypes` field from story categories
+- Updated `app/data/new_stories.yaml` to remove the `character_archetypes` sections from each story category
+- Modified `app/models/story.py` to remove `character_archetypes` from the required categories in validation
+- Updated `app/services/chapter_manager.py` to remove `character_archetypes` from the required categories
+- Removed `character_archetypes` from the system prompt template in `app/services/llm/prompt_templates.py`
+- Removed the `character_archetypes` parameter from the system prompt formatting in `app/services/llm/prompt_engineering.py`
+
 ### Removed Unused `tone` Field (2025-03-03)
 - Removed the unused `tone` field from story categories as it wasn't being passed to LLM prompts
 - Updated `app/data/new_stories.yaml` to remove the `tone` field from each story category
