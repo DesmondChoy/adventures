@@ -66,7 +66,7 @@ FIRST_CHAPTER_PROMPT = """# Current Context
 2. World Building: Create an immersive setting using the sensory elements
 3. Decision Point: Build naturally to a pivotal choice that will shape the character's journey
 
-# The Exactly 3 {agency_category_name} Options To Use
+# {agency_category_name} Options
 {agency_options}
 
 # Choice Format Specification
@@ -324,38 +324,38 @@ def get_agency_category() -> Tuple[str, str, List[str]]:
 BASE_PHASE_GUIDANCE: Dict[str, str] = {
     "Exposition": (
         "# Phase Guidance: Exposition\n"
-        "- Focus: Introduction, setting the scene, establishing the character's ordinary world\n"
-        "- Narrative Goals: Introduce the main character, the setting, and the initial situation\n"
-        "- Emotional Tone: Intriguing, inviting, a sense of normalcy that will soon be disrupted\n"
-        "- Sensory Integration: Establish the world through vivid sensory details"
+        "- Focus: This is the opening chapter, where you lay the foundation for the entire story.\n"
+        "- Narrative Goals: Introduce the protagonist, their ordinary world, and the initial situation with vivid clarity. Establish who they are, what their daily life looks like, and the setting they inhabit. Subtly hint at the adventure or conflict to come, building toward a pivotal agency choice (e.g., crafting a magical item or choosing a companion) that will launch their journey.\n"
+        "- Emotional Tone: Create an intriguing and inviting atmosphere that reflects the character’s normalcy—calm, familiar, yet laced with a promise of disruption or wonder.\n"
+        "- Sensory Integration: Immerse the reader in the world with rich sensory details—sights, sounds, smells, textures—that make the character’s environment feel alive and relatable. Use these details to foreshadow the path ahead without starting the main action."
     ),
     "Rising": (
         "# Phase Guidance: Rising Action\n"
-        "- Focus: Character begins their journey, facing initial challenges\n"
-        "- Narrative Goals: Develop the plot and introduce early obstacles\n"
-        "- Emotional Tone: Excitement, anticipation, building momentum\n"
-        "- Sensory Integration: Use sensory details to highlight new experiences"
+        "- Focus: In this chapter, the character steps into their journey and encounters their first challenges.\n"
+        "- Narrative Goals: Develop the plot by introducing early obstacles or conflicts that nudge the character out of their comfort zone. These should feel fresh and exciting, setting the stage for bigger trials later. Show how the story is beginning to unfold and gain momentum.\n"
+        "- Emotional Tone: Infuse the chapter with excitement and anticipation, capturing the thrill of new experiences and the subtle tension of what’s to come.\n"
+        "- Sensory Integration: Highlight the character’s new surroundings or situations with vivid sensory details—describe the unfamiliar sounds, shifting landscapes, or unexpected sensations they encounter as the journey begins."
     ),
     "Trials": (
         "# Phase Guidance: Trials\n"
-        "- Focus: Character faces significant challenges and setbacks\n"
-        "- Narrative Goals: Test resolve, increase stakes, deepen learning\n"
-        "- Emotional Tone: Tension, determination, growing uncertainty\n"
-        "- Sensory Integration: Intensify sensory details during key moments"
+        "- Focus: The character now faces escalating challenges that push them to their limits.\n"
+        "- Narrative Goals: Introduce significant setbacks, obstacles, or revelations in this chapter that raise the stakes and test the character’s resolve. Show them struggling, learning, and adapting as the story deepens. Each moment should feel like a step toward the ultimate confrontation.\n"
+        "- Emotional Tone: Build a sense of tension and determination, tinged with growing uncertainty or doubt, to reflect the character’s intense efforts and inner growth.\n"
+        "- Sensory Integration: Intensify the sensory details during key moments—gritty textures, sharp sounds, or overwhelming sights—to make the struggles vivid and visceral, drawing the reader into the character’s experience."
     ),
     "Climax": (
         "# Phase Guidance: Climax\n"
-        "- Focus: Character confronts the main conflict and revelations\n"
-        "- Narrative Goals: Deliver exciting resolution and transformation\n"
-        "- Emotional Tone: Intense excitement, high stakes, breakthrough moments\n"
-        "- Sensory Integration: Peak sensory experience during crucial scenes"
+        "- Focus: This chapter is the story’s turning point, where the character confronts the central conflict head-on.\n"
+        "- Narrative Goals: Deliver an exciting, transformative moment that resolves the main tension or reveals a critical truth. This should feel like the payoff for all prior buildup, with the character facing their greatest challenge or achieving a breakthrough.\n"
+        "- Emotional Tone: Make the atmosphere intense and electrifying, with high stakes, raw emotion, and a sense of triumph or realization.\n"
+        "- Sensory Integration: Use peak sensory experiences—blinding lights, deafening roars, or heart-pounding stillness—to amplify the drama of crucial scenes and make them unforgettable."
     ),
     "Return": (
         "# Phase Guidance: Return\n"
-        "- Focus: Character integrates their experiences and growth\n"
-        "- Narrative Goals: Show transformation and provide closure\n"
-        "- Emotional Tone: Reflective, peaceful, sense of completion\n"
-        "- Sensory Integration: Use sensory details to highlight the character's new perspective"
+        "- Focus: In this final chapter, showcase the character’s transformation and bring the story to a close.\n"
+        "- Narrative Goals: Resolve the journey by showing how the character has changed and what they’ve gained or lost. Tie up loose ends and provide a satisfying conclusion that reflects their growth. This is about closure and reflection, not new conflicts.\n"
+        "- Emotional Tone: Craft a reflective, peaceful tone with a sense of fulfillment or bittersweet completion, leaving the reader with a lasting impression.\n"
+        "- Sensory Integration: Use sensory details to highlight the character’s new perspective—familiar sights now seen differently, quiet sounds of calm, or a tangible sense of homecoming—to underscore their evolution."
     ),
 }
 
@@ -363,22 +363,26 @@ PLOT_TWIST_GUIDANCE: Dict[str, str] = {
     "Rising": (
         "## Plot Twist Development\n"
         "- Subtly introduce elements that hint at: {plot_twist}\n"
-        "- Plant small, seemingly insignificant details that will become important\n"
-        "- Keep the hints subtle and in the background"
+        "- Plant small, seemingly insignificant details that will become important, such as a passing remark, a peculiar object, or a character’s fleeting odd behavior.\n"
+        "- Keep the hints subtle and in the background, blending them seamlessly into the scene so they don’t stand out—readers should only recognize their significance in hindsight.\n"
+        "- **Purpose**: Lay the groundwork for the twist by scattering clues that feel like natural parts of the story world."
     ),
     "Trials": (
         "## Plot Twist Development\n"
         "- Build tension around the emerging plot twist: {plot_twist}\n"
-        "- Make the hints more noticeable but still mysterious\n"
-        "- Connect previously planted details to current events"
+        "- Make the hints more noticeable but still mysterious, amplifying earlier details through repetition, new context, or character reactions that hint at unease.\n"
+        "- Connect previously planted details to current events, weaving them into the narrative so the reader senses something is off without fully understanding why.\n"
+        "- **Purpose**: Heighten curiosity and suspense, making the reader question the true meaning behind these recurring elements."
     ),
     "Climax": (
         "## Plot Twist Development\n"
         "- Bring the plot twist to its full revelation: {plot_twist}\n"
-        "- Connect all the previously planted hints\n"
-        "- Show how this revelation changes everything"
+        "- Connect all the previously planted hints, clearly showing how each detail—whether a forgotten object, a strange action, or an overlooked comment—led to this moment.\n"
+        "- Show how this revelation changes everything, reshaping the character’s journey, the stakes, or the reader’s perception of the story in a dramatic, satisfying way.\n"
+        "- **Purpose**: Deliver a powerful, earned twist that ties the narrative together and leaves the reader both shocked and delighted by the payoff."
     ),
 }
+
 
 # Storytelling techniques
 # ----------------------
