@@ -210,8 +210,8 @@ def build_first_chapter_prompt(state: AdventureState) -> str:
     # Get base prompt components
     story_history, story_phase, _ = _build_base_prompt(state)
 
-    # Get random agency category
-    agency_category_name, agency_options = get_agency_category()
+    # Get random agency category, 3 formatted options, and extracted option names
+    agency_category_name, agency_options, option_names = get_agency_category()
 
     # Clean options by removing visual details in brackets directly
     cleaned_agency_options = re.sub(r"\s*\[.*?\]\s*", " ", agency_options)
@@ -219,6 +219,7 @@ def build_first_chapter_prompt(state: AdventureState) -> str:
     # Log agency category selection
     logger = logging.getLogger("story_app")
     logger.debug(f"First chapter: Using agency category: {agency_category_name}")
+    logger.debug(f"Selected options: {', '.join(option_names)}")
 
     return FIRST_CHAPTER_PROMPT.format(
         chapter_number=state.current_chapter_number,
@@ -230,6 +231,9 @@ def build_first_chapter_prompt(state: AdventureState) -> str:
         story_history=story_history,
         agency_category_name=agency_category_name,
         agency_options=cleaned_agency_options,
+        option_a=option_names[0],
+        option_b=option_names[1],
+        option_c=option_names[2],
     )
 
 

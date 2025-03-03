@@ -9,7 +9,7 @@ chapter types and scenarios.
 
 import re
 import random
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 # System Prompt Template
 # ---------------------
@@ -64,17 +64,21 @@ FIRST_CHAPTER_PROMPT = """# Current Context
 2. World Building: Create an immersive setting using the sensory elements
 3. Decision Point: Build naturally to a pivotal choice that will shape the character's journey
 
-# Agency Options: {agency_category_name}
+# The Exactly 3 {agency_category_name} Options To Use
 {agency_options}
 
 # Choice Format Specification
 <CHOICES>
-Choice A: [Select one of the {agency_category_name} options above and incorporate it into a meaningful choice]
-Choice B: [Select a different {agency_category_name} option from above and incorporate it into a meaningful choice]
-Choice C: [Select a third {agency_category_name} option from above and incorporate it into a meaningful choice]
+Choice A: As a {option_a}, the character decides to [meaningful action using this specific ability]
+Choice B: As a {option_b}, the character decides to [meaningful action using this specific ability]
+Choice C: As a {option_c}, the character decides to [meaningful action using this specific ability]
 </CHOICES>
 
-Each choice MUST directly correspond to one of the specific {agency_category_name} options listed above. Do not create generic choices - each choice should clearly reference one of the provided agency options."""
+# CRITICAL REQUIREMENTS
+1. Each choice MUST use EXACTLY ONE of the three {agency_category_name} options provided above
+2. Use Choice A with {option_a}, Choice B with {option_b}, and Choice C with {option_c}
+3. Begin each choice with "As a [Option Name]," format
+4. Create meaningful and distinct actions for each choice"""
 
 STORY_CHAPTER_PROMPT = """# Current Context
 - Chapter: {chapter_number} of {story_length}
@@ -251,76 +255,62 @@ Choice C: [Third story-driven choice]
 # -----------------------
 
 
-def get_agency_category() -> Tuple[str, str]:
-    """Randomly select one agency category and return its name and formatted options."""
+def get_agency_category() -> Tuple[str, str, List[str]]:
+    """
+    Randomly select one agency category and return:
+    - its name
+    - 3 randomly selected formatted options
+    - the list of selected option names (without visual details or descriptions)
+    """
     # Categories with options formatted as "Name [Visual details for image generation] - Description"
     # The square brackets won't be shown to users but will be used for image generation
     categories = {
         "Magical Items to Craft": [
-            "Luminous Lantern [golden light with intricate celestial patterns] - reveals hidden truths and illuminates dark places",
-            "Sturdy Rope [enchanted with glowing runes that shift and pulse] - overcomes physical obstacles and bridges gaps",
-            "Mystical Amulet [swirling gemstone that changes color with intuition] - enhances intuition and provides subtle guidance",
-            "Weathered Map [with moving ink and shimmering locations] - reveals new paths and hidden locations",
-            "Pocket Watch [with constellation dial and glowing hands] - helps with timing and glimpses possible futures",
-            "Healing Potion [crystal vial with swirling iridescent liquid] - restores strength and provides clarity of mind",
-            "Singing Bells [cluster of colorful crystal bells that glow and float in mid-air] - creates harmonious music that soothes troubled hearts",
-            "Transforming Clay [rainbow-colored clay that shimmers when touched and leaves stardust trails] - shapes into whatever you imagine",
-            "Invisibility Cloak [shimmering fabric that reflects its environment like water with silver thread edges] - makes the wearer blend into surroundings",
-            "Bottomless Backpack [patchwork bag with magical symbols and items occasionally peeking out] - holds impossible amounts of treasures",
-            "Whispering Quill [feather pen with color-changing ink and tiny translucent wings] - writes messages that fly to distant friends",
+            "Luminous Lantern [a golden lantern adorned with twinkling stars and swirling moonlit patterns, radiating a cozy amber glow] - A wondrous lantern that chases away shadows, lights the trickiest trails, and whispers hidden secrets to brave explorers.",
+            "Sturdy Rope [a thick, shimmering rope woven with emerald-green threads and glowing silver runes that pulse like fireflies] - An unbreakable rope that stretches to the tallest towers, swings over wild rivers, and ties the tightest knots for any adventure.",
+            "Weathered Map [a crinkled parchment map with golden ink that dances, revealing glowing trails and sparkling treasure spots] - An enchanted map that redraws itself to guide you to magical places, secret hideouts, and lost wonders waiting to be found.",
+            "Transforming Clay [a shimmering ball of clay swirling with rainbow hues, sparkling as it shifts into shapes like butterflies or boats] - A playful clay that molds into whatever you dream up—castles, creatures, or flying ships—ready to join your story.",
+            "Bottomless Backpack [a tiny, patchwork backpack stitched with silver stars, overflowing with twinkling lights and endless surprises] - A magical pack that swallows up mountains of treasures and pulls out just what you need, no matter how big or small.",
         ],
         "Companions to Choose": [
-            "Wise Owl [with spectacle-like markings and glowing blue eyes] - offers knowledge and explanations",
-            "Brave Fox [with flame-tipped tail and amber fur] - excels in courage and action-oriented tasks",
-            "Clever Squirrel [with silver-tipped fur and tiny pouch of tools] - skilled in problem-solving and improvisation",
-            "Gentle Deer [with luminous antlers that bloom with flowers] - provides emotional support and peaceful solutions",
-            "Playful Otter [with aquamarine fur and pearl necklace] - brings joy and finds unexpected approaches",
-            "Steadfast Turtle [with crystal-embedded shell and ancient eyes] - offers patience and protection in difficult times",
-            "Tiny Dragon [iridescent scales, butterfly wings, and friendly purple eyes] - breathes helpful magical flames and offers fierce loyalty",
-            "Starlight Butterfly [wings that glow like constellations with trailing stardust] - illuminates dark places and finds hidden paths",
-            "Friendly Shadow [shifting dark form with playful glowing eyes and misty edges] - sneaks into tight spaces and provides camouflage",
-            "Crystal Hedgehog [gemstone spines that change color with mood and tiny spectacles] - senses danger and collects valuable treasures",
-            "Bubble Dolphin [translucent body with rainbow highlights and a trail of magical bubbles] - travels through water and air with equal grace",
+            "Wise Owl [a grand owl with snowy feathers, golden spectacles perched on its beak, and a shimmering blue aura like a starry night] - A clever owl who hoots ancient riddles, shares tales of forgotten lands, and guides you with its twinkling wisdom.",
+            "Brave Fox [a sleek fox with a blazing orange tail tipped with flames, emerald eyes gleaming with courage, and a daring grin] - A fearless fox who dashes through danger, guards its pals with a fiery heart, and leaps into any quest with a swish of its tail.",
+            "Clever Squirrel [a tiny squirrel in a chestnut-brown coat, wearing a leather tool belt jingling with gadgets, and eyes like bright stars] - A quick-witted squirrel who invents tiny machines, cracks tricky puzzles, and scurries to the rescue with a clever plan.",
+            "Playful Otter [a bouncy otter with glossy fur, a necklace of glowing pearls, and a trail of bubbles as it twirls through water] - A merry otter who splashes into fun, uncovers shiny surprises, and giggles through every adventure with slippery grace.",
+            "Tiny Dragon [a palm-sized dragon with shimmering scales that shift like a rainbow, friendly violet eyes, and puffs of glittery smoke] - A pint-sized dragon with a giant spirit, puffing sparkly flames to light the way or cook marshmallow treats for friends.",
         ],
         "Roles or Professions": [
-            "Healer [flowing robes, medicinal herbs, and a glowing crystal staff] - mends wounds and restores balance",
-            "Scholar [embroidered robes, surrounded by floating tomes and scrolls] - values knowledge and understanding",
-            "Guardian [shimmering armor with shield emblazoned with protective sigils] - protects others and stands against threats",
-            "Pathfinder [weathered explorer's outfit, glowing compass and constellation map] - discovers new routes and possibilities",
-            "Diplomat [elegant attire with ceremonial medallion and glowing scroll case] - resolves conflicts through communication",
-            "Craftsperson [leather apron with magical tools and intricate glowing creations] - builds and creates solutions",
-            "Explorer [weathered hat with collection of magical maps and glowing compass] - discovers hidden paths and ancient secrets",
-            "Musician [flowing outfit with musical note patterns and instrument that radiates colored light] - weaves magic through melodies that transform the world",
-            "Dream-Keeper [star-speckled robes with dream-catcher designs and bag of glowing memory orbs] - collects and protects important memories",
-            "Inventor [goggles with multiple lenses, tool belt with miniature inventions, and blueprint scrolls] - creates gadgets to solve impossible problems",
-            "Alchemist [colorful potion bottles, bubbling cauldron, and lab coat with mystical symbols] - transforms and combines elements to create wonders",
+            "Healer [a gentle figure in flowing robes of soft lavender, clutching a crystal staff that pulses with warm, healing light] - A kind healer who soothes scrapes with a touch, brews potions that taste like honey, and wraps the world in calm and care.",
+            "Scholar [a curious figure in a starry cloak, surrounded by spinning books and golden scrolls that flutter like butterflies] - A wise scholar who unravels mysteries, reads the sky’s secrets, and scribbles notes to share with wide-eyed adventurers.",
+            "Guardian [a towering figure in gleaming silver armor, wielding a shield that sparkles like a mirror under the sun] - A bold guardian who blocks storms, stands tall against trouble, and keeps friends safe with a heart as strong as their shield.",
+            "Craftsperson [a cheerful figure in a patched apron, hands buzzing with glowing tools that carve wood and bend metal into wonders] - A crafty genius who builds bridges, toys, or flying machines, turning scraps into treasures with a wink and a hammer.",
+            "Musician [a lively figure strumming a harp with strings of rainbow light, notes floating as glowing orbs in the air] - A magical musician whose tunes lift spirits, summon dancing winds, and paint the world with songs of joy and wonder.",
         ],
         "Special Abilities": [
-            "Animal Whisperer [spiraling nature patterns on skin and surrounded by various forest creatures] - communicates with creatures",
-            "Puzzle Master [glowing runic symbols floating around hands and eyes that reflect labyrinths] - excels at solving riddles and mysteries",
-            "Storyteller [magical book emitting glowing words and vivid illusions of tales] - charms others with words and narratives",
-            "Element Bender [hands surrounded by swirling water, fire, earth and air] - connects with natural forces",
-            "Dream Walker [misty aura and star-like particles that trail behind] - glimpses insights through dreams",
-            "Pattern Seer [eyes reflecting intricate geometric designs and fingertips that trace glowing connections] - notices connections others miss",
-            "Size Shifter [body surrounded by expanding/contracting magical circles and glowing outlines] - grows or shrinks at will",
-            "Light Weaver [hands trailing ribbons of colorful light that form into animals and objects] - creates shapes and creatures from light",
-            "Gravity Dancer [feet hovering above ground with swirling air currents and glittering dust beneath] - floats, flies and moves with incredible grace",
-            "Season Spinner [hair and clothing that shift between seasonal colors with swirling leaves and snowflakes] - creates pockets of different weather and seasons",
-            "Time Pauser [surrounded by frozen moments and clock symbols with hourglass-shaped aura] - creates moments where time stands still",
+            "Animal Whisperer [a figure with leafy green tattoos swirling on their arms, encircled by chatting birds and hopping rabbits] - A wild friend who chats with deer, calls birds to sing, and listens to the forest’s whispers to uncover its mysteries.",
+            "Element Bender [a swirling figure with hands sparking flames, splashing water, tossing earth, and twirling breezes in a dance] - A mighty pal who shapes fire into stars, bends rivers to bridges, and spins air into whirlwinds to sweep away trouble.",
+            "Storyteller [a dreamy figure with a giant book glowing with golden words that leap into shimmering pictures above] - A magical teller who weaves tales so real you can step inside them, bringing heroes and dragons to life with every word.",
+            "Size Shifter [a figure haloed by sparkling rings, stretching to touch clouds or shrinking to ride a ladybug’s back] - A stretchy wonder who grows huge to cross mountains or shrinks tiny to sneak through keyholes, always just the right size.",
+            "Light Weaver [a figure with fingers trailing ribbons of ruby, sapphire, and emerald light, weaving them into glowing shapes] - A dazzling artist who spins light into crowns, bridges, or butterflies, brightening the world with every colorful twist.",
         ],
     }
 
     # Select a random category
     category_name = random.choice(list(categories.keys()))
 
-    # Get and shuffle the options for this category
-    options = categories[category_name]
-    random.shuffle(options)
+    # Get all options for this category
+    all_options = categories[category_name]
 
-    # Format the options more concisely
-    formatted_options = "\n".join([f"- {option}" for option in options])
+    # Randomly select exactly 3 options
+    selected_options = random.sample(all_options, 3)
 
-    return category_name, formatted_options
+    # Format the selected options
+    formatted_options = "\n".join([f"- {option}" for option in selected_options])
+
+    # Extract just the names for use in the template (everything before the first '[')
+    option_names = [opt.split("[")[0].strip() for opt in selected_options]
+
+    return category_name, formatted_options, option_names
 
 
 # Phase guidance
