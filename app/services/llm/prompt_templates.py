@@ -7,7 +7,6 @@ prompt_engineering.py module to construct complete prompts for different
 chapter types and scenarios.
 """
 
-import re
 import random
 from typing import Dict, Tuple, List
 
@@ -15,7 +14,10 @@ from typing import Dict, Tuple, List
 # ---------------------
 
 SYSTEM_PROMPT_TEMPLATE = """# Storyteller Role
-You are a master storyteller crafting an interactive educational story that seamlessly blends narrative and learning.
+You are a master storyteller who captivates young minds with vibrant imagery, accessible language, and well-paced adventures. 
+Your narratives balance wonder and familiarity, using relatable characters who face challenges that naturally foster growth and understanding. 
+You expertly weave moments of humor, surprise, and gentle tension throughout your tales, maintaining a warm, encouraging tone that invites participation. 
+Your stories unfold at a rhythm that sustains interest—alternating between exciting action, thoughtful discovery, and moments of reflection—while ensuring learning emerges organically from the characters' experiences rather than from direct instruction.
 
 # Story Elements
 - Setting: {setting_types}
@@ -69,16 +71,16 @@ FIRST_CHAPTER_PROMPT = """# Current Context
 
 # Choice Format Specification
 <CHOICES>
-Choice A: As a {option_a}, the character decides to [meaningful action using this specific ability]
-Choice B: As a {option_b}, the character decides to [meaningful action using this specific ability]
-Choice C: As a {option_c}, the character decides to [meaningful action using this specific ability]
+Choice A: {agency_category_name}: {option_a} - [Briefly describe potential actions unlocked with this agency]
+Choice B: {agency_category_name}: {option_b} - [Briefly describe potential actions unlocked with this agency]
+Choice C: {agency_category_name}: {option_c} - [Meaningful action using this agency]
 </CHOICES>
 
 # CRITICAL REQUIREMENTS
 1. Each choice MUST use EXACTLY ONE of the three {agency_category_name} options provided above
 2. Use Choice A with {option_a}, Choice B with {option_b}, and Choice C with {option_c}
-3. Begin each choice with "As a [Option Name]," format
-4. Create meaningful and distinct actions for each choice"""
+3. Format each choice as "{agency_category_name}: [Option Name] - [action]"
+4. [action] should present open-ended possibilities without suggesting narrative conclusions."""
 
 STORY_CHAPTER_PROMPT = """# Current Context
 - Chapter: {chapter_number} of {story_length}
@@ -257,33 +259,33 @@ Choice C: [Third story-driven choice]
 
 # Agency categories dictionary - exposed for direct access by image generation
 categories = {
-    "Magical Items to Craft": [
-        "Luminous Lantern [a golden lantern adorned with twinkling stars and swirling moonlit patterns, radiating a cozy amber glow] - A wondrous lantern that chases away shadows, lights the trickiest trails, and whispers hidden secrets to brave explorers.",
-        "Sturdy Rope [a thick, shimmering rope woven with emerald-green threads and glowing silver runes that pulse like fireflies] - An unbreakable rope that stretches to the tallest towers, swings over wild rivers, and ties the tightest knots for any adventure.",
-        "Weathered Map [a crinkled parchment map with golden ink that dances, revealing glowing trails and sparkling treasure spots] - An enchanted map that redraws itself to guide you to magical places, secret hideouts, and lost wonders waiting to be found.",
-        "Transforming Clay [a shimmering ball of clay swirling with rainbow hues, sparkling as it shifts into shapes like butterflies or boats] - A playful clay that molds into whatever you dream up—castles, creatures, or flying ships—ready to join your story.",
-        "Bottomless Backpack [a tiny, patchwork backpack stitched with silver stars, overflowing with twinkling lights and endless surprises] - A magical pack that swallows up mountains of treasures and pulls out just what you need, no matter how big or small.",
+    "Craft a Magical Artifact": [
+        "Luminous Lantern [a golden lantern adorned with twinkling stars and swirling moonlit patterns, radiating a cozy amber glow] - Craft a wondrous lantern that chases away shadows, lights the trickiest trails, and whispers hidden secrets to brave explorers like you.",
+        "Sturdy Rope [a thick, shimmering rope woven with emerald-green threads and glowing silver runes that pulse like fireflies] - Weave an unbreakable rope that stretches to the tallest towers, swings over wild rivers, and ties the tightest knots for any adventure you dream up.",
+        "Weathered Map [a crinkled parchment map with golden ink that dances, revealing glowing trails and sparkling treasure spots] - Create an enchanted map that redraws itself to guide you to magical places, secret hideouts, and lost wonders waiting for you to find.",
+        "Transforming Clay [a shimmering ball of clay swirling with rainbow hues, sparkling as it shifts into shapes like butterflies or boats] - Mold a playful clay that transforms into whatever you dream up—castles, creatures, or flying ships—ready to join your story.",
+        "Bottomless Backpack [a tiny, patchwork backpack stitched with silver stars, overflowing with twinkling lights and endless surprises] - Sew a magical backpack that swallows up mountains of treasures and pulls out just what you need, no matter how big or small.",
     ],
-    "Companions to Choose": [
-        "Wise Owl [a grand owl with snowy feathers, golden spectacles perched on its beak, and a shimmering blue aura like a starry night] - A clever owl who hoots ancient riddles, shares tales of forgotten lands, and guides you with its twinkling wisdom.",
-        "Brave Fox [a sleek fox with a blazing orange tail tipped with flames, emerald eyes gleaming with courage, and a daring grin] - A fearless fox who dashes through danger, guards its pals with a fiery heart, and leaps into any quest with a swish of its tail.",
-        "Clever Squirrel [a tiny squirrel in a chestnut-brown coat, wearing a leather tool belt jingling with gadgets, and eyes like bright stars] - A quick-witted squirrel who invents tiny machines, cracks tricky puzzles, and scurries to the rescue with a clever plan.",
-        "Playful Otter [a bouncy otter with glossy fur, a necklace of glowing pearls, and a trail of bubbles as it twirls through water] - A merry otter who splashes into fun, uncovers shiny surprises, and giggles through every adventure with slippery grace.",
-        "Tiny Dragon [a palm-sized dragon with shimmering scales that shift like a rainbow, friendly violet eyes, and puffs of glittery smoke] - A pint-sized dragon with a giant spirit, puffing sparkly flames to light the way or cook marshmallow treats for friends.",
+    "Choose a Companion": [
+        "Wise Owl [a grand owl with snowy feathers, golden spectacles perched on its beak, and a shimmering blue aura like a starry night] - Choose a clever owl who hoots ancient riddles, shares tales of forgotten lands, and guides you with its twinkling wisdom.",
+        "Brave Fox [a sleek fox with a blazing orange tail tipped with flames, emerald eyes gleaming with courage, and a daring grin] - Pick a fearless fox who dashes through danger, guards you with a fiery heart, and leaps into any quest with a swish of its tail.",
+        "Clever Squirrel [a tiny squirrel in a chestnut-brown coat, wearing a leather tool belt jingling with gadgets, and eyes like bright stars] - Select a quick-witted squirrel who invents tiny machines, cracks tricky puzzles, and scurries to your rescue with a clever plan.",
+        "Playful Otter [a bouncy otter with glossy fur, a necklace of glowing pearls, and a trail of bubbles as it twirls through water] - Choose a merry otter who splashes into fun, uncovers shiny surprises, and giggles through every adventure with slippery grace.",
+        "Tiny Dragon [a palm-sized dragon with shimmering scales that shift like a rainbow, friendly violet eyes, and puffs of glittery smoke] - Pick a pint-sized dragon with a giant spirit, puffing sparkly flames to light your way or cook marshmallow treats for you and your friends.",
     ],
-    "Roles or Professions": [
-        "Healer [a gentle figure in flowing robes of soft lavender, clutching a crystal staff that pulses with warm, healing light] - A kind healer who soothes scrapes with a touch, brews potions that taste like honey, and wraps the world in calm and care.",
-        "Scholar [a curious figure in a starry cloak, surrounded by spinning books and golden scrolls that flutter like butterflies] - A wise scholar who unravels mysteries, reads the sky's secrets, and scribbles notes to share with wide-eyed adventurers.",
-        "Guardian [a towering figure in gleaming silver armor, wielding a shield that sparkles like a mirror under the sun] - A bold guardian who blocks storms, stands tall against trouble, and keeps friends safe with a heart as strong as their shield.",
-        "Craftsperson [a cheerful figure in a patched apron, hands buzzing with glowing tools that carve wood and bend metal into wonders] - A crafty genius who builds bridges, toys, or flying machines, turning scraps into treasures with a wink and a hammer.",
-        "Musician [a lively figure strumming a harp with strings of rainbow light, notes floating as glowing orbs in the air] - A magical musician whose tunes lift spirits, summon dancing winds, and paint the world with songs of joy and wonder.",
+    "Take on a Profession": [
+        "Healer [a gentle figure in flowing robes of soft lavender, clutching a crystal staff that pulses with warm, healing light] - Become a kind healer who soothes scrapes with a touch, brews potions that taste like honey, and wraps the world in calm and care.",
+        "Scholar [a curious figure in a starry cloak, surrounded by spinning books and golden scrolls that flutter like butterflies] - Step into the role of a wise scholar who unravels mysteries, reads the sky's secrets, and scribbles notes to share with wide-eyed adventurers like you.",
+        "Guardian [a towering figure in gleaming silver armor, wielding a shield that sparkles like a mirror under the sun] - Take on the mantle of a bold guardian who blocks storms, stands tall against trouble, and keeps friends safe with a heart as strong as your shield.",
+        "Craftsperson [a cheerful figure in a patched apron, hands buzzing with glowing tools that carve wood and bend metal into wonders] - Embrace the life of a crafty genius who builds bridges, toys, or flying machines, turning scraps into treasures with a wink and a hammer.",
+        "Musician [a lively figure strumming a harp with strings of rainbow light, notes floating as glowing orbs in the air] - Become a magical musician whose tunes lift spirits, summon dancing winds, and paint the world with songs of joy and wonder.",
     ],
-    "Special Abilities": [
-        "Animal Whisperer [a figure with leafy green tattoos swirling on their arms, encircled by chatting birds and hopping rabbits] - A wild friend who chats with deer, calls birds to sing, and listens to the forest's whispers to uncover its mysteries.",
-        "Element Bender [a swirling figure with hands sparking flames, splashing water, tossing earth, and twirling breezes in a dance] - A mighty pal who shapes fire into stars, bends rivers to bridges, and spins air into whirlwinds to sweep away trouble.",
-        "Storyteller [a dreamy figure with a giant book glowing with golden words that leap into shimmering pictures above] - A magical teller who weaves tales so real you can step inside them, bringing heroes and dragons to life with every word.",
-        "Size Shifter [a figure haloed by sparkling rings, stretching to touch clouds or shrinking to ride a ladybug's back] - A stretchy wonder who grows huge to cross mountains or shrinks tiny to sneak through keyholes, always just the right size.",
-        "Light Weaver [a figure with fingers trailing ribbons of ruby, sapphire, and emerald light, weaving them into glowing shapes] - A dazzling artist who spins light into crowns, bridges, or butterflies, brightening the world with every colorful twist.",
+    "Gain a Special Ability": [
+        "Animal Whisperer [a figure with leafy green tattoos swirling on their arms, encircled by chatting birds and hopping rabbits] - Gain the gift of chatting with deer, calling birds to sing, and listening to the forest's whispers to uncover its mysteries.",
+        "Element Bender [a swirling figure with hands sparking flames, splashing water, tossing earth, and twirling breezes in a dance] - Acquire the power to shape fire into stars, bend rivers to bridges, and spin air into whirlwinds to sweep away trouble.",
+        "Storyteller [a dreamy figure with a giant book glowing with golden words that leap into shimmering pictures above] - Receive the talent to weave tales so real you can step inside them, bringing heroes and dragons to life with every word you speak.",
+        "Size Shifter [a figure haloed by sparkling rings, stretching to touch clouds or shrinking to ride a ladybug's back] - Gain the ability to grow huge to cross mountains or shrink tiny to sneak through keyholes, always just the right size for the moment.",
+        "Light Weaver [a figure with fingers trailing ribbons of ruby, sapphire, and emerald light, weaving them into glowing shapes] - Acquire the skill to spin light into crowns, bridges, or butterflies, brightening the world with every colorful twist you make.",
     ],
 }
 

@@ -140,13 +140,22 @@ class ImageGenerationService:
             visual_details = bracket_match.group(1)
             logger.debug(f"Extracted visual details: {visual_details}")
 
-        # Check if the name is actually a full choice text starting with "As a..."
+        # Check if the name is in the new format "Category: Option - Action"
         # This happens when the choice text is passed as original_prompt
-        as_a_match = re.match(r"As a (\w+\s*\w*)", name)
-        if as_a_match:
-            # Extract just the agency name from the choice text
-            agency_name = as_a_match.group(1).strip()
+        agency_name = ""
+        category_option_match = re.match(r"(?:[^:]+):\s*([^-]+)", name)
+        if category_option_match:
+            # Extract just the option name from the choice text (after the colon, before the dash)
+            agency_name = category_option_match.group(1).strip()
             logger.debug(f"Extracted agency name from choice text: {agency_name}")
+            name = agency_name
+        # Fallback to the old "As a..." pattern for backward compatibility
+        elif re.match(r"As a (\w+\s*\w*)", name):
+            as_a_match = re.match(r"As a (\w+\s*\w*)", name)
+            agency_name = as_a_match.group(1).strip()
+            logger.debug(
+                f"Extracted agency name from legacy 'As a' format: {agency_name}"
+            )
             name = agency_name
 
         logger.debug(f"Using name for prompt: {name}")

@@ -303,12 +303,21 @@ async def stream_and_send_chapter(
             original_option = None
             choice_text = choice.text.lower()
 
-            # Extract agency name from choice text if it starts with "As a..."
+            # Extract agency name from choice text
             agency_name = ""
-            as_a_match = re.match(r"As a (\w+\s*\w*)", choice_text)
-            if as_a_match:
-                agency_name = as_a_match.group(1).strip().lower()
+            # Check for new format "Category: Option - Action"
+            category_option_match = re.match(r"(?:[^:]+):\s*([^-]+)", choice_text)
+            if category_option_match:
+                # Extract just the option name from the choice text (after the colon, before the dash)
+                agency_name = category_option_match.group(1).strip().lower()
                 logger.debug(f"Extracted agency name from choice text: {agency_name}")
+            # Fallback to the old "As a..." pattern for backward compatibility
+            elif re.match(r"As a (\w+\s*\w*)", choice_text):
+                as_a_match = re.match(r"As a (\w+\s*\w*)", choice_text)
+                agency_name = as_a_match.group(1).strip().lower()
+                logger.debug(
+                    f"Extracted agency name from legacy 'As a' format: {agency_name}"
+                )
 
             # Try to find the agency option directly from categories
             try:
