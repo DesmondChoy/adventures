@@ -95,7 +95,6 @@ def init_story_categories(db, story_data):
                 name=key,
                 display_name=category["name"],
                 description=category["description"],
-                tone=category["tone"],
                 story_config=json.dumps(story_config),
             )
             print(f"Created category object: {db_category.name}")  # Debug print

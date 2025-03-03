@@ -45,7 +45,6 @@ def select_random_elements(
         non_random_elements = {
             "name": category_data["name"],
             "description": category_data["description"],
-            "tone": category_data["tone"],
         }
         for key, value in non_random_elements.items():
             if not value or not isinstance(value, str):

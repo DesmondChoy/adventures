@@ -2,7 +2,6 @@ story_categories:
   festival_of_lights_and_colors:
     name: "Festival of Lights & Colors"
     description: "A radiant celebration where every moment shimmers with laughter and bright spectacle. Lanterns, parades, and vibrant costumes invite endless wonder."
-    tone: "vibrant and magical"
 
     narrative_elements:
       setting_types:
@@ -65,7 +64,6 @@ story_categories:
   circus_and_carnival_capers:
     name: "Circus & Carnival Capers"
     description: "A dazzling realm of acrobats, clowns, and magical wonders. Children can explore whimsical rides and hidden secrets amid colorful tents."
-    tone: "playful and vibrant"
 
     narrative_elements:
       setting_types:
@@ -128,7 +126,6 @@ story_categories:
   enchanted_forest_tales:
     name: "Enchanted Forest Tales"
     description: "A realm where ancient trees whisper secrets and magical creatures wander unseen. It's a place of wonder, courage, and hidden surprises."
-    tone: "dreamy and adventurous"
 
     narrative_elements:
       setting_types:
@@ -187,3 +184,53 @@ story_categories:
         - "Delicate fragrance of honey drizzling from wild beehives"
         - "Warm, comforting whiff of spiced berry tea from a ranger's kettle"
         - "Lingering musk of ancient tree bark steeped in magic"
+
+  jade_mountain:
+    name: "Jade Mountain"
+    description: "In the enchanting land of Jade Mountain, where emerald peaks pierce the heavens and whispers of magic dance on the breeze, brave young explorers set forth on a grand adventure. Your choices weave a tale of wonder, unveiling secret trails and summoning friends from a world that shifts with every step you take."
+
+    narrative_elements:
+      settings:
+        - "Whispering Forest: A lush, green forest where ancient trees sway and whisper riddles or hints to those who pause to listen. If you trust their words, the branches part to reveal sunlit paths to friendly glades filled with talking animals. Ignore them, and the forest thickens, leading to tricky mazes where playful sprites test your wits. The air sparkles with golden dust when you're kind, but shadows stretch longer if you rush ahead carelessly."
+        - "Crystal Cavern: A dazzling underground chamber where jade crystals glow and shift with your feelings. Show bravery, and they light up warmly, opening secret tunnels lined with treasures. Hesitate or doubt, and the crystals flicker, creating slippery slopes or echoing illusions that challenge you to find your way. The cavern reshapes itself with every visit, reflecting your growing courage or curiosity."
+        - "Skyward Summit: A breathtaking peak where fluffy clouds swirl and tiny islands float in the sky, linked by shimmering bridges of light. Help the cheerful wind spirits with their games, and the bridges grow stronger, leading to new heights with stunning views. Act selfishly, and the winds giggle and scatter the islands, turning your climb into a bouncy, playful puzzle. The sky brightens with your good deeds, or swirls with harmless storms if you're hasty."
+        - "Mystic Marsh: A glowing wetland where will-o'-wisps bob like lanterns, guiding you through misty trails. Trust the marsh's shy creatures and lend a hand, and the wisps shine green, showing safe paths to hidden ponds with friendly frogs. Doubt or push them away, and the wisps turn purple, leading you into squishy, fun challenges among the reeds. The water sparkles or ripples based on your kindness."
+        - "Golden Meadow: A sunny field bursting with colorful flowers and the hum of tiny pixies flitting about. Share a smile or a gift, and the meadow blooms brighter, revealing secret groves where pixies teach you magic tricks. Keep everything to yourself, and the flowers droop, hiding paths as the pixies pout and play harmless pranks. The grass sways happily or stills quietly with your choices."
+      themes:
+        - "Friendship's Strength: Bonds with creatures grow stronger when you help them, like fixing a sprite's broken wing, unlocking allies who guide you later. Push them away, and they stay distant, leaving you to face challenges alone. Friendship shapes who stands by you in the story's big moments."
+        - "Bravery in Small Steps: Small acts of courage, like crossing a wobbly bridge, build your confidence and reveal new paths, such as a shortcut to a treasure. Avoiding risks keeps the story simpler but misses hidden surprises, teaching that bravery opens doors."
+        - "Kindness Echoes: Acts of kindness, like sharing with a hungry bird, ripple outward—flowers bloom, and creatures offer help in return. Selfishness dims the world, closing off paths and quieting its magic, showing how kindness keeps the adventure alive."
+        - "Curiosity's Reward: Exploring odd noises or glowing stones uncovers secrets, like a map from a chatty turtle. Sticking to the safe route skips these wonders, rewarding those who ask questions with extra fun and discoveries."
+        - "Responsibility's Weight: Your choices affect Jade Mountain—saving a flower patch keeps the meadow thriving, while trampling it might block a path later. The world reflects your care, growing richer or quieter based on how you treat it."
+      moral_teachings:
+        - "Honesty Opens Doors: In the Whispering Forest, telling the truth to a curious owl about a lost feather reveals a shortcut lined with sparkly stones. Lying sends you on a winding loop, proving honesty clears the way forward."
+        - "Helping Others Brings Joy: Sharing berries with pixies in the Golden Meadow earns you a glowing flower that lights dark paths. Keeping them for yourself dims the meadow, showing that helping others makes the journey brighter."
+        - "Facing Fears Makes You Stronger: In the Crystal Cavern, approaching a shadowy shape turns it into a shy friend who joins you. Running traps you in a twisty tunnel, teaching that courage turns fears into allies."
+        - "Patience Solves Puzzles: At the Skyward Summit, waiting for the wind to settle before crossing a bridge keeps it steady. Rushing makes it wobble comically, showing patience keeps you on track."
+        - "Respect Nature's Balance: In the Mystic Marsh, gently moving a fallen log helps a frog family and clears your path. Kicking it floods the trail with mud, proving respect keeps the world in harmony."
+      plot_twists:
+        - "The Troll's Big Secret: The grumpy troll you meet turns out to be a treasure keeper! Help him with a task, and he shares a shiny gem that unlocks a new area. Ignore him, and he sets up a silly obstacle course instead."
+        - "The Pixie Surprise: The Golden Meadow's pixies are secretly fairy testers! Share with them, and they transform, granting a wish like a flying boost. Be stingy, and they shrink you for a tiny, giggly adventure."
+        - "The Crystal's Voice: Touch a Crystal Cavern gem, and it hums a tale of an old hero, giving clues to a hidden nook. Your past kindness decides if it's a helpful tip or a tricky riddle."
+        - "The Wind's Big Trick: The Skyward Summit's wind spirits guard a magic whistle! Solve their playful riddle, and it's yours to call cloud rides. Fail, and they send you bouncing into a soft cloud pile."
+        - "The Frog Party: In the Mystic Marsh, kind acts summon a hidden frog village! They throw a feast with dancing and stories if you've been nice. Skip the kindness, and it stays a quiet, empty swamp."
+
+    sensory_details:
+      visuals:
+        - "Emerald Peaks: Jade Mountain's slopes glow vivid green when you're kind, casting a cheerful light. Act selfishly, and they fade to a dull gray, hinting at your impact on its magic."
+        - "Crystal Glow: The cavern's crystals shimmer blue for calm, gold for joy, or red for excitement, forming shapes like stars or paths that guide your next step based on your mood."
+        - "Floating Islands: Skyward Summit's islands drift closer and shine with rainbow edges when you help the winds. Rush or argue, and they drift apart, wrapped in playful mist."
+        - "Glowing Wisps: Mystic Marsh's will-o'-wisps flicker green for trust, purple for mischief, growing brighter or dimmer to match your choices and light your way."
+        - "Blooming Meadows: Golden Meadow's flowers burst into rainbows after kind acts, or droop to brown patches if you're greedy, painting the world with your decisions."
+      sounds:
+        - "Whispering Leaves: The forest hums with soft murmurs that sing clearly when you listen, guiding you. Rush by, and they hush, leaving only a quiet rustle."
+        - "Crystal Chimes: Cavern crystals tinkle like bells, harmonizing when you're brave and clashing funnily when you're unsure, echoing your heart."
+        - "Cavern crystals tinkle like bells, harmonizing when you're brave and clashing funnily when you're unsure, echoing your heart."
+        - "Howling Winds: Summit winds whistle happy tunes for wise choices, turning to silly whooshes if you stumble, keeping the mood light and alive."
+        - "Pixie Laughter: Meadow pixies giggle like chimes when you share, turning to cheeky snickers if you don't, filling the air with fun."
+      smells:
+        - "Pine and Mint: The forest smells fresh and cool when you're on track, turning musty if you stray or act mean, nudging you back."
+        - "Mineral Mist: The cavern's clean, rainy scent sharpens with excitement, softening to a gentle breeze when you're calm and safe."
+        - "Crisp Breeze: Summit air carries a sweet, stormy tang, growing fresher with good deeds and tickling your nose with playful puffs otherwise."
+        - "Earthy Damp: The marsh smells rich and loamy, turning sour if you upset its balance, warning you to be gentle."
+        - "Floral Breeze: The meadow wafts honeyed flowers, sweeter with kindness and flattening to plain grass if you're selfish, tying scent to your heart."

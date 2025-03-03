@@ -27,6 +27,14 @@
 
 ## Recent Changes
 
+### Removed Unused `tone` Field (2025-03-03)
+- Removed the unused `tone` field from story categories as it wasn't being passed to LLM prompts
+- Updated `app/data/new_stories.yaml` to remove the `tone` field from each story category
+- Modified `app/services/chapter_manager.py` to remove `tone` from the `non_random_elements` dictionary
+- Updated `app/database.py` to remove the `tone` Column from the `StoryCategory` class
+- Changed `app/init_data.py` to remove the `tone` field when creating the `db_category` object
+- Recreated the database to apply the schema changes
+
 ### LLM Response Formatting Improvement (2025-03-03)
 - Fixed issue with LLM responses sometimes beginning with "chapter" despite system prompt instructions
 - Updated regex pattern in `websocket_service.py` to catch and remove both numbered and unnumbered chapter prefixes

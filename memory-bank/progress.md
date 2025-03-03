@@ -1,5 +1,17 @@
 # Progress Log
 
+## 2025-03-03: Removed Unused `tone` Field
+
+### Removed Unnecessary `tone` Field from Story Categories
+- Problem: The `tone` field in story categories wasn't being passed into the LLM prompt used to generate chapters
+- Solution:
+  * Removed the `tone` field from each story category in `app/data/new_stories.yaml`
+  * Modified `app/services/chapter_manager.py` to remove `tone` from the `non_random_elements` dictionary
+  * Updated `app/database.py` to remove the `tone` Column from the `StoryCategory` class
+  * Changed `app/init_data.py` to remove the `tone` field when creating the `db_category` object
+  * Recreated the database to apply the schema changes
+- Result: Simplified data model by removing unused field, ensuring database schema matches actual usage in the application
+
 ## 2025-03-03: LLM Response Formatting Improvement
 
 ### Fixed "Chapter" Prefix in LLM Responses
