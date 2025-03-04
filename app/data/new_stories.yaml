@@ -1,4 +1,4 @@
-story_categories: 
+story_categories:
   festival_of_lights_and_colors:
     name: "Festival of Lights & Colors"
     description: "A radiant celebration where every moment shimmers with laughter and bright spectacle. Lanterns, parades, and vibrant costumes invite endless wonder."
@@ -181,15 +181,15 @@ story_categories:
 
     sensory_details:
       visuals:
-        - "Emerald Peaks: Jade Mountain's slopes glow vivid green when you're kind, casting a cheerful light. Act selfishly, and they fade to a dull gray, hinting at your impact on its magic."
-        - "Crystal Glow: The cavern's crystals shimmer blue for calm, gold for joy, or red for excitement, forming shapes like stars or paths that guide your next step based on your mood."
-        - "Floating Islands: Skyward Summit's islands drift closer and shine with rainbow edges when you help the winds. Rush or argue, and they drift apart, wrapped in playful mist."
-        - "Glowing Wisps: Mystic Marsh's will-o'-wisps flicker green for trust, purple for mischief, growing brighter or dimmer to match your choices and light your way."
-        - "Blooming Meadows: Golden Meadow's flowers burst into rainbows after kind acts, or droop to brown patches if you're greedy, painting the world with your decisions."
+        - "Whispering Woods: Trees with emerald leaves shimmering like jade, their bark etched with ancient runes that glow softly when the user nears a good choice."
+        - "Crystal Caverns: Walls of jade crystals refracting light into rainbows, sparkling brighter when the user acts with heart or wisdom."
+        - "Sky Bridges: Fluffy white cloud bridges pierced by golden sunlight, with distant peaks floating like islands in a boundless blue sea."
+        - "River of Echoes: Crystal-clear water reflecting the user's face, rippling with visions of their past deeds when they pause to look."
+        - "Summit Sanctuary: A garden of translucent jade flowers glowing atop the peak, their light pulsing with the user's final steps."
       sounds:
         - "Whispering Leaves: The forest hums with soft murmurs that sing clearly when you listen, guiding you. Rush by, and they hush, leaving only a quiet rustle."
         - "Crystal Chimes: Cavern crystals tinkle like bells, harmonizing when you're brave and clashing funnily when you're unsure, echoing your heart."
-        - "Cavern crystals tinkle like bells, harmonizing when you're brave and clashing funnily when you're unsure, echoing your heart."
+        - "Gentle Echoes: Soft reverberations carry through the cavern passages, creating natural melodies that guide explorers through the darkness."
         - "Howling Winds: Summit winds whistle happy tunes for wise choices, turning to silly whooshes if you stumble, keeping the mood light and alive."
         - "Pixie Laughter: Meadow pixies giggle like chimes when you share, turning to cheeky snickers if you don't, filling the air with fun."
       smells:

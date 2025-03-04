@@ -15,20 +15,44 @@ def load_story_data() -> Dict[str, Any]:
     """Load story data with error handling."""
     try:
         with open("app/data/new_stories.yaml", "r") as f:
-            data = yaml.safe_load(f)
+            yaml_content = f.read()
+            logger.info(
+                "Raw YAML content",
+                extra={
+                    "content_preview": yaml_content[:200]
+                },  # Log first 200 chars for debugging
+            )
+            data = yaml.safe_load(yaml_content)
+            logger.info(
+                "Parsed YAML data",
+                extra={
+                    "data_type": str(type(data)),
+                    "data_keys": str(
+                        list(data.keys()) if isinstance(data, dict) else "Not a dict"
+                    ),
+                },
+            )
             # Extract the story_categories from the loaded data
             story_categories = data.get("story_categories", {})
             logger.info(
                 "Loaded story data",
                 extra={
-                    "categories": list(story_categories.keys()),
+                    "categories_type": str(type(story_categories)),
+                    "categories_count": len(story_categories)
+                    if story_categories
+                    else 0,
+                    "categories": list(story_categories.keys())
+                    if story_categories
+                    else [],
                     "elements_per_category": {
                         cat: list(details.keys())
                         for cat, details in story_categories.items()
-                    },
-                    "raw_data_keys": list(
-                        data.keys()
-                    ),  # Debug log to see top-level structure
+                    }
+                    if story_categories
+                    else {},
+                    "raw_data_keys": list(data.keys())
+                    if isinstance(data, dict)
+                    else "Not a dict",  # Debug log to see top-level structure
                 },
             )
             return story_categories
