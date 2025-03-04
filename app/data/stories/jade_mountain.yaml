@@ -1,0 +1,48 @@
+name: "Jade Mountain"
+description: "Embark on a journey to the Jade Mountain, where ancient secrets lie hidden beneath emerald peaks and whispering winds. Every choice you make shapes the path ahead, revealing new wonders and challenges in a land where courage and kindness light the way."
+
+narrative_elements:
+  settings:
+    - "The Whispering Caves: Deep within the mountain, these caves glow with humming crystals. Paths twist to reveal hidden chambers or steep drops depending on how truthful and brave the user is, with crystals shining brighter for honest hearts."
+    - "The Emerald Forest: A lush forest at the mountain's base, filled with trees that rustle with secrets. The leaves part to show peaceful glades or tighten around the user based on how much they care for the plants and animals."
+    - "The Sky Bridges: High up, these swaying bridges link floating islands. They stay steady or wobble depending on whether the user is careful or bold, with islands drifting closer for those who find the right balance."
+    - "The Jade Sanctuary: A calm temple inside the mountain, guarded by wise statues. Its doors swing wide or lock tight based on the user's kindness and smart choices, offering treasures to those who show compassion."
+    - "The Misty Peaks: The mountain's foggy top, where winds howl softly. The mist thins to show stunning views or thickens to hide dangers depending on how well the user trusts their instincts."
+  themes:
+    - "The Power of Friendship: Users can team up with others or go solo. Choosing friends makes tasks easier, while going alone tests their strength, shaping how they grow."
+    - "The Balance of Nature: Caring for the world brings peace, but ignoring it stirs trouble. The user's actions decide if the land helps or hinders them."
+    - "Courage in the Face of Fear: Standing tall against scary moments earns rewards, while stepping back keeps things safe but simple. Bravery builds the user's confidence."
+    - "The Value of Wisdom: Listening to hints or thinking hard leads to success, but rushing in might cause mix-ups. Smart choices help the user learn and win."
+    - "The Journey of Self-Discovery: Every decision shows the user what they're good at or need to work on. Their adventure becomes a story of who they're becoming."
+  moral_teachings:
+    - "Honesty Leads to Trust: Telling the truth makes others friendly, like a locked chest opening when the user admits a mistake, while fibbing makes them wary, hiding the key."
+    - "Kindness Opens Doors: Helping someone in need might make a bridge appear, but keeping everything for oneself could leave the user stuck with no way forward."
+    - "Courage Brings Rewards: Facing a loud roar might reveal a shiny gem, but running away keeps the user safe with nothing new to show for it."
+    - "Wisdom Prevents Mistakes: Following a wise old bird's advice could dodge a falling rock, while ignoring it might trip the user up with a tumble."
+    - "Respect for Nature: Planting a seed might grow a ladder to climb, but stepping on flowers could make vines block the path."
+  plot_twists:
+    - "The Guardian's Secret: A chatty guide admits they're testing the user. If treated well, they share a map; if not, they vanish with a giggle."
+    - "The Hidden Passage: A wall moves aside when the user keeps trying, showing a tunnel full of surprises after they refuse to give up."
+    - "The Shapeshifter: A cute squirrel turns into a big bear—or a tiny bird—depending on how nice the user is, offering help or a playful chase."
+    - "The Ancient Prophecy: A stone says the user is “the chosen one,” and its meaning changes with their actions, pointing to treasure or a fun riddle."
+    - "The Mountain's Heart: The ground shakes and flowers bloom when the user is kind, or it rumbles with a huff if they're careless, making the day brighter or trickier."
+
+sensory_details:
+  visuals:
+    - "Glowing Jade Crystals: Crystals in the caves sparkle like stars, growing brighter when the user tells the truth."
+    - "Whispering Leaves: Green leaves in the forest shimmer softly, glowing stronger when the user helps a lost bug."
+    - "Floating Islands: Islands drift in the sky, glowing with golden edges that sway closer when the user is brave but careful."
+    - "Ancient Carvings: Stone faces in the sanctuary wink or smile when the user makes a thoughtful choice."
+    - "Misty Vistas: Fog on the peaks swirls away to show far-off lands when the user trusts their gut."
+  sounds:
+    - "Crystal Hum: A gentle tune from the crystals gets loud and happy as the user finds something special."
+    - "Rustling Leaves: Leaves in the forest whisper like a song, clear and sweet when the user is gentle with the trees."
+    - "Creaking Bridges: The sky bridges groan softly, squeaking more if the user's wild moves shake them."
+    - "Echoing Footsteps: Steps in the sanctuary bounce back loud or soft, depending on whether the user is kind or hasty."
+    - "Whispering Winds: Winds on the peaks hum with hints, growing sharp and helpful when the user listens close."
+  smells:
+    - "Fresh Pine: A sweet pine scent fills the forest, stronger when the user helps a critter find its home."
+    - "Damp Earth: The caves smell rich and cool, turning sharp if the user tricks someone."
+    - "Crisp Mountain Air: Clean air on the bridges sparkles in the nose, fizzing a bit if the user leaps too fast."
+    - "Incense: A warm, cosy smell drifts in the sanctuary, growing big when the user shares with others."
+    - "Frosty Mint: A chilly mint scent cools the peaks, warming up as the user solves a puzzle."

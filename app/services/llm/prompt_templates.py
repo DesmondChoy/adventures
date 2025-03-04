@@ -60,17 +60,17 @@ FIRST_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. Agency Decision: Craft the chapter to naturally flow into a thrilling end, where three critical agency choices are explicitly presented, each shaping the character's journey across all future chapters.
+1. Agency Decision: The chapter naturally and organically concludes with a situation where Agency Options are offered - each with the potential to shape the character's journey across all future chapters.
 2. This chapter MUST have at least 10 paragraphs.
 
-# {agency_category_name} Options
+# Agency Options
 {agency_options}
 
 # Choice Format Specification
 <CHOICES>
-Choice A: {agency_category_name}: {option_a} - [Briefly describe potential actions unlocked with this agency]
-Choice B: {agency_category_name}: {option_b} - [Briefly describe potential actions unlocked with this agency]
-Choice C: {agency_category_name}: {option_c} - [Meaningful action using this agency]
+Choice A: {agency_category_name}: {option_a} - [Offer a sneak peek of the potential actions unlocked with this agency choice]
+Choice B: {agency_category_name}: {option_b} - [Offer a sneak peek of the potential actions unlocked with this agency choice]
+Choice C: {agency_category_name}: {option_c} - [Offer a sneak peek of the potential actions unlocked with this agency choice]
 </CHOICES>
 
 # CRITICAL REQUIREMENTS

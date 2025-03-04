@@ -75,6 +75,12 @@
    - Required narrative elements are now only `settings` (validator updated in `story.py`)
    - System prompt template uses `settings` but no longer includes `story_rules`
 
+6. File Encoding:
+   - All YAML files in `app/data/stories/` MUST be opened with UTF-8 encoding
+   - Use `encoding="utf-8"` parameter when opening files in `story_loader.py`
+   - This ensures proper handling of special characters in story content
+   - Default Windows encoding (cp1252) cannot handle certain special characters
+
 ## Development Workflow
 
 ### Code Changes

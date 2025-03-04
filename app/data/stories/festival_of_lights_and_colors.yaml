@@ -1,0 +1,48 @@
+name: "Festival of Lights & Colors"
+description: "A radiant celebration where every moment shimmers with laughter and bright spectacle. Lanterns, parades, and vibrant costumes invite endless wonder."
+
+narrative_elements:
+  settings:
+    - "Glowing rainbow streets decorated with floating paper lanterns"
+    - "Gigantic kaleidoscope tents where colors shift with each step"
+    - "Illuminated bridges arched over canals of sparkling water"
+    - "Hidden garden paths lit by luminescent flowers and tiny fireflies"
+    - "Grand fireworks arena with a sky full of dancing lights"
+  themes:
+    - "Celebrating diversity through the brilliant spectrum of colors"
+    - "Uniting communities by sharing stories and music"
+    - "Finding beauty in unexpected places and little details"
+    - "Overcoming fears by seeking light in the darkest corners"
+    - "Believing in the power of wonder and imagination"
+  moral_teachings:
+    - "Sharing light with others illuminates everyone's path"
+    - "Honesty can brighten the dimmest lantern"
+    - "Courage helps us step into the unknown without losing hope"
+    - "Teamwork colors the world in ways we cannot achieve alone"
+    - "Respect for each person's creativity keeps the festival alive"
+  plot_twists:
+    - "A mysterious shadow threatens to extinguish lanterns one by one"
+    - "An ancient color thought lost suddenly appears in someone's artwork"
+    - "A colorful parade float comes to life, revealing a hidden realm"
+    - "A secret tunnel leads to a forgotten chamber of glowing crystals"
+    - "The festival's grand finale is disrupted by a swirl of vanishing hues"
+
+sensory_details:
+  visuals:
+    - "Sparkling confetti bursts that shower the crowds in glittery rainbows"
+    - "Enormous lanterns shaped like mythical creatures roaming the streets"
+    - "Luminescent paint swirling in patterns on the festival grounds"
+    - "Multicolored streamers cascading from rooftops and balconies"
+    - "Reflective ribbons dancing in the breeze under starlit skies"
+  sounds:
+    - "Melodic chimes ringing with each lantern lit"
+    - "Steady beat of drums guiding the nightly color parade"
+    - "Excited giggles and exclamations echoing across the festival paths"
+    - "Gentle humming of glowing insects drawn to the colorful lights"
+    - "Trumpeting fanfare announcing the arrival of the grand fireworks"
+  smells:
+    - "Sweet aroma of sugar-dusted pastries fresh from festival stalls"
+    - "Flowery perfume drifting from blossoming lantern bouquets"
+    - "Subtle whiff of sparklers and sizzling fireworks in the distance"
+    - "Fruity scents of color-themed sorbets melting under lantern glow"
+    - "Warm fragrance of toasted nuts and honey filling the night air"

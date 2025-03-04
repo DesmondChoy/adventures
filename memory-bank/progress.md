@@ -1,5 +1,39 @@
 # Progress Log
 
+## 2025-03-04: Fixed Character Encoding Issue in Story Loader
+
+### Fixed YAML File Loading with UTF-8 Encoding
+- Problem: Character encoding error when loading YAML files: `'charmap' codec can't decode byte 0x9d in position 3643: character maps to <undefined>`
+- Root Cause:
+  * Files were being opened with the default system encoding (cp1252 on Windows)
+  * One of the story files (specifically `jade_mountain.yaml`) contained a character (byte 0x9d) that couldn't be decoded using the default encoding
+- Solution:
+  * Modified the `load_all_stories()` method in `app/data/story_loader.py` to explicitly use UTF-8 encoding when opening files
+  * Changed `with open(file_path, "r") as f:` to `with open(file_path, "r", encoding="utf-8") as f:`
+- Result: Fixed character encoding issues when loading story files, ensuring proper handling of special characters in YAML content
+
+## 2025-03-04: Story Data Organization Refactoring
+
+### Improved Story Data Management with Individual Files
+- Problem: All story categories were in a single YAML file, making maintenance difficult and increasing risk of syntax errors
+- Solution:
+  * Created a dedicated `app/data/stories/` directory to store individual story files
+  * Split the monolithic `new_stories.yaml` into individual files for each story category:
+    - `festival_of_lights_and_colors.yaml`
+    - `circus_and_carnival_capers.yaml`
+    - `enchanted_forest_tales.yaml`
+    - `jade_mountain.yaml`
+  * Implemented a dedicated `StoryLoader` class in `app/data/story_loader.py` with:
+    - Caching for performance optimization
+    - Error handling and logging
+    - Methods for accessing individual stories and listing available categories
+  * Updated `chapter_manager.py` to use the new loader while maintaining backward compatibility
+  * Created proper test files in `tests/data/` directory:
+    - `test_story_loader.py`: Tests story data loading functionality
+    - `test_story_elements.py`: Tests random element selection
+    - `test_chapter_manager.py`: Tests adventure state initialization
+- Result: Improved maintainability, reduced risk of syntax errors, better scalability for adding new stories, and enhanced collaboration potential
+
 ## 2025-03-04: Dynamic Adventure Topic Reference in Exposition Phase
 
 ### Enhanced World Building Guidance with Adventure Topic Reference

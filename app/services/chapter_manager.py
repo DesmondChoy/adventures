@@ -2,18 +2,18 @@ from typing import List, Dict, Any
 import random
 import logging
 import math
-import yaml
 from datetime import datetime
 from app.models.story import ChapterType, AdventureState
+from app.data.story_loader import StoryLoader
 
 logger = logging.getLogger("story_app")
 
 
 def load_story_data() -> Dict[str, Any]:
-    """Load story data from new_stories.yaml."""
+    """Load story data from individual YAML files in the stories directory."""
     try:
-        with open("app/data/new_stories.yaml", "r") as f:
-            return yaml.safe_load(f)
+        loader = StoryLoader()
+        return loader.load_all_stories()
     except Exception as e:
         logger.error("Failed to load story data", extra={"error": str(e)})
         raise ValueError(f"Failed to load story data: {str(e)}")

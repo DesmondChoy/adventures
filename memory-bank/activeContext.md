@@ -25,7 +25,30 @@
    * Error recovery mechanisms
    * Metadata tracking for agency, elements, and challenge types
 
+4. **Story Data Management (`app/data/story_loader.py`):**
+   * Loads individual story files from `app/data/stories/` directory
+   * Combines data into a consistent structure
+   * Provides caching for performance optimization
+   * Offers methods for accessing specific story categories
+
 ## Recent Changes
+
+### Fixed Character Encoding Issue in Story Loader (2025-03-04)
+- Problem: Character encoding error when loading YAML files: `'charmap' codec can't decode byte 0x9d in position 3643: character maps to <undefined>`
+- Solution:
+  * Modified `load_all_stories()` method in `app/data/story_loader.py` to explicitly use UTF-8 encoding when opening files
+  * Changed `with open(file_path, "r") as f:` to `with open(file_path, "r", encoding="utf-8") as f:`
+- Result: Fixed character encoding issues when loading story files, ensuring proper handling of special characters in YAML content
+
+### Story Data Organization Refactoring (2025-03-04)
+- Problem: All story categories were in a single YAML file, making maintenance difficult and increasing risk of syntax errors
+- Solution:
+  * Created a dedicated `app/data/stories/` directory to store individual story files
+  * Split the monolithic `new_stories.yaml` into individual files for each story category
+  * Implemented a dedicated `StoryLoader` class in `app/data/story_loader.py`
+  * Updated `chapter_manager.py` to use the new loader
+  * Created proper test files in `tests/data/` directory
+- Result: Improved maintainability, reduced risk of syntax errors, better scalability for adding new stories, and enhanced collaboration potential
 
 ### Dynamic Adventure Topic Reference in Exposition Phase (2025-03-04)
 - Problem: World building guidance in Exposition phase was generic and didn't reference the specific adventure topic selected by the user
@@ -114,6 +137,9 @@
   * Validates component integration
 
 - **Test Files:**
-  * `test_simulation_functionality.py`: Verifies chapter sequences, ratios, state transitions
-  * `test_simulation_errors.py`: Tests error handling, recovery, logging configuration
-  * `run_simulation_tests.py`: Orchestrates server, simulation, and test execution
+  * `tests/simulations/test_simulation_functionality.py`: Verifies chapter sequences, ratios, state transitions
+  * `tests/simulations/test_simulation_errors.py`: Tests error handling, recovery, logging configuration
+  * `tests/simulations/run_simulation_tests.py`: Orchestrates server, simulation, and test execution
+  * `tests/data/test_story_loader.py`: Tests story data loading functionality
+  * `tests/data/test_story_elements.py`: Tests random element selection
+  * `tests/data/test_chapter_manager.py`: Tests adventure state initialization

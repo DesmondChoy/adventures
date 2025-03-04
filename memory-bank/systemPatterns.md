@@ -11,6 +11,8 @@ graph TD
     CM <--> LLM[LLM Service]
     CM <--> DB[(Database)]
     WSS <--> IMG[Image Generation Service]
+    CM <--> SL[Story Loader]
+    SL <--> SF[(Story Files)]
 
     subgraph Client Side
         LP[localStorage] <--> CSM[Client State Manager]
@@ -33,6 +35,7 @@ graph TD
         CSV[lessons.csv] --> CM
         LLM --> CM
         IMG --> WSS
+        SF --> SL
     end
 ```
 
@@ -70,7 +73,21 @@ graph TD
   * REFLECT: Narrative-driven follow-up to LESSON
   * CONCLUSION: Resolution without choices
 
-### 3. WebSocket Components
+### 3. Story Data Management
+- **Story Loader** (`app/data/story_loader.py`)
+  * Loads individual story files from `app/data/stories/` directory
+  * Combines data into a consistent structure for use by Chapter Manager
+  * Provides caching for performance optimization
+  * Offers methods for accessing specific story categories
+  * Handles error cases gracefully with detailed logging
+
+- **Story Files** (`app/data/stories/*.yaml`)
+  * Individual YAML files for each story category
+  * Consistent structure across all story files
+  * Contains narrative elements, sensory details, and other story components
+  * Enables easier maintenance and collaboration
+
+### 4. WebSocket Components
 - **Router** (`app/routers/websocket_router.py`)
   * Handles connection lifecycle
   * Validates client messages
@@ -82,7 +99,7 @@ graph TD
   * Handles streaming of content
   * Coordinates with ImageGenerationService
 
-### 4. LLM Integration
+### 5. LLM Integration
 - **Prompt Engineering** (`app/services/llm/prompt_engineering.py`)
   * `build_prompt()`: Main entry point for all chapter types
   * `build_system_prompt()`: Creates system context
@@ -94,7 +111,7 @@ graph TD
   * Standardized response handling
   * Error recovery mechanisms
 
-### 5. Image Generation
+### 6. Image Generation
 - **Service** (`app/services/image_generation_service.py`)
   * Asynchronous processing with `generate_image_async()`
   * 5 retries with exponential backoff
@@ -145,7 +162,33 @@ flowchart TD
 
 ## Key Patterns
 
-### 1. Agency Pattern
+### 1. Story Data Organization Pattern
+```mermaid
+flowchart TD
+    subgraph Story_Data_Organization
+        SL[StoryLoader] --> |"Loads"| SF[Story Files]
+        SF --> |"Individual files for"| SC[Story Categories]
+        SC --> |"Contains"| NE[Narrative Elements]
+        SC --> |"Contains"| SD[Sensory Details]
+        SC --> |"Contains"| MT[Moral Teachings]
+        SC --> |"Contains"| PT[Plot Twists]
+        SC --> |"Contains"| TH[Themes]
+        
+        SL --> |"Provides"| CM[Chapter Manager]
+        CM --> |"Selects random"| Elements[Story Elements]
+        Elements --> |"Used in"| AS[Adventure State]
+    end
+    
+    subgraph Element_Selection
+        CM --> |"Calls"| SRE[select_random_elements]
+        SRE --> |"Extracts"| NRE[Non-Random Elements]
+        SRE --> |"Randomly selects"| RE[Random Elements]
+        NRE --> |"name, description"| AS
+        RE --> |"settings, theme, etc."| AS
+    end
+```
+
+### 2. Agency Pattern
 - **First Chapter Choice**
   * Four categories: Items, Companions, Roles, Abilities
   * Stored in `state.metadata["agency"]`
@@ -156,7 +199,7 @@ flowchart TD
   * CLIMAX phase: Agency plays pivotal role
   * CONCLUSION: Agency has meaningful resolution
 
-### 2. Narrative Continuity
+### 3. Narrative Continuity
 - **Story Elements Consistency**
   * Setting, characters, theme maintained
   * Plot twist development across phases
@@ -167,17 +210,19 @@ flowchart TD
   * STORY: Continue from chosen path with consequences
   * REFLECT: Build on previous lesson understanding
 
-### 3. Testing Framework
+### 4. Testing Framework
 - **Simulation** (`tests/simulations/story_simulation.py`)
   * Generates structured log data
   * Verifies complete workflow
 
 - **Test Files**
-  * `test_simulation_functionality.py`: Verifies sequences, ratios
-  * `test_simulation_errors.py`: Tests error handling
-  * `run_simulation_tests.py`: Orchestrates testing workflow
+  * `tests/simulations/test_simulation_functionality.py`: Verifies sequences, ratios
+  * `tests/simulations/test_simulation_errors.py`: Tests error handling
+  * `tests/data/test_story_loader.py`: Tests story data loading functionality
+  * `tests/data/test_story_elements.py`: Tests random element selection
+  * `tests/data/test_chapter_manager.py`: Tests adventure state initialization
 
-### 4. Text Streaming
+### 5. Text Streaming
 - **Content Delivery**
   * Word-by-word streaming (0.02s delay)
   * Paragraph breaks (0.1s delay)
@@ -195,7 +240,7 @@ flowchart TD
     words -->|Stream with delay| Client
 ```
 
-### 7. Prompt Engineering Pattern (`app/services/llm/prompt_templates.py`)
+### 6. Prompt Engineering Pattern (`app/services/llm/prompt_templates.py`)
 - **Prompt Structure and Organization**:
   * Modular template design with separate templates for different chapter types
   * Consistent section ordering across templates
