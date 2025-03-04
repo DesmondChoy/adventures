@@ -8,11 +8,11 @@ This app aims to promote learning and curiosity by weaving together educational 
 ## How It Works
 
 1. **Educational Journey**
-   - Choose your setting and lesson topic
+   - Choose your story genre and lesson topic
    - Every adventure is unique and choices (story paths or correct/incorrect answers) affects the narrative
    - Characters in the story encourage curiosity and learning
    - Make a pivotal agency choice in the first chapter that evolves throughout your journey
-   - See visual representations of your agency choices through AI-generated images
+   - Visual representations of agency choices through AI-generated images
    - WIP: Users can upload their own settings and/or lesson topics.
 
 2. **Technical Innovation**
@@ -34,6 +34,8 @@ graph TD
     CM <--> LLM[LLM Service]
     CM <--> DB[(Database)]
     WSS <--> IMG[Image Generation Service]
+    CM <--> SL[Story Loader]
+    SL <--> SF[(Story Files)]
 
     subgraph Client Side
         LP[localStorage] <--> CSM[Client State Manager]
@@ -50,6 +52,7 @@ graph TD
         CM
         LLM
         IMG
+        SL
     end
 
     subgraph Routing
@@ -60,15 +63,16 @@ graph TD
         CSV[lessons.csv] --> CM
         LLM --> CM
         IMG --> WSS
+        SF --> SL
     end
 ```
 
 ## Tech Stack
 
 - **Backend**: FastAPI, Python 3.x with WebSocket communication, structured logging, and middleware for request tracking
-- **AI Integration**: Provider-agnostic implementation supporting GPT-4o/Gemini for text and Gemini Imagen for image generation
+- **AI Integration**: Provider-agnostic implementation supporting GPT-4o/Gemini 2.0 Flash for text and Imagen3 for image generation
 - **Architecture**: Real-time WebSocket updates, SQLite database, comprehensive error handling, and asynchronous processing
-- **Frontend**: Modular CSS organization, 3D carousel with animations, responsive design, word-by-word content streaming with Markdown support, and progressive enhancement for images
+- **Frontend**: Modular CSS organization, 3D carousel with animations, responsive design, content streaming with Markdown support, and progressive enhancement for images
 
 ## Setup
 
@@ -114,7 +118,8 @@ app/
 │   └── llm/                       # LLM integration with prompt engineering
 ├── data/              
 │   ├── lessons.csv                # Educational content
-│   └── new_stories.yaml           # Story templates and elements
+│   ├── story_loader.py            # Story data loading and caching
+│   └── stories/                   # Individual story category files
 ├── middleware/                    # Custom middleware components
 ├── templates/                     # HTML templates
 ├── static/
@@ -150,4 +155,4 @@ python tests/simulations/run_simulation_tests.py
 
 Learning Odyssey faces unique caching constraints due to its sequential storytelling nature. Each chapter requires the prior chapter to be complete before it can be generated, as the narrative builds upon previous events and choices. This means the entire adventure must be generated sequentially in real-time, with no ability to pre-cache future content. While theoretically possible to pre-generate all possible branches, this approach quickly becomes impractical as the adventure length and number of choices increase—each additional choice point exponentially multiplies the number of possible paths. Since each user's path through the story is unique based on their choices and educational responses, the system cannot feasibly pre-generate all potential outcomes, making traditional caching approaches ineffective.
 
-To address these sequential generation challenges, we've implemented several solutions. Client-side state persistence using localStorage maintains the complete chapter history and user choices, ensuring continuity even during connection issues. Our connection management system employs exponential backoff (1s to 30s) with automatic state restoration to maintain the narrative flow. For error recovery, we prioritize preserving the user's progress and implement graceful degradation with fallbacks for features like image generation, ensuring the educational journey can continue even when certain components encounter issues.
+To address these sequential generation challenges, several solutions have been implemented. Client-side state persistence using localStorage maintains the complete chapter history and user choices, ensuring continuity even during connection issues. Connection management system employs exponential backoff (1s to 30s) with automatic state restoration to maintain the narrative flow. For error recovery, it prioritizes preserving the user's progress and implement graceful degradation with fallbacks for features like image generation, ensuring the educational journey can continue even when certain components encounter issues.
