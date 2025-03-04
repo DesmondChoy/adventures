@@ -120,7 +120,7 @@ class ImageGenerationService:
         return None
 
     def enhance_prompt(self, original_prompt, adventure_state=None, choice_text=None):
-        """Enhance a basic prompt to get better image generation results.
+        """Streamlined prompt enhancement with updated order of elements.
 
         Args:
             original_prompt: The basic text prompt
@@ -128,129 +128,91 @@ class ImageGenerationService:
             choice_text: Optional text of the selected choice to include in the prompt
 
         Returns:
-            Enhanced prompt with style guidance and story elements
+            Enhanced prompt with elements in the specified order
         """
-        # Extract only the name (everything before the first " - " or "[")
-        name = original_prompt.split(" - ")[0].split("[")[0].strip()
+        # Extract the combined name and visual details up to the closing bracket
+        name_with_details = ""
+        full_bracket_match = re.match(r"(.*?\])", original_prompt)
+        if full_bracket_match:
+            name_with_details = full_bracket_match.group(1).strip()
+            logger.debug(f"Extracted name with visual details: {name_with_details}")
+        else:
+            # Fallback to just extracting the name if no bracket is found
+            name = original_prompt.split(" - ")[0].strip()
 
-        # Extract visual details from square brackets if present
-        visual_details = ""
-        bracket_match = re.search(r"\[(.*?)\]", original_prompt)
-        if bracket_match:
-            visual_details = bracket_match.group(1)
-            logger.debug(f"Extracted visual details: {visual_details}")
+            # Handle agency name extraction from choice text if needed
+            if re.match(r"(?:[^:]+):\s*([^-]+)", name):
+                agency_name = re.match(r"(?:[^:]+):\s*([^-]+)", name).group(1).strip()
+                logger.debug(f"Extracted agency name from choice text: {agency_name}")
+                name = agency_name
+            elif re.match(r"As a (\w+\s*\w*)", name):
+                as_a_match = re.match(r"As a (\w+\s*\w*)", name)
+                agency_name = as_a_match.group(1).strip()
+                logger.debug(
+                    f"Extracted agency name from legacy 'As a' format: {agency_name}"
+                )
+                name = agency_name
 
-        # Check if the name is in the new format "Category: Option - Action"
-        # This happens when the choice text is passed as original_prompt
-        agency_name = ""
-        category_option_match = re.match(r"(?:[^:]+):\s*([^-]+)", name)
-        if category_option_match:
-            # Extract just the option name from the choice text (after the colon, before the dash)
-            agency_name = category_option_match.group(1).strip()
-            logger.debug(f"Extracted agency name from choice text: {agency_name}")
-            name = agency_name
-        # Fallback to the old "As a..." pattern for backward compatibility
-        elif re.match(r"As a (\w+\s*\w*)", name):
-            as_a_match = re.match(r"As a (\w+\s*\w*)", name)
-            agency_name = as_a_match.group(1).strip()
-            logger.debug(
-                f"Extracted agency name from legacy 'As a' format: {agency_name}"
-            )
-            name = agency_name
+            name_with_details = name
+            logger.debug(f"Using name without visual details: {name}")
 
-        logger.debug(f"Using name for prompt: {name}")
+            # Try to look up visual details for this name
+            visual_details = self._lookup_visual_details(name)
+            if visual_details:
+                name_with_details = f"{name} [{visual_details}]"
+                logger.debug(f"Added visual details from lookup: {visual_details}")
 
         # Base style guidance
         base_style = "vibrant colors, detailed, whimsical, digital art"
 
-        # If adventure_state is provided, incorporate setting and visual details
-        if (
-            adventure_state
-            and hasattr(adventure_state, "selected_narrative_elements")
-            and hasattr(adventure_state, "selected_sensory_details")
-        ):
-            # Extract setting and visual details if available
-            setting = adventure_state.selected_narrative_elements.get("settings", "")
-            visual = adventure_state.selected_sensory_details.get("visuals", "")
-
-            # Build prompt components with proper comma separation
-            components = []
-
-            # Start with the name and visual details
-            if visual_details:
-                # Use proper formatting for visual details in square brackets
-                components.append(f"Fantasy illustration of {name} [{visual_details}]")
-            else:
-                # If no visual details found in the original prompt, try to find them in the agency lookup
-                from app.services.llm.prompt_templates import categories
-
-                try:
-                    # Look for the agency name in all categories
-                    for category_options in categories.values():
-                        for option in category_options:
-                            option_name = option.split("[")[0].strip().lower()
-                            if (
-                                name.lower() == option_name
-                                or name.lower() in option_name
-                            ):
-                                # Extract visual details from the option
-                                option_visual_match = re.search(r"\[(.*?)\]", option)
-                                if option_visual_match:
-                                    option_visual_details = option_visual_match.group(1)
-                                    logger.debug(
-                                        f"Found visual details from categories: {option_visual_details}"
-                                    )
-                                    components.append(
-                                        f"Fantasy illustration of {name} [{option_visual_details}]"
-                                    )
-                                    break
-                        else:
-                            continue
-                        break
-                    else:
-                        # If no match found, use just the name
-                        components.append(f"Fantasy illustration of {name}")
-                except Exception as e:
-                    logger.error(f"Error looking up visual details: {e}")
-                    components.append(f"Fantasy illustration of {name}")
-
-            # Add the choice text directly if provided
-            if choice_text:
-                # Clean up the choice text (remove "Choice X: " prefix if present)
-                if choice_text.startswith("Choice ") and ": " in choice_text:
-                    clean_choice = choice_text.split(": ", 1)[1]
-                else:
-                    clean_choice = choice_text
-                components.append(clean_choice)
-
-            if setting:
-                components.append(f"in a {setting} setting")
-
-            if visual:
-                components.append(f"with {visual}")
-
-            components.append(base_style)
-
-            # Join all components with commas
-            return ", ".join(components)
-
-        # Default enhancement if no adventure_state is provided
+        # Build components in the specified order
         components = []
 
-        # Start with the name and visual details
-        if visual_details:
-            components.append(f"Fantasy illustration of {name} [{visual_details}]")
-        else:
-            components.append(f"Fantasy illustration of {name}")
+        # 1. Start with "Fantasy illustration of [Agency Name with Visual Details]"
+        components.append(f"Fantasy illustration of {name_with_details}")
 
-        # Add the choice text directly if provided
-        if choice_text:
-            # Clean up the choice text (remove "Choice X: " prefix if present)
-            if choice_text.startswith("Choice ") and ": " in choice_text:
-                clean_choice = choice_text.split(": ", 1)[1]
-            else:
-                clean_choice = choice_text
-            components.append(clean_choice)
+        # 2. Add story name if available
+        story_name = ""
+        if (
+            adventure_state
+            and hasattr(adventure_state, "metadata")
+            and "non_random_elements" in adventure_state.metadata
+        ):
+            story_name = adventure_state.metadata["non_random_elements"].get("name", "")
+            if story_name:
+                components.append(f"in {story_name}")
+                logger.debug(f"Added story name: {story_name}")
 
+        # 3. Add sensory details from adventure state if available
+        if adventure_state and hasattr(adventure_state, "selected_sensory_details"):
+            visual = adventure_state.selected_sensory_details.get("visuals", "")
+            if visual:
+                components.append(f"with {visual}")
+                logger.debug(f"Added sensory details: {visual}")
+
+        # 4. Add base style
         components.append(base_style)
-        return ", ".join(components)
+
+        # Join all components with commas
+        prompt = ", ".join(components)
+        logger.info(f"Enhanced prompt: {prompt}")
+        return prompt
+
+    def _lookup_visual_details(self, name):
+        """Helper method to look up visual details from categories."""
+        try:
+            from app.services.llm.prompt_templates import categories
+
+            # Look for the agency name in all categories
+            for category_options in categories.values():
+                for option in category_options:
+                    option_name = option.split("[")[0].strip().lower()
+                    if name.lower() == option_name or name.lower() in option_name:
+                        # Extract visual details from the option
+                        option_visual_match = re.search(r"\[(.*?)\]", option)
+                        if option_visual_match:
+                            return option_visual_match.group(1)
+        except Exception as e:
+            logger.error(f"Error looking up visual details: {e}")
+
+        return ""

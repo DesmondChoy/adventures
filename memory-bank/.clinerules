@@ -68,6 +68,13 @@
    - Add robust null checking for API responses
    - Handle failed generation gracefully
    - Use asynchronous processing to maintain performance
+   - Image prompt structure MUST follow this format:
+     ```
+     Fantasy illustration of [Agency Name] in [Story Name], [Visual Details], with [adventure_state.selected_sensory_details["visuals"]], [Base Style]
+     ```
+   - Extract agency name with visual details up to the closing bracket
+   - Include story name from `state.metadata["non_random_elements"]["name"]`
+   - Omit redundant descriptions that come after the dash
 
 5. Data Model:
    - Story categories in `new_stories.yaml` MUST include `settings` (renamed from `setting_types`)

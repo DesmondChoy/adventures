@@ -1,5 +1,33 @@
 # Progress Log
 
+## 2025-03-04: Optimized Image Generation Prompts
+
+### Streamlined Prompt Structure for More Consistent Images
+- Problem: Image generation prompts were bloated with redundant information, causing inconsistent results
+- Root Cause:
+  * The prompt included multiple layers of descriptive text that sometimes conflicted with each other
+  * Complex extraction logic with multiple approaches to extract agency details led to inconsistent results
+  * Redundant information from choice text was being included even when visual details were already present
+  * The prompt structure didn't prioritize the most important visual elements
+- Solution:
+  * Restructured the prompt format to focus on essential elements:
+    ```
+    Fantasy illustration of [Agency Name] in [Story Name], [Visual Details], with [adventure_state.selected_sensory_details["visuals"]], [Base Style]
+    ```
+  * Completely rewrote `enhance_prompt()` in `image_generation_service.py` to:
+    - Extract the complete agency name with visual details up to the closing bracket
+    - Include the story name from `adventure_state.metadata["non_random_elements"]["name"]`
+    - Remove redundant descriptions that come after the dash
+    - Add sensory details from the adventure state
+    - Preserve the base style guidance
+  * Added a helper method `_lookup_visual_details()` to find visual details when not present in the original prompt
+  * Simplified agency option extraction in `websocket_service.py` to be more direct and reliable
+- Result:
+  * More consistent image generation with reduced token usage
+  * Improved visual quality by focusing on essential elements
+  * Better organization of prompt components in a logical order
+  * Cleaner, more maintainable code with improved logging
+
 ## 2025-03-04: Fixed Outdated References to new_stories.yaml
 
 ### Updated Code to Use StoryLoader Consistently

@@ -33,6 +33,15 @@
 
 ## Recent Changes
 
+### Optimized Image Generation Prompts (2025-03-04)
+- Problem: Image generation prompts were bloated with redundant information, causing inconsistent results
+- Solution:
+  * Restructured prompt format to focus on essential elements: `Fantasy illustration of [Agency Name] in [Story Name], [Visual Details], with [adventure_state.selected_sensory_details["visuals"]], [Base Style]`
+  * Rewrote `enhance_prompt()` in `image_generation_service.py` to extract the complete agency name with visual details up to the closing bracket
+  * Added a helper method `_lookup_visual_details()` to find visual details when not present in the original prompt
+  * Simplified agency option extraction in `websocket_service.py` to be more direct and reliable
+- Result: More consistent image generation with reduced token usage and improved visual quality by focusing on essential elements
+
 ### Fixed Outdated References to new_stories.yaml (2025-03-04)
 - Problem: After refactoring story data into individual files, some parts of the codebase were still referencing the old `new_stories.yaml` file, causing errors
 - Solution:
