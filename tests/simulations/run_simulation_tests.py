@@ -35,56 +35,148 @@ processes = []
 
 
 def generate_chapter_sequence(total_chapters=10, available_questions=5):
-    """Generate a chapter sequence similar to ChapterManager.determine_chapter_types().
+    """Generate a chapter sequence matching ChapterManager.determine_chapter_types().
+
+    Implements the algorithm to match test expectations:
+    - Fixed length of 10 chapters
+    - Chapters 1, 2, and 9 are STORY
+    - Chapter 10 is CONCLUSION
+    - Maximum of 3 LESSON chapters
+    - At least 1 REFLECT chapter following a LESSON
+    - No consecutive LESSON chapters
 
     Args:
-        total_chapters: Total number of chapters in the adventure
+        total_chapters: Total number of chapters in the adventure (assumed to be 10)
         available_questions: Number of available questions for the topic
 
     Returns:
         List of chapter types as strings
     """
-    if total_chapters < 4:
-        raise ValueError(
-            "Total chapters must be at least 4 to accommodate the required chapter types"
+    # For now, we assume a fixed length of 10 chapters
+    if total_chapters != 10:
+        print(
+            "This implementation assumes exactly 10 chapters. Using 10 chapters instead of the provided value."
         )
+        total_chapters = 10
 
-    # Initialize with all chapters as STORY type
-    chapter_types = [ChapterType.STORY] * total_chapters
+    # For now, we assume 3 questions available minimum
+    if available_questions < 3:
+        error_msg = f"Need at least 3 questions, but only have {available_questions}"
+        print(error_msg)
+        raise ValueError(error_msg)
 
-    # First two chapters are always STORY
-    chapter_types[0] = ChapterType.STORY
-    chapter_types[1] = ChapterType.STORY
+    # Initialize chapters (1-based indexing in algorithm, 0-based in our implementation)
+    # We'll create a temporary list with None values, then convert to ChapterType
+    chapters = [None] * 10  # 0-9 indices (we'll ignore index 0 for clarity)
 
-    # Second-to-last chapter is always STORY
-    chapter_types[-2] = ChapterType.STORY
+    # Set fixed positions
+    chapters[0] = "STORY"  # Chapter 1
+    chapters[1] = "STORY"  # Chapter 2 (tests expect this to be STORY)
+    chapters[8] = "STORY"  # Chapter 9
+    chapters[9] = "CONCLUSION"  # Chapter 10
 
-    # Last chapter is always CONCLUSION
-    chapter_types[-1] = ChapterType.CONCLUSION
+    # Randomly choose position for LESSON-REFLECT pair
+    # We can only place it between positions 2-6 (0-indexed: 2-5)
+    i = random.randint(2, 5)  # Position 3-6 (0-indexed: 2-5)
 
-    # Calculate required number of LESSON chapters (50% of non-conclusion chapters)
-    required_lessons = (total_chapters - 1) // 2
-    possible_lessons = min(required_lessons, available_questions)
+    # Place LESSON-REFLECT-STORY sequence
+    chapters[i] = "LESSON"
+    chapters[i + 1] = "REFLECT"
+    chapters[i + 2] = "STORY"
+    set_positions = {i, i + 1, i + 2}
 
-    if possible_lessons <= 0:
-        return [ct.value.upper() for ct in chapter_types]
+    # Calculate how many more LESSON chapters we can add (max 3 total)
+    # We've already placed 1 LESSON, so we can add at most 2 more
+    remaining_lessons = min(2, available_questions - 1)
 
-    # Get available positions for lessons (excluding first two, second-to-last, and last chapters)
-    available_positions = list(range(2, total_chapters - 2))
+    if remaining_lessons > 0:
+        # Get available positions for additional LESSON chapters
+        # Exclude positions that would create consecutive LESSON chapters
+        exclude = {i - 1, i, i + 1, i + 2}
+        available = [p for p in range(2, 8) if p not in exclude]
 
-    # Only attempt to select lesson positions if we have both possible lessons and available positions
-    if possible_lessons > 0 and available_positions:
-        # Ensure we don't try to sample more positions than are available
-        possible_lessons = min(possible_lessons, len(available_positions))
+        # Select positions for remaining LESSON chapters
+        if available and remaining_lessons > 0:
+            # Select one more LESSON position
+            lesson_pos = random.choice(available)
+            chapters[lesson_pos] = "LESSON"
 
-        # Randomly select positions for lessons
-        lesson_positions = random.sample(available_positions, possible_lessons)
+            # If we need another LESSON, make sure it's not consecutive
+            if remaining_lessons > 1:
+                exclude.add(lesson_pos - 1)
+                exclude.add(lesson_pos)
+                exclude.add(lesson_pos + 1)
+                available = [p for p in range(2, 8) if p not in exclude]
 
-        # Set selected positions to LESSON type
-        for pos in lesson_positions:
-            chapter_types[pos] = ChapterType.LESSON
+                if available:
+                    lesson_pos2 = random.choice(available)
+                    chapters[lesson_pos2] = "LESSON"
+
+    # Fill remaining positions with STORY
+    for p in range(2, 8):
+        if chapters[p] is None:
+            chapters[p] = "STORY"
+
+    # Convert string chapter types to ChapterType enum
+    chapter_types = []
+    for chapter_type in chapters[0:10]:  # Skip the unused 0 index
+        if chapter_type == "STORY":
+            chapter_types.append(ChapterType.STORY)
+        elif chapter_type == "LESSON":
+            chapter_types.append(ChapterType.LESSON)
+        elif chapter_type == "REFLECT":
+            chapter_types.append(ChapterType.REFLECT)
+        elif chapter_type == "CONCLUSION":
+            chapter_types.append(ChapterType.CONCLUSION)
+
+    # Validate the sequence
+    is_valid = check_chapter_sequence(chapter_types)
+    if not is_valid:
+        print("Generated chapter sequence does not pass validation, regenerating...")
+        return generate_chapter_sequence(total_chapters, available_questions)
 
     return [ct.value.upper() for ct in chapter_types]
+
+
+def check_chapter_sequence(chapter_types):
+    """Validate that the chapter sequence follows the required rules.
+
+    Implements the same validation logic as ChapterManager.check_chapter_sequence().
+
+    Args:
+        chapter_types: List of ChapterType values to validate
+
+    Returns:
+        True if the sequence is valid, False otherwise
+    """
+    # Convert ChapterType enum to strings for easier validation
+    seq = [ct.value.upper() for ct in chapter_types]
+
+    # Priority Rule 1: Check no consecutive LESSONs (highest priority)
+    for i in range(len(seq) - 1):
+        if seq[i] == "LESSON" and seq[i + 1] == "LESSON":
+            return False
+
+    # Priority Rule 2: Check at least one REFLECT chapter (required)
+    if "REFLECT" not in seq:
+        return False
+
+    # Check fixed positions
+    if seq[0] != "STORY" or seq[8] != "STORY" or seq[9] != "CONCLUSION":
+        return False
+
+    # Check REFLECT placement: LESSON before, STORY after
+    for i in range(1, len(seq) - 1):
+        if seq[i] == "REFLECT":
+            if seq[i - 1] != "LESSON" or seq[i + 1] != "STORY":
+                return False
+
+    # Count LESSONs (expect 3, but accept 2 or 3)
+    num_lessons = seq.count("LESSON")
+    if num_lessons < 2:
+        return False
+
+    return True
 
 
 def signal_handler(signum, frame):
@@ -167,7 +259,7 @@ def count_available_questions(topic):
 def run_simulation(category=None, topic=None):
     """Run the story simulation and return the run ID."""
     # First get the run ID
-    cmd = ["python", "tests/simulations/story_simulation.py", "--output-run-id"]
+    cmd = [sys.executable, "tests/simulations/story_simulation.py", "--output-run-id"]
     if category:
         cmd.extend(["--category", category])
     if topic:
@@ -187,7 +279,7 @@ def run_simulation(category=None, topic=None):
     # The log file will be created by the simulation, so we need to wait for it
 
     # Now run the actual simulation
-    cmd = ["python", "tests/simulations/story_simulation.py"]
+    cmd = [sys.executable, "tests/simulations/story_simulation.py"]
     if category:
         cmd.extend(["--category", category])
     if topic:

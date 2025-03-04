@@ -113,6 +113,21 @@ Run story simulation on changes to:
 
 ## Testing and Debugging
 
+### Subprocess Execution
+1. Always use `sys.executable` instead of "python" when creating subprocess commands:
+   ```python
+   # Correct way to create a subprocess
+   cmd = [sys.executable, "path/to/script.py"]
+   
+   # Incorrect way (may use wrong Python interpreter)
+   cmd = ["python", "path/to/script.py"]
+   ```
+2. This ensures the subprocess uses the same Python interpreter as the main script, with access to all installed packages in the virtual environment.
+3. This is particularly important for:
+   - `run_simulation_tests.py` when running `story_simulation.py`
+   - Any script that needs to execute Python code in a subprocess
+   - Testing frameworks that spawn multiple processes
+
 ### Question Flow
 1. Verify topic selection in `websocket_router.py`.
 2. Check sampling logic in `chapter_manager.py`.

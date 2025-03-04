@@ -33,6 +33,16 @@
 
 ## Recent Changes
 
+### Fixed Subprocess Python Interpreter Issue in Simulation Tests (2025-03-05)
+- Problem: The `run_simulation_tests.py` script was failing to run the story simulation properly with a `ModuleNotFoundError: No module named 'websockets'` error, even though the package was installed in the virtual environment
+- Root Cause: When the script used commands like `["python", "tests/simulations/story_simulation.py"]` to create subprocesses, it wasn't necessarily using the same Python interpreter that was running the main script
+- Solution:
+  * Modified `run_simulation_tests.py` to use `sys.executable` instead of "python" when creating subprocess commands
+  * Changed the command for getting the run ID from `["python", "tests/simulations/story_simulation.py", "--output-run-id"]` to `[sys.executable, "tests/simulations/story_simulation.py", "--output-run-id"]`
+  * Changed the command for running the actual simulation from `["python", "tests/simulations/story_simulation.py"]` to `[sys.executable, "tests/simulations/story_simulation.py"]`
+  * This ensures that the subprocess uses the same Python interpreter that's running the main script, which has access to all the installed packages in the virtual environment
+- Result: The story simulation now runs correctly when executed through `run_simulation_tests.py`, properly generating chapters and allowing making choices
+
 ### Mobile Font Size Controls Implementation (2025-03-04)
 - Problem: Mobile users needed a way to adjust font size for better readability
 - Solution:

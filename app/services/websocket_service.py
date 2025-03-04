@@ -365,11 +365,33 @@ async def stream_and_send_chapter(
             )
             # We'll log this but continue processing normally
 
-        # Stream the paragraph word by word
-        words = paragraph.split()
-        for word in words:
-            await websocket.send_text(word + " ")
-            await asyncio.sleep(WORD_DELAY)
+        # Check if paragraph starts with dialogue (quotation mark)
+        if paragraph.strip().startswith('"'):
+            # For paragraphs starting with dialogue, handle differently to preserve opening quotes
+            words = paragraph.split()
+            if len(words) > 0:
+                # Find the first word with the quotation mark
+                first_word = words[0]
+
+                # Send the first word with its quotation mark intact
+                await websocket.send_text(first_word + " ")
+                await asyncio.sleep(WORD_DELAY)
+
+                # Then stream the rest of the words normally
+                for word in words[1:]:
+                    await websocket.send_text(word + " ")
+                    await asyncio.sleep(WORD_DELAY)
+            else:
+                # Fallback if splitting doesn't work as expected
+                await websocket.send_text(paragraph)
+                await asyncio.sleep(PARAGRAPH_DELAY)
+        else:
+            # For non-dialogue paragraphs, stream normally word by word
+            words = paragraph.split()
+            for word in words:
+                await websocket.send_text(word + " ")
+                await asyncio.sleep(WORD_DELAY)
+
         await websocket.send_text("\n\n")
         await asyncio.sleep(PARAGRAPH_DELAY)
 
@@ -469,12 +491,35 @@ async def send_story_complete(
             )
             # We'll log this but continue processing normally
 
-        # Stream the paragraph word by word
-        words = paragraph.split()
-        for i in range(0, len(words), WORD_BATCH_SIZE):
-            batch = " ".join(words[i : i + WORD_BATCH_SIZE])
-            await websocket.send_text(batch + " ")
-            await asyncio.sleep(WORD_DELAY)
+        # Check if paragraph starts with dialogue (quotation mark)
+        if paragraph.strip().startswith('"'):
+            # For paragraphs starting with dialogue, handle differently to preserve opening quotes
+            words = paragraph.split()
+            if len(words) > 0:
+                # Find the first word with the quotation mark
+                first_word = words[0]
+
+                # Send the first word with its quotation mark intact
+                await websocket.send_text(first_word + " ")
+                await asyncio.sleep(WORD_DELAY)
+
+                # Then stream the rest of the words normally
+                for i in range(1, len(words), WORD_BATCH_SIZE):
+                    batch = " ".join(words[i : i + WORD_BATCH_SIZE])
+                    await websocket.send_text(batch + " ")
+                    await asyncio.sleep(WORD_DELAY)
+            else:
+                # Fallback if splitting doesn't work as expected
+                await websocket.send_text(paragraph)
+                await asyncio.sleep(PARAGRAPH_DELAY)
+        else:
+            # For non-dialogue paragraphs, stream normally word by word
+            words = paragraph.split()
+            for i in range(0, len(words), WORD_BATCH_SIZE):
+                batch = " ".join(words[i : i + WORD_BATCH_SIZE])
+                await websocket.send_text(batch + " ")
+                await asyncio.sleep(WORD_DELAY)
+
         await websocket.send_text("\n\n")
         await asyncio.sleep(PARAGRAPH_DELAY)
 

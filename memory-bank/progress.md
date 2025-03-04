@@ -1,5 +1,36 @@
 # Progress Log
 
+## 2025-03-05: Fixed Subprocess Python Interpreter Issue in Simulation Tests
+
+### Fixed Python Interpreter Path in Subprocess Commands
+- Problem: The `run_simulation_tests.py` script was failing to run the story simulation properly with a `ModuleNotFoundError: No module named 'websockets'` error, even though the package was installed in the virtual environment
+- Root Cause:
+  * When the script used commands like `["python", "tests/simulations/story_simulation.py"]` to create subprocesses, it wasn't necessarily using the same Python interpreter that was running the main script
+  * This led to the subprocess potentially using a different Python interpreter that didn't have the required `websockets` package installed
+  * The issue occurred specifically when running the script from within a virtual environment, where packages are installed locally to that environment
+- Solution:
+  * Modified `run_simulation_tests.py` to use `sys.executable` instead of "python" when creating subprocess commands
+  * Changed the command for getting the run ID:
+    ```python
+    # Changed from:
+    cmd = ["python", "tests/simulations/story_simulation.py", "--output-run-id"]
+    # To:
+    cmd = [sys.executable, "tests/simulations/story_simulation.py", "--output-run-id"]
+    ```
+  * Changed the command for running the actual simulation:
+    ```python
+    # Changed from:
+    cmd = ["python", "tests/simulations/story_simulation.py"]
+    # To:
+    cmd = [sys.executable, "tests/simulations/story_simulation.py"]
+    ```
+  * This ensures that the subprocess uses the same Python interpreter that's running the main script, which has access to all the installed packages in the virtual environment
+- Result:
+  * The story simulation now runs correctly when executed through `run_simulation_tests.py`
+  * The script properly generates chapters and allows making choices
+  * All tests pass successfully when running the full test suite
+  * The testing framework is now more reliable, ensuring consistent Python interpreter usage across all subprocess calls
+
 ## 2025-03-04: Mobile Font Size Controls Implementation
 
 ### Added Font Size Adjustment Feature for Mobile Users

@@ -59,7 +59,7 @@ def test_final_chapter_sequence_exists():
         )
 
         # Verify the chapter types are valid
-        valid_chapter_types = {"STORY", "LESSON", "CONCLUSION"}
+        valid_chapter_types = {"STORY", "LESSON", "CONCLUSION", "REFLECT"}
         for chapter_type in chapter_sequence:
             assert chapter_type in valid_chapter_types, (
                 f"Invalid chapter type: {chapter_type}"

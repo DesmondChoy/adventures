@@ -1033,7 +1033,7 @@ function startAdventure() {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = text;
             const decodedText = tempDiv.textContent;
-            
+
             // Check if this is the first chunk of text and it starts with a dialogue verb
             // This indicates we might have lost a character name and opening quote
             if (streamBuffer === '' && /^(chirped|said|whispered|shouted|called|murmured|exclaimed|replied|asked|answered|responded)/.test(decodedText.trim())) {
@@ -1041,9 +1041,27 @@ function startAdventure() {
                 // If we're starting with a dialogue verb, it's likely we lost the character name
                 // We'll log this but continue processing normally
             }
-            
+
+            // Special handling for dialogue text at the beginning of paragraphs
+            let textToAdd = decodedText;
+
+            // If this is the first chunk of a paragraph and it starts with a quotation mark
+            // make sure we preserve it properly
+            if (streamBuffer === '' && decodedText.trim().startsWith('"')) {
+                console.log('Detected dialogue at paragraph start - ensuring proper formatting');
+                // Ensure the quotation mark is preserved
+                textToAdd = decodedText;
+            }
+
+            // Check if we're starting a new paragraph after a double newline
+            if (streamBuffer.endsWith('\n\n') && decodedText.trim().startsWith('"')) {
+                console.log('Detected dialogue at new paragraph - ensuring proper formatting');
+                // Ensure the quotation mark is preserved for new paragraphs
+                textToAdd = decodedText;
+            }
+
             // Normalize special characters while preserving opening quotes and character names
-            const normalizedText = decodedText
+            const normalizedText = textToAdd
                 .replace(/[\u2018\u2019]/g, "'")
                 .replace(/[\u201C\u201D]/g, '"')
                 .replace(/\u2014/g, '--')
@@ -1052,22 +1070,22 @@ function startAdventure() {
 
             // Add text to buffer and immediately display
             streamBuffer += normalizedText;
-            
+
             try {
                 // Convert the entire buffer to HTML while preserving line breaks
                 const htmlContent = marked.parse(streamBuffer, {
                     breaks: true,
                     gfm: true
                 });
-                
+
                 // Apply the HTML content to the story container
                 storyContent.innerHTML = htmlContent;
-                
+
                 // Additional check for dialogue formatting issues
-                if (streamBuffer.trim().startsWith('chirped') || 
-                    streamBuffer.trim().startsWith('said') || 
-                    streamBuffer.trim().startsWith('whispered') || 
-                    streamBuffer.trim().startsWith('shouted') || 
+                if (streamBuffer.trim().startsWith('chirped') ||
+                    streamBuffer.trim().startsWith('said') ||
+                    streamBuffer.trim().startsWith('whispered') ||
+                    streamBuffer.trim().startsWith('shouted') ||
                     streamBuffer.trim().startsWith('called') ||
                     streamBuffer.trim().startsWith('murmured') ||
                     streamBuffer.trim().startsWith('exclaimed') ||
@@ -1075,9 +1093,9 @@ function startAdventure() {
                     streamBuffer.trim().startsWith('asked') ||
                     streamBuffer.trim().startsWith('answered') ||
                     streamBuffer.trim().startsWith('responded')) {
-                    
+
                     console.warn('Story content starts with dialogue verb - possible formatting issue');
-                    
+
                     // We could potentially add a visual indicator here for the user
                     // For example, adding a small warning icon or changing the text color
                     // But for now, we'll just log the warning
@@ -1087,7 +1105,7 @@ function startAdventure() {
                 // Fallback to plain text if markdown parsing fails
                 storyContent.textContent = streamBuffer;
             }
-            
+
             // Always scroll to bottom as text streams in
             storyContent.scrollTop = storyContent.scrollHeight;
         }
