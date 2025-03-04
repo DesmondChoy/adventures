@@ -25,7 +25,6 @@ class StoryCategory(Base):
     name = Column(String, unique=True, index=True)  # Internal name (key)
     display_name = Column(String)  # User-friendly name
     description = Column(Text)
-    tone = Column(String)
     story_config = Column(Text)  # Store entire config as JSON
 
 

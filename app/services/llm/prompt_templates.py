@@ -20,9 +20,7 @@ You expertly weave moments of humor, surprise, and gentle tension throughout you
 Your stories unfold at a rhythm that sustains interest—alternating between exciting action, thoughtful discovery, and moments of reflection—while ensuring learning emerges organically from the characters' experiences rather than from direct instruction.
 
 # Story Elements
-- Setting: {setting_types}
-- Character: {character_archetypes}
-- Rule: {story_rules}
+- Setting: {settings}
 - Theme: {selected_theme}
 - Moral Teaching: {selected_moral_teaching}
 - Sensory Details:
@@ -62,18 +60,17 @@ FIRST_CHAPTER_PROMPT = """# Current Context
 {story_history}
 
 # Chapter Development Guidelines
-1. Character Introduction: Establish the protagonist through vivid sensory details
-2. World Building: Create an immersive setting using the sensory elements
-3. Decision Point: Build naturally to a pivotal choice that will shape the character's journey
+1. Agency Decision: The chapter naturally and organically concludes with a situation where Agency Options are offered - each with the potential to shape the character's journey across all future chapters.
+2. This chapter MUST have at least 10 paragraphs.
 
-# {agency_category_name} Options
+# Agency Options
 {agency_options}
 
 # Choice Format Specification
 <CHOICES>
-Choice A: {agency_category_name}: {option_a} - [Briefly describe potential actions unlocked with this agency]
-Choice B: {agency_category_name}: {option_b} - [Briefly describe potential actions unlocked with this agency]
-Choice C: {agency_category_name}: {option_c} - [Meaningful action using this agency]
+Choice A: {agency_category_name}: {option_a} - [Offer a sneak peek of the potential actions unlocked with this agency choice]
+Choice B: {agency_category_name}: {option_b} - [Offer a sneak peek of the potential actions unlocked with this agency choice]
+Choice C: {agency_category_name}: {option_c} - [Offer a sneak peek of the potential actions unlocked with this agency choice]
 </CHOICES>
 
 # CRITICAL REQUIREMENTS
@@ -96,8 +93,7 @@ STORY_CHAPTER_PROMPT = """# Current Context
 {lesson_history}
 {agency_guidance}
 
-# Current Chapter Emphasis
-- Focus on character development and plot progression
+2. Focus on character development and plot progression
 
 {plot_twist_guidance}
 
@@ -122,15 +118,13 @@ LESSON_CHAPTER_PROMPT = """# Current Context
 {lesson_history}
 {agency_guidance}
 
-# Current Chapter Emphasis
-1. Core Question Integration: Include this exact question in your narrative: "{question}"
-2. Story Object Method: Create ONE visually interesting element that naturally connects to the question
-3. Narrative Integration: Make the question feel like a natural part of the character's journey
-4. Educational Context: Establish clear stakes for why answering matters to the characters
+2. Core Question Integration: Include this exact question in your narrative: "{question}"
+3. Story Object Method: Create ONE visually interesting element that naturally connects to the question
+4. Narrative Integration: Make the question feel like a natural part of the character's journey
+5. Educational Context: Establish clear stakes for why answering matters to the characters
 
 # Available Answers
 {formatted_answers}
-
 
 DO NOT:
 - Mention/Reference any of the available answers in the narrative
@@ -145,20 +139,15 @@ REFLECT_CHAPTER_PROMPT = """# Current Context
 # Story History
 {story_history}
 
-# Chapter Development Guidelines
-1. Reflection Purpose: Process the previous lesson's understanding
-
-# Current Chapter Emphasis
-This is an opportunity for to apply Narrative-Driven Reflection. 
-The character previously answered: "{question}" with "{chosen_answer}" ({answer_status})
-{correct_answer_info}
-
 {reflective_technique}
 
-## Scene Structure
-1. Narrative Acknowledgment: {acknowledgment_guidance}
-2. Socratic Exploration: Guide the character to {exploration_goal} through thoughtful questions
-3. Story Integration: Connect this reflection to the ongoing narrative and theme of "{theme}"
+# Chapter Development Guidelines
+1. Reflection Purpose: The character previously answered: "{question}" with "{chosen_answer}" ({answer_status})
+{correct_answer_info}.
+2. Narrative Acknowledgment: {acknowledgment_guidance}
+3. Socratic Exploration: Guide the character to {exploration_goal} through thoughtful questions
+4. Story Integration: Connect this reflection to the ongoing narrative and theme of "{theme}"
+
 {agency_guidance}
 
 ## Choice Structure
@@ -284,7 +273,7 @@ categories = {
         "Animal Whisperer [a figure with leafy green tattoos swirling on their arms, encircled by chatting birds and hopping rabbits] - Gain the gift of chatting with deer, calling birds to sing, and listening to the forest's whispers to uncover its mysteries.",
         "Element Bender [a swirling figure with hands sparking flames, splashing water, tossing earth, and twirling breezes in a dance] - Acquire the power to shape fire into stars, bend rivers to bridges, and spin air into whirlwinds to sweep away trouble.",
         "Storyteller [a dreamy figure with a giant book glowing with golden words that leap into shimmering pictures above] - Receive the talent to weave tales so real you can step inside them, bringing heroes and dragons to life with every word you speak.",
-        "Size Shifter [a figure haloed by sparkling rings, stretching to touch clouds or shrinking to ride a ladybug's back] - Gain the ability to grow huge to cross mountains or shrink tiny to sneak through keyholes, always just the right size for the moment.",
+        "Size Shifter [a figure stretching to touch clouds, another figure shrinking to ride a ladybug's back] - Gain the ability to grow huge to cross mountains or shrink tiny to sneak through keyholes, always just the right size for the moment.",
         "Light Weaver [a figure with fingers trailing ribbons of ruby, sapphire, and emerald light, weaving them into glowing shapes] - Acquire the skill to spin light into crowns, bridges, or butterflies, brightening the world with every colorful twist you make.",
     ],
 }
@@ -324,38 +313,39 @@ def get_agency_category() -> Tuple[str, str, List[str]]:
 BASE_PHASE_GUIDANCE: Dict[str, str] = {
     "Exposition": (
         "# Phase Guidance: Exposition\n"
-        "- Focus: This is the opening chapter, where you lay the foundation for the entire story.\n"
-        "- Narrative Goals: Introduce the protagonist, their ordinary world, and the initial situation with vivid clarity. Establish who they are, what their daily life looks like, and the setting they inhabit. Subtly hint at the adventure or conflict to come, building toward a pivotal agency choice (e.g., crafting a magical item or choosing a companion) that will launch their journey.\n"
-        "- Emotional Tone: Create an intriguing and inviting atmosphere that reflects the character’s normalcy—calm, familiar, yet laced with a promise of disruption or wonder.\n"
-        "- Sensory Integration: Immerse the reader in the world with rich sensory details—sights, sounds, smells, textures—that make the character’s environment feel alive and relatable. Use these details to foreshadow the path ahead without starting the main action."
+        "- Focus: This is the opening chapter, where you lay the foundation for the entire story through lush character creation, vibrant world weaving, and building toward a pivotal agency decision that will shape the adventure.\n"
+        "- Character Introduction: Pour extra creativity into introducing the protagonist, painting them with vivid sensory strokes to reveal their spirit, quirks, and spark in this opening tale. Establish who they are, what their daily life looks like, and subtly hint at the adventure to come.\n"
+        "- World Building: Take your time spinning a breathtaking setting of {adventure_topic}, threading sensory elements into a tapestry that wraps the reader in its magic and makes the environment feel alive and relatable.\n"
+        "- Emotional Tone: Create an intriguing and inviting atmosphere that reflects the character's normalcy—calm, familiar, yet laced with a promise of disruption or wonder.\n"
+        "- Sensory Integration: Immerse the reader in the world with rich sensory details—sights, sounds, smells, textures—that make the character's environment feel alive and relatable. Use these details to foreshadow the path ahead without starting the main action."
     ),
     "Rising": (
         "# Phase Guidance: Rising Action\n"
         "- Focus: In this chapter, the character steps into their journey and encounters their first challenges.\n"
         "- Narrative Goals: Develop the plot by introducing early obstacles or conflicts that nudge the character out of their comfort zone. These should feel fresh and exciting, setting the stage for bigger trials later. Show how the story is beginning to unfold and gain momentum.\n"
-        "- Emotional Tone: Infuse the chapter with excitement and anticipation, capturing the thrill of new experiences and the subtle tension of what’s to come.\n"
-        "- Sensory Integration: Highlight the character’s new surroundings or situations with vivid sensory details—describe the unfamiliar sounds, shifting landscapes, or unexpected sensations they encounter as the journey begins."
+        "- Emotional Tone: Infuse the chapter with excitement and anticipation, capturing the thrill of new experiences and the subtle tension of what's to come.\n"
+        "- Sensory Integration: Highlight the character's new surroundings or situations with vivid sensory details—describe the unfamiliar sounds, shifting landscapes, or unexpected sensations they encounter as the journey begins."
     ),
     "Trials": (
         "# Phase Guidance: Trials\n"
         "- Focus: The character now faces escalating challenges that push them to their limits.\n"
-        "- Narrative Goals: Introduce significant setbacks, obstacles, or revelations in this chapter that raise the stakes and test the character’s resolve. Show them struggling, learning, and adapting as the story deepens. Each moment should feel like a step toward the ultimate confrontation.\n"
-        "- Emotional Tone: Build a sense of tension and determination, tinged with growing uncertainty or doubt, to reflect the character’s intense efforts and inner growth.\n"
-        "- Sensory Integration: Intensify the sensory details during key moments—gritty textures, sharp sounds, or overwhelming sights—to make the struggles vivid and visceral, drawing the reader into the character’s experience."
+        "- Narrative Goals: Introduce significant setbacks, obstacles, or revelations in this chapter that raise the stakes and test the character's resolve. Show them struggling, learning, and adapting as the story deepens. Each moment should feel like a step toward the ultimate confrontation.\n"
+        "- Emotional Tone: Build a sense of tension and determination, tinged with growing uncertainty or doubt, to reflect the character's intense efforts and inner growth.\n"
+        "- Sensory Integration: Intensify the sensory details during key moments—gritty textures, sharp sounds, or overwhelming sights—to make the struggles vivid and visceral, drawing the reader into the character's experience."
     ),
     "Climax": (
         "# Phase Guidance: Climax\n"
-        "- Focus: This chapter is the story’s turning point, where the character confronts the central conflict head-on.\n"
+        "- Focus: This chapter is the story's turning point, where the character confronts the central conflict head-on.\n"
         "- Narrative Goals: Deliver an exciting, transformative moment that resolves the main tension or reveals a critical truth. This should feel like the payoff for all prior buildup, with the character facing their greatest challenge or achieving a breakthrough.\n"
         "- Emotional Tone: Make the atmosphere intense and electrifying, with high stakes, raw emotion, and a sense of triumph or realization.\n"
         "- Sensory Integration: Use peak sensory experiences—blinding lights, deafening roars, or heart-pounding stillness—to amplify the drama of crucial scenes and make them unforgettable."
     ),
     "Return": (
         "# Phase Guidance: Return\n"
-        "- Focus: In this final chapter, showcase the character’s transformation and bring the story to a close.\n"
-        "- Narrative Goals: Resolve the journey by showing how the character has changed and what they’ve gained or lost. Tie up loose ends and provide a satisfying conclusion that reflects their growth. This is about closure and reflection, not new conflicts.\n"
+        "- Focus: In this final chapter, showcase the character's transformation and bring the story to a close.\n"
+        "- Narrative Goals: Resolve the journey by showing how the character has changed and what they've gained or lost. Tie up loose ends and provide a satisfying conclusion that reflects their growth. This is about closure and reflection, not new conflicts.\n"
         "- Emotional Tone: Craft a reflective, peaceful tone with a sense of fulfillment or bittersweet completion, leaving the reader with a lasting impression.\n"
-        "- Sensory Integration: Use sensory details to highlight the character’s new perspective—familiar sights now seen differently, quiet sounds of calm, or a tangible sense of homecoming—to underscore their evolution."
+        "- Sensory Integration: Use sensory details to highlight the character's new perspective—familiar sights now seen differently, quiet sounds of calm, or a tangible sense of homecoming—to underscore their evolution."
     ),
 }
 
@@ -363,8 +353,8 @@ PLOT_TWIST_GUIDANCE: Dict[str, str] = {
     "Rising": (
         "## Plot Twist Development\n"
         "- Subtly introduce elements that hint at: {plot_twist}\n"
-        "- Plant small, seemingly insignificant details that will become important, such as a passing remark, a peculiar object, or a character’s fleeting odd behavior.\n"
-        "- Keep the hints subtle and in the background, blending them seamlessly into the scene so they don’t stand out—readers should only recognize their significance in hindsight.\n"
+        "- Plant small, seemingly insignificant details that will become important, such as a passing remark, a peculiar object, or a character's fleeting odd behavior.\n"
+        "- Keep the hints subtle and in the background, blending them seamlessly into the scene so they don't stand out—readers should only recognize their significance in hindsight.\n"
         "- **Purpose**: Lay the groundwork for the twist by scattering clues that feel like natural parts of the story world."
     ),
     "Trials": (
@@ -378,7 +368,7 @@ PLOT_TWIST_GUIDANCE: Dict[str, str] = {
         "## Plot Twist Development\n"
         "- Bring the plot twist to its full revelation: {plot_twist}\n"
         "- Connect all the previously planted hints, clearly showing how each detail—whether a forgotten object, a strange action, or an overlooked comment—led to this moment.\n"
-        "- Show how this revelation changes everything, reshaping the character’s journey, the stakes, or the reader’s perception of the story in a dramatic, satisfying way.\n"
+        "- Show how this revelation changes everything, reshaping the character's journey, the stakes, or the reader's perception of the story in a dramatic, satisfying way.\n"
         "- **Purpose**: Deliver a powerful, earned twist that ties the narrative together and leaves the reader both shocked and delighted by the payoff."
     ),
 }
@@ -451,13 +441,13 @@ REFLECT_CONFIG = {
     "correct": {
         "answer_status": "Correct",
         "acknowledgment_guidance": "Create a story event that acknowledges success",
-        "exploration_goal": "deepen their understanding and explore broader implications",
+        "exploration_goal": "deepen their understanding of {question} and explore broader implications",
         "correct_answer_info": "This was the correct answer.",
     },
     "incorrect": {
         "answer_status": "Incorrect",
         "acknowledgment_guidance": "Create a story event that gently corrects the mistake",
-        "exploration_goal": "discover the correct understanding through guided reflection",
+        "exploration_goal": "discover the correct understanding of {question} through guided reflection",
         "correct_answer_info": 'The correct answer was: "{correct_answer}".',
     },
 }

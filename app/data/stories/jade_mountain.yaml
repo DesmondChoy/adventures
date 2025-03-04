@@ -1,0 +1,48 @@
+name: "Jade Mountain"
+description: "Journey into a realm where emerald peaks shimmer with hidden magic, and every choice you make carves a unique path through its lush, mysterious landscapes."
+
+narrative_elements:
+  settings:
+    - "The Crystal Canopy: A lofty plateau encircled by glass-like trees that refract sunlight into dancing rainbows. Every step on its glimmering trails can awaken hidden passageways or seal them, responding to the bravery and kindness of those who tread there."
+    - "Moonlit Lagoon: A tranquil waterscape illuminated by bioluminescent lily pads that shift formation under the gaze of curious explorers. Unknown creatures dwell beneath its shimmering surface, offering alliances or presenting mischievous challenges depending on how visitors treat the lagoon's delicate balance."
+    - "Emerald Coves: A network of glistening caves within Jade Mountain's heart, strewn with luminescent moss that guides travelers or retreats in fear. Whispered echoes tell of secret vaults and hidden tunnels waiting to be uncovered by those who dare to explore."
+    - "Windchime Terrace: A breezy outcrop where clusters of musical windchimes sway in unison, resonating differently with each traveler's intent. Their melodies can reveal unseen pathways or summon gentle guardians that help or hinder, based on the user's past actions."
+    - "Stormlit Ascent: A steep trail leading toward Jade Mountain's apex, perpetually roiled by swirling clouds of mist and flickers of lightning. Bold deeds might calm the raging skies, while indecision could spark sudden gusts that alter the path ahead."
+  themes:
+    - "The Power of Friendship: Bonds formed through trust and loyalty can turn the tide of any challenge, with every supportive choice fortifying relationships that drive the story forward."
+    - "Respect for the Unknown: Embracing mystery and the magic of unseen forces can unlock new discoveries, while dismissive actions may close off opportunities and growth."
+    - "Unity in Diversity: Collaborations between characters from varied backgrounds foster strength and harmony, influencing plot progress and revealing shared values beneath apparent differences."
+    - "Courage Under Doubt: Moments of uncertainty become tests of bravery, shaping personal development as the user faces fears head-on or retreats, affecting future possibilities."
+    - "Hope in Adversity: Even in dire circumstances, optimism and perseverance can illuminate hidden solutions, leading to breakthroughs that may redefine the journey's outcome."
+  moral_teachings:
+    - "Kindness Breeds Compassion: Showing empathy to others often inspires mutual support, leading to pivotal assistance in times of need. Acts of cruelty might drive away those who could have been allies."
+    - "Responsibility in Action: Stepping up to right a wrong can prevent harm, while neglecting duty might amplify dangers and teach lessons of accountability."
+    - "Humility Sparks Growth: A humble approach to learning from mistakes or seeking help encourages personal development, whereas arrogance could create barriers and missed chances."
+    - "Steadfast Honesty: Being truthful in dire moments can establish trust, opening new routes forward, while deceit can sow seeds of doubt that alter future outcomes."
+    - "Balance Rewards Harmony: Nurturing equilibrium between personal wants and collective needs fosters stability, while tipping the scales too far can unbalance the world around the user."
+  plot_twists:
+    - "Hidden Guardian's Revelation: A seemingly passive bystander abruptly claims a role of great importance, shifting allegiances based on how the user has treated them so far."
+    - "Unexpected Rival Return: A rival thought long gone reappears with a humorous or surprising backstory twist, influenced by past encounters or decisions."
+    - "Enchanted Key's Secret: A mundane trinket reveals itself as a powerful token that morphs to reflect the user's choices, either aiding progress or complicating it at a crucial juncture."
+    - "Playful Trickster's Bargain: A mischievous entity offers an irresistible deal, adjusting terms according to the user's moral standing, leading to comedic or dramatic outcomes."
+    - "Echo of the Past: Strange echoes manifest a new ally or obstacle connected to the user's own history, re-framing previous decisions in a different light without presenting any danger."
+
+sensory_details:
+  visuals:
+    - "Celestial Vines: Twisting ivy strands that shimmer with captured starlight, intensifying if the user shows compassion to nearby creatures."
+    - "Floating Embers: Tiny orbs of light drifting around pathways, glowing brighter in the presence of hope or dimming if doubt prevails."
+    - "Glistening Puddles: Small pools reflecting enchanted visions of possible futures, clarity sharpening with each brave choice the user makes."
+    - "Gauzy Fog: Wispy mists that swirl playfully around those who exhibit curiosity, occasionally parting to reveal hidden routes."
+    - "Aurora Flashes: Vibrant curtains of light gliding across the sky, rippling in response to major story milestones."
+  sounds:
+    - "Serenity Chimes: Soft, tinkling bells that resonate after an act of kindness, signaling a moment of unity or goodwill."
+    - "Echoing Footfalls: Rhythmic thuds that grow louder when uncertainty creeps in, prompting the user to make a decisive move."
+    - "Gentle Drip: The soft patter of water droplets, matching the user's emotional state; calm when they are at peace, tense if they wrestle with conflict."
+    - "Arcane Whispers: Faint murmurs brushing the air during pivotal discoveries, hinting at the hidden wonders or truths just out of sight."
+    - "Cheerful Chorus: A burst of harmonious humming that appears spontaneously to celebrate acts of courage, fading if fear overtakes the moment."
+  smells:
+    - "Fragrant Petal Spice: A delicate floral aroma that grows stronger when the user practices empathy, gently guiding them toward benevolent paths."
+    - "Misty Dewdrop: A crisp, refreshing scent that emerges after moments of enlightenment, reinforcing calm and clarity."
+    - "Verdant Herb Perfume: Earthy notes intensify with proactive choices to restore or protect nature, weaving an added layer of immersion."
+    - "Sweet Hearth Musk: A comforting, warm smell that surfaces during reconciliations or peaceful resolutions, instilling a sense of security."
+    - "Sparkling Citrus Breeze: A bright, invigorating scent that wafts in during confident decisions, energizing both spirit and setting."

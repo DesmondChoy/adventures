@@ -177,10 +177,16 @@ def print_separator(title=""):
 
 
 def load_story_data():
-    """Load story data from YAML file."""
+    """Load story data from individual YAML files."""
     try:
-        with open("app/data/new_stories.yaml", "r") as f:
-            return yaml.safe_load(f)
+        # Import here to avoid circular imports
+        sys.path.insert(
+            0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+        )
+        from app.data.story_loader import StoryLoader
+
+        loader = StoryLoader()
+        return loader.load_all_stories()
     except Exception as e:
         simulation_logger.error(f"Failed to load story data: {e}")
         return {"story_categories": {}}

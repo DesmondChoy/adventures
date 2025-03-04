@@ -68,6 +68,25 @@
    - Add robust null checking for API responses
    - Handle failed generation gracefully
    - Use asynchronous processing to maintain performance
+   - Image prompt structure MUST follow this format:
+     ```
+     Fantasy illustration of [Agency Name] in [Story Name], [Visual Details], with [adventure_state.selected_sensory_details["visuals"]], [Base Style]
+     ```
+   - Extract agency name with visual details up to the closing bracket
+   - Include story name from `state.metadata["non_random_elements"]["name"]`
+   - Omit redundant descriptions that come after the dash
+
+5. Data Model:
+   - Story categories in `new_stories.yaml` MUST include `settings` (renamed from `setting_types`)
+   - `story_rules` field has been removed from the data model
+   - Required narrative elements are now only `settings` (validator updated in `story.py`)
+   - System prompt template uses `settings` but no longer includes `story_rules`
+
+6. File Encoding:
+   - All YAML files in `app/data/stories/` MUST be opened with UTF-8 encoding
+   - Use `encoding="utf-8"` parameter when opening files in `story_loader.py`
+   - This ensures proper handling of special characters in story content
+   - Default Windows encoding (cp1252) cannot handle certain special characters
 
 ## Development Workflow
 
@@ -144,6 +163,10 @@ Run story simulation on changes to:
    - Check for missing context.
    - Verify continuity elements.
    - Confirm agency references.
+4. Verify Adventure Topic Reference:
+   - Confirm `state.metadata["non_random_elements"]["name"]` contains the adventure topic name.
+   - Check that `_get_phase_guidance()` correctly replaces the {adventure_topic} placeholder in Exposition phase.
+   - Verify the final prompt includes the specific adventure topic name in the world building section.
 
 ### Image Generation Debugging
 1. Verify API Configuration:
@@ -154,7 +177,7 @@ Run story simulation on changes to:
    - Verify API call parameters.
    - Check response handling.
 3. Analyze Error Handling:
-   - Verify retry mechanism.
+   - Verify retry mechanism (5 retries with exponential backoff).
    - Check null response handling.
    - Confirm fallback behavior.
 4. Agency Choice Visual Details:
@@ -166,6 +189,10 @@ Run story simulation on changes to:
      * Match with full choice text
      * Fallback to agency_lookup if direct category access fails
    - Check final prompt format includes visual details in square brackets.
+5. Gender Consistency:
+   - Verify choice text is passed to `enhance_prompt()`.
+   - Check that narrative text with gender indicators is incorporated in image prompts.
+   - Confirm generated images maintain gender consistency with narrative.
 
 ## Error Handling
 

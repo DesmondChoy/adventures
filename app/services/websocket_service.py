@@ -17,7 +17,7 @@ from app.services.llm import LLMService
 from app.services.chapter_manager import ChapterManager
 from app.services.adventure_state_manager import AdventureStateManager
 from app.init_data import sample_question
-import yaml
+from app.data.story_loader import StoryLoader
 
 # Constants for streaming optimization
 WORD_BATCH_SIZE = 1  # Reduced to stream word by word
@@ -298,96 +298,50 @@ async def stream_and_send_chapter(
 
         # Start async image generation for each choice
         for i, choice in enumerate(chapter_content.choices):
-            # Try to find if this choice corresponds to an agency option
-            # by looking for agency names in the choice text
+            # Simplified agency option extraction
             original_option = None
-            choice_text = choice.text.lower()
 
-            # Extract agency name from choice text
-            agency_name = ""
-            # Check for new format "Category: Option - Action"
-            category_option_match = re.match(r"(?:[^:]+):\s*([^-]+)", choice_text)
-            if category_option_match:
-                # Extract just the option name from the choice text (after the colon, before the dash)
-                agency_name = category_option_match.group(1).strip().lower()
-                logger.debug(f"Extracted agency name from choice text: {agency_name}")
-            # Fallback to the old "As a..." pattern for backward compatibility
-            elif re.match(r"As a (\w+\s*\w*)", choice_text):
-                as_a_match = re.match(r"As a (\w+\s*\w*)", choice_text)
-                agency_name = as_a_match.group(1).strip().lower()
-                logger.debug(
-                    f"Extracted agency name from legacy 'As a' format: {agency_name}"
-                )
-
-            # Try to find the agency option directly from categories
             try:
                 from app.services.llm.prompt_templates import categories
 
-                # First try direct match with the extracted agency name
-                if agency_name:
-                    for category_options in categories.values():
-                        for option in category_options:
-                            option_name = option.split("[")[0].strip().lower()
-                            if agency_name == option_name or agency_name in option_name:
-                                original_option = option
-                                logger.debug(
-                                    f"Found direct match in categories for '{agency_name}'"
-                                )
-                                break
-                        else:
-                            continue
+                # Extract the core name from the choice text
+                choice_text = choice.text
+                clean_text = choice_text.lower()
+
+                # Try to find a matching agency option in categories
+                for category_options in categories.values():
+                    for option in category_options:
+                        option_name = option.split("[")[0].strip().lower()
+
+                        # Check if option name is in the choice text
+                        if option_name in clean_text:
+                            original_option = option
+                            logger.debug(f"Found matching agency option: {option_name}")
+                            break
+
+                    if original_option:
                         break
 
-                # If no match found with agency name, try matching with the full choice text
-                if not original_option:
-                    for category_options in categories.values():
-                        for option in category_options:
-                            option_name = option.split("[")[0].strip().lower()
-                            if option_name in choice_text.lower():
-                                original_option = option
-                                logger.debug(
-                                    f"Found match in choice text: '{option_name}'"
-                                )
-                                break
-                        else:
-                            continue
-                        break
-            except Exception as e:
-                logger.error(f"Error accessing categories: {e}")
-
-                # Fall back to the agency_lookup if direct category access fails
-                if agency_name and agency_name in agency_lookup:
-                    original_option = agency_lookup[agency_name]
-                    logger.debug(
-                        f"Fallback: Found direct match for agency name '{agency_name}' in lookup"
-                    )
-                else:
-                    # Try partial matching if direct match fails
+                # If no match found, try using the agency_lookup as fallback
+                if not original_option and agency_lookup:
+                    # Try to match with any key in the lookup
                     for key, option in agency_lookup.items():
-                        # If we have an agency name from "As a...", prioritize matching that
-                        if agency_name and agency_name in key:
+                        if key in clean_text:
                             original_option = option
-                            logger.debug(
-                                f"Fallback: Found partial match for agency name '{agency_name}' in key '{key}'"
-                            )
+                            logger.debug(f"Found match in agency_lookup: {key}")
                             break
-                        # Otherwise try to find any match in the choice text
-                        elif key in choice_text.lower():
-                            original_option = option
-                            logger.debug(f"Fallback: Found key '{key}' in choice text")
-                            break
+            except Exception as e:
+                logger.error(f"Error finding agency option: {e}")
 
-            # Use the original option with visual details if found, otherwise use the choice text
+            # Generate the image prompt
             if original_option:
-                prompt = image_service.enhance_prompt(
-                    original_option, state, choice.text
-                )
-                logger.debug(
-                    f"Using original agency option for image: {original_option}"
-                )
+                # Pass the entire original option with visual details
+                prompt = image_service.enhance_prompt(original_option, state)
+                logger.debug(f"Using original agency option: {original_option}")
             else:
-                prompt = image_service.enhance_prompt(choice.text, state, choice.text)
-                logger.debug(f"No match found, using choice text: {choice.text}")
+                # If no match found, use the choice text directly
+                prompt = image_service.enhance_prompt(choice.text, state)
+                logger.debug(f"Using choice text directly: {choice.text}")
 
             image_tasks.append(
                 (i, asyncio.create_task(image_service.generate_image_async(prompt)))
@@ -559,10 +513,14 @@ async def generate_chapter(
     Returns:
         Tuple of (ChapterContent, Optional[dict])
     """
-    # Load story configuration
-    with open("app/data/new_stories.yaml", "r") as f:
-        story_data = yaml.safe_load(f)
-    story_config = story_data["story_categories"][story_category]
+    # Load story configuration using StoryLoader
+    try:
+        loader = StoryLoader()
+        story_data = loader.load_all_stories()
+        story_config = story_data["story_categories"][story_category]
+    except Exception as e:
+        logger.error(f"Error loading story data: {str(e)}")
+        raise ValueError(f"Failed to load story data: {str(e)}")
 
     # Get chapter type
     current_chapter_number = len(state.chapters) + 1

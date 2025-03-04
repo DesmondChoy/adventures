@@ -1,5 +1,133 @@
 # Progress Log
 
+## 2025-03-04: Optimized Image Generation Prompts
+
+### Streamlined Prompt Structure for More Consistent Images
+- Problem: Image generation prompts were bloated with redundant information, causing inconsistent results
+- Root Cause:
+  * The prompt included multiple layers of descriptive text that sometimes conflicted with each other
+  * Complex extraction logic with multiple approaches to extract agency details led to inconsistent results
+  * Redundant information from choice text was being included even when visual details were already present
+  * The prompt structure didn't prioritize the most important visual elements
+- Solution:
+  * Restructured the prompt format to focus on essential elements:
+    ```
+    Fantasy illustration of [Agency Name] in [Story Name], [Visual Details], with [adventure_state.selected_sensory_details["visuals"]], [Base Style]
+    ```
+  * Completely rewrote `enhance_prompt()` in `image_generation_service.py` to:
+    - Extract the complete agency name with visual details up to the closing bracket
+    - Include the story name from `adventure_state.metadata["non_random_elements"]["name"]`
+    - Remove redundant descriptions that come after the dash
+    - Add sensory details from the adventure state
+    - Preserve the base style guidance
+  * Added a helper method `_lookup_visual_details()` to find visual details when not present in the original prompt
+  * Simplified agency option extraction in `websocket_service.py` to be more direct and reliable
+- Result:
+  * More consistent image generation with reduced token usage
+  * Improved visual quality by focusing on essential elements
+  * Better organization of prompt components in a logical order
+  * Cleaner, more maintainable code with improved logging
+
+## 2025-03-04: Fixed Outdated References to new_stories.yaml
+
+### Updated Code to Use StoryLoader Consistently
+- Problem: After refactoring story data into individual files, some parts of the codebase were still referencing the old `new_stories.yaml` file, causing errors
+- Root Cause:
+  * While `chapter_manager.py` was updated to use the new `StoryLoader` class during the story data refactoring, other files that directly loaded story data were missed
+  * This caused errors when trying to load story data or generate chapters, as the application couldn't find the old monolithic YAML file
+- Solution:
+  * Updated `app/routers/web.py` to use the new `StoryLoader` class instead of directly loading from the old YAML file
+  * Updated `app/services/websocket_service.py` to use the `StoryLoader` class in the `generate_chapter()` function
+  * Updated `app/init_data.py` to use the `StoryLoader` class in the `load_story_data()` function
+  * Updated `tests/simulations/story_simulation.py` to use the `StoryLoader` class in the `load_story_data()` function
+- Result:
+  * Fixed "Failed to load story data" error in the web interface
+  * Fixed "Error generating chapter: [Errno 2] No such file or directory: 'app/data/new_stories.yaml'" error when starting an adventure
+  * Ensured all parts of the application use the new story data structure consistently
+  * Completed the story data refactoring process by updating all references to the old file
+
+## 2025-03-04: Fixed Character Encoding Issue in Story Loader
+
+### Fixed YAML File Loading with UTF-8 Encoding
+- Problem: Character encoding error when loading YAML files: `'charmap' codec can't decode byte 0x9d in position 3643: character maps to <undefined>`
+- Root Cause:
+  * Files were being opened with the default system encoding (cp1252 on Windows)
+  * One of the story files (specifically `jade_mountain.yaml`) contained a character (byte 0x9d) that couldn't be decoded using the default encoding
+- Solution:
+  * Modified the `load_all_stories()` method in `app/data/story_loader.py` to explicitly use UTF-8 encoding when opening files
+  * Changed `with open(file_path, "r") as f:` to `with open(file_path, "r", encoding="utf-8") as f:`
+- Result: Fixed character encoding issues when loading story files, ensuring proper handling of special characters in YAML content
+
+## 2025-03-04: Story Data Organization Refactoring
+
+### Improved Story Data Management with Individual Files
+- Problem: All story categories were in a single YAML file, making maintenance difficult and increasing risk of syntax errors
+- Solution:
+  * Created a dedicated `app/data/stories/` directory to store individual story files
+  * Split the monolithic `new_stories.yaml` into individual files for each story category:
+    - `festival_of_lights_and_colors.yaml`
+    - `circus_and_carnival_capers.yaml`
+    - `enchanted_forest_tales.yaml`
+    - `jade_mountain.yaml`
+  * Implemented a dedicated `StoryLoader` class in `app/data/story_loader.py` with:
+    - Caching for performance optimization
+    - Error handling and logging
+    - Methods for accessing individual stories and listing available categories
+  * Updated `chapter_manager.py` to use the new loader while maintaining backward compatibility
+  * Created proper test files in `tests/data/` directory:
+    - `test_story_loader.py`: Tests story data loading functionality
+    - `test_story_elements.py`: Tests random element selection
+    - `test_chapter_manager.py`: Tests adventure state initialization
+- Result: Improved maintainability, reduced risk of syntax errors, better scalability for adding new stories, and enhanced collaboration potential
+
+## 2025-03-04: Dynamic Adventure Topic Reference in Exposition Phase
+
+### Enhanced World Building Guidance with Adventure Topic Reference
+- Problem: World building guidance in Exposition phase was generic and didn't reference the specific adventure topic selected by the user
+- Solution:
+  * Modified the BASE_PHASE_GUIDANCE dictionary in `prompt_templates.py` to add an {adventure_topic} placeholder in the "World Building" section of the "Exposition" phase guidance
+  * Updated the `_get_phase_guidance()` function in `prompt_engineering.py` to replace the placeholder with the actual adventure topic name from `state.metadata["non_random_elements"]["name"]`
+  * Added conditional logic to only apply this replacement for the "Exposition" phase
+- Result: Exposition phase guidance now dynamically references the specific adventure topic (e.g., "Jade Mountain") selected by the user, creating a more tailored and immersive storytelling experience
+
+## 2025-03-03: Renamed `setting_types` to `settings` and Removed `story_rules`
+
+### Updated Data Model and Field Naming
+- Problem: Needed to simplify the data model and update field naming for clarity
+- Solution:
+  * Renamed `setting_types` to `settings` in all story categories in `app/data/new_stories.yaml`
+  * Removed all `story_rules` sections from each story category in `app/data/new_stories.yaml`
+  * Updated the validator in `app/models/story.py` to use `settings` instead of `setting_types` and removed `story_rules` from required categories
+  * Modified `app/services/chapter_manager.py` to update the required categories and selection logic
+  * Updated references in `app/services/llm/prompt_engineering.py` to use `settings` instead of `setting_types` and removed references to `story_rules`
+  * Updated the `SYSTEM_PROMPT_TEMPLATE` in `app/services/llm/prompt_templates.py` to use `settings` and removed the `story_rules` line
+  * Updated `app/services/image_generation_service.py` to use `settings` instead of `setting_types`
+- Result: Simplified data model while maintaining core functionality; system now uses `settings` instead of `setting_types` and no longer requires or uses `story_rules` in narrative generation
+
+## 2025-03-03: Removed Unused `character_archetypes` Field
+
+### Removed Unnecessary `character_archetypes` Field from Story Categories
+- Problem: The `character_archetypes` field in story categories wasn't being effectively utilized in the narrative generation
+- Solution:
+  * Removed the `character_archetypes` sections from each story category in `app/data/new_stories.yaml`
+  * Modified `app/models/story.py` to remove `character_archetypes` from the required categories in the `validate_narrative_elements` validator
+  * Updated `app/services/chapter_manager.py` to remove `character_archetypes` from the required categories in the `select_random_elements` function
+  * Removed the `character_archetypes` line from the system prompt template in `app/services/llm/prompt_templates.py`
+  * Removed the `character_archetypes` parameter from the system prompt formatting in `app/services/llm/prompt_engineering.py`
+- Result: Simplified data model and prompt structure while maintaining narrative quality with other elements like settings, rules, themes, and sensory details
+
+## 2025-03-03: Removed Unused `tone` Field
+
+### Removed Unnecessary `tone` Field from Story Categories
+- Problem: The `tone` field in story categories wasn't being passed into the LLM prompt used to generate chapters
+- Solution:
+  * Removed the `tone` field from each story category in `app/data/new_stories.yaml`
+  * Modified `app/services/chapter_manager.py` to remove `tone` from the `non_random_elements` dictionary
+  * Updated `app/database.py` to remove the `tone` Column from the `StoryCategory` class
+  * Changed `app/init_data.py` to remove the `tone` field when creating the `db_category` object
+  * Recreated the database to apply the schema changes
+- Result: Simplified data model by removing unused field, ensuring database schema matches actual usage in the application
+
 ## 2025-03-03: LLM Response Formatting Improvement
 
 ### Fixed "Chapter" Prefix in LLM Responses

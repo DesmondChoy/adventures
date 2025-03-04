@@ -65,6 +65,15 @@
         <div id="introText" class="text-center space-y-2 mb-8">
             <p class="text-xl text-indigo-600 font-medium">Where no two stories are ever the same.</p>
             <p class="text-gray-600 max-w-2xl mx-auto">Choose your path and learn through engaging, personalized adventures.</p>
+            <!-- Debug info - will be hidden in production -->
+            <div id="debugInfo" class="mt-4 p-2 bg-gray-100 text-xs text-left rounded-md" style="display: none;">
+                <p><strong>Debug Info:</strong></p>
+                <p>Total Categories: <span id="debugCategoryCount">{{ story_categories|length }}</span></p>
+                <p>Category IDs: <span id="debugCategoryIds">{{ story_categories.keys()|list }}</span></p>
+                <p>First Category: <span id="debugFirstCategory">{{ story_categories.values()|list|first if story_categories else 'None' }}</span></p>
+            </div>
+            <button onclick="document.getElementById('debugInfo').style.display = document.getElementById('debugInfo').style.display === 'none' ? 'block' : 'none';" 
+                    class="text-xs text-gray-500 underline mt-2">Toggle Debug Info</button>
         </div>
         
         <!-- Screen 1: Story Category Selection -->
@@ -76,7 +85,7 @@
                     {% for category_id, category_data in story_categories.items() %}
                     <div class="carousel-card" data-category="{{ category_id }}" onclick="selectCategory('{{ category_id }}')">
                         <div class="card-face card-front">
-                            <img src="/static/images/categories/{{ category_id }}.jpg" alt="{{ category_data.name }}" class="card-image">
+                            <img src="/static/images/stories/{{ category_id }}.jpg" alt="{{ category_data.name }}" class="card-image">
                         </div>
                         <div class="card-face card-back">
                             <div class="carousel-title">{{ category_data.name }}</div>
@@ -337,22 +346,54 @@
         }
 
         function initializeCarousel() {
+            console.log('Initializing carousel with totalCategories:', totalCategories);
+            console.log('Rotation angle:', rotationAngle);
+            
             const carousel = document.getElementById('categoryCarousel');
+            if (!carousel) {
+                console.error('Carousel element not found!');
+                return;
+            }
+            
             const cards = carousel.getElementsByClassName('carousel-card');
+            console.log('Found carousel cards:', cards.length);
+            
+            if (cards.length === 0) {
+                console.error('No carousel cards found! Check if story_categories data is loaded correctly.');
+                // Add a visible error message on the page
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'p-4 bg-red-100 text-red-800 rounded-md mb-4';
+                errorMsg.innerHTML = `<p><strong>Error:</strong> No story categories found.</p>
+                                     <p>Debug info: Total categories = ${totalCategories}</p>`;
+                carousel.parentNode.insertBefore(errorMsg, carousel);
+                return;
+            }
             
             // Position cards in 3D space
-            for (let i = 0; i < cards.length; i++) {
-                const angle = (i * rotationAngle);
-                const radius = 400;
-                cards[i].style.transform = `rotateY(${angle}deg) translateZ(${radius}px)`;
-                cards[i].style.visibility = 'visible';
+            try {
+                for (let i = 0; i < cards.length; i++) {
+                    const angle = (i * rotationAngle);
+                    const radius = 400;
+                    console.log(`Positioning card ${i} at angle ${angle}deg and radius ${radius}px`);
+                    cards[i].style.transform = `rotateY(${angle}deg) translateZ(${radius}px)`;
+                    cards[i].style.visibility = 'visible';
+                }
+                
+                // Set initial active card
+                updateActiveCard();
+                
+                // Add keyboard navigation
+                document.addEventListener('keydown', handleKeyPress);
+                
+                console.log('Carousel initialization complete');
+            } catch (error) {
+                console.error('Error during carousel initialization:', error);
+                // Add a visible error message on the page
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'p-4 bg-red-100 text-red-800 rounded-md mb-4';
+                errorMsg.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+                carousel.parentNode.insertBefore(errorMsg, carousel);
             }
-
-            // Set initial active card
-            updateActiveCard();
-
-            // Add keyboard navigation
-            document.addEventListener('keydown', handleKeyPress);
 
             // Add touch event handling
             let touchStartX = 0;

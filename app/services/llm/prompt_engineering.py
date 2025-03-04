@@ -75,6 +75,14 @@ def _get_phase_guidance(story_phase: str, state: AdventureState) -> str:
     """
     # Get base guidance for the phase
     base_guidance_text = BASE_PHASE_GUIDANCE.get(story_phase, "")
+
+    # If it's the Exposition phase, replace the adventure_topic placeholder
+    if story_phase == "Exposition" and "non_random_elements" in state.metadata:
+        adventure_topic = state.metadata["non_random_elements"].get("name", "")
+        base_guidance_text = base_guidance_text.replace(
+            "{adventure_topic}", adventure_topic
+        )
+
     return base_guidance_text
 
 
@@ -85,9 +93,7 @@ def build_system_prompt(state: AdventureState) -> str:
         state: The current adventure state containing selected story elements
     """
     return SYSTEM_PROMPT_TEMPLATE.format(
-        setting_types=state.selected_narrative_elements["setting_types"],
-        character_archetypes=state.selected_narrative_elements["character_archetypes"],
-        story_rules=state.selected_narrative_elements["story_rules"],
+        settings=state.selected_narrative_elements["settings"],
         selected_theme=state.selected_theme,
         selected_moral_teaching=state.selected_moral_teaching,
         visuals=state.selected_sensory_details["visuals"],
