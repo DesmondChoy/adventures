@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2025-03-04: Mobile Font Size Controls Implementation
+
+### Added Font Size Adjustment Feature for Mobile Users
+- Problem: Mobile users needed a way to adjust font size for better readability
+- Root Cause:
+  * Text size that works well on desktop may be too small or large on mobile devices
+  * Different mobile devices have varying screen sizes and resolutions
+  * Users have different visual preferences and accessibility needs
+- Solution:
+  * Created a new `font-size-manager.js` file with a `FontSizeManager` class that:
+    - Manages font size adjustments (from 80% to 200% of default size)
+    - Saves user preferences to localStorage for persistence
+    - Applies font size changes to both story content and choice buttons
+    - Shows/hides controls on scroll (matching the chapter indicator behavior)
+    - Only initializes on mobile devices (screen width ≤ 768px)
+  * Updated the HTML structure in `index.html`:
+    - Added font size controls (minus button, percentage display, plus button) in the header row
+    - Removed the progress bar as it wasn't needed
+    - Added proper ARIA labels for accessibility
+  * Added CSS styles:
+    - Mobile-only display for the font size controls
+    - Styled buttons and percentage display to match the app's indigo theme
+    - Added transitions for smooth show/hide behavior
+    - Implemented disabled states for min/max font sizes
+  * Updated the JavaScript:
+    - Modified the `updateProgress` function to work without the progress bar
+    - Added event dispatching for new chapter loads
+    - Included the font-size-manager.js script
+- Result:
+  * Mobile users can now easily adjust text size for better readability
+  * Font size preferences persist between sessions
+  * Controls are only visible on mobile devices
+  * Controls match the app's visual design using the indigo theme
+  * Controls have the same scroll behavior as the chapter indicator
+
+## 2025-03-04: Debug Toggle Removal
+
+### Removed Debug Toggle Button from User Interface
+- Problem: Debug toggle button was visible to users on both desktop and mobile
+- Root Cause:
+  * The debug toggle button was added during development for testing purposes
+  * It was never hidden from the production UI
+  * The button allowed users to see internal debugging information
+- Solution:
+  * Removed the "Toggle Debug Info" button from the UI in `index.html`
+  * Kept the debug info div in the HTML but hidden by default
+  * Added a comment explaining how developers can still access it via the console:
+    `document.getElementById('debugInfo').style.display = 'block';`
+- Result:
+  * Cleaner user interface without developer tools visible to end users
+  * Debug functionality still available to developers when needed
+  * Improved user experience by removing non-essential UI elements
+
 ## 2025-03-04: Optimized Image Generation Prompts
 
 ### Streamlined Prompt Structure for More Consistent Images

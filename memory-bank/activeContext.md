@@ -33,6 +33,27 @@
 
 ## Recent Changes
 
+### Mobile Font Size Controls Implementation (2025-03-04)
+- Problem: Mobile users needed a way to adjust font size for better readability
+- Solution:
+  * Created a new `font-size-manager.js` file to handle font size adjustments
+  * Added font size controls (plus/minus buttons and percentage display) to the header row
+  * Removed the progress bar as it wasn't needed
+  * Styled controls using the app's indigo theme colors
+  * Implemented show/hide behavior on scroll (matching chapter indicator behavior)
+  * Made controls only visible on mobile devices (screen width ≤ 768px)
+  * Ensured font size defaults to 100% for new users
+  * Saved user preferences to localStorage for persistence
+- Result: Mobile users can now easily adjust text size for better readability while maintaining the app's visual design
+
+### Debug Toggle Removal (2025-03-04)
+- Problem: Debug toggle button was visible to users on both desktop and mobile
+- Solution:
+  * Removed the "Toggle Debug Info" button from the UI
+  * Kept the debug info div in the HTML but hidden by default
+  * Added a comment explaining how developers can still access it via the console
+- Result: Cleaner user interface without developer tools visible to end users
+
 ### Optimized Image Generation Prompts (2025-03-04)
 - Problem: Image generation prompts were bloated with redundant information, causing inconsistent results
 - Solution:
