@@ -126,8 +126,8 @@ LESSON_CHAPTER_PROMPT = """# Current Context
 # Available Answers
 {formatted_answers}
 
-DO NOT:
-- Mention/Reference any of the available answers in the narrative
+YOU MUST NOT:
+- Mention/Reference any of the Available Answers
 - Include any choices or <CHOICES> tags in LESSON chapters. The options above are provided for information only and will be handled by the application."""
 
 REFLECT_CHAPTER_PROMPT = """# Current Context
