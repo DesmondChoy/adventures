@@ -17,7 +17,7 @@ from app.services.llm import LLMService
 from app.services.chapter_manager import ChapterManager
 from app.services.adventure_state_manager import AdventureStateManager
 from app.init_data import sample_question
-import yaml
+from app.data.story_loader import StoryLoader
 
 # Constants for streaming optimization
 WORD_BATCH_SIZE = 1  # Reduced to stream word by word
@@ -559,10 +559,14 @@ async def generate_chapter(
     Returns:
         Tuple of (ChapterContent, Optional[dict])
     """
-    # Load story configuration
-    with open("app/data/new_stories.yaml", "r") as f:
-        story_data = yaml.safe_load(f)
-    story_config = story_data["story_categories"][story_category]
+    # Load story configuration using StoryLoader
+    try:
+        loader = StoryLoader()
+        story_data = loader.load_all_stories()
+        story_config = story_data["story_categories"][story_category]
+    except Exception as e:
+        logger.error(f"Error loading story data: {str(e)}")
+        raise ValueError(f"Failed to load story data: {str(e)}")
 
     # Get chapter type
     current_chapter_number = len(state.chapters) + 1

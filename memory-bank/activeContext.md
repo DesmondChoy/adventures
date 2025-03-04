@@ -33,6 +33,15 @@
 
 ## Recent Changes
 
+### Fixed Outdated References to new_stories.yaml (2025-03-04)
+- Problem: After refactoring story data into individual files, some parts of the codebase were still referencing the old `new_stories.yaml` file, causing errors
+- Solution:
+  * Updated `app/routers/web.py` to use the new `StoryLoader` class instead of directly loading from the old YAML file
+  * Updated `app/services/websocket_service.py` to use the `StoryLoader` class in the `generate_chapter()` function
+  * Updated `app/init_data.py` to use the `StoryLoader` class in the `load_story_data()` function
+  * Updated `tests/simulations/story_simulation.py` to use the `StoryLoader` class in the `load_story_data()` function
+- Result: Fixed "Failed to load story data" and "Error generating chapter: [Errno 2] No such file or directory: 'app/data/new_stories.yaml'" errors, ensuring all parts of the application use the new story data structure
+
 ### Fixed Character Encoding Issue in Story Loader (2025-03-04)
 - Problem: Character encoding error when loading YAML files: `'charmap' codec can't decode byte 0x9d in position 3643: character maps to <undefined>`
 - Solution:

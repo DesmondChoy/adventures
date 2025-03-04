@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.templating import Jinja2Templates
-import yaml
 import pandas as pd
 import logging
 import uuid
 from typing import Dict, Any
+from app.data.story_loader import StoryLoader
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -14,48 +14,25 @@ logger = logging.getLogger("story_app")
 def load_story_data() -> Dict[str, Any]:
     """Load story data with error handling."""
     try:
-        with open("app/data/new_stories.yaml", "r") as f:
-            yaml_content = f.read()
-            logger.info(
-                "Raw YAML content",
-                extra={
-                    "content_preview": yaml_content[:200]
-                },  # Log first 200 chars for debugging
-            )
-            data = yaml.safe_load(yaml_content)
-            logger.info(
-                "Parsed YAML data",
-                extra={
-                    "data_type": str(type(data)),
-                    "data_keys": str(
-                        list(data.keys()) if isinstance(data, dict) else "Not a dict"
-                    ),
-                },
-            )
-            # Extract the story_categories from the loaded data
-            story_categories = data.get("story_categories", {})
-            logger.info(
-                "Loaded story data",
-                extra={
-                    "categories_type": str(type(story_categories)),
-                    "categories_count": len(story_categories)
-                    if story_categories
-                    else 0,
-                    "categories": list(story_categories.keys())
-                    if story_categories
-                    else [],
-                    "elements_per_category": {
-                        cat: list(details.keys())
-                        for cat, details in story_categories.items()
-                    }
-                    if story_categories
-                    else {},
-                    "raw_data_keys": list(data.keys())
-                    if isinstance(data, dict)
-                    else "Not a dict",  # Debug log to see top-level structure
-                },
-            )
-            return story_categories
+        story_loader = StoryLoader()
+        all_stories = story_loader.load_all_stories()
+        story_categories = all_stories.get("story_categories", {})
+
+        logger.info(
+            "Loaded story data",
+            extra={
+                "categories_type": str(type(story_categories)),
+                "categories_count": len(story_categories) if story_categories else 0,
+                "categories": list(story_categories.keys()) if story_categories else [],
+                "elements_per_category": {
+                    cat: list(details.keys())
+                    for cat, details in story_categories.items()
+                }
+                if story_categories
+                else {},
+            },
+        )
+        return story_categories
     except Exception as e:
         logger.error("Failed to load story data", extra={"error": str(e)})
         return {}  # Provide empty default value

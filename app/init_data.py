@@ -11,21 +11,23 @@ logger = logging.getLogger("story_app")
 
 
 def load_story_data():
-    """Load and process story categories from YAML file."""
+    """Load and process story categories from individual YAML files."""
     try:
-        with open("app/data/new_stories.yaml", "r") as f:
-            data = yaml.safe_load(f)
-            categories = data.get("story_categories", {})
-            logger.info(
-                "Loaded story data",
-                extra={
-                    "categories": list(categories.keys()),
-                    "elements_per_category": {
-                        cat: list(details.keys()) for cat, details in categories.items()
-                    },
+        from app.data.story_loader import StoryLoader
+
+        loader = StoryLoader()
+        data = loader.load_all_stories()
+        categories = data.get("story_categories", {})
+        logger.info(
+            "Loaded story data",
+            extra={
+                "categories": list(categories.keys()),
+                "elements_per_category": {
+                    cat: list(details.keys()) for cat, details in categories.items()
                 },
-            )
-            return categories
+            },
+        )
+        return categories
     except Exception as e:
         logger.error("Failed to load story data", extra={"error": str(e)})
         return {}  # Provide empty default value

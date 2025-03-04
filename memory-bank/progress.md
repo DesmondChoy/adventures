@@ -1,5 +1,23 @@
 # Progress Log
 
+## 2025-03-04: Fixed Outdated References to new_stories.yaml
+
+### Updated Code to Use StoryLoader Consistently
+- Problem: After refactoring story data into individual files, some parts of the codebase were still referencing the old `new_stories.yaml` file, causing errors
+- Root Cause:
+  * While `chapter_manager.py` was updated to use the new `StoryLoader` class during the story data refactoring, other files that directly loaded story data were missed
+  * This caused errors when trying to load story data or generate chapters, as the application couldn't find the old monolithic YAML file
+- Solution:
+  * Updated `app/routers/web.py` to use the new `StoryLoader` class instead of directly loading from the old YAML file
+  * Updated `app/services/websocket_service.py` to use the `StoryLoader` class in the `generate_chapter()` function
+  * Updated `app/init_data.py` to use the `StoryLoader` class in the `load_story_data()` function
+  * Updated `tests/simulations/story_simulation.py` to use the `StoryLoader` class in the `load_story_data()` function
+- Result:
+  * Fixed "Failed to load story data" error in the web interface
+  * Fixed "Error generating chapter: [Errno 2] No such file or directory: 'app/data/new_stories.yaml'" error when starting an adventure
+  * Ensured all parts of the application use the new story data structure consistently
+  * Completed the story data refactoring process by updating all references to the old file
+
 ## 2025-03-04: Fixed Character Encoding Issue in Story Loader
 
 ### Fixed YAML File Loading with UTF-8 Encoding
