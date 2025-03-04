@@ -75,6 +75,14 @@ def _get_phase_guidance(story_phase: str, state: AdventureState) -> str:
     """
     # Get base guidance for the phase
     base_guidance_text = BASE_PHASE_GUIDANCE.get(story_phase, "")
+
+    # If it's the Exposition phase, replace the adventure_topic placeholder
+    if story_phase == "Exposition" and "non_random_elements" in state.metadata:
+        adventure_topic = state.metadata["non_random_elements"].get("name", "")
+        base_guidance_text = base_guidance_text.replace(
+            "{adventure_topic}", adventure_topic
+        )
+
     return base_guidance_text
 
 
