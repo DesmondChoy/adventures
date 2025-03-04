@@ -1,48 +1,54 @@
 name: "Enchanted Forest Tales"
-description: "A realm where ancient trees whisper secrets and magical creatures wander unseen. It's a place of wonder, courage, and hidden surprises."
+description: "Step beyond the moss-covered archway and into a realm where ancient oaks whisper secrets to those who listen. Here, in the heart of enchanted woodlands, every path you choose awakens new magic, drawing you into a heroic journey shaped by your own decisions."
 
 narrative_elements:
   settings:
-    - "towering mushroom groves that glow at night"
-    - "crystal-clear fairy ponds shimmering with moonbeams"
-    - "enchanted tree villages hidden in twisting branches"
-    - "glittering cobblestone paths that shift underfoot"
-    - "sunlit clearings where gentle woodland creatures gather"
+    - "Glittering Grove: A sun-dappled woodland clearing where flowers glow in the twilight and shifting tree roots reveal hidden pathways based on acts of kindness. Mysterious sprites flit between the blossoms, guiding or hindering explorers depending on their sincerity."
+    - "Skybloom Canopy: A vast network of treetop bridges woven from living vines. The canopy expands or contracts according to the user's friendships with the local birdfolk, offering new vantage points—or perilous drops—tied to trust and cooperation."
+    - "Moonlit Marsh: A mist-shrouded wetland where phosphorescent lily pads light the way at night. Will-o'-wisps scatter if the user chooses deceit, but cluster protectively around those who show compassion, altering the marsh's murky paths."
+    - "Emberwood Fortress: A grand wooden bastion perched on the edge of a simmering woodland volcano. The lava channels beneath the fortress glow brighter when the user embraces courage, forging accessible routes or sealing them off in moments of fear."
+    - "Frostpetal Glade: A shimmering winter oasis deep in the forest, where ice-laden trees bloom with magical frostflowers. Petals scatter to form guiding trails for those who seek redemption, but may freeze solid for those driven by selfish ambition."
+
   themes:
-    - "Friendship formed through shared adventures"
-    - "Personal growth discovered by overcoming fears"
-    - "The power of teamwork in solving forest mysteries"
-    - "Respect for all living things fosters unity"
-    - "Small deeds can have extraordinary consequences"
+    - "Friendship and Unity: Every alliance forged in the forest shapes the direction of the tale, opening doors to communal growth or leading to challenges overcome best with trusted companions."
+    - "Responsibility to Nature: Acts of care toward flora and fauna are reciprocated by the enchanted environment, while neglect or harm can stir the forest's protective forces, altering the journey's course."
+    - "Courage in the Unknown: Venturing beyond familiar glens uncovers wonders and potential perils. Summoning bravery can unlock hidden trails, while fear may cause protective barriers of vine or mist to form."
+    - "The Power of Curiosity: Those who question ancient runes and whimsical creatures discover deeper layers of magic. A dismissive attitude may close pathways, while an inquiring mind reveals secret lore."
+    - "Growth Through Challenge: Obstacles in the wood test resolve and empathy. Passing each test with kindness or resilience leads to personal growth, shaping the user's role in the unfolding story."
+
   moral_teachings:
-    - "Bravery means standing up for what is right"
-    - "Loyalty is proven by helping others in need"
-    - "Generosity brings unexpected blessings"
-    - "Listening to elders can lead to invaluable wisdom"
-    - "Truth shines brighter than the darkest lie"
+    - "Kindness Breeds Harmony: Choosing to help a struggling creature might earn a devoted ally, while turning away could incite unease, leaving you to face the forest's trials alone."
+    - "Bravery Invites Opportunity: Defending a frightened traveler against lurking shadows can open new routes or reveal magical secrets, whereas hiding from danger risks losing vital guidance."
+    - "Generosity Wins Hearts: Offering supplies or comfort to weary animals can prompt them to share valuable information, but hoarding wealth or resources risks angering the local spirits."
+    - "Patience Guides Wisdom: Taking time to listen to a wise old owl or to study cryptic runes can prevent disastrous missteps, while rushing ahead may unleash chaos within the enchanted realm."
+    - "Honesty Nurtures Trust: Telling the truth about your intentions might earn the counsel of a mystical guardian, but deception can corrode alliances and unleash hidden dangers."
+
   plot_twists:
-    - "A trusted guide suddenly reveals a hidden royal heritage"
-    - "A mischievous forest sprite steals a crucial magical artifact"
-    - "Ancient runes on a tree trunk unlock a forbidden portal"
-    - "A long-lost friend reappears in a surprising new form"
-    - "A once-humble acorn transforms into a legendary symbol of hope"
+    - "The Secret Treant Guardian: A friendly oak that seemed ordinary reveals itself as an ancient guardian. Its favor—or suspicion—is determined by how you've treated the forest's smallest inhabitants."
+    - "Petals of Prophecy: The frostflowers in the glade begin to whisper hints of coming events. Their predictions change depending on how you resolved earlier dilemmas, offering new story branches or surprising detours."
+    - "The Curious Illusionist: A mischievous woodland illusionist may appear in a time of need, claiming to be a friend. Whether they help or hinder depends on your history of honesty in previous encounters."
+    - "Hidden Inheritance: A forgotten heirloom emerges from the forest floor, bearing symbols tied to your past choices. Uniting its pieces could bring salvation—or additional challenges to overcome."
+    - "Living Legend Awakens: A slumbering fairy queen stirs beneath ancient roots. Her attitude toward you depends on your treatment of magical creatures throughout the journey, offering aid, puzzles, or gentle trickery."
 
 sensory_details:
   visuals:
-    - "Glistening dew droplets reflecting tiny rainbows at dawn"
-    - "Ribbons of colored light dancing between the treetops"
-    - "Otherworldly fireflies illuminating hidden pathways"
-    - "Towering mossy trunks swirling with faint glowing patterns"
-    - "Fairy lanterns twinkling like stars in hollow tree nooks"
+    - "Glowshroom Lanterns: Bioluminescent fungi lining tree trunks and paths, growing brighter when compassion is shown, creating an inviting route where kindness thrives."
+    - "Aurora Dewdrops: Tiny orbs of light that sparkle on leaves at dawn and fade by dusk; they cluster around characters who exhibit genuine bravery, highlighting their steps with gentle radiance."
+    - "Moss-Covered Runestones: Etched with swirling patterns that flicker whenever you make choices aligned with harmony. If selfishness prevails, the carvings dull and become indecipherable."
+    - "Brambles of Doubt: Thick, twisting vines that encroach on pathways when fears and uncertainties dominate decisions, transforming the forest's easy trails into tangled puzzles."
+    - "Firefly Constellations: At night, swarms of fireflies swirl overhead, forming luminous patterns. Their formations subtly shift in response to the user's moral compass, guiding or warning in twinkling displays."
+
   sounds:
-    - "Rustling leaves that whisper forest secrets"
-    - "Gentle chirping of magical birds at sunrise"
-    - "Soft hum of distant waterfalls echoing through the trees"
-    - "Enthralling flute melodies played by unseen forest dwellers"
-    - "Occasional giggles of mischievous sprites fluttering by"
+    - "Melodic Leaf Rustle: Leaves that sing when approached with good intentions, harmonizing in gentle chords to encourage further exploration."
+    - "Echoing Branch Creaks: The treetop bridges emit creaks that grow louder if you've unsettled the forest spirits, signaling looming consequences."
+    - "Whispering Marsh Reeds: They hush to a gentle rustle when trust is nurtured among characters, but grow piercingly loud if betrayal lingers nearby."
+    - "Heartbeat of the Volcano: A rhythmic, pulsing rumble underfoot in Emberwood Fortress that matches your resolve, intensifying in moments of bold determination."
+    - "Frostwind Chimes: Eerie, bell-like gusts through the ice-laden boughs of Frostpetal Glade. They crescendo when you accept redemption, echoing your choice with a haunting chorus."
+
   smells:
-    - "Sweet aroma of blooming moonflowers after dusk"
-    - "Rich scent of damp earth and fresh pine"
-    - "Delicate fragrance of honey drizzling from wild beehives"
-    - "Warm, comforting whiff of spiced berry tea from a ranger's kettle"
-    - "Lingering musk of ancient tree bark steeped in magic"
+    - "Sylvan Sweetness: A delicate floral aroma wafting from the grove's blossoms, growing richer when kind deeds are performed, enhancing a sense of welcome."
+    - "Charged Canopy Air: A faintly electric tang that intensifies in the Skybloom Canopy if tension rises among the birdfolk, warning of impending discord."
+    - "Marshy Mint: A cool, herbal scent in the Moonlit Marsh that becomes more invigorating when alliances are formed, helping characters feel rejuvenated."
+    - "Ashen Wood Smoke: A warm, smoky note lingering around Emberwood Fortress, turning acrid if choices lean toward aggression or reckless behavior."
+    - "Icy Petal Perfume: A crisp, invigorating scent in Frostpetal Glade, mellowing when forgiveness is granted, symbolizing the quiet magic of healing."
+

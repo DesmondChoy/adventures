@@ -1,48 +1,54 @@
 name: "Festival of Lights & Colors"
-description: "A radiant celebration where every moment shimmers with laughter and bright spectacle. Lanterns, parades, and vibrant costumes invite endless wonder."
+
+description: "A realm where kaleidoscopic wonders mingle with hidden mysteries, inviting you to shape the course of a grand celebration. Every choice awakens a new hue of possibility, promising a personal journey through dazzling magic."
 
 narrative_elements:
   settings:
-    - "Glowing rainbow streets decorated with floating paper lanterns"
-    - "Gigantic kaleidoscope tents where colors shift with each step"
-    - "Illuminated bridges arched over canals of sparkling water"
-    - "Hidden garden paths lit by luminescent flowers and tiny fireflies"
-    - "Grand fireworks arena with a sky full of dancing lights"
+    - "Sun-Flecked Plaza: A bustling courtyard paved with shimmering tiles that change color when stepped on, reflecting the user's hope or doubt. Lanterns bob overhead, sparking to life in response to acts of kindness or bravery."
+    - "Aurora Veil Lagoon: A tranquil inlet where ribbons of dancing light arch across the sky, shifting to mirror the user's friendships and alliances. Curious fish flit among coral that brightens or dims based on the user's generosity."
+    - "Glowroot Forest: An ancient wood where trees' leaves glisten like stained glass, producing soft chimes when lightly brushed. Hidden pathways reveal themselves if the user nurtures the forest's wildlife or close unexpectedly if treated poorly."
+    - "Prismatic Cliffside: A towering precipice laced with rainbow-colored stones that echo the user's emotions back as patterns of light. Mysterious caves burrow into the cliff, offering secret passages only to those who face their fears."
+    - "Lantern-Strewn Canopy: High above the ground, sprawling ropes of lanterns illuminate treehouses that sway with each significant decision. The glow intensifies when acts of cooperation unfold and dims if selfishness prevails."
+
   themes:
-    - "Celebrating diversity through the brilliant spectrum of colors"
-    - "Uniting communities by sharing stories and music"
-    - "Finding beauty in unexpected places and little details"
-    - "Overcoming fears by seeking light in the darkest corners"
-    - "Believing in the power of wonder and imagination"
+    - "Friendship in Discovery: Explores how forming bonds under the radiant displays can open hidden paths and shared triumphs."
+    - "Courage in the Unknown: Centers on the bravery required to step into uncharted lightscapes, shaping how challenges present themselves."
+    - "Kindness as a Key: Highlights how small, compassionate gestures can unlock grand opportunities and revered alliances."
+    - "Resilience Through Color: Emphasizes the strength gained by embracing each spectrum of emotion, guiding the user to adapt and persevere."
+    - "Celebrating Differences: Reminds that every hue has a place in the celebration, steering the user toward empathy and open-mindedness."
+
   moral_teachings:
-    - "Sharing light with others illuminates everyone's path"
-    - "Honesty can brighten the dimmest lantern"
-    - "Courage helps us step into the unknown without losing hope"
-    - "Teamwork colors the world in ways we cannot achieve alone"
-    - "Respect for each person's creativity keeps the festival alive"
+    - "Bravery Lights the Way: Demonstrates how facing a challenge can unveil helpful secrets, while retreating might keep treasures hidden."
+    - "Generosity Shapes Community: Shows that sharing resources fosters bonds with those who may return the favor in surprising ways."
+    - "Thoughtfulness Prevents Harm: Illustrates how listening to warnings or advice can avert trouble, whereas haste can lead to comical setbacks."
+    - "Compassion Heals Strife: Depicts how choosing forgiveness can mend friendships, whereas grudges can complicate future endeavors."
+    - "Integrity Wins Trust: Portrays truthfulness as a beacon that opens doors of friendship, whereas deception can strain the merriment."
+
   plot_twists:
-    - "A mysterious shadow threatens to extinguish lanterns one by one"
-    - "An ancient color thought lost suddenly appears in someone's artwork"
-    - "A colorful parade float comes to life, revealing a hidden realm"
-    - "A secret tunnel leads to a forgotten chamber of glowing crystals"
-    - "The festival's grand finale is disrupted by a swirl of vanishing hues"
+    - "Dancing Lights in Disguise: Revelers reveal they're enchanted fireflies capable of speaking, reacting warmly or playfully wary based on prior kindness."
+    - "The Glowing Gateway: A hidden portal appears in the plaza, its glow intensifying if the user has upheld a promise, allowing passage to an unseen realm."
+    - "Merry Masker Unmasked: A festival entertainer who seemed to lead celebrations is actually seeking the user's help, but only if past choices prove the user's reliability."
+    - "Illumination Overflow: A sudden surge of color floods the lagoon, transforming friendly creatures into giddy pranksters if the user showed them curiosity before."
+    - "Reflections Come Alive: The user's silhouette on the prismatic stones steps out as a playful double, offering aid or mischief depending on how the user treated allies."
 
 sensory_details:
   visuals:
-    - "Sparkling confetti bursts that shower the crowds in glittery rainbows"
-    - "Enormous lanterns shaped like mythical creatures roaming the streets"
-    - "Luminescent paint swirling in patterns on the festival grounds"
-    - "Multicolored streamers cascading from rooftops and balconies"
-    - "Reflective ribbons dancing in the breeze under starlit skies"
+    - "Shimmering Confetti Bursts: Sparkling flakes that swirl around acts of heroism or generosity, lighting the air with a flurry of color."
+    - "Revel Lanterns in Bloom: Glowing orbs that sway in midair and bloom into flower shapes when touched by sincere gratitude."
+    - "Dazzling Footprint Trails: Footsteps briefly leave behind glowing footprints, fading if the user shows hesitation or shining longer if they stride with confidence."
+    - "Rainbow Cascade: A waterfall refracting sunlight into vivid arcs, shimmering more brilliantly after acts of harmony or camaraderie."
+    - "Crystal Petal Rain: Occasional showers of weightless blossoms that reflect each decision's emotional tone, shining softly or vibrantly."
+
   sounds:
-    - "Melodic chimes ringing with each lantern lit"
-    - "Steady beat of drums guiding the nightly color parade"
-    - "Excited giggles and exclamations echoing across the festival paths"
-    - "Gentle humming of glowing insects drawn to the colorful lights"
-    - "Trumpeting fanfare announcing the arrival of the grand fireworks"
+    - "Tinkling Luminescence: Delicate chimes echo whenever a new bond is formed, gently announcing promising encounters."
+    - "Cascading Harmony: A chorus of gentle tones pulses along lagoon shores, intensifying when the user embraces a generous choice."
+    - "Mystic Leaf Rustle: A soft susurration through the forest canopy that quiets if the user's actions disrupt the woodland's peace."
+    - "Crystalline Crescendo: A resonant hum that builds along the cliffside whenever the user confronts a fear or stands up for a friend."
+    - "Joyful Lantern Flutter: Lanterns flutter and ring like small bells when they sense acts of courage, growing louder with each brave decision."
+
   smells:
-    - "Sweet aroma of sugar-dusted pastries fresh from festival stalls"
-    - "Flowery perfume drifting from blossoming lantern bouquets"
-    - "Subtle whiff of sparklers and sizzling fireworks in the distance"
-    - "Fruity scents of color-themed sorbets melting under lantern glow"
-    - "Warm fragrance of toasted nuts and honey filling the night air"
+    - "Sweet Aurora Mists: A faintly sugary scent drifting across the lagoon, strengthening as the user's kindness flourishes."
+    - "Petal-Kissed Breeze: A gentle floral aroma drifting through the plaza, brightening when unity and fellowship grow."
+    - "Glowing Sap Essence: A warm, earthy fragrance exuding from tree trunks in Glowroot Forest, turning sweeter if the user protects its creatures."
+    - "Spiced Cliffside Draft: A tingling aroma of herbs carried by winds at the precipice, becoming more robust when the user persists despite challenges."
+    - "Festival-Spun Sugar: A whimsical cotton-candy note lingering under lantern canopies, sharpening if the user resolves conflicts peacefully."

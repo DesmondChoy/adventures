@@ -93,8 +93,7 @@ STORY_CHAPTER_PROMPT = """# Current Context
 {lesson_history}
 {agency_guidance}
 
-# Current Chapter Emphasis
-- Focus on character development and plot progression
+2. Focus on character development and plot progression
 
 {plot_twist_guidance}
 
@@ -119,15 +118,13 @@ LESSON_CHAPTER_PROMPT = """# Current Context
 {lesson_history}
 {agency_guidance}
 
-# Current Chapter Emphasis
-1. Core Question Integration: Include this exact question in your narrative: "{question}"
-2. Story Object Method: Create ONE visually interesting element that naturally connects to the question
-3. Narrative Integration: Make the question feel like a natural part of the character's journey
-4. Educational Context: Establish clear stakes for why answering matters to the characters
+2. Core Question Integration: Include this exact question in your narrative: "{question}"
+3. Story Object Method: Create ONE visually interesting element that naturally connects to the question
+4. Narrative Integration: Make the question feel like a natural part of the character's journey
+5. Educational Context: Establish clear stakes for why answering matters to the characters
 
 # Available Answers
 {formatted_answers}
-
 
 DO NOT:
 - Mention/Reference any of the available answers in the narrative
@@ -142,20 +139,15 @@ REFLECT_CHAPTER_PROMPT = """# Current Context
 # Story History
 {story_history}
 
-# Chapter Development Guidelines
-1. Reflection Purpose: Process the previous lesson's understanding
-
-# Current Chapter Emphasis
-This is an opportunity for to apply Narrative-Driven Reflection. 
-The character previously answered: "{question}" with "{chosen_answer}" ({answer_status})
-{correct_answer_info}
-
 {reflective_technique}
 
-## Scene Structure
-1. Narrative Acknowledgment: {acknowledgment_guidance}
-2. Socratic Exploration: Guide the character to {exploration_goal} through thoughtful questions
-3. Story Integration: Connect this reflection to the ongoing narrative and theme of "{theme}"
+# Chapter Development Guidelines
+1. Reflection Purpose: The character previously answered: "{question}" with "{chosen_answer}" ({answer_status})
+{correct_answer_info}.
+2. Narrative Acknowledgment: {acknowledgment_guidance}
+3. Socratic Exploration: Guide the character to {exploration_goal} through thoughtful questions
+4. Story Integration: Connect this reflection to the ongoing narrative and theme of "{theme}"
+
 {agency_guidance}
 
 ## Choice Structure
@@ -449,13 +441,13 @@ REFLECT_CONFIG = {
     "correct": {
         "answer_status": "Correct",
         "acknowledgment_guidance": "Create a story event that acknowledges success",
-        "exploration_goal": "deepen their understanding and explore broader implications",
+        "exploration_goal": "deepen their understanding of {question} and explore broader implications",
         "correct_answer_info": "This was the correct answer.",
     },
     "incorrect": {
         "answer_status": "Incorrect",
         "acknowledgment_guidance": "Create a story event that gently corrects the mistake",
-        "exploration_goal": "discover the correct understanding through guided reflection",
+        "exploration_goal": "discover the correct understanding of {question} through guided reflection",
         "correct_answer_info": 'The correct answer was: "{correct_answer}".',
     },
 }
