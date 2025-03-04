@@ -244,6 +244,8 @@ flowchart TD
         
         get_phase_guidance --> BASE_PHASE_GUIDANCE
         get_phase_guidance --> |If applicable|PLOT_TWIST_GUIDANCE
+        get_phase_guidance --> |For Exposition phase|replace_adventure_topic[Replace {adventure_topic} placeholder]
+        replace_adventure_topic --> |From metadata|state.metadata["non_random_elements"]["name"]
         
         build_first_chapter_prompt --> get_agency_category
         build_story_chapter_prompt --> |If needed|process_consequences

@@ -1,5 +1,15 @@
 # Progress Log
 
+## 2025-03-04: Dynamic Adventure Topic Reference in Exposition Phase
+
+### Enhanced World Building Guidance with Adventure Topic Reference
+- Problem: World building guidance in Exposition phase was generic and didn't reference the specific adventure topic selected by the user
+- Solution:
+  * Modified the BASE_PHASE_GUIDANCE dictionary in `prompt_templates.py` to add an {adventure_topic} placeholder in the "World Building" section of the "Exposition" phase guidance
+  * Updated the `_get_phase_guidance()` function in `prompt_engineering.py` to replace the placeholder with the actual adventure topic name from `state.metadata["non_random_elements"]["name"]`
+  * Added conditional logic to only apply this replacement for the "Exposition" phase
+- Result: Exposition phase guidance now dynamically references the specific adventure topic (e.g., "Jade Mountain") selected by the user, creating a more tailored and immersive storytelling experience
+
 ## 2025-03-03: Renamed `setting_types` to `settings` and Removed `story_rules`
 
 ### Updated Data Model and Field Naming
