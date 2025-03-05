@@ -33,6 +33,20 @@
 
 ## Recent Changes
 
+### Fixed Loading Spinner Visibility for Chapter 1 (2025-03-05)
+- Problem: The loading spinner was disappearing too quickly for Chapter 1 but working fine for other chapters
+- Root Cause:
+  * The loader was being hidden immediately after content streaming but before image generation tasks for Chapter 1 were complete
+  * CSS issues with the loader overlay were causing visibility problems
+  * The WebSocket connection handler was hiding the loader too early in the process
+- Solution:
+  * Modified `stream_and_send_chapter()` in `websocket_service.py` to only hide the loader after all image tasks are complete
+  * Updated the WebSocket connection handler in `index.html` to not hide the loader immediately after connection
+  * Enhanced the `showLoader()` and `hideLoader()` functions with better error handling and logging
+  * Fixed CSS issues in `loader.css` to ensure proper visibility of the loader overlay
+  * Added `!important` to the hidden class to prevent style conflicts
+- Result: The loading spinner now remains visible during the entire image generation process for Chapter 1, providing a better user experience by accurately reflecting the loading state
+
 ### Fixed Subprocess Python Interpreter Issue in Simulation Tests (2025-03-05)
 - Problem: The `run_simulation_tests.py` script was failing to run the story simulation properly with a `ModuleNotFoundError: No module named 'websockets'` error, even though the package was installed in the virtual environment
 - Root Cause: When the script used commands like `["python", "tests/simulations/story_simulation.py"]` to create subprocesses, it wasn't necessarily using the same Python interpreter that was running the main script

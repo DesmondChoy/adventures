@@ -1,5 +1,48 @@
 # Progress Log
 
+## 2025-03-05: Fixed Loading Spinner Visibility for Chapter 1
+
+### Fixed Loading Spinner Timing and Visibility Issues
+- Problem: The loading spinner was disappearing too quickly for Chapter 1 but working fine for other chapters
+- Root Cause:
+  * The loader was being hidden immediately after content streaming but before image generation tasks for Chapter 1 were complete
+  * CSS issues with the loader overlay were causing visibility problems
+  * The WebSocket connection handler was hiding the loader too early in the process
+- Solution:
+  * Modified `stream_and_send_chapter()` in `websocket_service.py` to only hide the loader after all image tasks are complete:
+    ```python
+    # Only hide the loader after all image tasks are complete for Chapter 1
+    # For other chapters, hide it immediately since there are no image tasks
+    if not image_tasks:
+        # No image tasks, hide loader immediately
+        await websocket.send_json({"type": "hide_loader"})
+    
+    # If we have image tasks, wait for them to complete and send updates
+    if image_tasks:
+        # Process image tasks...
+        
+        # Hide loader after all image tasks are complete
+        await websocket.send_json({"type": "hide_loader"})
+    ```
+  * Updated the WebSocket connection handler in `index.html` to not hide the loader immediately after connection:
+    ```javascript
+    this.connection.onopen = () => {
+        console.log('WebSocket reconnected, restoring state...');
+        // Don't hide loader here - wait for server to send hide_loader message
+        this.reconnectAttempts = 0; // Reset counter on successful connection
+        
+        // Rest of the connection handling...
+    };
+    ```
+  * Enhanced the `showLoader()` and `hideLoader()` functions with better error handling and logging
+  * Fixed CSS issues in `loader.css` to ensure proper visibility of the loader overlay
+  * Added `!important` to the hidden class to prevent style conflicts
+- Result:
+  * The loading spinner now remains visible during the entire image generation process for Chapter 1
+  * The user experience is improved by accurately reflecting the loading state
+  * The spinner is properly hidden after all content and images are loaded
+  * Consistent behavior across all chapters with appropriate loading indicators
+
 ## 2025-03-05: Fixed Subprocess Python Interpreter Issue in Simulation Tests
 
 ### Fixed Python Interpreter Path in Subprocess Commands

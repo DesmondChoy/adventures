@@ -319,7 +319,7 @@
 
                 this.connection.onopen = () => {
                     console.log('WebSocket reconnected, restoring state...');
-                    hideLoader();
+                    // Don't hide loader here - wait for server to send hide_loader message
                     this.reconnectAttempts = 0; // Reset counter on successful connection
                     
                     if (savedState) {
@@ -723,17 +723,39 @@ function startAdventure() {
 
         // --- Utility Functions ---
         function showLoader() {
+            console.log('Showing loader...');
             const overlay = document.getElementById('loaderOverlay');
+            if (!overlay) {
+                console.error('Loader overlay element not found!');
+                return;
+            }
+            
+            // Force display to ensure it's visible
+            overlay.style.display = 'flex';
             overlay.classList.remove('hidden');
+            
             // Use setTimeout to ensure the transition works
-            setTimeout(() => overlay.classList.add('active'), 0);
+            setTimeout(() => {
+                overlay.classList.add('active');
+                console.log('Loader activated');
+            }, 0);
         }
 
         function hideLoader() {
+            console.log('Hiding loader...');
             const overlay = document.getElementById('loaderOverlay');
+            if (!overlay) {
+                console.error('Loader overlay element not found!');
+                return;
+            }
+            
             overlay.classList.remove('active');
+            
             // Wait for transition to complete before hiding
-            setTimeout(() => overlay.classList.add('hidden'), 300);
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                console.log('Loader hidden');
+            }, 300);
         }
         
         // Function to update progress display
@@ -765,9 +787,10 @@ function startAdventure() {
         function handleMessage(event) {
             try {
                 const data = JSON.parse(event.data);
-                hideLoader();
-
-                if (data.type === 'choices') {
+                
+                if (data.type === 'hide_loader') {
+                    hideLoader();
+                } else if (data.type === 'choices') {
                     displayChoices(data.choices);
                 } else if (data.type === 'story') {
                     appendStoryText(data.content);
@@ -776,6 +799,9 @@ function startAdventure() {
                 } else if (data.type === 'choice_image_update') {
                     // Handle image updates for choices
                     updateChoiceWithImage(data.choice_index, data.image_data);
+                } else {
+                    // For any other message types, hide the loader as a fallback
+                    hideLoader();
                 }
             } catch (e) {
                 // Assume it's plain text if JSON parsing fails

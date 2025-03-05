@@ -433,13 +433,23 @@ async def stream_and_send_chapter(
         }
     )
 
+    # Only hide the loader after all image tasks are complete for Chapter 1
+    # For other chapters, hide it immediately since there are no image tasks
+    if not image_tasks:
+        # No image tasks, hide loader immediately
+        logger.info(
+            f"No image tasks for chapter {current_chapter_number}, hiding loader immediately"
+        )
+        await websocket.send_json({"type": "hide_loader"})
+
     # If we have image tasks, wait for them to complete and send updates
     if image_tasks:
         logger.info(
-            f"Waiting for {len(image_tasks)} image generation tasks to complete"
+            f"Chapter {current_chapter_number}: Waiting for {len(image_tasks)} image generation tasks to complete"
         )
         for i, task in image_tasks:
             try:
+                logger.info(f"Awaiting image generation task {i + 1}...")
                 image_data = await task
                 if image_data:
                     logger.info(f"Image generated for choice {i + 1}, sending update")
@@ -460,6 +470,12 @@ async def stream_and_send_chapter(
                     f"Error waiting for image generation task {i + 1}: {str(e)}"
                 )
                 # Log the error but continue processing other tasks
+
+        # Hide loader after all image tasks are complete
+        logger.info(
+            f"All image tasks complete for chapter {current_chapter_number}, hiding loader"
+        )
+        await websocket.send_json({"type": "hide_loader"})
 
 
 async def send_story_complete(

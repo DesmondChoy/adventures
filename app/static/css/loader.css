@@ -87,7 +87,7 @@
 }
 
 .loader-overlay.hidden {
-    display: none;
+    display: none !important;
 }
 
 .loader-icon {
@@ -129,7 +129,7 @@
     transform-origin: center;
 }
 
-/* Hide the old loader visually - NEW */
+/* Hide the old loader visually by default - but can be shown when needed */
 .loader-container {
-    @apply hidden;
+    display: none;
 }
