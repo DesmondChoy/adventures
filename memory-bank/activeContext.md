@@ -1,5 +1,18 @@
 # Active Context
 
+## Development Tools
+
+1. **Code Complexity Analyzer (`tools/code_complexity_analyzer.py`):**
+   * Identifies files that may need refactoring due to excessive code size
+   * Counts total lines, non-blank lines, and code lines (excluding comments)
+   * Supports filtering by file extension and sorting by different metrics
+   * Command-line usage: `python tools/code_complexity_analyzer.py [options]`
+   * Options:
+     - `-p, --path PATH`: Repository path (default: current directory)
+     - `-e, --extensions EXT`: File extensions to include (e.g., py js html)
+     - `-s, --sort TYPE`: Sort by total, non-blank, or code lines
+     - `-n, --number N`: Number of files to display
+
 ## Core Architecture
 
 1. **Adventure Flow (`app/routers/web.py`, `app/services/chapter_manager.py`):**
