@@ -1,0 +1,42 @@
+/* Choice image styles */
+.choice-image-container {
+    transition: all 0.3s ease-in-out;
+    max-height: 200px;
+    overflow: hidden;
+    margin-top: 0.75rem;
+    border-radius: 0.5rem;
+}
+
+.choice-image-container img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    border-radius: 0.5rem;
+}
+
+.choice-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.choice-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+@media (min-width: 768px) {
+    .choice-content {
+        flex-direction: row;
+    }
+    
+    .choice-text {
+        flex: 2;
+        padding-right: 1rem;
+    }
+    
+    .choice-image-container {
+        flex: 1;
+        margin-top: 0;
+    }
+}

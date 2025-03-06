@@ -10,110 +10,11 @@
     <link rel="stylesheet" href="/static/css/typography.css">
     <link rel="stylesheet" href="/static/css/theme.css">
     <link rel="stylesheet" href="/static/css/carousel.css">
+    <link rel="stylesheet" href="/static/css/font-controls.css">
+    <link rel="stylesheet" href="/static/css/header-controls.css">
+    <link rel="stylesheet" href="/static/css/choice-cards.css">
     <style>
         /* Any remaining non-typography styles can stay here */
-        
-        /* Font size controls */
-        .font-size-controls {
-            display: none; /* Hidden by default, shown only on mobile */
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .font-size-btn {
-            width: 2rem;
-            height: 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: var(--color-bg-secondary);
-            border-radius: 0.375rem;
-            font-weight: bold;
-            transition: all 0.2s ease-in-out;
-            border: none;
-            cursor: pointer;
-        }
-        
-        .font-size-btn:hover {
-            background-color: var(--color-accent-medium);
-        }
-        
-        .font-size-btn:focus {
-            outline: none;
-            box-shadow: 0 0 0 2px var(--color-primary-light);
-        }
-        
-        .font-size-btn:disabled {
-            opacity: var(--color-disabled);
-            cursor: not-allowed;
-        }
-        
-        .font-size-percentage {
-            font-size: 0.875rem;
-            font-weight: 500;
-            min-width: 3rem;
-            text-align: center;
-        }
-        
-        /* Header controls visibility */
-        .header-controls {
-            transition: opacity 0.3s ease-in-out;
-        }
-        
-        .header-controls-hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-        
-        /* Mobile-only controls */
-        @media (max-width: 768px) {
-            .font-size-controls {
-                display: flex;
-            }
-        }
-        
-        /* Choice image styles */
-        .choice-image-container {
-            transition: all 0.3s ease-in-out;
-            max-height: 200px;
-            overflow: hidden;
-            margin-top: 0.75rem;
-            border-radius: 0.5rem;
-        }
-
-        .choice-image-container img {
-            width: 100%;
-            height: auto;
-            object-fit: cover;
-            border-radius: 0.5rem;
-        }
-
-        .choice-card {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .choice-content {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-        }
-
-        @media (min-width: 768px) {
-            .choice-content {
-                flex-direction: row;
-            }
-            
-            .choice-text {
-                flex: 2;
-                padding-right: 1rem;
-            }
-            
-            .choice-image-container {
-                flex: 1;
-                margin-top: 0;
-            }
-        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
