@@ -170,11 +170,9 @@ flowchart TD
         HTML --> |"Includes"| JS[JavaScript Files]
         
         subgraph CSS_Files["app/static/css/"]
-            carousel_css[carousel.css]
-            choice_cards_css[choice-cards.css]
-            font_controls_css[font-controls.css]
-            header_controls_css[header-controls.css]
-            loader_css[loader.css]
+            layout_css[layout.css]
+            components_css[components.css]
+            carousel_component_css[carousel-component.css]
             theme_css[theme.css]
             typography_css[typography.css]
         end
@@ -193,6 +191,18 @@ flowchart TD
         FontSize --> |"Controls"| TextSize[Text Size Adjustments]
     end
 ```
+
+- **CSS Organization** (`app/static/css/`)
+  * Organized by purpose and responsibility:
+    - `layout.css`: Structural elements, containers, screen transitions, and responsive adjustments
+    - `components.css`: Reusable UI components (toast notifications, buttons, loaders, choice cards, header controls, font controls)
+    - `carousel-component.css`: Specialized carousel component styles
+    - `theme.css`: Color schemes and theme variables
+    - `typography.css`: Text styling and formatting
+  * Clear separation of concerns:
+    - Layout styles are separate from component styles
+    - Base styles (theme, typography) are separate from specific component styles
+    - Specialized components (carousel) have their own file due to complexity
 
 - **Carousel Component** (`app/static/js/carousel-manager.js`)
   * Reusable class for 3D carousel functionality

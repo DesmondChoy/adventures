@@ -1,9 +1,0 @@
-/* Header controls visibility */
-.header-controls {
-    transition: opacity 0.3s ease-in-out;
-}
-
-.header-controls-hidden {
-    opacity: 0;
-    pointer-events: none;
-}

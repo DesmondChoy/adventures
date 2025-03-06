@@ -6,6 +6,10 @@
  * - Button styles
  * - Custom animations
  * - Utility classes
+ * - Header controls
+ * - Font size controls
+ * - Loader components
+ * - Choice cards
  */
 
 /* Toast notifications */
@@ -69,6 +73,8 @@
 .choice-card {
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .choice-card.disabled {
@@ -79,6 +85,44 @@
 .choice-card.selected {
     border-color: #4f46e5; /* indigo-600 */
     box-shadow: 0 0 0 2px #4f46e5;
+}
+
+/* Choice image styles */
+.choice-image-container {
+    transition: all 0.3s ease-in-out;
+    max-height: 200px;
+    overflow: hidden;
+    margin-top: 0.75rem;
+    border-radius: 0.5rem;
+}
+
+.choice-image-container img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    border-radius: 0.5rem;
+}
+
+.choice-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+@media (min-width: 768px) {
+    .choice-content {
+        flex-direction: row;
+    }
+    
+    .choice-text {
+        flex: 2;
+        padding-right: 1rem;
+    }
+    
+    .choice-image-container {
+        flex: 1;
+        margin-top: 0;
+    }
 }
 
 /* Image fade-in animation */
@@ -99,4 +143,199 @@
     font-size: 0.75rem;
     text-align: left;
     border-radius: 0.375rem;
+}
+
+/* Header controls visibility */
+.header-controls {
+    transition: opacity 0.3s ease-in-out;
+}
+
+.header-controls-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Font size controls */
+.font-size-controls {
+    display: none; /* Hidden by default, shown only on mobile */
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.font-size-btn {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-bg-secondary);
+    border-radius: 0.375rem;
+    font-weight: bold;
+    transition: all 0.2s ease-in-out;
+    border: none;
+    cursor: pointer;
+}
+
+.font-size-btn:hover {
+    background-color: var(--color-accent-medium);
+}
+
+.font-size-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.font-size-btn:disabled {
+    opacity: var(--color-disabled);
+    cursor: not-allowed;
+}
+
+.font-size-percentage {
+    font-size: 0.875rem;
+    font-weight: 500;
+    min-width: 3rem;
+    text-align: center;
+}
+
+/* Mobile-only controls */
+@media (max-width: 768px) {
+    .font-size-controls {
+        display: flex;
+    }
+}
+
+/* Loader Component Styles */
+
+/* Base loader container */
+.loader-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+}
+
+/* Default spinner style */
+.loader {
+    border: 3px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 3px solid #4f46e5; /* Indigo color matching your theme */
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+/* Spinner animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Utility class for hiding elements */
+.loader-hidden {
+    display: none;
+}
+
+/* Size variants */
+.loader-sm {
+    width: 24px;
+    height: 24px;
+    border-width: 2px;
+}
+
+.loader-lg {
+    width: 56px;
+    height: 56px;
+    border-width: 4px;
+}
+
+/* Color variants - can be customized based on your theme */
+.loader-primary {
+    border-top-color: #4f46e5; /* Indigo */
+}
+
+.loader-secondary {
+    border-top-color: #6b7280; /* Gray */
+}
+
+.loader-success {
+    border-top-color: #10b981; /* Green */
+}
+
+/* Speed variants */
+.loader-slow {
+    animation-duration: 2s;
+}
+
+.loader-fast {
+    animation-duration: 0.5s;
+}
+
+/* Fade Overlay Styles - NEW */
+.loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 300ms ease-in-out;
+    pointer-events: none;
+}
+
+.loader-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.loader-overlay.hidden {
+    display: none !important;
+}
+
+.loader-icon {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.loader-triangle {
+    width: 0;
+    height: 0;
+    border-left: 30px solid transparent;
+    border-right: 30px solid transparent;
+    border-bottom: 60px solid #4f46e5;
+    transform-origin: 50% 50%;
+}
+
+@keyframes spin-accelerate-decelerate {
+    0% { transform: rotate(0deg); }
+    50% { transform: rotate(180deg); }
+    75% { transform: rotate(630deg); }
+    100% { transform: rotate(720deg); }
+}
+
+@keyframes float {
+    0% { translate: 0 -120px; }
+    25% { translate: 120px 0; }
+    50% { translate: 0 120px; }
+    75% { translate: -120px 0; }
+    100% { translate: 0 -120px; }
+}
+
+.animate-spin-accelerate {
+    animation: 
+        spin-accelerate-decelerate 1.2s infinite ease-in-out,
+        float 3.5s infinite cubic-bezier(0.45, 0.05, 0.55, 0.95);
+    transform-origin: center;
+}
+
+/* Hide the old loader visually by default - but can be shown when needed */
+.loader-container {
+    display: none;
 }

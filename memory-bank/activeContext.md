@@ -46,6 +46,29 @@
 
 ## Recent Changes
 
+### CSS Files Reorganization (2025-03-06)
+- Problem: There were too many standalone CSS files, making it difficult to maintain and understand the styling structure
+- Solution:
+  * Merged multiple CSS files into a more organized structure:
+    - Consolidated `header-controls.css`, `font-controls.css`, `loader.css`, and `choice-cards.css` into `components.css`
+    - Renamed `carousel.css` to `carousel-component.css` to better reflect its purpose
+    - Kept `layout.css`, `theme.css`, and `typography.css` as separate files for their specific purposes
+  * Updated the HTML file to reference the new CSS structure:
+    - Removed references to the merged files
+    - Added reference to the renamed carousel component file
+  * Organized CSS files by their purpose:
+    - `components.css` - Reusable UI components (toast notifications, buttons, loaders, choice cards, etc.)
+    - `carousel-component.css` - Specialized carousel component styles
+    - `layout.css` - Structural elements, containers, and screen transitions
+    - `theme.css` - Color schemes and theme variables
+    - `typography.css` - Text styling and formatting
+- Result:
+  * More maintainable CSS structure with clear separation of concerns
+  * Reduced number of CSS files from 9 to 5
+  * Better organization of styles by their purpose
+  * Improved developer experience with easier-to-find styles
+  * No change in functionality or appearance for end users
+
 ### CSS Modularization and Transition Improvements (2025-03-06)
 - Problem: CSS was scattered throughout the HTML file with inline styles and lacked organization
 - Solution:

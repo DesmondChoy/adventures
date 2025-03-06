@@ -28,11 +28,9 @@
 3. Frontend components:
    - HTML: `templates/index.html`
    - CSS: `static/css/` (modular organization)
-     * `carousel.css`: 3D carousel styles
-     * `choice-cards.css`: Choice button styles
-     * `font-controls.css`: Font size adjustment controls
-     * `header-controls.css`: Chapter indicator and controls
-     * `loader.css`: Loading spinner styles
+     * `layout.css`: Structural elements, containers, and screen transitions
+     * `components.css`: Reusable UI components (toast notifications, buttons, loaders, choice cards, etc.)
+     * `carousel-component.css`: Specialized carousel component styles
      * `theme.css`: Color scheme and theme variables
      * `typography.css`: Text styling and formatting
    - JavaScript: `static/js/`
@@ -111,8 +109,10 @@
      * Implement proper event handling and cleanup
      * Use mobile-specific optimizations when needed
    - Follow CSS organization pattern:
-     * Component-specific CSS in dedicated files
-     * Shared styles in theme.css and typography.css
+     * Layout styles in layout.css (structural elements, containers, screen transitions)
+     * Component styles in components.css (reusable UI components)
+     * Specialized component styles in dedicated files (e.g., carousel-component.css)
+     * Base styles in theme.css (colors, variables) and typography.css (text styling)
      * Mobile-specific styles with media queries
    - Maintain progressive enhancement:
      * Core functionality must work without JavaScript
