@@ -43,7 +43,7 @@
             <div class="carousel-container">
                 <div class="carousel" id="categoryCarousel">
                     {% for category_id, category_data in story_categories.items() %}
-                    <div class="carousel-card" data-category="{{ category_id }}" onclick="selectCategory('{{ category_id }}')">
+                    <div class="carousel-card" data-category="{{ category_id }}" onclick="window.categoryCarousel.select('{{ category_id }}')">
                         <div class="card-face card-front">
                             <img src="/static/images/stories/{{ category_id }}.jpg" alt="{{ category_data.name }}" class="card-image">
                         </div>
@@ -55,12 +55,12 @@
                     {% endfor %}
                 </div>
                 <div class="carousel-nav">
-                    <button type="button" onclick="rotateCarousel('prev')" aria-label="Previous">
+                    <button type="button" onclick="window.categoryCarousel.rotate('prev')" aria-label="Previous">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                         </svg>
                     </button>
-                    <button type="button" onclick="rotateCarousel('next')" aria-label="Next">
+                    <button type="button" onclick="window.categoryCarousel.rotate('next')" aria-label="Next">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <path d="M8.59 7.41L10 6l6 6-6 6-1.41-1.41L13.17 12z"/>
                         </svg>
@@ -79,7 +79,7 @@
             <div class="carousel-container">
                 <div class="carousel" id="lessonCarousel">
                     {% for topic in lesson_topics %}
-                    <div class="carousel-card" data-topic="{{ topic }}" onclick="selectLessonTopic('{{ topic }}')">
+                    <div class="carousel-card" data-topic="{{ topic }}" onclick="window.lessonCarousel.select('{{ topic }}')">
                         <div class="card-face card-front">
                             <img src="/static/images/lessons/{{ topic }}.jpg" alt="{{ topic }}" class="card-image">
                         </div>
@@ -91,12 +91,12 @@
                     {% endfor %}
                 </div>
                 <div class="carousel-nav">
-                    <button type="button" onclick="rotateLessonCarousel('prev')" aria-label="Previous">
+                    <button type="button" onclick="window.lessonCarousel.rotate('prev')" aria-label="Previous">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                         </svg>
                     </button>
-                    <button type="button" onclick="rotateLessonCarousel('next')" aria-label="Next">
+                    <button type="button" onclick="window.lessonCarousel.rotate('next')" aria-label="Next">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <path d="M8.59 7.41L10 6l6 6-6 6-1.41-1.41L13.17 12z"/>
                         </svg>
@@ -272,285 +272,9 @@
         const totalCategories = parseInt("{{ story_categories|length }}");
         const totalLessonTopics = parseInt("{{ lesson_topics|length }}");
 
-        // Global variables for carousel state
-        let currentRotation = 0;
-        let currentLessonRotation = 0;
-        let currentIndex = 0;
-        let currentLessonIndex = 0;
-        const rotationAngle = 360 / totalCategories;
-        const lessonRotationAngle = 360 / totalLessonTopics;
+        // Global variables for state management
 
-        // --- Carousel Functions ---
-        function rotateCarousel(direction) {
-            if (direction === 'next') {
-                currentRotation -= rotationAngle;
-                currentIndex = (currentIndex + 1) % totalCategories;
-            } else {
-                currentRotation += rotationAngle;
-                currentIndex = (currentIndex - 1 + totalCategories) % totalCategories;
-            }
-            
-            const carousel = document.getElementById('categoryCarousel');
-            carousel.style.transform = `translate(-50%, -50%) rotateY(${currentRotation}deg)`;
-            
-            // Update active state
-            updateActiveCard();
-        }
-
-        function updateActiveCard() {
-            const cards = document.getElementById('categoryCarousel').getElementsByClassName('carousel-card');
-            Array.from(cards).forEach((card, index) => {
-                card.classList.remove('active');
-                if (index === currentIndex) {
-                    card.classList.add('active');
-                }
-            });
-        }
-
-        function initializeCarousel() {
-            console.log('Initializing carousel with totalCategories:', totalCategories);
-            console.log('Rotation angle:', rotationAngle);
-            
-            const carousel = document.getElementById('categoryCarousel');
-            if (!carousel) {
-                console.error('Carousel element not found!');
-                return;
-            }
-            
-            const cards = carousel.getElementsByClassName('carousel-card');
-            console.log('Found carousel cards:', cards.length);
-            
-            if (cards.length === 0) {
-                console.error('No carousel cards found! Check if story_categories data is loaded correctly.');
-                // Add a visible error message on the page
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'p-4 bg-red-100 text-red-800 rounded-md mb-4';
-                errorMsg.innerHTML = `<p><strong>Error:</strong> No story categories found.</p>
-                                     <p>Debug info: Total categories = ${totalCategories}</p>`;
-                carousel.parentNode.insertBefore(errorMsg, carousel);
-                return;
-            }
-            
-            // Position cards in 3D space
-            try {
-                for (let i = 0; i < cards.length; i++) {
-                    const angle = (i * rotationAngle);
-                    const radius = 400;
-                    console.log(`Positioning card ${i} at angle ${angle}deg and radius ${radius}px`);
-                    cards[i].style.transform = `rotateY(${angle}deg) translateZ(${radius}px)`;
-                    cards[i].style.visibility = 'visible';
-                }
-                
-                // Set initial active card
-                updateActiveCard();
-                
-                // Add keyboard navigation
-                document.addEventListener('keydown', handleKeyPress);
-                
-                console.log('Carousel initialization complete');
-            } catch (error) {
-                console.error('Error during carousel initialization:', error);
-                // Add a visible error message on the page
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'p-4 bg-red-100 text-red-800 rounded-md mb-4';
-                errorMsg.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
-                carousel.parentNode.insertBefore(errorMsg, carousel);
-            }
-
-            // Add touch event handling
-            let touchStartX = 0;
-            let touchEndX = 0;
-            
-            carousel.addEventListener('touchstart', function(event) {
-                touchStartX = event.touches[0].clientX;
-                // Hide swipe tip on first touch
-                const swipeTip = document.querySelector('.swipe-tip');
-                if (swipeTip) swipeTip.style.display = 'none';
-            }, false);
-            
-            carousel.addEventListener('touchmove', function(event) {
-                event.preventDefault(); // Prevent scrolling while swiping
-            }, false);
-            
-            carousel.addEventListener('touchend', function(event) {
-                touchEndX = event.changedTouches[0].clientX;
-                handleSwipe();
-            }, false);
-            
-            function handleSwipe() {
-                const swipeThreshold = 50; // Minimum distance for a swipe
-                const swipeDistance = touchEndX - touchStartX;
-                
-                if (Math.abs(swipeDistance) > swipeThreshold) {
-                    if (swipeDistance > 0) {
-                        // Swipe right
-                        rotateCarousel('prev');
-                    } else {
-                        // Swipe left
-                        rotateCarousel('next');
-                    }
-                }
-            }
-        }
-
-        function handleKeyPress(event) {
-            if (event.key === 'ArrowLeft') {
-                rotateCarousel('prev');
-            } else if (event.key === 'ArrowRight') {
-                rotateCarousel('next');
-            } else if (event.key === 'Enter') {
-                const cards = document.getElementById('categoryCarousel').getElementsByClassName('carousel-card');
-                const activeCard = cards[currentIndex];
-                if (activeCard) {
-                    selectCategory(activeCard.dataset.category);
-                }
-            }
-        }
-
-        function selectCategory(categoryId) {
-            selectedCategory = categoryId;
-            document.getElementById('storyCategory').value = categoryId;
-            
-            // Remove selected class from all cards and add to the chosen one
-            const cards = document.getElementById('categoryCarousel').getElementsByClassName('carousel-card');
-            Array.from(cards).forEach(card => {
-                card.classList.remove('selected', 'selecting');
-                if (card.dataset.category === categoryId) {
-                    card.classList.add('selected', 'selecting');
-                    setTimeout(() => card.classList.remove('selecting'), 300);
-                }
-            });
-        }
-
-        // --- Lesson Carousel Functions ---
-        function rotateLessonCarousel(direction) {
-            if (direction === 'next') {
-                currentLessonRotation -= lessonRotationAngle;
-                currentLessonIndex = (currentLessonIndex + 1) % totalLessonTopics;
-            } else {
-                currentLessonRotation += lessonRotationAngle;
-                currentLessonIndex = (currentLessonIndex - 1 + totalLessonTopics) % totalLessonTopics;
-            }
-            
-            const carousel = document.getElementById('lessonCarousel');
-            carousel.style.transform = `translate(-50%, -50%) rotateY(${currentLessonRotation}deg)`;
-            
-            // Update active state
-            updateActiveLessonCard();
-        }
-
-        function updateActiveLessonCard() {
-            const cards = document.getElementById('lessonCarousel').getElementsByClassName('carousel-card');
-            Array.from(cards).forEach((card, index) => {
-                card.classList.remove('active');
-                if (index === currentLessonIndex) {
-                    card.classList.add('active');
-                }
-            });
-        }
-
-        function initializeLessonCarousel() {
-            const carousel = document.getElementById('lessonCarousel');
-            const cards = carousel.getElementsByClassName('carousel-card');
-            
-            // Position cards in 3D space
-            for (let i = 0; i < cards.length; i++) {
-                const angle = (i * lessonRotationAngle);
-                const radius = 400;
-                cards[i].style.transform = `rotateY(${angle}deg) translateZ(${radius}px)`;
-                cards[i].style.visibility = 'visible';
-            }
-
-            // Set initial active card
-            updateActiveLessonCard();
-
-            // Add keyboard navigation
-            document.addEventListener('keydown', handleLessonKeyPress);
-
-            // Add touch event handling
-            let touchStartX = 0;
-            let touchEndX = 0;
-            
-            carousel.addEventListener('touchstart', function(event) {
-                touchStartX = event.touches[0].clientX;
-            }, false);
-            
-            carousel.addEventListener('touchmove', function(event) {
-                event.preventDefault(); // Prevent scrolling while swiping
-            }, false);
-            
-            carousel.addEventListener('touchend', function(event) {
-                touchEndX = event.changedTouches[0].clientX;
-                handleSwipe();
-            }, false);
-            
-            function handleSwipe() {
-                const swipeThreshold = 50; // Minimum distance for a swipe
-                const swipeDistance = touchEndX - touchStartX;
-                
-                if (Math.abs(swipeDistance) > swipeThreshold) {
-                    if (swipeDistance > 0) {
-                        // Swipe right
-                        rotateLessonCarousel('prev');
-                    } else {
-                        // Swipe left
-                        rotateLessonCarousel('next');
-                    }
-                }
-            }
-
-            // Mobile-specific fix for active card scaling
-            if (window.innerWidth <= 768) {
-                fixMobileActiveCardScaling();
-            }
-        }
-
-        function handleLessonKeyPress(event) {
-            if (event.key === 'ArrowLeft') {
-                rotateLessonCarousel('prev');
-            } else if (event.key === 'ArrowRight') {
-                rotateLessonCarousel('next');
-            } else if (event.key === 'Enter') {
-                const cards = document.getElementById('lessonCarousel').getElementsByClassName('carousel-card');
-                const activeCard = cards[currentLessonIndex];
-                if (activeCard) {
-                    selectLessonTopic(activeCard.dataset.topic);
-                }
-            }
-        }
-
-        function selectLessonTopic(topic) {
-            selectedLessonTopic = topic;
-            document.getElementById('lessonTopic').value = topic;
-            
-            // Remove selected class from all cards and add to the chosen one
-            const cards = document.getElementById('lessonCarousel').getElementsByClassName('carousel-card');
-            Array.from(cards).forEach(card => {
-                card.classList.remove('selected', 'selecting');
-                if (card.dataset.topic === topic) {
-                    card.classList.add('selected', 'selecting');
-                    setTimeout(() => card.classList.remove('selecting'), 300);
-                }
-            });
-        }
-
-        // Mobile-specific fix for active card scaling
-        function fixMobileActiveCardScaling() {
-            // This function only runs on mobile devices
-            if (window.innerWidth > 768) return;
-            
-            // Ensure the active card on the second page has the correct scaling
-            const lessonCards = document.getElementById('lessonCarousel').getElementsByClassName('carousel-card');
-            const activeCard = lessonCards[currentLessonIndex];
-            
-            if (activeCard) {
-                // Remove active class from all cards
-                Array.from(lessonCards).forEach(card => card.classList.remove('active'));
-                
-                // Add active class to the current card
-                activeCard.classList.add('active');
-            }
-        }
+        // Carousel functionality has been moved to carousel-manager.js
 
         // --- Navigation Functions ---
         // Function to show error messages
@@ -575,8 +299,24 @@
             document.getElementById('storyCategoryScreen').classList.add('hidden');
             document.getElementById('lessonTopicScreen').classList.remove('hidden');
             
-            // Initialize the lesson carousel
-            initializeLessonCarousel();
+            // Initialize the lesson carousel with our Carousel class
+            window.lessonCarousel = new Carousel({
+                elementId: 'lessonCarousel',
+                itemCount: totalLessonTopics,
+                dataAttribute: 'topic',
+                inputId: 'lessonTopic',
+                onSelect: (topic) => {
+                    selectedLessonTopic = topic;
+                }
+            });
+            
+            // Update the keyboard navigation to include the lesson carousel
+            setupCarouselKeyboardNavigation([window.categoryCarousel, window.lessonCarousel]);
+            
+            // Fix mobile-specific active card scaling if needed
+            if (window.innerWidth <= 768) {
+                window.lessonCarousel.fixMobileActiveCardScaling();
+            }
         }
 
 function startAdventure() {
@@ -609,7 +349,19 @@ function startAdventure() {
 
         // Initialize carousels on page load
         window.addEventListener('load', () => {
-            initializeCarousel();
+            // Create category carousel
+            window.categoryCarousel = new Carousel({
+                elementId: 'categoryCarousel',
+                itemCount: totalCategories,
+                dataAttribute: 'category',
+                inputId: 'storyCategory',
+                onSelect: (categoryId) => {
+                    selectedCategory = categoryId;
+                }
+            });
+            
+            // Set up global keyboard navigation
+            setupCarouselKeyboardNavigation([window.categoryCarousel]);
         });
 
         // Initialize marked.js with custom options
@@ -906,8 +658,19 @@ function startAdventure() {
                 card.classList.remove('selected', 'selecting', 'active');
             });
             
-            // Re-initialize the category carousel
-            initializeCarousel();
+            // Re-initialize the category carousel with our Carousel class
+            window.categoryCarousel = new Carousel({
+                elementId: 'categoryCarousel',
+                itemCount: totalCategories,
+                dataAttribute: 'category',
+                inputId: 'storyCategory',
+                onSelect: (categoryId) => {
+                    selectedCategory = categoryId;
+                }
+            });
+            
+            // Set up global keyboard navigation
+            setupCarouselKeyboardNavigation([window.categoryCarousel]);
         }
 
 // --- Event Handlers ---
@@ -1146,7 +909,8 @@ function startAdventure() {
         }
     </script>
     
-    <!-- Font Size Manager Script -->
+    <!-- External Scripts -->
     <script src="/static/js/font-size-manager.js"></script>
+    <script src="/static/js/carousel-manager.js"></script>
 </body>
 </html>
