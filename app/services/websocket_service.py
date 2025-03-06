@@ -7,6 +7,7 @@ from app.services.image_generation_service import ImageGenerationService
 from app.models.story import (
     ChapterType,
     ChapterContent,
+    ChapterContentValidator,
     StoryResponse,
     LessonResponse,
     ChapterData,
@@ -186,14 +187,29 @@ async def process_choice(
 
     # Create and append new chapter
     try:
-        new_chapter = ChapterData(
-            chapter_number=len(state.chapters) + 1,
-            content=re.sub(
-                r"^Chapter(?:\s+\d+)?:?\s*",
+        # Use the Pydantic validator to clean the content
+        try:
+            validated_content = ChapterContentValidator(
+                content=chapter_content.content
+            ).content
+            if validated_content != chapter_content.content:
+                logger.info(
+                    "Content was cleaned by ChapterContentValidator in process_choice"
+                )
+        except Exception as e:
+            logger.error(f"Error in Pydantic validation in process_choice: {e}")
+            # Fallback to regex if Pydantic validation fails
+            validated_content = re.sub(
+                r"^(?:#{1,6}\s+)?chapter(?:\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))?:?\s*",
                 "",
                 chapter_content.content,
-                flags=re.MULTILINE,
-            ).strip(),
+                flags=re.IGNORECASE,
+            )
+            logger.debug("Fallback to regex cleaning in process_choice")
+
+        new_chapter = ChapterData(
+            chapter_number=len(state.chapters) + 1,
+            content=validated_content.strip(),
             chapter_type=chapter_type,
             response=None,
             chapter_content=chapter_content,
@@ -233,10 +249,27 @@ async def stream_and_send_chapter(
         sampled_question: The question data (if any)
         state: The current state
     """
-    # Remove any "Chapter X:" prefix or just "Chapter" prefix before streaming
-    content_to_stream = re.sub(
-        r"^Chapter(?:\s+\d+)?:?\s*", "", chapter_content.content, flags=re.MULTILINE
-    ).strip()
+    # Use the Pydantic validator to clean the content before streaming
+    try:
+        content_to_stream = ChapterContentValidator(
+            content=chapter_content.content
+        ).content
+        if content_to_stream != chapter_content.content:
+            logger.info(
+                "Content was cleaned by ChapterContentValidator in stream_and_send_chapter"
+            )
+    except Exception as e:
+        logger.error(f"Error in Pydantic validation in stream_and_send_chapter: {e}")
+        # Fallback to regex if Pydantic validation fails
+        content_to_stream = re.sub(
+            r"^(?:#{1,6}\s+)?chapter(?:\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))?:?\s*",
+            "",
+            chapter_content.content,
+            flags=re.IGNORECASE,
+        )
+        logger.debug("Fallback to regex cleaning in stream_and_send_chapter")
+
+    content_to_stream = content_to_stream.strip()
 
     # Get chapter type for current chapter
     current_chapter_number = len(state.chapters)
@@ -433,13 +466,23 @@ async def stream_and_send_chapter(
         }
     )
 
+    # Only hide the loader after all image tasks are complete for Chapter 1
+    # For other chapters, hide it immediately since there are no image tasks
+    if not image_tasks:
+        # No image tasks, hide loader immediately
+        logger.info(
+            f"No image tasks for chapter {current_chapter_number}, hiding loader immediately"
+        )
+        await websocket.send_json({"type": "hide_loader"})
+
     # If we have image tasks, wait for them to complete and send updates
     if image_tasks:
         logger.info(
-            f"Waiting for {len(image_tasks)} image generation tasks to complete"
+            f"Chapter {current_chapter_number}: Waiting for {len(image_tasks)} image generation tasks to complete"
         )
         for i, task in image_tasks:
             try:
+                logger.info(f"Awaiting image generation task {i + 1}...")
                 image_data = await task
                 if image_data:
                     logger.info(f"Image generated for choice {i + 1}, sending update")
@@ -460,6 +503,12 @@ async def stream_and_send_chapter(
                     f"Error waiting for image generation task {i + 1}: {str(e)}"
                 )
                 # Log the error but continue processing other tasks
+
+        # Hide loader after all image tasks are complete
+        logger.info(
+            f"All image tasks complete for chapter {current_chapter_number}, hiding loader"
+        )
+        await websocket.send_json({"type": "hide_loader"})
 
 
 async def send_story_complete(
@@ -631,6 +680,27 @@ async def generate_chapter(
         ):
             story_content += chunk
 
+        # Validate and clean the content using Pydantic
+        try:
+            validated_content = ChapterContentValidator(content=story_content).content
+            if validated_content != story_content:
+                logger.info("Content was cleaned by ChapterContentValidator")
+                logger.debug(f"Original content started with: {story_content[:50]}...")
+                logger.debug(
+                    f"Cleaned content starts with: {validated_content[:50]}..."
+                )
+            story_content = validated_content
+        except Exception as e:
+            logger.error(f"Error in Pydantic validation: {e}")
+            # Fallback to regex if Pydantic validation fails
+            story_content = re.sub(
+                r"^(?:#{1,6}\s+)?chapter(?:\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))?:?\s*",
+                "",
+                story_content,
+                flags=re.IGNORECASE,
+            )
+            logger.debug("Fallback to regex cleaning after Pydantic validation failure")
+
         # Check for dialogue formatting issues in the generated content
         if re.match(
             r"^(chirped|said|whispered|shouted|called|murmured|exclaimed|replied|asked|answered|responded)\b",
@@ -690,10 +760,25 @@ async def generate_chapter(
             # Extract choices text and clean up story content
             choices_text = choices_match.group(1).strip()
             story_content = story_content[: choices_match.start()].strip()
-            # Remove any "Chapter X:" prefix or just "Chapter" prefix, including any whitespace after it
-            story_content = re.sub(
-                r"^Chapter(?:\s+\d+)?:?\s*", "", story_content, flags=re.MULTILINE
-            ).strip()
+            # Use the Pydantic validator to clean the content
+            try:
+                story_content = ChapterContentValidator(content=story_content).content
+                if story_content != story_content:
+                    logger.info(
+                        "Content was cleaned by ChapterContentValidator in choice extraction"
+                    )
+            except Exception as e:
+                logger.error(f"Error in Pydantic validation in choice extraction: {e}")
+                # Fallback to regex if Pydantic validation fails
+                story_content = re.sub(
+                    r"^(?:#{1,6}\s+)?chapter(?:\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))?:?\s*",
+                    "",
+                    story_content,
+                    flags=re.IGNORECASE,
+                )
+                logger.debug("Fallback to regex cleaning in choice extraction")
+
+            story_content = story_content.strip()
 
             # Initialize choices array
             choices = []

@@ -6,115 +6,11 @@
     <title>Interactive Story Adventure</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/static/css/loader.css">
     <link rel="stylesheet" href="/static/css/typography.css">
     <link rel="stylesheet" href="/static/css/theme.css">
-    <link rel="stylesheet" href="/static/css/carousel.css">
-    <style>
-        /* Any remaining non-typography styles can stay here */
-        
-        /* Font size controls */
-        .font-size-controls {
-            display: none; /* Hidden by default, shown only on mobile */
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .font-size-btn {
-            width: 2rem;
-            height: 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: var(--color-bg-secondary);
-            border-radius: 0.375rem;
-            font-weight: bold;
-            transition: all 0.2s ease-in-out;
-            border: none;
-            cursor: pointer;
-        }
-        
-        .font-size-btn:hover {
-            background-color: var(--color-accent-medium);
-        }
-        
-        .font-size-btn:focus {
-            outline: none;
-            box-shadow: 0 0 0 2px var(--color-primary-light);
-        }
-        
-        .font-size-btn:disabled {
-            opacity: var(--color-disabled);
-            cursor: not-allowed;
-        }
-        
-        .font-size-percentage {
-            font-size: 0.875rem;
-            font-weight: 500;
-            min-width: 3rem;
-            text-align: center;
-        }
-        
-        /* Header controls visibility */
-        .header-controls {
-            transition: opacity 0.3s ease-in-out;
-        }
-        
-        .header-controls-hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-        
-        /* Mobile-only controls */
-        @media (max-width: 768px) {
-            .font-size-controls {
-                display: flex;
-            }
-        }
-        
-        /* Choice image styles */
-        .choice-image-container {
-            transition: all 0.3s ease-in-out;
-            max-height: 200px;
-            overflow: hidden;
-            margin-top: 0.75rem;
-            border-radius: 0.5rem;
-        }
-
-        .choice-image-container img {
-            width: 100%;
-            height: auto;
-            object-fit: cover;
-            border-radius: 0.5rem;
-        }
-
-        .choice-card {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .choice-content {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-        }
-
-        @media (min-width: 768px) {
-            .choice-content {
-                flex-direction: row;
-            }
-            
-            .choice-text {
-                flex: 2;
-                padding-right: 1rem;
-            }
-            
-            .choice-image-container {
-                flex: 1;
-                margin-top: 0;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="/static/css/carousel-component.css">
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
@@ -125,7 +21,7 @@
             <p class="text-xl text-indigo-600 font-medium">Where no two stories are ever the same.</p>
             <p class="text-gray-600 max-w-2xl mx-auto">Choose your path and learn through engaging, personalized adventures.</p>
             <!-- Debug info - hidden but accessible via console for developers -->
-            <div id="debugInfo" class="mt-4 p-2 bg-gray-100 text-xs text-left rounded-md" style="display: none;">
+            <div id="debugInfo" class="debug-info" style="display: none;">
                 <p><strong>Debug Info:</strong></p>
                 <p>Total Categories: <span id="debugCategoryCount">{{ story_categories|length }}</span></p>
                 <p>Category IDs: <span id="debugCategoryIds">{{ story_categories.keys()|list }}</span></p>
@@ -136,13 +32,13 @@
         </div>
         
         <!-- Screen 1: Story Category Selection -->
-        <div id="storyCategoryScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6">
+        <div id="storyCategoryScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6 screen-transition">
             <input type="hidden" id="storyCategory" name="storyCategory" required>
             <div class="swipe-tip">Swipe to explore <span class="hand">➜</span></div>
             <div class="carousel-container">
                 <div class="carousel" id="categoryCarousel">
                     {% for category_id, category_data in story_categories.items() %}
-                    <div class="carousel-card" data-category="{{ category_id }}" onclick="selectCategory('{{ category_id }}')">
+                    <div class="carousel-card" data-category="{{ category_id }}" onclick="window.categoryCarousel.select('{{ category_id }}')">
                         <div class="card-face card-front">
                             <img src="/static/images/stories/{{ category_id }}.jpg" alt="{{ category_data.name }}" class="card-image">
                         </div>
@@ -154,12 +50,12 @@
                     {% endfor %}
                 </div>
                 <div class="carousel-nav">
-                    <button type="button" onclick="rotateCarousel('prev')" aria-label="Previous">
+                    <button type="button" onclick="window.categoryCarousel.rotate('prev')" aria-label="Previous">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                         </svg>
                     </button>
-                    <button type="button" onclick="rotateCarousel('next')" aria-label="Next">
+                    <button type="button" onclick="window.categoryCarousel.rotate('next')" aria-label="Next">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <path d="M8.59 7.41L10 6l6 6-6 6-1.41-1.41L13.17 12z"/>
                         </svg>
@@ -173,12 +69,12 @@
         </div>
 
         <!-- Screen 2: Lesson Topic Selection -->
-        <div id="lessonTopicScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6 hidden">
+        <div id="lessonTopicScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6 hidden screen-transition">
             <input type="hidden" id="lessonTopic" name="lessonTopic" required>
             <div class="carousel-container">
                 <div class="carousel" id="lessonCarousel">
                     {% for topic in lesson_topics %}
-                    <div class="carousel-card" data-topic="{{ topic }}" onclick="selectLessonTopic('{{ topic }}')">
+                    <div class="carousel-card" data-topic="{{ topic }}" onclick="window.lessonCarousel.select('{{ topic }}')">
                         <div class="card-face card-front">
                             <img src="/static/images/lessons/{{ topic }}.jpg" alt="{{ topic }}" class="card-image">
                         </div>
@@ -190,12 +86,12 @@
                     {% endfor %}
                 </div>
                 <div class="carousel-nav">
-                    <button type="button" onclick="rotateLessonCarousel('prev')" aria-label="Previous">
+                    <button type="button" onclick="window.lessonCarousel.rotate('prev')" aria-label="Previous">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                         </svg>
                     </button>
-                    <button type="button" onclick="rotateLessonCarousel('next')" aria-label="Next">
+                    <button type="button" onclick="window.lessonCarousel.rotate('next')" aria-label="Next">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <path d="M8.59 7.41L10 6l6 6-6 6-1.41-1.41L13.17 12z"/>
                         </svg>
@@ -216,7 +112,7 @@
         </div>
         
         <!-- Story Container (Initially Hidden) -->
-        <div id="storyContainer" class="mt-8 max-w-2xl mx-auto hidden">
+        <div id="storyContainer" class="mt-8 max-w-2xl mx-auto hidden screen-transition">
             <div class="bg-white rounded-xl shadow-md p-6">
                 <!-- Header Controls (Chapter indicator and Font Size) -->
                 <div class="w-full flex items-center justify-between mb-6 header-controls">
@@ -319,7 +215,7 @@
 
                 this.connection.onopen = () => {
                     console.log('WebSocket reconnected, restoring state...');
-                    hideLoader();
+                    // Don't hide loader here - wait for server to send hide_loader message
                     this.reconnectAttempts = 0; // Reset counter on successful connection
                     
                     if (savedState) {
@@ -371,297 +267,21 @@
         const totalCategories = parseInt("{{ story_categories|length }}");
         const totalLessonTopics = parseInt("{{ lesson_topics|length }}");
 
-        // Global variables for carousel state
-        let currentRotation = 0;
-        let currentLessonRotation = 0;
-        let currentIndex = 0;
-        let currentLessonIndex = 0;
-        const rotationAngle = 360 / totalCategories;
-        const lessonRotationAngle = 360 / totalLessonTopics;
+        // Global variables for state management
 
-        // --- Carousel Functions ---
-        function rotateCarousel(direction) {
-            if (direction === 'next') {
-                currentRotation -= rotationAngle;
-                currentIndex = (currentIndex + 1) % totalCategories;
-            } else {
-                currentRotation += rotationAngle;
-                currentIndex = (currentIndex - 1 + totalCategories) % totalCategories;
-            }
-            
-            const carousel = document.getElementById('categoryCarousel');
-            carousel.style.transform = `translate(-50%, -50%) rotateY(${currentRotation}deg)`;
-            
-            // Update active state
-            updateActiveCard();
-        }
-
-        function updateActiveCard() {
-            const cards = document.getElementById('categoryCarousel').getElementsByClassName('carousel-card');
-            Array.from(cards).forEach((card, index) => {
-                card.classList.remove('active');
-                if (index === currentIndex) {
-                    card.classList.add('active');
-                }
-            });
-        }
-
-        function initializeCarousel() {
-            console.log('Initializing carousel with totalCategories:', totalCategories);
-            console.log('Rotation angle:', rotationAngle);
-            
-            const carousel = document.getElementById('categoryCarousel');
-            if (!carousel) {
-                console.error('Carousel element not found!');
-                return;
-            }
-            
-            const cards = carousel.getElementsByClassName('carousel-card');
-            console.log('Found carousel cards:', cards.length);
-            
-            if (cards.length === 0) {
-                console.error('No carousel cards found! Check if story_categories data is loaded correctly.');
-                // Add a visible error message on the page
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'p-4 bg-red-100 text-red-800 rounded-md mb-4';
-                errorMsg.innerHTML = `<p><strong>Error:</strong> No story categories found.</p>
-                                     <p>Debug info: Total categories = ${totalCategories}</p>`;
-                carousel.parentNode.insertBefore(errorMsg, carousel);
-                return;
-            }
-            
-            // Position cards in 3D space
-            try {
-                for (let i = 0; i < cards.length; i++) {
-                    const angle = (i * rotationAngle);
-                    const radius = 400;
-                    console.log(`Positioning card ${i} at angle ${angle}deg and radius ${radius}px`);
-                    cards[i].style.transform = `rotateY(${angle}deg) translateZ(${radius}px)`;
-                    cards[i].style.visibility = 'visible';
-                }
-                
-                // Set initial active card
-                updateActiveCard();
-                
-                // Add keyboard navigation
-                document.addEventListener('keydown', handleKeyPress);
-                
-                console.log('Carousel initialization complete');
-            } catch (error) {
-                console.error('Error during carousel initialization:', error);
-                // Add a visible error message on the page
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'p-4 bg-red-100 text-red-800 rounded-md mb-4';
-                errorMsg.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
-                carousel.parentNode.insertBefore(errorMsg, carousel);
-            }
-
-            // Add touch event handling
-            let touchStartX = 0;
-            let touchEndX = 0;
-            
-            carousel.addEventListener('touchstart', function(event) {
-                touchStartX = event.touches[0].clientX;
-                // Hide swipe tip on first touch
-                const swipeTip = document.querySelector('.swipe-tip');
-                if (swipeTip) swipeTip.style.display = 'none';
-            }, false);
-            
-            carousel.addEventListener('touchmove', function(event) {
-                event.preventDefault(); // Prevent scrolling while swiping
-            }, false);
-            
-            carousel.addEventListener('touchend', function(event) {
-                touchEndX = event.changedTouches[0].clientX;
-                handleSwipe();
-            }, false);
-            
-            function handleSwipe() {
-                const swipeThreshold = 50; // Minimum distance for a swipe
-                const swipeDistance = touchEndX - touchStartX;
-                
-                if (Math.abs(swipeDistance) > swipeThreshold) {
-                    if (swipeDistance > 0) {
-                        // Swipe right
-                        rotateCarousel('prev');
-                    } else {
-                        // Swipe left
-                        rotateCarousel('next');
-                    }
-                }
-            }
-        }
-
-        function handleKeyPress(event) {
-            if (event.key === 'ArrowLeft') {
-                rotateCarousel('prev');
-            } else if (event.key === 'ArrowRight') {
-                rotateCarousel('next');
-            } else if (event.key === 'Enter') {
-                const cards = document.getElementById('categoryCarousel').getElementsByClassName('carousel-card');
-                const activeCard = cards[currentIndex];
-                if (activeCard) {
-                    selectCategory(activeCard.dataset.category);
-                }
-            }
-        }
-
-        function selectCategory(categoryId) {
-            selectedCategory = categoryId;
-            document.getElementById('storyCategory').value = categoryId;
-            
-            // Remove selected class from all cards and add to the chosen one
-            const cards = document.getElementById('categoryCarousel').getElementsByClassName('carousel-card');
-            Array.from(cards).forEach(card => {
-                card.classList.remove('selected', 'selecting');
-                if (card.dataset.category === categoryId) {
-                    card.classList.add('selected', 'selecting');
-                    setTimeout(() => card.classList.remove('selecting'), 300);
-                }
-            });
-        }
-
-        // --- Lesson Carousel Functions ---
-        function rotateLessonCarousel(direction) {
-            if (direction === 'next') {
-                currentLessonRotation -= lessonRotationAngle;
-                currentLessonIndex = (currentLessonIndex + 1) % totalLessonTopics;
-            } else {
-                currentLessonRotation += lessonRotationAngle;
-                currentLessonIndex = (currentLessonIndex - 1 + totalLessonTopics) % totalLessonTopics;
-            }
-            
-            const carousel = document.getElementById('lessonCarousel');
-            carousel.style.transform = `translate(-50%, -50%) rotateY(${currentLessonRotation}deg)`;
-            
-            // Update active state
-            updateActiveLessonCard();
-        }
-
-        function updateActiveLessonCard() {
-            const cards = document.getElementById('lessonCarousel').getElementsByClassName('carousel-card');
-            Array.from(cards).forEach((card, index) => {
-                card.classList.remove('active');
-                if (index === currentLessonIndex) {
-                    card.classList.add('active');
-                }
-            });
-        }
-
-        function initializeLessonCarousel() {
-            const carousel = document.getElementById('lessonCarousel');
-            const cards = carousel.getElementsByClassName('carousel-card');
-            
-            // Position cards in 3D space
-            for (let i = 0; i < cards.length; i++) {
-                const angle = (i * lessonRotationAngle);
-                const radius = 400;
-                cards[i].style.transform = `rotateY(${angle}deg) translateZ(${radius}px)`;
-                cards[i].style.visibility = 'visible';
-            }
-
-            // Set initial active card
-            updateActiveLessonCard();
-
-            // Add keyboard navigation
-            document.addEventListener('keydown', handleLessonKeyPress);
-
-            // Add touch event handling
-            let touchStartX = 0;
-            let touchEndX = 0;
-            
-            carousel.addEventListener('touchstart', function(event) {
-                touchStartX = event.touches[0].clientX;
-            }, false);
-            
-            carousel.addEventListener('touchmove', function(event) {
-                event.preventDefault(); // Prevent scrolling while swiping
-            }, false);
-            
-            carousel.addEventListener('touchend', function(event) {
-                touchEndX = event.changedTouches[0].clientX;
-                handleSwipe();
-            }, false);
-            
-            function handleSwipe() {
-                const swipeThreshold = 50; // Minimum distance for a swipe
-                const swipeDistance = touchEndX - touchStartX;
-                
-                if (Math.abs(swipeDistance) > swipeThreshold) {
-                    if (swipeDistance > 0) {
-                        // Swipe right
-                        rotateLessonCarousel('prev');
-                    } else {
-                        // Swipe left
-                        rotateLessonCarousel('next');
-                    }
-                }
-            }
-
-            // Mobile-specific fix for active card scaling
-            if (window.innerWidth <= 768) {
-                fixMobileActiveCardScaling();
-            }
-        }
-
-        function handleLessonKeyPress(event) {
-            if (event.key === 'ArrowLeft') {
-                rotateLessonCarousel('prev');
-            } else if (event.key === 'ArrowRight') {
-                rotateLessonCarousel('next');
-            } else if (event.key === 'Enter') {
-                const cards = document.getElementById('lessonCarousel').getElementsByClassName('carousel-card');
-                const activeCard = cards[currentLessonIndex];
-                if (activeCard) {
-                    selectLessonTopic(activeCard.dataset.topic);
-                }
-            }
-        }
-
-        function selectLessonTopic(topic) {
-            selectedLessonTopic = topic;
-            document.getElementById('lessonTopic').value = topic;
-            
-            // Remove selected class from all cards and add to the chosen one
-            const cards = document.getElementById('lessonCarousel').getElementsByClassName('carousel-card');
-            Array.from(cards).forEach(card => {
-                card.classList.remove('selected', 'selecting');
-                if (card.dataset.topic === topic) {
-                    card.classList.add('selected', 'selecting');
-                    setTimeout(() => card.classList.remove('selecting'), 300);
-                }
-            });
-        }
-
-        // Mobile-specific fix for active card scaling
-        function fixMobileActiveCardScaling() {
-            // This function only runs on mobile devices
-            if (window.innerWidth > 768) return;
-            
-            // Ensure the active card on the second page has the correct scaling
-            const lessonCards = document.getElementById('lessonCarousel').getElementsByClassName('carousel-card');
-            const activeCard = lessonCards[currentLessonIndex];
-            
-            if (activeCard) {
-                // Remove active class from all cards
-                Array.from(lessonCards).forEach(card => card.classList.remove('active'));
-                
-                // Add active class to the current card
-                activeCard.classList.add('active');
-            }
-        }
+        // Carousel functionality has been moved to carousel-manager.js
 
         // --- Navigation Functions ---
         // Function to show error messages
         function showError(message) {
             const toast = document.createElement('div');
-            toast.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-md bg-red-500 text-white shadow-lg transition-opacity duration-300';
+            toast.className = 'toast-notification';
             toast.textContent = message;
             document.body.appendChild(toast);
             
             // Remove after 3 seconds
             setTimeout(() => {
-                toast.style.opacity = '0';
+                toast.classList.add('hide');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
@@ -671,11 +291,29 @@
                 showError('Please select a story category to continue');
                 return;
             }
+            // Add hidden class to trigger transition
             document.getElementById('storyCategoryScreen').classList.add('hidden');
+            // Remove hidden class to trigger transition
             document.getElementById('lessonTopicScreen').classList.remove('hidden');
             
-            // Initialize the lesson carousel
-            initializeLessonCarousel();
+            // Initialize the lesson carousel with our Carousel class
+            window.lessonCarousel = new Carousel({
+                elementId: 'lessonCarousel',
+                itemCount: totalLessonTopics,
+                dataAttribute: 'topic',
+                inputId: 'lessonTopic',
+                onSelect: (topic) => {
+                    selectedLessonTopic = topic;
+                }
+            });
+            
+            // Update the keyboard navigation to include the lesson carousel
+            setupCarouselKeyboardNavigation([window.categoryCarousel, window.lessonCarousel]);
+            
+            // Fix mobile-specific active card scaling if needed
+            if (window.innerWidth <= 768) {
+                window.lessonCarousel.fixMobileActiveCardScaling();
+            }
         }
 
 function startAdventure() {
@@ -696,10 +334,11 @@ function startAdventure() {
         lessonTopic: selectedLessonTopic
     });
 
-    // Update UI
+    // Update UI - add hidden class to trigger transitions
     document.getElementById('lessonTopicScreen').classList.add('hidden');
-    document.getElementById('storyContainer').classList.remove('hidden');
     document.getElementById('introText').classList.add('hidden');
+    // Remove hidden class to trigger transition
+    document.getElementById('storyContainer').classList.remove('hidden');
 
     // Start the adventure
     showLoader();
@@ -708,7 +347,19 @@ function startAdventure() {
 
         // Initialize carousels on page load
         window.addEventListener('load', () => {
-            initializeCarousel();
+            // Create category carousel
+            window.categoryCarousel = new Carousel({
+                elementId: 'categoryCarousel',
+                itemCount: totalCategories,
+                dataAttribute: 'category',
+                inputId: 'storyCategory',
+                onSelect: (categoryId) => {
+                    selectedCategory = categoryId;
+                }
+            });
+            
+            // Set up global keyboard navigation
+            setupCarouselKeyboardNavigation([window.categoryCarousel]);
         });
 
         // Initialize marked.js with custom options
@@ -723,17 +374,39 @@ function startAdventure() {
 
         // --- Utility Functions ---
         function showLoader() {
+            console.log('Showing loader...');
             const overlay = document.getElementById('loaderOverlay');
+            if (!overlay) {
+                console.error('Loader overlay element not found!');
+                return;
+            }
+            
+            // Force display to ensure it's visible
+            overlay.style.display = 'flex';
             overlay.classList.remove('hidden');
+            
             // Use setTimeout to ensure the transition works
-            setTimeout(() => overlay.classList.add('active'), 0);
+            setTimeout(() => {
+                overlay.classList.add('active');
+                console.log('Loader activated');
+            }, 0);
         }
 
         function hideLoader() {
+            console.log('Hiding loader...');
             const overlay = document.getElementById('loaderOverlay');
+            if (!overlay) {
+                console.error('Loader overlay element not found!');
+                return;
+            }
+            
             overlay.classList.remove('active');
+            
             // Wait for transition to complete before hiding
-            setTimeout(() => overlay.classList.add('hidden'), 300);
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                console.log('Loader hidden');
+            }, 300);
         }
         
         // Function to update progress display
@@ -765,9 +438,10 @@ function startAdventure() {
         function handleMessage(event) {
             try {
                 const data = JSON.parse(event.data);
-                hideLoader();
-
-                if (data.type === 'choices') {
+                
+                if (data.type === 'hide_loader') {
+                    hideLoader();
+                } else if (data.type === 'choices') {
                     displayChoices(data.choices);
                 } else if (data.type === 'story') {
                     appendStoryText(data.content);
@@ -776,6 +450,9 @@ function startAdventure() {
                 } else if (data.type === 'choice_image_update') {
                     // Handle image updates for choices
                     updateChoiceWithImage(data.choice_index, data.image_data);
+                } else {
+                    // For any other message types, hide the loader as a fallback
+                    hideLoader();
                 }
             } catch (e) {
                 // Assume it's plain text if JSON parsing fails
@@ -829,10 +506,9 @@ function startAdventure() {
                 
                 // Add fade-in animation
                 const img = imageContainer.querySelector('img');
-                img.style.opacity = '0';
-                img.style.transition = 'opacity 0.5s ease-in-out';
+                img.classList.add('fade-in');
                 setTimeout(() => {
-                    img.style.opacity = '1';
+                    img.classList.add('show');
                 }, 50);
             }
         }
@@ -944,10 +620,10 @@ function startAdventure() {
                 clearTimeout(renderTimeout);
             }
             
-            // Reset UI to initial state
-            document.getElementById('storyCategoryScreen').classList.remove('hidden');
+            // Reset UI to initial state - add/remove hidden classes to trigger transitions
             document.getElementById('lessonTopicScreen').classList.add('hidden');
             document.getElementById('storyContainer').classList.add('hidden');
+            document.getElementById('storyCategoryScreen').classList.remove('hidden');
             document.getElementById('introText').classList.remove('hidden');
             
             // Hide loaders
@@ -979,8 +655,19 @@ function startAdventure() {
                 card.classList.remove('selected', 'selecting', 'active');
             });
             
-            // Re-initialize the category carousel
-            initializeCarousel();
+            // Re-initialize the category carousel with our Carousel class
+            window.categoryCarousel = new Carousel({
+                elementId: 'categoryCarousel',
+                itemCount: totalCategories,
+                dataAttribute: 'category',
+                inputId: 'storyCategory',
+                onSelect: (categoryId) => {
+                    selectedCategory = categoryId;
+                }
+            });
+            
+            // Set up global keyboard navigation
+            setupCarouselKeyboardNavigation([window.categoryCarousel]);
         }
 
 // --- Event Handlers ---
@@ -1001,9 +688,13 @@ function startAdventure() {
             if (savedState?.chapters?.length > 0 && savedState.storyCategory && savedState.lessonTopic) {
                 showLoader();
                 updateProgress(savedState.chapters.length + 1, savedState.story_length);
+                
+                // Add hidden classes to trigger transitions
                 document.getElementById('storyCategoryScreen').classList.add('hidden');
                 document.getElementById('lessonTopicScreen').classList.add('hidden');
                 document.getElementById('introText').classList.add('hidden');
+                
+                // Remove hidden class to trigger transition
                 document.getElementById('storyContainer').classList.remove('hidden');
 
                 // Restore selections
@@ -1219,7 +910,8 @@ function startAdventure() {
         }
     </script>
     
-    <!-- Font Size Manager Script -->
+    <!-- External Scripts -->
     <script src="/static/js/font-size-manager.js"></script>
+    <script src="/static/js/carousel-manager.js"></script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from typing import List, Dict, Any, Optional, Union, Literal
 from enum import Enum
+import re
 
 
 class ChapterType(str, Enum):
@@ -24,6 +25,31 @@ class StoryResponse(BaseModel):
 
     chosen_path: str
     choice_text: str
+
+
+class ChapterContentValidator(BaseModel):
+    """Validates and cleans chapter content."""
+
+    content: str
+
+    @field_validator("content")
+    @classmethod
+    def content_must_not_start_with_chapter(cls, v):
+        # Case-insensitive check for any variation of "chapter" at the beginning
+        # This handles markdown headings and various formats
+        if re.match(r"^(?:#{1,6}\s+)?chapter\b", v, re.IGNORECASE):
+            # Automatically fix the content by removing the prefix
+            fixed_content = re.sub(
+                r"^(?:#{1,6}\s+)?chapter(?:\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))?:?\s*",
+                "",
+                v,
+                flags=re.IGNORECASE,
+            )
+            # Ensure the first letter is capitalized after removing the prefix
+            if fixed_content:
+                fixed_content = fixed_content[0].upper() + fixed_content[1:]
+            return fixed_content
+        return v
 
 
 class ChapterContent(BaseModel):

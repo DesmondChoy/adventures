@@ -1,3 +1,13 @@
+/**
+ * Carousel Component Styles
+ * 
+ * Contains styles for:
+ * - 3D carousel container and structure
+ * - Carousel cards and animations
+ * - Navigation controls
+ * - Responsive adjustments
+ */
+
 /* Carousel Container and Base Structure */
 .carousel-container {
     perspective: 2000px;

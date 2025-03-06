@@ -1,5 +1,137 @@
 # Progress Log
 
+## 2025-03-06: CSS Modularization and Transition Improvements
+
+### Improved Frontend Architecture with CSS Organization and Transitions
+- Problem: CSS was scattered throughout the HTML file with inline styles and lacked organization
+- Root Cause:
+  * Inline styles were used for various UI components
+  * No dedicated CSS files for layout and components
+  * Screen transitions lacked proper animation effects
+  * Error messages used inline styling instead of a reusable component
+- Solution:
+  * Created two new CSS files:
+    - `app/static/css/layout.css` - Contains structural elements, containers, and screen transitions
+    - `app/static/css/components.css` - Contains reusable UI components like toasts, buttons, and animations
+  * Removed inline styles and replaced them with proper CSS classes:
+    - Moved debug info styles to the components.css file
+    - Added screen transition classes to all screen containers
+    - Created a toast notification component for error messages
+    - Added fade-in animation classes for images
+  * Enhanced screen transitions:
+    - Added proper transition effects between screens
+    - Improved the navigation functions to handle transitions correctly
+    - Added comments to clarify the transition logic
+  * Improved code maintainability:
+    - Organized CSS into logical modules
+    - Added descriptive comments to explain the purpose of each section
+    - Used consistent naming conventions for classes
+- Result:
+  * More maintainable codebase with better organized CSS
+  * Smoother screen transitions throughout the application
+  * Improved user experience with consistent animations
+  * Reduced code duplication and better separation of concerns
+
+## 2025-03-06: Carousel Component Refactoring
+
+### Improved Frontend Architecture with Reusable Carousel Component
+- Problem: The carousel functionality in `index.html` was complex and difficult to maintain with over 1,200 lines of code
+- Root Cause:
+  * All carousel functionality was embedded directly in the main HTML file
+  * Duplicate code for category and lesson carousels
+  * Global variables for carousel state management
+  * Complex event handling logic mixed with other UI code
+- Solution:
+  * Created a reusable `Carousel` class in a new `app/static/js/carousel-manager.js` file with:
+    - Constructor that accepts configuration options (elementId, itemCount, dataAttribute, inputId, onSelect)
+    - Methods for rotation, selection, and event handling
+    - Support for keyboard, button, and touch controls
+    - Mobile-specific optimizations
+  * Updated HTML to use the new class for both category and lesson carousels:
+    ```javascript
+    // Initialize category carousel
+    window.categoryCarousel = new Carousel({
+        elementId: 'categoryCarousel',
+        itemCount: totalCategories,
+        dataAttribute: 'category',
+        inputId: 'storyCategory',
+        onSelect: (categoryId) => {
+            selectedCategory = categoryId;
+        }
+    });
+    ```
+  * Added a `setupCarouselKeyboardNavigation()` function to handle keyboard events for multiple carousels
+  * Removed redundant carousel functions and global variables from the main JavaScript code
+  * Updated event handlers to use the new class methods
+- Result:
+  * Improved code organization with carousel functionality isolated in its own module
+  * Reduced duplication by using the same class for both carousels
+  * Enhanced maintainability with changes to carousel behavior only needed in one place
+  * Better encapsulation with carousel state managed within the class rather than using global variables
+  * Cleaner HTML file with significantly reduced JavaScript code
+
+## 2025-03-05: Added Code Complexity Analyzer Tool
+
+### Created Development Tool for Identifying Refactoring Candidates
+- Problem: Needed a way to identify files with excessive code size that might need refactoring
+- Solution:
+  * Created a new `tools/code_complexity_analyzer.py` utility script that:
+    - Analyzes files in the repository to find those with the most lines
+    - Counts total lines, non-blank lines, and code lines (excluding comments)
+    - Supports filtering by file extension (e.g., `-e py js html`)
+    - Allows sorting by different metrics (`-s total/non-blank/code`)
+    - Provides a summary of total files and lines analyzed
+  * Added comprehensive documentation with usage examples
+  * Implemented comment pattern detection for Python, JavaScript, HTML, and CSS
+  * Created a dedicated `tools/` directory for development utilities
+- Result:
+  * Identified that `app/templates/index.html` (1,251 lines) is the largest file in the project
+  * Provided a reusable tool for ongoing code quality monitoring
+  * Established a pattern for organizing development utilities separate from application code
+
+## 2025-03-05: Fixed Loading Spinner Visibility for Chapter 1
+
+### Fixed Loading Spinner Timing and Visibility Issues
+- Problem: The loading spinner was disappearing too quickly for Chapter 1 but working fine for other chapters
+- Root Cause:
+  * The loader was being hidden immediately after content streaming but before image generation tasks for Chapter 1 were complete
+  * CSS issues with the loader overlay were causing visibility problems
+  * The WebSocket connection handler was hiding the loader too early in the process
+- Solution:
+  * Modified `stream_and_send_chapter()` in `websocket_service.py` to only hide the loader after all image tasks are complete:
+    ```python
+    # Only hide the loader after all image tasks are complete for Chapter 1
+    # For other chapters, hide it immediately since there are no image tasks
+    if not image_tasks:
+        # No image tasks, hide loader immediately
+        await websocket.send_json({"type": "hide_loader"})
+    
+    # If we have image tasks, wait for them to complete and send updates
+    if image_tasks:
+        # Process image tasks...
+        
+        # Hide loader after all image tasks are complete
+        await websocket.send_json({"type": "hide_loader"})
+    ```
+  * Updated the WebSocket connection handler in `index.html` to not hide the loader immediately after connection:
+    ```javascript
+    this.connection.onopen = () => {
+        console.log('WebSocket reconnected, restoring state...');
+        // Don't hide loader here - wait for server to send hide_loader message
+        this.reconnectAttempts = 0; // Reset counter on successful connection
+        
+        // Rest of the connection handling...
+    };
+    ```
+  * Enhanced the `showLoader()` and `hideLoader()` functions with better error handling and logging
+  * Fixed CSS issues in `loader.css` to ensure proper visibility of the loader overlay
+  * Added `!important` to the hidden class to prevent style conflicts
+- Result:
+  * The loading spinner now remains visible during the entire image generation process for Chapter 1
+  * The user experience is improved by accurately reflecting the loading state
+  * The spinner is properly hidden after all content and images are loaded
+  * Consistent behavior across all chapters with appropriate loading indicators
+
 ## 2025-03-05: Fixed Subprocess Python Interpreter Issue in Simulation Tests
 
 ### Fixed Python Interpreter Path in Subprocess Commands

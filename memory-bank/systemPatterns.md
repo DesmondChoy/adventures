@@ -162,7 +162,71 @@ flowchart TD
 
 ## Key Patterns
 
-### 1. Story Data Organization Pattern
+### 1. Frontend Component Architecture
+```mermaid
+flowchart TD
+    subgraph Frontend_Components
+        HTML[index.html] --> |"Includes"| CSS[CSS Files]
+        HTML --> |"Includes"| JS[JavaScript Files]
+        
+        subgraph CSS_Files["app/static/css/"]
+            layout_css[layout.css]
+            components_css[components.css]
+            carousel_component_css[carousel-component.css]
+            theme_css[theme.css]
+            typography_css[typography.css]
+        end
+        
+        subgraph JS_Files["app/static/js/"]
+            carousel_js[carousel-manager.js]
+            font_size_js[font-size-manager.js]
+        end
+        
+        HTML --> |"Initializes"| Carousel[Carousel Class]
+        HTML --> |"Initializes"| FontSize[FontSizeManager Class]
+        
+        Carousel --> |"Manages"| CategoryCarousel[Category Carousel]
+        Carousel --> |"Manages"| LessonCarousel[Lesson Carousel]
+        
+        FontSize --> |"Controls"| TextSize[Text Size Adjustments]
+    end
+```
+
+- **CSS Organization** (`app/static/css/`)
+  * Organized by purpose and responsibility:
+    - `layout.css`: Structural elements, containers, screen transitions, and responsive adjustments
+    - `components.css`: Reusable UI components (toast notifications, buttons, loaders, choice cards, header controls, font controls)
+    - `carousel-component.css`: Specialized carousel component styles
+    - `theme.css`: Color schemes and theme variables
+    - `typography.css`: Text styling and formatting
+  * Clear separation of concerns:
+    - Layout styles are separate from component styles
+    - Base styles (theme, typography) are separate from specific component styles
+    - Specialized components (carousel) have their own file due to complexity
+
+- **Carousel Component** (`app/static/js/carousel-manager.js`)
+  * Reusable class for 3D carousel functionality
+  * Configuration via constructor options:
+    - `elementId`: DOM element ID for the carousel
+    - `itemCount`: Number of items in the carousel
+    - `dataAttribute`: Data attribute for selection (e.g., 'category', 'topic')
+    - `inputId`: Input element ID to update on selection
+    - `onSelect`: Callback function when an item is selected
+  * Methods:
+    - `rotate(direction)`: Rotates the carousel in the specified direction
+    - `select(value)`: Selects a card by its data attribute value
+    - `handleKeyPress(event)`: Handles keyboard navigation
+    - `handleSwipe(startX, endX)`: Processes touch gestures
+  * Event handling for keyboard, touch, and click interactions
+  * Mobile-specific optimizations
+
+- **Font Size Manager** (`app/static/js/font-size-manager.js`)
+  * Controls text size adjustments for mobile users
+  * Persists preferences in localStorage
+  * Shows/hides controls on scroll
+  * Applies size changes to story content and choice buttons
+
+### 2. Story Data Organization Pattern
 ```mermaid
 flowchart TD
     subgraph Story_Data_Organization

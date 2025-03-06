@@ -1,5 +1,18 @@
 # Active Context
 
+## Development Tools
+
+1. **Code Complexity Analyzer (`tools/code_complexity_analyzer.py`):**
+   * Identifies files that may need refactoring due to excessive code size
+   * Counts total lines, non-blank lines, and code lines (excluding comments)
+   * Supports filtering by file extension and sorting by different metrics
+   * Command-line usage: `python tools/code_complexity_analyzer.py [options]`
+   * Options:
+     - `-p, --path PATH`: Repository path (default: current directory)
+     - `-e, --extensions EXT`: File extensions to include (e.g., py js html)
+     - `-s, --sort TYPE`: Sort by total, non-blank, or code lines
+     - `-n, --number N`: Number of files to display
+
 ## Core Architecture
 
 1. **Adventure Flow (`app/routers/web.py`, `app/services/chapter_manager.py`):**
@@ -32,6 +45,82 @@
    * Offers methods for accessing specific story categories
 
 ## Recent Changes
+
+### CSS Files Reorganization (2025-03-06)
+- Problem: There were too many standalone CSS files, making it difficult to maintain and understand the styling structure
+- Solution:
+  * Merged multiple CSS files into a more organized structure:
+    - Consolidated `header-controls.css`, `font-controls.css`, `loader.css`, and `choice-cards.css` into `components.css`
+    - Renamed `carousel.css` to `carousel-component.css` to better reflect its purpose
+    - Kept `layout.css`, `theme.css`, and `typography.css` as separate files for their specific purposes
+  * Updated the HTML file to reference the new CSS structure:
+    - Removed references to the merged files
+    - Added reference to the renamed carousel component file
+  * Organized CSS files by their purpose:
+    - `components.css` - Reusable UI components (toast notifications, buttons, loaders, choice cards, etc.)
+    - `carousel-component.css` - Specialized carousel component styles
+    - `layout.css` - Structural elements, containers, and screen transitions
+    - `theme.css` - Color schemes and theme variables
+    - `typography.css` - Text styling and formatting
+- Result:
+  * More maintainable CSS structure with clear separation of concerns
+  * Reduced number of CSS files from 9 to 5
+  * Better organization of styles by their purpose
+  * Improved developer experience with easier-to-find styles
+  * No change in functionality or appearance for end users
+
+### CSS Modularization and Transition Improvements (2025-03-06)
+- Problem: CSS was scattered throughout the HTML file with inline styles and lacked organization
+- Solution:
+  * Created two new CSS files:
+    - `app/static/css/layout.css` - Contains structural elements, containers, and screen transitions
+    - `app/static/css/components.css` - Contains reusable UI components like toasts, buttons, and animations
+  * Removed inline styles and replaced them with proper CSS classes:
+    - Moved debug info styles to the components.css file
+    - Added screen transition classes to all screen containers
+    - Created a toast notification component for error messages
+    - Added fade-in animation classes for images
+  * Enhanced screen transitions:
+    - Added proper transition effects between screens
+    - Improved the navigation functions to handle transitions correctly
+    - Added comments to clarify the transition logic
+  * Improved code maintainability:
+    - Organized CSS into logical modules
+    - Added descriptive comments to explain the purpose of each section
+    - Used consistent naming conventions for classes
+- Result:
+  * More maintainable codebase with better organized CSS
+  * Smoother screen transitions throughout the application
+  * Improved user experience with consistent animations
+  * Reduced code duplication and better separation of concerns
+
+### Carousel Component Refactoring (2025-03-06)
+- Problem: The carousel functionality in `index.html` was complex and difficult to maintain with over 1,200 lines of code
+- Solution:
+  * Created a reusable `Carousel` class in a new `app/static/js/carousel-manager.js` file
+  * Encapsulated all carousel-related functionality including rotation, selection, and event handling
+  * Updated HTML to use the new class for both category and lesson carousels
+  * Removed redundant carousel functions and global variables from the main JavaScript code
+  * Implemented proper keyboard navigation through the new class
+- Result:
+  * Improved code organization with carousel functionality isolated in its own module
+  * Reduced duplication by using the same class for both carousels
+  * Enhanced maintainability with changes to carousel behavior only needed in one place
+  * Better encapsulation with carousel state managed within the class rather than using global variables
+
+### Fixed Loading Spinner Visibility for Chapter 1 (2025-03-05)
+- Problem: The loading spinner was disappearing too quickly for Chapter 1 but working fine for other chapters
+- Root Cause:
+  * The loader was being hidden immediately after content streaming but before image generation tasks for Chapter 1 were complete
+  * CSS issues with the loader overlay were causing visibility problems
+  * The WebSocket connection handler was hiding the loader too early in the process
+- Solution:
+  * Modified `stream_and_send_chapter()` in `websocket_service.py` to only hide the loader after all image tasks are complete
+  * Updated the WebSocket connection handler in `index.html` to not hide the loader immediately after connection
+  * Enhanced the `showLoader()` and `hideLoader()` functions with better error handling and logging
+  * Fixed CSS issues in `loader.css` to ensure proper visibility of the loader overlay
+  * Added `!important` to the hidden class to prevent style conflicts
+- Result: The loading spinner now remains visible during the entire image generation process for Chapter 1, providing a better user experience by accurately reflecting the loading state
 
 ### Fixed Subprocess Python Interpreter Issue in Simulation Tests (2025-03-05)
 - Problem: The `run_simulation_tests.py` script was failing to run the story simulation properly with a `ModuleNotFoundError: No module named 'websockets'` error, even though the package was installed in the virtual environment
