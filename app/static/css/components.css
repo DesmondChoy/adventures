@@ -1,0 +1,102 @@
+/**
+ * Components Styles
+ * 
+ * Contains styles for:
+ * - Toast notifications
+ * - Button styles
+ * - Custom animations
+ * - Utility classes
+ */
+
+/* Toast notifications */
+.toast-notification {
+    position: fixed;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    background-color: #ef4444; /* red-500 */
+    color: white;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transition: opacity 0.3s ease-in-out;
+    z-index: 50;
+}
+
+.toast-notification.hide {
+    opacity: 0;
+}
+
+/* Button styles */
+.primary-button {
+    display: flex;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border: 1px solid transparent;
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+    background-color: #4f46e5; /* indigo-600 */
+    transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.primary-button:hover {
+    background-color: #4338ca; /* indigo-700 */
+    transform: scale(1.02);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.primary-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #4f46e5;
+}
+
+.success-button {
+    background-color: #10b981; /* green-600 */
+}
+
+.success-button:hover {
+    background-color: #059669; /* green-700 */
+}
+
+.success-button:focus {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #10b981;
+}
+
+/* Choice card styles */
+.choice-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.choice-card.disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.choice-card.selected {
+    border-color: #4f46e5; /* indigo-600 */
+    box-shadow: 0 0 0 2px #4f46e5;
+}
+
+/* Image fade-in animation */
+.fade-in {
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.fade-in.show {
+    opacity: 1;
+}
+
+/* Debug info styles */
+.debug-info {
+    margin-top: 1rem;
+    padding: 0.5rem;
+    background-color: #f3f4f6; /* gray-100 */
+    font-size: 0.75rem;
+    text-align: left;
+    border-radius: 0.375rem;
+}

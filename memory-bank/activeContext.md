@@ -46,6 +46,31 @@
 
 ## Recent Changes
 
+### CSS Modularization and Transition Improvements (2025-03-06)
+- Problem: CSS was scattered throughout the HTML file with inline styles and lacked organization
+- Solution:
+  * Created two new CSS files:
+    - `app/static/css/layout.css` - Contains structural elements, containers, and screen transitions
+    - `app/static/css/components.css` - Contains reusable UI components like toasts, buttons, and animations
+  * Removed inline styles and replaced them with proper CSS classes:
+    - Moved debug info styles to the components.css file
+    - Added screen transition classes to all screen containers
+    - Created a toast notification component for error messages
+    - Added fade-in animation classes for images
+  * Enhanced screen transitions:
+    - Added proper transition effects between screens
+    - Improved the navigation functions to handle transitions correctly
+    - Added comments to clarify the transition logic
+  * Improved code maintainability:
+    - Organized CSS into logical modules
+    - Added descriptive comments to explain the purpose of each section
+    - Used consistent naming conventions for classes
+- Result:
+  * More maintainable codebase with better organized CSS
+  * Smoother screen transitions throughout the application
+  * Improved user experience with consistent animations
+  * Reduced code duplication and better separation of concerns
+
 ### Carousel Component Refactoring (2025-03-06)
 - Problem: The carousel functionality in `index.html` was complex and difficult to maintain with over 1,200 lines of code
 - Solution:

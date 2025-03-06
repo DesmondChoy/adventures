@@ -13,9 +13,8 @@
     <link rel="stylesheet" href="/static/css/font-controls.css">
     <link rel="stylesheet" href="/static/css/header-controls.css">
     <link rel="stylesheet" href="/static/css/choice-cards.css">
-    <style>
-        /* Any remaining non-typography styles can stay here */
-    </style>
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/components.css">
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
@@ -26,7 +25,7 @@
             <p class="text-xl text-indigo-600 font-medium">Where no two stories are ever the same.</p>
             <p class="text-gray-600 max-w-2xl mx-auto">Choose your path and learn through engaging, personalized adventures.</p>
             <!-- Debug info - hidden but accessible via console for developers -->
-            <div id="debugInfo" class="mt-4 p-2 bg-gray-100 text-xs text-left rounded-md" style="display: none;">
+            <div id="debugInfo" class="debug-info" style="display: none;">
                 <p><strong>Debug Info:</strong></p>
                 <p>Total Categories: <span id="debugCategoryCount">{{ story_categories|length }}</span></p>
                 <p>Category IDs: <span id="debugCategoryIds">{{ story_categories.keys()|list }}</span></p>
@@ -37,7 +36,7 @@
         </div>
         
         <!-- Screen 1: Story Category Selection -->
-        <div id="storyCategoryScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6">
+        <div id="storyCategoryScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6 screen-transition">
             <input type="hidden" id="storyCategory" name="storyCategory" required>
             <div class="swipe-tip">Swipe to explore <span class="hand">➜</span></div>
             <div class="carousel-container">
@@ -74,7 +73,7 @@
         </div>
 
         <!-- Screen 2: Lesson Topic Selection -->
-        <div id="lessonTopicScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6 hidden">
+        <div id="lessonTopicScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6 hidden screen-transition">
             <input type="hidden" id="lessonTopic" name="lessonTopic" required>
             <div class="carousel-container">
                 <div class="carousel" id="lessonCarousel">
@@ -117,7 +116,7 @@
         </div>
         
         <!-- Story Container (Initially Hidden) -->
-        <div id="storyContainer" class="mt-8 max-w-2xl mx-auto hidden">
+        <div id="storyContainer" class="mt-8 max-w-2xl mx-auto hidden screen-transition">
             <div class="bg-white rounded-xl shadow-md p-6">
                 <!-- Header Controls (Chapter indicator and Font Size) -->
                 <div class="w-full flex items-center justify-between mb-6 header-controls">
@@ -280,13 +279,13 @@
         // Function to show error messages
         function showError(message) {
             const toast = document.createElement('div');
-            toast.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-md bg-red-500 text-white shadow-lg transition-opacity duration-300';
+            toast.className = 'toast-notification';
             toast.textContent = message;
             document.body.appendChild(toast);
             
             // Remove after 3 seconds
             setTimeout(() => {
-                toast.style.opacity = '0';
+                toast.classList.add('hide');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
@@ -296,7 +295,9 @@
                 showError('Please select a story category to continue');
                 return;
             }
+            // Add hidden class to trigger transition
             document.getElementById('storyCategoryScreen').classList.add('hidden');
+            // Remove hidden class to trigger transition
             document.getElementById('lessonTopicScreen').classList.remove('hidden');
             
             // Initialize the lesson carousel with our Carousel class
@@ -337,10 +338,11 @@ function startAdventure() {
         lessonTopic: selectedLessonTopic
     });
 
-    // Update UI
+    // Update UI - add hidden class to trigger transitions
     document.getElementById('lessonTopicScreen').classList.add('hidden');
-    document.getElementById('storyContainer').classList.remove('hidden');
     document.getElementById('introText').classList.add('hidden');
+    // Remove hidden class to trigger transition
+    document.getElementById('storyContainer').classList.remove('hidden');
 
     // Start the adventure
     showLoader();
@@ -508,10 +510,9 @@ function startAdventure() {
                 
                 // Add fade-in animation
                 const img = imageContainer.querySelector('img');
-                img.style.opacity = '0';
-                img.style.transition = 'opacity 0.5s ease-in-out';
+                img.classList.add('fade-in');
                 setTimeout(() => {
-                    img.style.opacity = '1';
+                    img.classList.add('show');
                 }, 50);
             }
         }
@@ -623,10 +624,10 @@ function startAdventure() {
                 clearTimeout(renderTimeout);
             }
             
-            // Reset UI to initial state
-            document.getElementById('storyCategoryScreen').classList.remove('hidden');
+            // Reset UI to initial state - add/remove hidden classes to trigger transitions
             document.getElementById('lessonTopicScreen').classList.add('hidden');
             document.getElementById('storyContainer').classList.add('hidden');
+            document.getElementById('storyCategoryScreen').classList.remove('hidden');
             document.getElementById('introText').classList.remove('hidden');
             
             // Hide loaders
@@ -691,9 +692,13 @@ function startAdventure() {
             if (savedState?.chapters?.length > 0 && savedState.storyCategory && savedState.lessonTopic) {
                 showLoader();
                 updateProgress(savedState.chapters.length + 1, savedState.story_length);
+                
+                // Add hidden classes to trigger transitions
                 document.getElementById('storyCategoryScreen').classList.add('hidden');
                 document.getElementById('lessonTopicScreen').classList.add('hidden');
                 document.getElementById('introText').classList.add('hidden');
+                
+                // Remove hidden class to trigger transition
                 document.getElementById('storyContainer').classList.remove('hidden');
 
                 // Restore selections
