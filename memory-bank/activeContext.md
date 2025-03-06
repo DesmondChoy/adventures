@@ -46,6 +46,20 @@
 
 ## Recent Changes
 
+### Carousel Component Refactoring (2025-03-06)
+- Problem: The carousel functionality in `index.html` was complex and difficult to maintain with over 1,200 lines of code
+- Solution:
+  * Created a reusable `Carousel` class in a new `app/static/js/carousel-manager.js` file
+  * Encapsulated all carousel-related functionality including rotation, selection, and event handling
+  * Updated HTML to use the new class for both category and lesson carousels
+  * Removed redundant carousel functions and global variables from the main JavaScript code
+  * Implemented proper keyboard navigation through the new class
+- Result:
+  * Improved code organization with carousel functionality isolated in its own module
+  * Reduced duplication by using the same class for both carousels
+  * Enhanced maintainability with changes to carousel behavior only needed in one place
+  * Better encapsulation with carousel state managed within the class rather than using global variables
+
 ### Fixed Loading Spinner Visibility for Chapter 1 (2025-03-05)
 - Problem: The loading spinner was disappearing too quickly for Chapter 1 but working fine for other chapters
 - Root Cause:

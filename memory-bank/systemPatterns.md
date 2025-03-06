@@ -162,7 +162,61 @@ flowchart TD
 
 ## Key Patterns
 
-### 1. Story Data Organization Pattern
+### 1. Frontend Component Architecture
+```mermaid
+flowchart TD
+    subgraph Frontend_Components
+        HTML[index.html] --> |"Includes"| CSS[CSS Files]
+        HTML --> |"Includes"| JS[JavaScript Files]
+        
+        subgraph CSS_Files["app/static/css/"]
+            carousel_css[carousel.css]
+            choice_cards_css[choice-cards.css]
+            font_controls_css[font-controls.css]
+            header_controls_css[header-controls.css]
+            loader_css[loader.css]
+            theme_css[theme.css]
+            typography_css[typography.css]
+        end
+        
+        subgraph JS_Files["app/static/js/"]
+            carousel_js[carousel-manager.js]
+            font_size_js[font-size-manager.js]
+        end
+        
+        HTML --> |"Initializes"| Carousel[Carousel Class]
+        HTML --> |"Initializes"| FontSize[FontSizeManager Class]
+        
+        Carousel --> |"Manages"| CategoryCarousel[Category Carousel]
+        Carousel --> |"Manages"| LessonCarousel[Lesson Carousel]
+        
+        FontSize --> |"Controls"| TextSize[Text Size Adjustments]
+    end
+```
+
+- **Carousel Component** (`app/static/js/carousel-manager.js`)
+  * Reusable class for 3D carousel functionality
+  * Configuration via constructor options:
+    - `elementId`: DOM element ID for the carousel
+    - `itemCount`: Number of items in the carousel
+    - `dataAttribute`: Data attribute for selection (e.g., 'category', 'topic')
+    - `inputId`: Input element ID to update on selection
+    - `onSelect`: Callback function when an item is selected
+  * Methods:
+    - `rotate(direction)`: Rotates the carousel in the specified direction
+    - `select(value)`: Selects a card by its data attribute value
+    - `handleKeyPress(event)`: Handles keyboard navigation
+    - `handleSwipe(startX, endX)`: Processes touch gestures
+  * Event handling for keyboard, touch, and click interactions
+  * Mobile-specific optimizations
+
+- **Font Size Manager** (`app/static/js/font-size-manager.js`)
+  * Controls text size adjustments for mobile users
+  * Persists preferences in localStorage
+  * Shows/hides controls on scroll
+  * Applies size changes to story content and choice buttons
+
+### 2. Story Data Organization Pattern
 ```mermaid
 flowchart TD
     subgraph Story_Data_Organization
