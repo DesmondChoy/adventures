@@ -1,5 +1,31 @@
 # Progress Log
 
+## 2025-03-08: Fixed Lesson Loader CSV Format Handling
+
+### Enhanced CSV Parsing and Topic Matching
+- Problem: The `LessonLoader` class wasn't correctly parsing the new CSV format with quoted fields, causing errors when filtering by topic
+- Root Cause:
+  * CSV files were reformatted with proper quotes around each field
+  * The custom parsing logic in `LessonLoader` wasn't handling the quoted fields correctly
+  * Topic matching was case-sensitive and didn't handle whitespace variations
+  * Only 1 lesson was being found for "Human Body" topic when there should be 50
+- Solution:
+  * Completely rewrote the `load_all_lessons` method to use pandas' built-in CSV parsing with proper quoting parameters
+  * Enhanced the `get_lessons_by_topic` method to use case-insensitive matching
+  * Added fallback strategies for topic matching:
+    - First try exact case-insensitive matching
+    - Then try with stripped whitespace
+    - Finally try partial matching if needed
+  * Updated `get_lessons_by_difficulty` and `get_lessons_by_topic_and_difficulty` to use the same case-insensitive approach
+  * Added detailed logging to help diagnose any future issues
+  * Removed the fallback to the old CSV file since it's no longer needed
+- Result:
+  * Successfully loads all 150 lessons from the CSV files in the `app/data/lessons/` directory
+  * Correctly finds all 50 lessons for the "Human Body" topic
+  * More robust topic and difficulty matching with case-insensitive comparisons
+  * Better error handling and logging for easier debugging
+  * Fixed the "Need at least 3 questions, but only have 1" error in adventure state initialization
+
 ## 2025-03-07: Lesson Data Refactoring
 
 ### Improved Lesson Data Management with Individual Files

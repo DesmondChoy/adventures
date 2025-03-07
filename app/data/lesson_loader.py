@@ -17,69 +17,20 @@ logger = logging.getLogger("story_app")
 
 
 class LessonLoader:
-    """Loads and manages lesson data from multiple CSV files."""
+    """Loads and manages lesson data from multiple CSV files in the lessons directory."""
 
     def __init__(self):
         self._cache = None
         self._lessons_dir = "app/data/lessons"
-        self._old_csv_path = "app/data/lessons.csv"
 
     def load_all_lessons(self) -> pd.DataFrame:
         """Load all lesson data from CSV files in the lessons directory.
-
-        If the new CSV files can't be parsed correctly, falls back to the old CSV file.
 
         Returns:
             DataFrame containing all lesson data from all CSV files
         """
         if self._cache is not None:
             return self._cache
-
-        # First try to load from the old CSV file
-        try:
-            logger.debug(f"Trying to load from old CSV file: {self._old_csv_path}")
-            old_df = pd.read_csv(self._old_csv_path)
-            if "topic" in old_df.columns and len(old_df) > 0:
-                logger.info(
-                    f"Successfully loaded {len(old_df)} lessons from old CSV file"
-                )
-
-                # Add difficulty column if it doesn't exist
-                if (
-                    "difficulty" not in old_df.columns
-                    and "difficulty_level" in old_df.columns
-                ):
-                    old_df = old_df.rename(columns={"difficulty_level": "difficulty"})
-                    logger.debug("Renamed 'difficulty_level' to 'difficulty'")
-
-                # If difficulty column still doesn't exist, add it with default value
-                if "difficulty" not in old_df.columns:
-                    old_df["difficulty"] = "Reasonably Challenging"
-                    logger.debug("Added 'difficulty' column with default value")
-
-                # Convert numeric difficulty values to strings
-                if "difficulty" in old_df.columns:
-                    # Check if any values are numeric
-                    numeric_values = (
-                        old_df["difficulty"]
-                        .apply(lambda x: isinstance(x, (int, float)))
-                        .any()
-                    )
-                    if numeric_values:
-                        # Convert numeric values to string
-                        old_df["difficulty"] = old_df["difficulty"].apply(
-                            lambda x: "Very Challenging"
-                            if (isinstance(x, (int, float)) and x > 1)
-                            else "Reasonably Challenging"
-                            if isinstance(x, (int, float))
-                            else x
-                        )
-                        logger.debug("Converted numeric difficulty values to strings")
-
-                self._cache = old_df
-                return old_df
-        except Exception as e:
-            logger.debug(f"Could not load from old CSV file: {str(e)}")
 
         # Get all CSV files in the lessons directory
         csv_files = glob.glob(os.path.join(self._lessons_dir, "*.csv"))
@@ -90,233 +41,90 @@ class LessonLoader:
 
         # Load and combine all CSV files
         dfs = []
+
         for file_path in csv_files:
             try:
-                # Try to extract topic from filename
+                # Extract topic from filename for logging
                 filename = os.path.basename(file_path)
                 topic_from_filename = filename.split(".")[0].replace("_", " ").title()
-                if "-" in topic_from_filename:
-                    topic_from_filename = topic_from_filename.split("-")[0].strip()
+                logger.debug(f"Loading lessons from {topic_from_filename}")
 
-                logger.debug(f"Extracted topic from filename: {topic_from_filename}")
-
-                # Try to read the file with different encodings
+                # Try different encodings
                 for encoding in ["utf-8", "latin1", "cp1252"]:
                     try:
-                        # Read the file as text
-                        with open(file_path, "r", encoding=encoding) as f:
-                            content = f.read()
+                        # Use pandas to read the CSV file with proper quoting
+                        df = pd.read_csv(
+                            file_path,
+                            encoding=encoding,
+                            quotechar='"',
+                            doublequote=True,
+                        )
 
-                        # Check if this is a CSV file with proper structure
-                        if (
-                            "topic" in content
-                            and "subtopic" in content
-                            and "difficulty" in content
-                        ):
-                            # Try to parse as regular CSV
-                            df = pd.read_csv(file_path, encoding=encoding)
-                            if "topic" in df.columns:
+                        # Add source file column
+                        df["source_file"] = filename
+
+                        # Log the topics found in this file
+                        if "topic" in df.columns:
+                            unique_topics = df["topic"].unique()
+                            logger.debug(f"Topics in {filename}: {unique_topics}")
+
+                            # Log the count of lessons for each topic
+                            for topic in unique_topics:
+                                topic_count = len(df[df["topic"] == topic])
                                 logger.debug(
-                                    f"Successfully parsed {file_path} as regular CSV"
-                                )
-                                break
-
-                        # If we get here, we need to parse manually
-                        logger.debug(f"Parsing {file_path} manually")
-
-                        # Read the file line by line
-                        with open(file_path, "r", encoding=encoding) as f:
-                            lines = f.readlines()
-
-                        # Parse the data
-                        data = []
-                        for line in lines[1:]:  # Skip header
-                            line = line.strip()
-                            if not line:
-                                continue
-
-                            # Try to extract data using CSV reader
-                            try:
-                                row = next(csv.reader([line]))
-                                if len(row) >= 8:  # We expect at least 8 columns
-                                    data.append(
-                                        {
-                                            "topic": topic_from_filename,
-                                            "subtopic": row[1] if len(row) > 1 else "",
-                                            "difficulty": row[2]
-                                            if len(row) > 2
-                                            else "Reasonably Challenging",
-                                            "question": row[3] if len(row) > 3 else "",
-                                            "correct_answer": row[4]
-                                            if len(row) > 4
-                                            else "",
-                                            "wrong_answer1": row[5]
-                                            if len(row) > 5
-                                            else "",
-                                            "wrong_answer2": row[6]
-                                            if len(row) > 6
-                                            else "",
-                                            "explanation": row[7]
-                                            if len(row) > 7
-                                            else "",
-                                        }
-                                    )
-                            except Exception as csv_error:
-                                logger.debug(
-                                    f"Error parsing line with CSV reader: {str(csv_error)}"
+                                    f"Found {topic_count} lessons for topic '{topic}' in {filename}"
                                 )
 
-                                # Try a simpler approach - split by commas
-                                parts = []
-                                current_part = ""
-                                in_quotes = False
-
-                                for char in line:
-                                    if char == '"':
-                                        in_quotes = not in_quotes
-                                    elif char == "," and not in_quotes:
-                                        parts.append(current_part.strip())
-                                        current_part = ""
-                                    else:
-                                        current_part += char
-
-                                # Add the last part
-                                if current_part:
-                                    parts.append(current_part.strip())
-
-                                # If we have enough parts, add to data
-                                if len(parts) >= 7:
-                                    data.append(
-                                        {
-                                            "topic": topic_from_filename,
-                                            "subtopic": parts[1]
-                                            if len(parts) > 1
-                                            else "",
-                                            "difficulty": parts[2]
-                                            if len(parts) > 2
-                                            else "Reasonably Challenging",
-                                            "question": parts[3]
-                                            if len(parts) > 3
-                                            else "",
-                                            "correct_answer": parts[4]
-                                            if len(parts) > 4
-                                            else "",
-                                            "wrong_answer1": parts[5]
-                                            if len(parts) > 5
-                                            else "",
-                                            "wrong_answer2": parts[6]
-                                            if len(parts) > 6
-                                            else "",
-                                            "explanation": parts[7]
-                                            if len(parts) > 7
-                                            else "",
-                                        }
-                                    )
-
-                        # Create DataFrame from parsed data
-                        if data:
-                            df = pd.DataFrame(data)
-                            logger.debug(
-                                f"Successfully parsed {file_path} manually: {len(df)} rows"
-                            )
-                            break
-                        else:
-                            logger.warning(f"No data extracted from {file_path}")
-
-                    except Exception as encoding_error:
+                        dfs.append(df)
                         logger.debug(
-                            f"Error with encoding {encoding} for {file_path}: {str(encoding_error)}"
+                            f"Successfully parsed {file_path} with encoding {encoding}"
+                        )
+                        break
+
+                    except Exception as e:
+                        logger.debug(
+                            f"Error parsing {file_path} with encoding {encoding}: {str(e)}"
                         )
                         if encoding == "cp1252":  # Last encoding to try
+                            logger.error(
+                                f"Failed to parse {file_path} with any encoding"
+                            )
                             raise
 
-                # Add file name as source for debugging
-                df["source_file"] = os.path.basename(file_path)
-                dfs.append(df)
-                logger.debug(f"Loaded lesson data from {file_path}: {len(df)} rows")
             except Exception as e:
                 logger.error(f"Error loading {file_path}: {str(e)}")
                 # Continue with other files even if one fails
 
-        # If we couldn't load any data from the new CSV files, try the old CSV file again
+        # If we couldn't load any data, raise an error
         if not dfs:
-            logger.warning(
-                "Failed to load any lesson data from new CSV files, trying old CSV file"
+            logger.error(
+                "Failed to load any lesson data from CSV files in the lessons directory"
             )
-            try:
-                old_df = pd.read_csv(self._old_csv_path)
-                if "topic" in old_df.columns and len(old_df) > 0:
-                    logger.info(
-                        f"Successfully loaded {len(old_df)} lessons from old CSV file"
-                    )
-
-                    # Add difficulty column if it doesn't exist
-                    if (
-                        "difficulty" not in old_df.columns
-                        and "difficulty_level" in old_df.columns
-                    ):
-                        old_df = old_df.rename(
-                            columns={"difficulty_level": "difficulty"}
-                        )
-                        logger.debug("Renamed 'difficulty_level' to 'difficulty'")
-
-                    # If difficulty column still doesn't exist, add it with default value
-                    if "difficulty" not in old_df.columns:
-                        old_df["difficulty"] = "Reasonably Challenging"
-                        logger.debug("Added 'difficulty' column with default value")
-
-                    # Convert numeric difficulty values to strings
-                    if "difficulty" in old_df.columns:
-                        # Check if any values are numeric
-                        numeric_values = (
-                            old_df["difficulty"]
-                            .apply(lambda x: isinstance(x, (int, float)))
-                            .any()
-                        )
-                        if numeric_values:
-                            # Convert numeric values to string
-                            old_df["difficulty"] = old_df["difficulty"].apply(
-                                lambda x: "Very Challenging"
-                                if (isinstance(x, (int, float)) and x > 1)
-                                else "Reasonably Challenging"
-                                if isinstance(x, (int, float))
-                                else x
-                            )
-                            logger.debug(
-                                "Converted numeric difficulty values to strings"
-                            )
-
-                    self._cache = old_df
-                    return old_df
-                else:
-                    logger.error(
-                        "Old CSV file does not have expected columns or is empty"
-                    )
-                    raise ValueError("Failed to load any lesson data")
-            except Exception as e:
-                logger.error(f"Error loading old CSV file: {str(e)}")
-                raise ValueError("Failed to load any lesson data")
+            raise ValueError(
+                "Failed to load any lesson data from CSV files in the lessons directory"
+            )
 
         # Combine all DataFrames
         combined_df = pd.concat(dfs, ignore_index=True)
 
-        # Standardize column names and values
-        if (
-            "difficulty_level" in combined_df.columns
-            and "difficulty" not in combined_df.columns
-        ):
-            combined_df = combined_df.rename(columns={"difficulty_level": "difficulty"})
+        # Log the total number of lessons for each topic
+        if "topic" in combined_df.columns:
+            unique_topics = combined_df["topic"].unique()
+            logger.debug(f"All topics: {unique_topics}")
 
-        # Convert numeric difficulty to string if needed
+            for topic in unique_topics:
+                topic_count = len(combined_df[combined_df["topic"] == topic])
+                logger.debug(f"Total lessons for topic '{topic}': {topic_count}")
+
+        # Standardize difficulty values
         if "difficulty" in combined_df.columns:
-            # Check if any values are numeric
+            # Convert numeric difficulty to string if needed
             numeric_values = (
                 combined_df["difficulty"]
                 .apply(lambda x: isinstance(x, (int, float)))
                 .any()
             )
             if numeric_values:
-                # Convert numeric values to string
                 combined_df["difficulty"] = combined_df["difficulty"].apply(
                     lambda x: "Very Challenging"
                     if (isinstance(x, (int, float)) and x > 1)
@@ -328,9 +136,7 @@ class LessonLoader:
         # Cache the result
         self._cache = combined_df
 
-        logger.info(
-            f"Loaded all lesson data: {len(combined_df)} total rows from {len(dfs)} files"
-        )
+        logger.info(f"Loaded all lesson data: {len(combined_df)} total rows")
 
         return combined_df
 
@@ -344,7 +150,30 @@ class LessonLoader:
             DataFrame containing lessons for the specified topic
         """
         df = self.load_all_lessons()
-        filtered_df = df[df["topic"] == topic]
+
+        # Log all unique topics for debugging
+        unique_topics = df["topic"].unique()
+        logger.debug(f"Available topics: {unique_topics}")
+
+        # Case-insensitive matching
+        filtered_df = df[df["topic"].str.lower() == topic.lower()]
+
+        # If no matches, try with stripped whitespace
+        if len(filtered_df) == 0:
+            logger.debug(
+                f"No exact matches for '{topic}', trying with stripped whitespace"
+            )
+            filtered_df = df[
+                df["topic"].str.lower().str.strip() == topic.lower().strip()
+            ]
+
+        # If still no matches, try with partial matching
+        if len(filtered_df) == 0:
+            logger.debug(
+                f"No matches with stripped whitespace, trying partial matching"
+            )
+            filtered_df = df[df["topic"].str.lower().str.contains(topic.lower())]
+
         logger.debug(f"Found {len(filtered_df)} lessons for topic '{topic}'")
         return filtered_df
 
@@ -358,7 +187,23 @@ class LessonLoader:
             DataFrame containing lessons with the specified difficulty
         """
         df = self.load_all_lessons()
-        filtered_df = df[df["difficulty"] == difficulty]
+
+        # Log all unique difficulties for debugging
+        unique_difficulties = df["difficulty"].unique()
+        logger.debug(f"Available difficulties: {unique_difficulties}")
+
+        # Case-insensitive matching
+        filtered_df = df[df["difficulty"].str.lower() == difficulty.lower()]
+
+        # If no matches, try with stripped whitespace
+        if len(filtered_df) == 0:
+            logger.debug(
+                f"No exact matches for difficulty '{difficulty}', trying with stripped whitespace"
+            )
+            filtered_df = df[
+                df["difficulty"].str.lower().str.strip() == difficulty.lower().strip()
+            ]
+
         logger.debug(f"Found {len(filtered_df)} lessons with difficulty '{difficulty}'")
         return filtered_df
 
@@ -374,8 +219,12 @@ class LessonLoader:
         Returns:
             DataFrame containing lessons matching both topic and difficulty
         """
-        df = self.load_all_lessons()
-        filtered_df = df[(df["topic"] == topic) & (df["difficulty"] == difficulty)]
+        # First get lessons by topic using the robust topic matching
+        topic_df = self.get_lessons_by_topic(topic)
+
+        # Then filter by difficulty (case-insensitive)
+        filtered_df = topic_df[topic_df["difficulty"].str.lower() == difficulty.lower()]
+
         logger.debug(
             f"Found {len(filtered_df)} lessons for topic '{topic}' with difficulty '{difficulty}'"
         )

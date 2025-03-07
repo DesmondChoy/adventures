@@ -46,11 +46,13 @@
 
 5. **Lesson Data Management (`app/data/lesson_loader.py`):**
    * Loads lesson data from individual CSV files in `app/data/lessons/` directory
-   * Falls back to the old `app/data/lessons.csv` file if needed
-   * Handles various file encodings and formats
+   * Uses pandas' built-in CSV parsing with proper quoting parameters
+   * Handles various file encodings (utf-8, latin1, cp1252)
    * Standardizes difficulty levels to "Reasonably Challenging" and "Very Challenging"
-   * Provides methods to filter lessons by topic and difficulty
+   * Provides case-insensitive methods to filter lessons by topic and difficulty
+   * Implements robust topic matching with fallback strategies
    * Supports caching for performance optimization
+   * Includes detailed logging for debugging
 
 ## Recent Changes
 
