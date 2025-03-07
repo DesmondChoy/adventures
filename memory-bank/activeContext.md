@@ -46,6 +46,27 @@
 
 ## Recent Changes
 
+### Mobile Paragraph Interaction Enhancement (2025-03-07)
+- Problem: On mobile, the indigo accent line for paragraphs only worked after the entire chapter finished streaming, and clicking multiple paragraphs would highlight all of them simultaneously
+- Solution:
+  * Modified the CSS in `theme.css` to support an "active" class alongside the hover state:
+    - Added cursor pointer to indicate interactivity
+    - Added `.active` class selector to apply the same styling as `:hover`
+  * Implemented JavaScript functionality in `index.html`:
+    - Created a Set to track which paragraphs are active
+    - Added a function `addParagraphListeners()` to add click event listeners to paragraphs
+    - Modified the `appendStoryText()` function to call this function after rendering content
+    - Ensured only one paragraph can be active at a time by clearing all active states before setting a new one
+    - Added state management to reset active paragraphs when starting a new chapter or resetting the application
+  * Preserved the active state during text streaming:
+    - Restored the active state to paragraphs after content re-rendering
+    - Maintained the active state in the Set to persist through updates
+- Result:
+  * Paragraphs can now be tapped to highlight them with the indigo accent line during text streaming
+  * Only one paragraph can be highlighted at a time, with previous highlights being removed
+  * The feature works consistently throughout the text streaming process
+  * Improved mobile user experience with immediate visual feedback
+
 ### CSS File Consolidation (2025-03-07)
 - Problem: Too many separate CSS files were causing maintenance challenges and potential conflicts
 - Solution:

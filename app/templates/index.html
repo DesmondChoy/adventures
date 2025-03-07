@@ -567,6 +567,9 @@ function startAdventure() {
                 if (renderTimeout) {
                     clearTimeout(renderTimeout);
                 }
+                
+                // Reset active paragraphs for the new chapter
+                activeParagraphs.clear();
 
                 const existingState = stateManager.loadState() || {};
                 const currentChapter = existingState.chapters || [];
@@ -619,6 +622,9 @@ function startAdventure() {
             if (renderTimeout) {
                 clearTimeout(renderTimeout);
             }
+            
+            // Reset active paragraphs
+            activeParagraphs.clear();
             
             // Reset UI to initial state - add/remove hidden classes to trigger transitions
             document.getElementById('lessonTopicScreen').classList.add('hidden');
@@ -719,6 +725,40 @@ function startAdventure() {
 
         // --- UI Update Functions ---
 
+        // Store active paragraph indices
+        let activeParagraphs = new Set();
+
+        // Function to add click listeners to paragraphs
+        function addParagraphListeners() {
+            const storyContent = document.getElementById('storyContent');
+            const paragraphs = storyContent.querySelectorAll('p');
+            
+            paragraphs.forEach((paragraph, index) => {
+                // Restore active state if this paragraph was previously active
+                if (activeParagraphs.has(index)) {
+                    paragraph.classList.add('active');
+                }
+                
+                // Add click listener if not already added
+                if (!paragraph.hasAttribute('data-listener-added')) {
+                    paragraph.setAttribute('data-listener-added', 'true');
+                    paragraph.addEventListener('click', function() {
+                        // First, remove active class from all paragraphs
+                        paragraphs.forEach(p => p.classList.remove('active'));
+                        
+                        // Clear the active paragraphs set
+                        activeParagraphs.clear();
+                        
+                        // Add active class to the clicked paragraph
+                        this.classList.add('active');
+                        
+                        // Update active paragraphs set with only this paragraph
+                        activeParagraphs.add(index);
+                    });
+                }
+            });
+        }
+
         function appendStoryText(text) {
             const storyContent = document.getElementById('storyContent');
             const tempDiv = document.createElement('div');
@@ -771,6 +811,9 @@ function startAdventure() {
 
                 // Apply the HTML content to the story container
                 storyContent.innerHTML = htmlContent;
+
+                // Add click listeners to paragraphs
+                addParagraphListeners();
 
                 // Additional check for dialogue formatting issues
                 if (streamBuffer.trim().startsWith('chirped') ||
