@@ -197,12 +197,35 @@ flowchart TD
     - `layout.css`: Structural elements, containers, screen transitions, and responsive adjustments
     - `components.css`: Reusable UI components (toast notifications, buttons, loaders, choice cards, header controls, font controls)
     - `carousel-component.css`: Specialized carousel component styles
-    - `theme.css`: Color schemes and theme variables
-    - `typography.css`: Text styling and formatting
+    - `theme.css`: Color schemes, theme variables, and modern visual enhancements
+    - `typography.css`: Text styling and formatting with CSS variables
   * Clear separation of concerns:
     - Layout styles are separate from component styles
     - Base styles (theme, typography) are separate from specific component styles
     - Specialized components (carousel) have their own file due to complexity
+    - Theme-related styles (including modern accents) are consolidated in theme.css
+
+- **UI Enhancement Patterns** (now in `app/static/css/theme.css`)
+  * Layered visual hierarchy:
+    - Subtle background patterns using SVG data URIs
+    - Depth through layered shadows and refined borders
+    - Micro-interactions for interactive elements
+    - Gradient overlays for visual interest
+  * CSS techniques employed:
+    - CSS variables for consistent styling
+    - Pseudo-elements (::before, ::after) for decorative elements
+    - Backdrop filters for frosted glass effects
+    - Transform and transition properties for animations
+    - Box-shadow layering for depth perception
+  * Interaction patterns:
+    - Hover state transformations (scale, translateY)
+    - Active state feedback (scale, shadow changes)
+    - Focus state indicators for accessibility
+    - Transition timing functions for natural movement
+  * Mobile-specific enhancements:
+    - Touch-friendly hover alternatives
+    - Simplified animations for performance
+    - Adjusted visual density for smaller screens
 
 - **Carousel Component** (`app/static/js/carousel-manager.js`)
   * Reusable class for 3D carousel functionality

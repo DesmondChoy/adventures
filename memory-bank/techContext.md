@@ -46,8 +46,18 @@
 
 - **UI Components**
   * Modular CSS organization (`app/static/css/`)
-  * 3D carousel with animations (`carousel.css`)
-  * Typography system with educational focus (`typography.css`)
+    - `layout.css`: Structural elements, containers, and screen transitions
+    - `components.css`: Reusable UI components (toast notifications, buttons, loaders, etc.)
+    - `carousel-component.css`: 3D carousel with animations and touch support
+    - `theme.css`: Color schemes, theme variables, and modern visual enhancements
+    - `typography.css`: Text styling and CSS variables
+  * Modern UI enhancements (consolidated in `theme.css`):
+    - Subtle background patterns using SVG data URIs
+    - Layered shadows and refined borders for depth
+    - Micro-interactions and hover effects
+    - Gradient overlays and shine effects
+    - Backdrop filters for frosted glass effects
+  * Typography system with educational focus
   * Word-by-word content streaming with Markdown support
   * Progressive enhancement for images
 
