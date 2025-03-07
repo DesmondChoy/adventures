@@ -26,7 +26,16 @@
 
 /* Story container layout */
 #storyContainer {
+    position: relative;
     transition: opacity 0.5s ease-in-out;
+    padding-top: 15px; /* Add padding for content to not overlap with accent line */
+    padding-bottom: 40px; /* Extra padding at bottom for better scrolling */
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    overflow: hidden;
 }
 
 #storyContainer.hidden {
@@ -34,14 +43,45 @@
     pointer-events: none;
 }
 
+/* Create the curved-down effect at the top edges */
+#storyContainer::before {
+    content: "";
+    position: absolute;
+    top: -15px;
+    left: -5%;
+    right: -5%;
+    height: 30px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    z-index: 1;
+}
+
+/* Add a subtle accent line at the top */
+#storyContainer::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(to right, var(--color-primary-lighter), var(--color-primary), var(--color-primary-lighter));
+    opacity: 0.7;
+    z-index: 2;
+}
+
+/* Make the story container's inner content background transparent */
+#storyContainer .bg-white {
+    background: transparent !important;
+}
+
+/* Add subtle gradient background to body */
+body {
+    background: linear-gradient(135deg, var(--color-accent-light), white);
+    min-height: 100vh;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    /* Mobile background and body styling */
-    body {
-        background: linear-gradient(135deg, var(--color-accent-light), white);
-        min-height: 100vh;
-    }
-    
     /* Make the app title area blend with content */
     h1.text-4xl {
         background: transparent;
@@ -54,48 +94,10 @@
         padding: 0;
     }
     
-    /* Unified content container with rounded-down top edges */
+    /* Mobile-specific story container adjustments */
     #storyContainer {
-        position: relative;
         margin-top: 0;
-        padding-top: 15px; /* Add padding for content to not overlap with accent line */
-        padding-bottom: 40px; /* Extra padding at bottom for better scrolling */
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(10px);
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
-        border-top-left-radius: 10px;
-        border-top-right-radius: 10px;
-        overflow: hidden;
-    }
-    
-    #storyContainer .bg-white {
-        background: transparent !important;
-    }
-    
-    /* Create the curved-down effect at the top edges */
-    #storyContainer::before {
-        content: "";
-        position: absolute;
-        top: -15px;
-        left: -5%;
-        right: -5%;
-        height: 30px;
-        background: rgba(255, 255, 255, 0.8);
-        border-radius: 50%;
-        z-index: 1;
-    }
-    
-    /* Add a subtle accent line at the top */
-    #storyContainer::after {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(to right, var(--color-primary-lighter), var(--color-primary), var(--color-primary-lighter));
-        opacity: 0.7;
-        z-index: 2;
+        background: rgba(255, 255, 255, 0.8); /* Slightly more transparent on mobile */
     }
     
     .swipe-tip {

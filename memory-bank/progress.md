@@ -1,5 +1,66 @@
 # Progress Log
 
+## 2025-03-07: Desktop & Mobile UI Alignment
+
+### Unified UI Experience Across All Devices
+- Problem: The user interface on desktop and mobile looked inconsistent, with mobile having a more modern design
+- Root Cause:
+  * Mobile-specific UI enhancements were not applied to desktop view
+  * CSS was organized in a way that kept desktop and mobile styles separate
+  * Design elements like the indigo accented line and left border accent were only applied to mobile
+- Solution:
+  * Applied the mobile UI enhancements to desktop view:
+    - Added the indigo accented line with curved-down edges to all screen sizes
+    - Applied the left border accent to choice cards on all screen sizes
+    - Made the header controls consistent across devices
+    - Applied a subtle gradient background to the entire app
+  * Implemented specific improvements:
+    - Moved the story container styling outside the mobile media query
+    - Added hover effects for desktop choice cards
+    - Made the header controls border-bottom consistent across all devices
+    - Used semi-transparent backgrounds with backdrop blur for a modern look
+    - Ensured consistent typography and spacing across devices
+  * Cleaned up duplicate styles and organized the CSS files:
+    - Removed redundant styles in mobile media queries
+    - Created a dedicated narrative-font class for consistent text styling
+    - Improved code organization with better comments
+- Result:
+  * Consistent brand experience across all devices
+  * More modern and cohesive visual design
+  * Improved readability with consistent styling
+  * Better maintainability with organized CSS
+  * Enhanced visual hierarchy with consistent accent colors
+
+## 2025-03-06: CSS Files Reorganization
+
+### Improved Frontend Architecture with CSS Organization
+- Problem: There were too many standalone CSS files, making it difficult to maintain and understand the styling structure
+- Root Cause:
+  * CSS files were created ad-hoc as new features were added
+  * No clear organization strategy for CSS files
+  * Similar styles were spread across multiple files
+  * No clear separation of concerns between different types of styles
+- Solution:
+  * Merged multiple CSS files into a more organized structure:
+    - Consolidated `header-controls.css`, `font-controls.css`, `loader.css`, and `choice-cards.css` into `components.css`
+    - Renamed `carousel.css` to `carousel-component.css` to better reflect its purpose
+    - Kept `layout.css`, `theme.css`, and `typography.css` as separate files for their specific purposes
+  * Updated the HTML file to reference the new CSS structure:
+    - Removed references to the merged files
+    - Added reference to the renamed carousel component file
+  * Organized CSS files by their purpose:
+    - `components.css` - Reusable UI components (toast notifications, buttons, loaders, choice cards, etc.)
+    - `carousel-component.css` - Specialized carousel component styles
+    - `layout.css` - Structural elements, containers, and screen transitions
+    - `theme.css` - Color schemes and theme variables
+    - `typography.css` - Text styling and formatting
+- Result:
+  * More maintainable CSS structure with clear separation of concerns
+  * Reduced number of CSS files from 9 to 5
+  * Better organization of styles by their purpose
+  * Improved developer experience with easier-to-find styles
+  * No change in functionality or appearance for end users
+
 ## 2025-03-06: CSS Modularization and Transition Improvements
 
 ### Improved Frontend Architecture with CSS Organization and Transitions

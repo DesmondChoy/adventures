@@ -46,6 +46,31 @@
 
 ## Recent Changes
 
+### Desktop & Mobile UI Alignment (2025-03-07)
+- Problem: The user interface on desktop and mobile looked inconsistent, with mobile having a more modern design
+- Solution:
+  * Applied the mobile UI enhancements to desktop view:
+    - Added the indigo accented line with curved-down edges to all screen sizes
+    - Applied the left border accent to choice cards on all screen sizes
+    - Made the header controls consistent across devices
+    - Applied a subtle gradient background to the entire app
+  * Implemented specific improvements:
+    - Moved the story container styling outside the mobile media query
+    - Added hover effects for desktop choice cards
+    - Made the header controls border-bottom consistent across all devices
+    - Used semi-transparent backgrounds with backdrop blur for a modern look
+    - Ensured consistent typography and spacing across devices
+  * Cleaned up duplicate styles and organized the CSS files:
+    - Removed redundant styles in mobile media queries
+    - Created a dedicated narrative-font class for consistent text styling
+    - Improved code organization with better comments
+- Result:
+  * Consistent brand experience across all devices
+  * More modern and cohesive visual design
+  * Improved readability with consistent styling
+  * Better maintainability with organized CSS
+  * Enhanced visual hierarchy with consistent accent colors
+
 ### CSS Files Reorganization (2025-03-06)
 - Problem: There were too many standalone CSS files, making it difficult to maintain and understand the styling structure
 - Solution:
