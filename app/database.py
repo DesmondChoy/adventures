@@ -39,7 +39,7 @@ class LessonTopic(Base):
     wrong_answer1 = Column(Text)
     wrong_answer2 = Column(Text)
     explanation = Column(Text)
-    difficulty_level = Column(Integer)
+    difficulty_level = Column(String, index=True)  # Changed from Integer to String
 
 
 class StorySession(Base):

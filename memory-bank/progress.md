@@ -1,5 +1,31 @@
 # Progress Log
 
+## 2025-03-07: Lesson Data Refactoring
+
+### Improved Lesson Data Management with Individual Files
+- Problem: Lesson data was stored in a single CSV file (`app/data/lessons.csv`), making it difficult to maintain and update
+- Root Cause:
+  * All lesson data was in a single CSV file, making it hard to organize by topic
+  * No support for filtering by difficulty level
+  * Limited flexibility for adding new lessons or updating existing ones
+  * Potential for data corruption when editing a large CSV file
+- Solution:
+  * Created a new `LessonLoader` class in `app/data/lesson_loader.py` that:
+    - Attempts to load lessons from individual CSV files in the `app/data/lessons/` directory
+    - Falls back to the old `app/data/lessons.csv` file if needed
+    - Handles various file encodings and formats
+    - Standardizes the difficulty levels to "Reasonably Challenging" and "Very Challenging"
+    - Provides methods to filter lessons by topic and difficulty
+  * Updated the `sample_question` function in `app/init_data.py` to use the new `LessonLoader` class and support filtering by difficulty
+  * Updated the `init_lesson_topics` function in `app/init_data.py` to handle both old and new formats
+  * Ensured backward compatibility with the existing code
+- Result:
+  * More maintainable lesson data structure with individual files per topic
+  * Support for filtering lessons by difficulty level
+  * Improved error handling and logging
+  * Backward compatibility with the old CSV file
+  * Smooth transition path from old to new data structure
+
 ## 2025-03-07: CSS File Consolidation
 
 ### Improved Frontend Architecture with CSS Consolidation
@@ -546,91 +572,4 @@
 - Solution:
   * Changed environment variable from `GEMINI_API_KEY` to `GOOGLE_API_KEY`
   * Updated API initialization to use `genai.configure()`
-  * Enhanced debug logging similar to GeminiService
-- Result: Consistent configuration across services
-
-### Fixed Image Generation API Compatibility
-- Problem: Incompatibility with Google Generative AI SDK
-- Solution:
-  * Updated imports to use correct SDK
-  * Modified client initialization and method calls
-  * Updated response handling for new API structure
-- Result: Working image generation for Chapter 1 agency choices
-
-### Streamlined LLM Prompts for All Chapters
-- Problem: Inconsistent prompt styles across chapters
-- Solution:
-  * Extended streamlined approach to all chapter types
-  * Created unified `build_prompt()` function
-  * Removed redundant files and conditional checks
-  * Consolidated templates and engineering functions
-- Result: Consistent, maintainable prompts with reduced token usage
-
-## 2025-02-28: Agency Implementation and Narrative Improvements
-
-### Fixed F-String Syntax Error
-- Problem: Trailing space in f-string causing syntax error
-- Solution: Removed trailing space in agency guidance section
-- Result: Fixed application startup issue
-
-### Agency Implementation
-- Problem: Lack of meaningful user agency throughout adventure
-- Solution:
-  * Added four agency categories in first chapter (items, companions, roles, abilities)
-  * Implemented agency detection and storage in `websocket_service.py`
-  * Added reference tracking in `adventure_state_manager.py`
-  * Created evolution system in REFLECT chapters
-- Result: Meaningful agency that evolves throughout the adventure
-
-### REFLECT Chapter Narrative Integration
-- Problem: REFLECT chapters felt like detached tests
-- Solution:
-  * Created unified narrative approach for correct/incorrect answers
-  * Removed "correct/incorrect" structure from choices
-  * Made all choices story-driven without educational labels
-  * Used Socratic method for deeper understanding
-- Result: More natural integration of educational content
-
-### Removed Obsolete Code
-- Problem: Unused `CHOICE_FORMAT_INSTRUCTIONS` constant
-- Solution: Removed constant and its import
-- Result: Improved code maintainability
-
-### UI Improvements
-- Problem: "Swipe to explore" tip showing on desktop
-- Solution: Added media query to hide on screens > 768px
-- Result: Device-appropriate UI hints
-
-### Story Object Method for Lessons
-- Problem: Disconnect between narrative and educational content
-- Solution:
-  * Implemented Story Object Method for intuitive narrative bridges
-  * Required exact question to appear verbatim in narrative
-  * Allowed more natural placement of questions
-- Result: Better integration of educational content
-
-## 2025-02-27: Prompt Engineering Enhancements
-
-### Phase-Specific Choice Instructions
-- Problem: Generic choice instructions across all story phases
-- Solution:
-  * Created `BASE_CHOICE_FORMAT` with common instructions
-  * Added phase-specific guidance dictionary
-  * Implemented `get_choice_instructions(phase)` function
-- Result: More contextually appropriate choices for each phase
-
-### Markdown Structure for Prompts
-- Problem: Poor organization in LLM prompts
-- Solution:
-  * Implemented markdown-based structure
-  * Created clear visual hierarchy
-  * Enhanced formatting for lesson content
-- Result: Better organized, more effective prompts
-
-### Enhanced REFLECT Chapter Implementation
-- Problem: Limited variety in REFLECT challenges
-- Solution:
-  * Added multiple challenge types for correct answers
-  * Restructured incorrect answer handling
-  * Added challenge type tracking in metadata
-- Result: More varied and engaging REFLECT chapters
+  * Enhanced debug

@@ -33,15 +33,36 @@ class AdventureStateManager:
         self.chapter_manager = ChapterManager()  # Instantiate ChapterManager
 
     def initialize_state(
-        self, story_length: int, lesson_topic: str, story_category: str
+        self,
+        story_length: int,
+        lesson_topic: str,
+        story_category: str,
+        difficulty: str = None,
     ) -> AdventureState:
-        """Initializes and returns a new AdventureState."""
+        """Initializes and returns a new AdventureState.
+
+        Args:
+            story_length: The number of chapters in the story
+            lesson_topic: The topic of the lessons
+            story_category: The selected story category
+            difficulty: Optional difficulty level for lessons ("Reasonably Challenging" or "Very Challenging")
+
+        Returns:
+            The initialized AdventureState
+        """
+        # TODO: Implement difficulty toggle in UI to allow users to select difficulty level
         logger.debug(
-            f"Initializing AdventureState with story_length: {story_length}, lesson_topic: {lesson_topic}, story_category: {story_category}"
+            f"Initializing AdventureState with story_length: {story_length}, lesson_topic: {lesson_topic}, story_category: {story_category}, difficulty: {difficulty}"
         )
         self.state = self.chapter_manager.initialize_adventure_state(
-            story_length, lesson_topic, story_category
+            story_length, lesson_topic, story_category, difficulty
         )
+
+        # Store difficulty in metadata if provided
+        if difficulty:
+            self.state.metadata["difficulty"] = difficulty
+            logger.debug(f"Set difficulty level to: {difficulty}")
+
         return self.state
 
     def get_current_state(self) -> AdventureState | None:

@@ -25,7 +25,7 @@
 
 2. **Chapter Sequencing (`chapter_manager.py`):**
    * First chapter: STORY
-   * Second-to-last: STORY
+   * Second-to-last chapter: STORY
    * Last chapter: CONCLUSION
    * 50% of remaining: LESSON (subject to available questions)
    * 50% of LESSON chapters: REFLECT (follow LESSON)
@@ -44,7 +44,34 @@
    * Provides caching for performance optimization
    * Offers methods for accessing specific story categories
 
+5. **Lesson Data Management (`app/data/lesson_loader.py`):**
+   * Loads lesson data from individual CSV files in `app/data/lessons/` directory
+   * Falls back to the old `app/data/lessons.csv` file if needed
+   * Handles various file encodings and formats
+   * Standardizes difficulty levels to "Reasonably Challenging" and "Very Challenging"
+   * Provides methods to filter lessons by topic and difficulty
+   * Supports caching for performance optimization
+
 ## Recent Changes
+
+### Lesson Data Refactoring (2025-03-07)
+- Problem: Lesson data was stored in a single CSV file (`app/data/lessons.csv`), making it difficult to maintain and update
+- Solution:
+  * Created a new `LessonLoader` class in `app/data/lesson_loader.py` that:
+    - Attempts to load lessons from individual CSV files in the `app/data/lessons/` directory
+    - Falls back to the old `app/data/lessons.csv` file if needed
+    - Handles various file encodings and formats
+    - Standardizes the difficulty levels to "Reasonably Challenging" and "Very Challenging"
+    - Provides methods to filter lessons by topic and difficulty
+  * Updated the `sample_question` function in `app/init_data.py` to use the new `LessonLoader` class and support filtering by difficulty
+  * Updated the `init_lesson_topics` function in `app/init_data.py` to handle both old and new formats
+  * Ensured backward compatibility with the existing code
+- Result:
+  * More maintainable lesson data structure with individual files per topic
+  * Support for filtering lessons by difficulty level
+  * Improved error handling and logging
+  * Backward compatibility with the old CSV file
+  * Smooth transition path from old to new data structure
 
 ### Mobile Paragraph Interaction Enhancement (2025-03-07)
 - Problem: On mobile, the indigo accent line for paragraphs only worked after the entire chapter finished streaming, and clicking multiple paragraphs would highlight all of them simultaneously

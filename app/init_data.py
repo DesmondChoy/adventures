@@ -34,23 +34,46 @@ def load_story_data():
 
 
 def load_lesson_data():
-    """Load and process lesson data from CSV file."""
-    return pd.read_csv("app/data/lessons.csv")
+    """Load and process lesson data from CSV files in the lessons directory."""
+    from app.data.lesson_loader import LessonLoader
+
+    loader = LessonLoader()
+    return loader.load_all_lessons()
 
 
-def sample_question(topic: str, exclude_questions: list = None) -> dict:
-    """Sample a random question from the specified topic, excluding any previously used questions.
+def sample_question(
+    topic: str, exclude_questions: list = None, difficulty: str = None
+) -> dict:
+    """Sample a random question from the specified topic and difficulty, with fallback.
 
     Args:
         topic: The topic to sample from
         exclude_questions: List of questions to exclude from sampling
+        difficulty: Optional difficulty level ("Reasonably Challenging" or "Very Challenging")
 
     Returns:
         dict: Question data including question, answers, and explanation
     """
-    df = load_lesson_data()
-    topic_questions = df[df["topic"] == topic]
+    # Load data using LessonLoader
+    from app.data.lesson_loader import LessonLoader
 
+    loader = LessonLoader()
+
+    # Filter by topic and difficulty if specified
+    if difficulty:
+        topic_questions = loader.get_lessons_by_topic_and_difficulty(topic, difficulty)
+
+        # Fallback if fewer than 3 questions available
+        if len(topic_questions) < 3:
+            logger.warning(
+                f"Insufficient questions for topic '{topic}' with difficulty '{difficulty}'. "
+                f"Falling back to all difficulties."
+            )
+            topic_questions = loader.get_lessons_by_topic(topic)
+    else:
+        topic_questions = loader.get_lessons_by_topic(topic)
+
+    # Exclude previously used questions
     if exclude_questions:
         topic_questions = topic_questions[
             ~topic_questions["question"].isin(exclude_questions)
@@ -59,6 +82,7 @@ def sample_question(topic: str, exclude_questions: list = None) -> dict:
     if len(topic_questions) == 0:
         raise ValueError(f"No more available questions for topic: {topic}")
 
+    # Sample a random question
     sampled = topic_questions.sample(n=1).iloc[0]
 
     # Create list of all answers and randomize their order
@@ -75,6 +99,7 @@ def sample_question(topic: str, exclude_questions: list = None) -> dict:
         "explanation": sampled["explanation"],
         "topic": sampled["topic"],
         "subtopic": sampled["subtopic"],
+        "difficulty": sampled["difficulty"],  # Include difficulty in the returned data
     }
 
 
@@ -128,6 +153,17 @@ def init_story_categories(db, story_data):
 def init_lesson_topics(db, lesson_data):
     """Initialize lesson topics in the database."""
     for _, row in lesson_data.iterrows():
+        # Handle both old and new format
+        difficulty_level = row.get(
+            "difficulty", row.get("difficulty_level", "Reasonably Challenging")
+        )
+
+        # Convert numeric difficulty_level to string if needed
+        if isinstance(difficulty_level, (int, float)):
+            difficulty_level = (
+                "Very Challenging" if difficulty_level > 1 else "Reasonably Challenging"
+            )
+
         db_topic = LessonTopic(
             topic=row["topic"],
             subtopic=row["subtopic"],
@@ -136,7 +172,7 @@ def init_lesson_topics(db, lesson_data):
             wrong_answer1=row["wrong_answer1"],
             wrong_answer2=row["wrong_answer2"],
             explanation=row["explanation"],
-            difficulty_level=row["difficulty_level"],
+            difficulty_level=difficulty_level,
         )
         db.add(db_topic)
     db.commit()

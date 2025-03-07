@@ -419,29 +419,52 @@ class ChapterManager:
         return True
 
     @staticmethod
-    def count_available_questions(lesson_topic: str) -> int:
-        """Count the number of available questions for a given topic.
+    def count_available_questions(lesson_topic: str, difficulty: str = None) -> int:
+        """Count the number of available questions for a given topic and difficulty.
 
         Args:
             lesson_topic: The educational topic to count questions for
+            difficulty: Optional difficulty level to filter by
 
         Returns:
-            Number of available questions for the topic
+            Number of available questions for the topic and difficulty
         """
-        from app.init_data import load_lesson_data
+        from app.data.lesson_loader import LessonLoader
 
-        df = load_lesson_data()
-        topic_questions = df[df["topic"] == lesson_topic]
+        loader = LessonLoader()
+
+        if difficulty:
+            topic_questions = loader.get_lessons_by_topic_and_difficulty(
+                lesson_topic, difficulty
+            )
+
+            # If fewer than 3 questions available for the specified difficulty, count all questions
+            if len(topic_questions) < 3:
+                logger.warning(
+                    f"Insufficient questions for topic '{lesson_topic}' with difficulty '{difficulty}'. "
+                    f"Counting all difficulties."
+                )
+                topic_questions = loader.get_lessons_by_topic(lesson_topic)
+        else:
+            topic_questions = loader.get_lessons_by_topic(lesson_topic)
+
         question_count = len(topic_questions)
         logger.info(
             f"Counted available questions for topic",
-            extra={"lesson_topic": lesson_topic, "question_count": question_count},
+            extra={
+                "lesson_topic": lesson_topic,
+                "difficulty": difficulty,
+                "question_count": question_count,
+            },
         )
         return question_count
 
     @staticmethod
     def initialize_adventure_state(
-        total_chapters: int, lesson_topic: str, story_category: str
+        total_chapters: int,
+        lesson_topic: str,
+        story_category: str,
+        difficulty: str = None,
     ) -> AdventureState:
         """Initialize a new adventure state with the determined chapter types and story elements.
 
@@ -449,6 +472,7 @@ class ChapterManager:
             total_chapters: Total number of chapters in the adventure
             lesson_topic: The topic of the lessons
             story_category: The selected story category
+            difficulty: Optional difficulty level for lessons ("Reasonably Challenging" or "Very Challenging")
 
         Returns:
             Initialized AdventureState object
@@ -464,6 +488,7 @@ class ChapterManager:
                     "total_chapters": total_chapters,
                     "lesson_topic": lesson_topic,
                     "story_category": story_category,
+                    "difficulty": difficulty,
                 },
             )
 
@@ -472,7 +497,9 @@ class ChapterManager:
             selected_elements = select_random_elements(story_data, story_category)
 
             # Initialize chapter types
-            available_questions = ChapterManager.count_available_questions(lesson_topic)
+            available_questions = ChapterManager.count_available_questions(
+                lesson_topic, difficulty
+            )
             chapter_types = ChapterManager.determine_chapter_types(
                 total_chapters, available_questions
             )

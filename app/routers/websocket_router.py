@@ -12,12 +12,23 @@ logger = logging.getLogger("story_app")
 
 
 @router.websocket("/ws/story/{story_category}/{lesson_topic}")
-async def story_websocket(websocket: WebSocket, story_category: str, lesson_topic: str):
-    """Handle WebSocket connection for story streaming."""
+async def story_websocket(
+    websocket: WebSocket, story_category: str, lesson_topic: str, difficulty: str = None
+):
+    """Handle WebSocket connection for story streaming.
+
+    Args:
+        websocket: The WebSocket connection
+        story_category: The story category to use
+        lesson_topic: The topic of the lessons
+        difficulty: Optional difficulty level for lessons ("Reasonably Challenging" or "Very Challenging")
+    """
     await websocket.accept()
     logger.info(
-        f"WebSocket connection established for story category: {story_category}, lesson topic: {lesson_topic}"
+        f"WebSocket connection established for story category: {story_category}, lesson topic: {lesson_topic}, difficulty: {difficulty}"
     )
+
+    # TODO: Implement difficulty toggle in UI to allow users to select difficulty level
 
     state_manager = AdventureStateManager()
 
@@ -77,7 +88,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                     )
                     try:
                         state = state_manager.initialize_state(
-                            total_chapters, lesson_topic, story_category
+                            total_chapters, lesson_topic, story_category, difficulty
                         )
                         logger.info(
                             "Initialized adventure state",
@@ -85,6 +96,7 @@ async def story_websocket(websocket: WebSocket, story_category: str, lesson_topi
                                 "story_category": story_category,
                                 "lesson_topic": lesson_topic,
                                 "total_chapters": total_chapters,
+                                "difficulty": difficulty,
                             },
                         )
                     except ValueError as e:
