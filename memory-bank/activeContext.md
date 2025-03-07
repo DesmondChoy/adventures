@@ -46,6 +46,31 @@
 
 ## Recent Changes
 
+### Fixed Choice Card Images Display (2025-03-07)
+- Problem: Choice card images at the end of the first chapter were being cut off, particularly on mobile devices
+- Root Cause:
+  * The `.choice-image-container` class had a `max-height: 200px` constraint with `overflow: hidden`
+  * On desktop, the layout changed to a row format with text on the left and image on the right
+  * On mobile, the column layout with the height constraint was causing images to be truncated
+- Solution:
+  * Removed the `max-height: 200px` constraint from the `.choice-image-container` class to fix desktop display
+  * Added a mobile-specific media query to ensure proper image display on smaller screens:
+    ```css
+    @media (max-width: 767px) {
+        .choice-image-container img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+        }
+    }
+    ```
+  * Changed `object-fit: cover` to `object-fit: contain` for mobile to ensure the entire image is visible
+- Result:
+  * Images now display fully on both desktop and mobile devices
+  * Desktop maintains the side-by-side layout with properly sized images
+  * Mobile shows the complete image in the stacked layout without any cropping
+  * Improved user experience with complete visibility of important visual content
+
 ### Mobile Paragraph Interaction Enhancement (2025-03-07)
 - Problem: On mobile, the indigo accent line for paragraphs only worked after the entire chapter finished streaming, and clicking multiple paragraphs would highlight all of them simultaneously
 - Solution:

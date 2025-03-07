@@ -107,7 +107,6 @@
 /* Choice image styles */
 .choice-image-container {
     transition: all 0.3s ease-in-out;
-    max-height: 200px;
     overflow: hidden;
     margin-top: 0.75rem;
     border-radius: 0.5rem;
@@ -139,6 +138,15 @@
     .choice-image-container {
         flex: 1;
         margin-top: 0;
+    }
+}
+
+/* Ensure images display fully on mobile */
+@media (max-width: 767px) {
+    .choice-image-container img {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
     }
 }
 
