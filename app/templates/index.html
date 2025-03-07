@@ -853,9 +853,9 @@ function startAdventure() {
                 const textContainer = document.createElement('div');
                 textContainer.className = 'choice-text';
                 
-                // Add main choice text
+                // Add main choice text with same font styling as narrative content
                 const textElement = document.createElement('p');
-                textElement.className = 'text-gray-800 text-lg font-medium group-hover:text-gray-900 transition-colors duration-300';
+                textElement.className = 'narrative-font group-hover:text-gray-900 transition-colors duration-300';
                 textElement.textContent = choice.text;
                 
                 textContainer.appendChild(textElement);

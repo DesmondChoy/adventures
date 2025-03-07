@@ -61,6 +61,22 @@ body {
     text-shadow: 0 0 0.3px rgba(0,0,0,0.1);
 }
 
+/* Mobile-optimized story content */
+@media (max-width: 768px) {
+    .markdown-content {
+        padding: 0 8px;
+        font-size: calc(var(--font-size-content) * 0.95); /* Slightly smaller for mobile */
+    }
+    
+    /* Add subtle styling to paragraphs for better readability */
+    .markdown-content p {
+        border-left: 1px solid var(--color-accent-light);
+        padding-left: 8px;
+        margin-left: 0;
+        margin-bottom: 1.2em;
+    }
+}
+
 /* Heading styles */
 h1.text-4xl {
     font-family: var(--font-primary);
@@ -68,6 +84,14 @@ h1.text-4xl {
     letter-spacing: -0.02em;
     font-weight: 700;
     color: var(--color-text-dark);
+}
+
+/* Mobile typography adjustments */
+@media (max-width: 768px) {
+    h1.text-4xl {
+        margin-bottom: 1rem;
+        font-size: calc(var(--font-size-4xl) * 0.9);
+    }
 }
 
 /* Form and UI text */
@@ -102,6 +126,17 @@ label.text-sm {
     letter-spacing: 0.01em;
     font-weight: 500;
     text-align: left;
+    color: var(--color-text-primary);
+    text-shadow: 0 0 0.3px rgba(0,0,0,0.1);
+}
+
+/* Shared font styling for narrative and choice text */
+.narrative-font {
+    font-family: var(--font-primary);
+    font-size: var(--font-size-content);
+    line-height: var(--line-height-content);
+    letter-spacing: 0.01em;
+    font-weight: 500;
     color: var(--color-text-primary);
     text-shadow: 0 0 0.3px rgba(0,0,0,0.1);
 }
@@ -172,4 +207,4 @@ label.text-sm {
 .markdown-content strong {
     font-weight: 700;
     color: var(--color-text-dark);
-} 
+}

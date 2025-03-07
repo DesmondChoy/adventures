@@ -162,6 +162,26 @@
     gap: 0.5rem;
 }
 
+/* Mobile header enhancements */
+@media (max-width: 768px) {
+    .header-controls {
+        border-bottom: 1px solid var(--color-accent-medium);
+        padding: 8px 16px;
+        margin-bottom: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    /* Make font controls more integrated */
+    .font-size-controls {
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 8px;
+        padding: 4px;
+        backdrop-filter: blur(4px);
+    }
+}
+
 .font-size-btn {
     width: 2rem;
     height: 2rem;
@@ -201,6 +221,33 @@
 @media (max-width: 768px) {
     .font-size-controls {
         display: flex;
+    }
+    
+    /* Mobile choice cards enhancement */
+    .choice-card {
+        border-left: 2px solid var(--color-primary-light);
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(4px);
+        transform: translateZ(0); /* Hardware acceleration */
+        margin-bottom: 12px;
+        transition: all 0.3s ease;
+    }
+    
+    .choice-card:active {
+        transform: scale(0.98) translateZ(0);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .choice-card.selected {
+        border-left: 2px solid var(--color-primary);
+        background: rgba(255, 255, 255, 0.9);
+    }
+    
+    /* Enhanced swipe tip */
+    .swipe-tip {
+        background: var(--color-primary);
+        border: none;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
     }
 }
 
