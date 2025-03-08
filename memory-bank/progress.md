@@ -1,5 +1,31 @@
 # Progress Log
 
+## 2025-03-08: Fixed Question Difficulty Default in WebSocket Service
+
+### Fixed Question Difficulty Default in WebSocket Service
+- Problem: "Very Challenging" questions were still being selected for Chapter 2 despite the fix to default to "Reasonably Challenging" in the `sample_question()` function
+- Root Cause:
+  * While the `sample_question()` function in `app/init_data.py` was correctly updated to default to "Reasonably Challenging"
+  * In `websocket_service.py`, the difficulty was being retrieved from state metadata with a default of `None`:
+    ```python
+    # Get difficulty from state metadata if available (for future difficulty toggle)
+    difficulty = state.metadata.get("difficulty", None)
+    ```
+  * This `None` value was then passed to `sample_question()`, which overrode the default parameter value
+  * Even though `sample_question()` had a default parameter of "Reasonably Challenging", it was never used because `None` was explicitly passed
+- Solution:
+  * Modified the code in `websocket_service.py` to use "Reasonably Challenging" as the default when retrieving from state metadata:
+    ```python
+    # Get difficulty from state metadata if available (for future difficulty toggle)
+    difficulty = state.metadata.get("difficulty", "Reasonably Challenging")
+    ```
+  * This ensures that even if no difficulty is set in the state metadata, it will default to "Reasonably Challenging"
+- Result:
+  * Questions now consistently default to "Reasonably Challenging" when no difficulty is explicitly provided
+  * Fixed the specific issue with the question "What does it mean when a farm animal exhibits repetitive behaviors?" in Chapter 2
+  * Maintains flexibility for a future UI toggle to override this default
+  * Ensures consistent behavior regardless of how the function is called
+
 ## 2025-03-08: Fixed Question Placeholder in REFLECT Chapters
 
 ### Fixed Missing Question Placeholder Replacement in Reflection Chapters

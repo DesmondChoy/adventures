@@ -665,7 +665,7 @@ async def generate_chapter(
             ]
 
             # Get difficulty from state metadata if available (for future difficulty toggle)
-            difficulty = state.metadata.get("difficulty", None)
+            difficulty = state.metadata.get("difficulty", "Reasonably Challenging")
 
             # Sample question with optional difficulty parameter
             question = sample_question(
