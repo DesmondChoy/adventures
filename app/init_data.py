@@ -42,14 +42,16 @@ def load_lesson_data():
 
 
 def sample_question(
-    topic: str, exclude_questions: list = None, difficulty: str = None
+    topic: str,
+    exclude_questions: list = None,
+    difficulty: str = "Reasonably Challenging",
 ) -> dict:
     """Sample a random question from the specified topic and difficulty, with fallback.
 
     Args:
         topic: The topic to sample from
         exclude_questions: List of questions to exclude from sampling
-        difficulty: Optional difficulty level ("Reasonably Challenging" or "Very Challenging")
+        difficulty: Difficulty level ("Reasonably Challenging" or "Very Challenging"), defaults to "Reasonably Challenging"
 
     Returns:
         dict: Question data including question, answers, and explanation

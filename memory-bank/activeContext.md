@@ -18,7 +18,7 @@
 1. **Adventure Flow (`app/routers/web.py`, `app/services/chapter_manager.py`):**
    * ChapterType enum: LESSON, STORY, REFLECT, CONCLUSION
    * Content sources in `prompt_engineering.py`:
-     - LESSON: `lessons.csv` + LLM wrapper
+     - LESSON: Lessons from `app/data/lessons/*.csv` + LLM wrapper
      - STORY: Full LLM generation with choices
      - REFLECT: Narrative-driven follow-up to LESSON
      - CONCLUSION: Resolution without choices
@@ -45,7 +45,7 @@
    * Offers methods for accessing specific story categories
 
 5. **Lesson Data Management (`app/data/lesson_loader.py`):**
-   * Loads lesson data from individual CSV files in `app/data/lessons/` directory
+   * Loads lesson data exclusively from individual CSV files in `app/data/lessons/` directory
    * Uses pandas' built-in CSV parsing with proper quoting parameters
    * Handles various file encodings (utf-8, latin1, cp1252)
    * Standardizes difficulty levels to "Reasonably Challenging" and "Very Challenging"
@@ -56,24 +56,39 @@
 
 ## Recent Changes
 
-### Lesson Data Refactoring (2025-03-07)
+### Question Difficulty Default Setting (2025-03-08)
+- Problem: "Very Challenging" questions were being selected instead of defaulting to "Reasonably Challenging" as expected
+- Solution:
+  * Modified the `sample_question()` function in `app/init_data.py` to set the default difficulty parameter to "Reasonably Challenging"
+  * Updated the docstring to reflect this default value
+  * Kept the existing logic that falls back to all difficulties if fewer than 3 questions are available for the specified difficulty
+  * Added a note about a future UI toggle that will allow users to select difficulty level
+- Result:
+  * Questions now default to "Reasonably Challenging" when no difficulty is explicitly provided
+  * Maintains flexibility for a future UI toggle to override this default
+  * Ensures consistent behavior regardless of how the function is called
+- Future Enhancement:
+  * A UI toggle will be implemented to allow users to select between "Reasonably Challenging" and "Very Challenging" difficulty levels
+  * The WebSocket router and adventure state manager already support passing a difficulty parameter
+  * The UI implementation will involve adding a toggle in the lesson selection screen
+
+### Lesson Data Refactoring (2025-03-08)
 - Problem: Lesson data was stored in a single CSV file (`app/data/lessons.csv`), making it difficult to maintain and update
 - Solution:
   * Created a new `LessonLoader` class in `app/data/lesson_loader.py` that:
-    - Attempts to load lessons from individual CSV files in the `app/data/lessons/` directory
-    - Falls back to the old `app/data/lessons.csv` file if needed
+    - Loads lessons from individual CSV files in the `app/data/lessons/` directory
     - Handles various file encodings and formats
     - Standardizes the difficulty levels to "Reasonably Challenging" and "Very Challenging"
     - Provides methods to filter lessons by topic and difficulty
   * Updated the `sample_question` function in `app/init_data.py` to use the new `LessonLoader` class and support filtering by difficulty
   * Updated the `init_lesson_topics` function in `app/init_data.py` to handle both old and new formats
-  * Ensured backward compatibility with the existing code
+  * Updated `tests/simulations/story_simulation.py` to use the new `LessonLoader` class
+  * Removed the old `app/data/lessons.csv` file as it's no longer needed
 - Result:
   * More maintainable lesson data structure with individual files per topic
   * Support for filtering lessons by difficulty level
   * Improved error handling and logging
-  * Backward compatibility with the old CSV file
-  * Smooth transition path from old to new data structure
+  * Completed the transition to the new data structure
 
 ### Mobile Paragraph Interaction Enhancement (2025-03-07)
 - Problem: On mobile, the indigo accent line for paragraphs only worked after the entire chapter finished streaming, and clicking multiple paragraphs would highlight all of them simultaneously

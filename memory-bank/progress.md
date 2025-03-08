@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2025-03-08: Fixed Question Difficulty Default
+
+### Set Default Difficulty for Question Sampling
+- Problem: "Very Challenging" questions were being selected instead of defaulting to "Reasonably Challenging" as expected
+- Root Cause:
+  * The `sample_question()` function in `app/init_data.py` had no default value for the `difficulty` parameter
+  * Without an explicit difficulty setting, the system randomly sampled from all available questions regardless of difficulty
+  * A TODO comment indicated this was meant to be controlled by a UI toggle that hasn't been implemented yet
+- Solution:
+  * Modified the `sample_question()` function to set the default difficulty parameter to "Reasonably Challenging"
+  * Updated the docstring to reflect this default value
+  * Kept the existing logic that falls back to all difficulties if fewer than 3 questions are available for the specified difficulty
+- Result:
+  * Questions now default to "Reasonably Challenging" when no difficulty is explicitly provided
+  * Maintains flexibility for a future UI toggle to override this default
+  * Ensures consistent behavior regardless of how the function is called
+
+## 2025-03-08: Completed Lesson Data Refactoring
+
+### Removed Legacy Lessons CSV File and Updated References
+- Problem: The old `app/data/lessons.csv` file was still present and referenced in some parts of the code, despite the refactoring to use individual CSV files
+- Root Cause:
+  * The refactoring to use individual CSV files in the `app/data/lessons/` directory was incomplete
+  * The `tests/simulations/story_simulation.py` file still directly referenced the old CSV file
+  * The old CSV file was still present in the repository
+- Solution:
+  * Updated `tests/simulations/story_simulation.py` to use the `LessonLoader` class instead of directly loading from the old CSV file
+  * Removed the old `app/data/lessons.csv` file as it's no longer needed
+  * Updated documentation in memory-bank files to reflect the completed transition
+- Result:
+  * Completed the transition to the new data structure
+  * Removed redundant code and files
+  * Improved consistency across the codebase
+  * Simplified the lesson loading process
+
 ## 2025-03-08: Fixed Lesson Loader CSV Format Handling
 
 ### Enhanced CSV Parsing and Topic Matching
