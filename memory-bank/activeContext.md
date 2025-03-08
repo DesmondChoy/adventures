@@ -56,6 +56,22 @@
 
 ## Recent Changes
 
+### Fixed Question Placeholder in REFLECT Chapters (2025-03-08)
+- Problem: The `{question}` placeholder in the exploration_goal wasn't being properly replaced in REFLECT chapters
+- Solution:
+  * Modified `build_reflect_chapter_prompt` in `prompt_engineering.py` to format the exploration_goal with the actual question before inserting it into the prompt:
+    ```python
+    # Format the exploration_goal with the actual question
+    formatted_exploration_goal = config["exploration_goal"].format(
+        question=previous_lesson.question["question"]
+    )
+    ```
+  * Updated the REFLECT_CHAPTER_PROMPT.format() call to use the formatted_exploration_goal instead of the raw config["exploration_goal"]
+- Result:
+  * REFLECT chapters now properly include the actual question in the exploration_goal
+  * The LLM receives the correct guidance to help the character discover the correct understanding of the specific question
+  * Fixed the issue where "the correct understanding of {question}" wasn't loading correctly in the REFLECT chapter prompt
+
 ### Question Difficulty Default Setting (2025-03-08)
 - Problem: "Very Challenging" questions were being selected instead of defaulting to "Reasonably Challenging" as expected
 - Solution:

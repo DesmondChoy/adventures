@@ -427,6 +427,11 @@ def build_reflect_chapter_prompt(
     # Select the appropriate configuration
     config = REFLECT_CONFIG["correct"] if is_correct else REFLECT_CONFIG["incorrect"]
 
+    # Format the exploration_goal with the actual question
+    formatted_exploration_goal = config["exploration_goal"].format(
+        question=previous_lesson.question["question"]
+    )
+
     # Get agency guidance if available
     agency_guidance = ""
     if "agency" in state.metadata:
@@ -498,7 +503,7 @@ def build_reflect_chapter_prompt(
         explanation_guidance=explanation_guidance,
         reflective_technique=reflective_technique,
         acknowledgment_guidance=config["acknowledgment_guidance"],
-        exploration_goal=config["exploration_goal"],
+        exploration_goal=formatted_exploration_goal,
         theme=state.selected_theme,
         agency_guidance=agency_guidance,
         reflect_choice_format=REFLECT_CHOICE_FORMAT,

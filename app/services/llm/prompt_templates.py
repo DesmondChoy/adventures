@@ -442,13 +442,13 @@ REFLECT_CONFIG = {
     "correct": {
         "answer_status": "Correct",
         "acknowledgment_guidance": "Create a story event that acknowledges success",
-        "exploration_goal": "deepen their understanding of {question} and explore broader implications",
+        "exploration_goal": 'deepen their understanding of "{question}" and explore broader implications',
         "correct_answer_info": "This was the correct answer.",
     },
     "incorrect": {
         "answer_status": "Incorrect",
         "acknowledgment_guidance": "Create a story event that gently corrects the mistake",
-        "exploration_goal": "discover the correct understanding of {question} through guided reflection",
+        "exploration_goal": 'discover the correct understanding of "{question}" through guided reflection',
         "correct_answer_info": 'The correct answer was: "{correct_answer}".',
     },
 }
