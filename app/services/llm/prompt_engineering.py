@@ -416,6 +416,14 @@ def build_reflect_chapter_prompt(
         if answer["is_correct"]
     )
 
+    # Get the explanation from the question data and create explanation guidance
+    explanation = previous_lesson.question.get("explanation", "")
+    explanation_guidance = (
+        f'Use this explanation to guide reflection: "{explanation}"'
+        if explanation
+        else "Help the character understand the concept through thoughtful reflection."
+    )
+
     # Select the appropriate configuration
     config = REFLECT_CONFIG["correct"] if is_correct else REFLECT_CONFIG["incorrect"]
 
@@ -487,6 +495,7 @@ def build_reflect_chapter_prompt(
         )
         if not is_correct
         else config["correct_answer_info"],
+        explanation_guidance=explanation_guidance,
         reflective_technique=reflective_technique,
         acknowledgment_guidance=config["acknowledgment_guidance"],
         exploration_goal=config["exploration_goal"],

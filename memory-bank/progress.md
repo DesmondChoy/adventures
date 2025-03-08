@@ -1,5 +1,28 @@
 # Progress Log
 
+## 2025-03-08: Utilized Explanation Column in REFLECT Chapters
+
+### Enhanced Educational Content in Reflection Chapters
+- Problem: The `explanation` column in lesson CSV files wasn't being utilized in the prompts
+- Root Cause:
+  * The explanation field was loaded from CSV files and stored in the question data
+  * However, it wasn't being passed to the LLM in any of the prompt templates
+  * This meant valuable educational content was being ignored in the story generation
+- Solution:
+  * Modified `REFLECT_CHAPTER_PROMPT` in `prompt_templates.py` to include a new "Educational Context" section
+  * Added an `explanation_guidance` parameter to the template
+  * Updated `build_reflect_chapter_prompt` in `prompt_engineering.py` to:
+    - Extract the explanation from the question data
+    - Create an explanation guidance string that incorporates the explanation
+    - Add a fallback message for cases where no explanation is provided
+    - Pass the explanation_guidance parameter to the template
+- Result:
+  * REFLECT chapters now include the explanation from the CSV file
+  * The LLM can create more educationally sound reflection chapters
+  * Students receive better explanations of concepts, regardless of whether they answered correctly or incorrectly
+  * The implementation is minimal and focused, only affecting REFLECT chapters
+  * Gracefully handles cases where explanations might be missing
+
 ## 2025-03-08: Fixed Question Difficulty Default
 
 ### Set Default Difficulty for Question Sampling
@@ -550,87 +573,4 @@
 ### Removed Unnecessary `tone` Field from Story Categories
 - Problem: The `tone` field in story categories wasn't being passed into the LLM prompt used to generate chapters
 - Solution:
-  * Removed the `tone` field from each story category in `app/data/new_stories.yaml`
-  * Modified `app/services/chapter_manager.py` to remove `tone` from the `non_random_elements` dictionary
-  * Updated `app/database.py` to remove the `tone` Column from the `StoryCategory` class
-  * Changed `app/init_data.py` to remove the `tone` field when creating the `db_category` object
-  * Recreated the database to apply the schema changes
-- Result: Simplified data model by removing unused field, ensuring database schema matches actual usage in the application
-
-## 2025-03-03: LLM Response Formatting Improvement
-
-### Fixed "Chapter" Prefix in LLM Responses
-- Problem: Despite system prompt instructions not to begin with "Chapter X", some LLM responses still started with the word "chapter"
-- Solution:
-  * Updated regex pattern in three locations within `websocket_service.py` to catch both numbered and unnumbered chapter prefixes
-  * Changed pattern from `r"^Chapter\s+\d+:\s*"` to `r"^Chapter(?:\s+\d+)?:?\s*"`
-  * Applied the fix in `process_choice()`, `stream_and_send_chapter()`, and `generate_chapter()` functions
-- Result: All variations of "chapter" prefixes (with or without numbers) are now removed before content is streamed to users
-
-## 2025-03-03: Image Generation Visual Details Fix
-
-### Fixed Missing Visual Details in Agency Choice Images
-- Problem: Visual details in square brackets were not being included in image generation prompts for agency choices
-- Root Cause:
-  * `categories` dictionary in `prompt_templates.py` wasn't directly accessible
-  * Agency name extraction in `image_generation_service.py` wasn't properly handling the "As a..." format
-  * Matching logic in `websocket_service.py` wasn't effectively finding the correct agency option with visual details
-- Solution:
-  * Exposed `categories` dictionary at the module level in `prompt_templates.py`
-  * Enhanced `enhance_prompt()` to extract agency names from "As a..." choice texts
-  * Added fallback mechanism to look up visual details directly from the `categories` dictionary
-  * Implemented multi-stage matching approach in `websocket_service.py` for more accurate agency option identification
-- Result: Image generation prompts now correctly include visual details in square brackets, producing more accurate and consistent images for agency choices
-
-## 2025-03-02: Image Generation Gender Consistency
-
-### Fixed Character Gender Inconsistency in Image Generation
-- Problem: Image model was generating male characters for agency roles (e.g., Craftsperson) despite female protagonist in narrative
-- Solution:
-  * Modified `enhance_prompt()` in `image_generation_service.py` to accept and incorporate choice text from narrative
-  * Updated `stream_and_send_chapter()` in `websocket_service.py` to pass choice text to image generation
-  * Directly included narrative text with gender indicators (e.g., "Elara", "herself") in image prompts
-- Result: Generated images maintain gender consistency with narrative, properly depicting female protagonist
-
-## 2025-03-02: Prompt Template Optimizations
-
-### Fixed Duplicate Plot Twist Guidance
-- Problem: Plot twist guidance was being duplicated in Chapter 2 prompts
-- Solution:
-  * Modified `_get_phase_guidance()` to return only base phase guidance without plot twist guidance
-  * Maintained separate plot twist guidance in `build_story_chapter_prompt()` with the `{plot_twist_guidance}` placeholder
-  * Updated docstring to clarify the function's more specific purpose
-- Result: Eliminated duplicate "Plot Twist Development" sections in story chapter prompts
-
-### Removed Duplicate Phase Guidance
-- Problem: Phase guidance was duplicated in prompts (prepended in `build_user_prompt()` and extracted in chapter builders)
-- Solution:
-  * Removed "Exposition Focus" line from all templates in `prompt_templates.py`
-  * Removed exposition focus extraction in all chapter building functions
-  * Modified template `.format()` calls to remove the parameter
-- Result: Reduced token usage and improved maintainability
-
-### Reintegrated Phase Guidance Function
-- Problem: `_get_phase_guidance()` was defined but unused
-- Solution:
-  * Modified `build_user_prompt()` to get phase guidance and prepend to all prompts
-  * Maintained original chapter-specific functions
-  * Centralized phase guidance logic
-- Result: Consistent phase guidance across all chapter types
-
-## 2025-03-01: Image Generation and Prompt Improvements
-
-### Enhanced Image Generation Reliability
-- Problem: Image generation failing with "NoneType has no len()" error
-- Solution:
-  * Increased retries from 2 to 5 in `generate_image_async()` and `_generate_image()`
-  * Added robust null checking for API responses
-  * Implemented graceful fallbacks for failed generation
-- Result: More reliable image generation with better error handling
-
-### Standardized Image Generation Configuration
-- Problem: Inconsistent configuration between services
-- Solution:
-  * Changed environment variable from `GEMINI_API_KEY` to `GOOGLE_API_KEY`
-  * Updated API initialization to use `genai.configure()`
-  * Enhanced debug
+  * Removed the `tone`

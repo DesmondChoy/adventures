@@ -144,9 +144,10 @@ REFLECT_CHAPTER_PROMPT = """# Current Context
 # Chapter Development Guidelines
 1. Reflection Purpose: The character previously answered: "{question}" with "{chosen_answer}" ({answer_status})
 {correct_answer_info}.
-2. Narrative Acknowledgment: {acknowledgment_guidance}
-3. Socratic Exploration: Guide the character to {exploration_goal} through thoughtful questions
-4. Story Integration: Connect this reflection to the ongoing narrative and theme of "{theme}"
+2. Educational Context: {explanation_guidance}
+3. Narrative Acknowledgment: {acknowledgment_guidance}
+4. Socratic Exploration: Guide the character to {exploration_goal} through thoughtful questions
+5. Story Integration: Connect this reflection to the ongoing narrative and theme of "{theme}"
 
 {agency_guidance}
 
