@@ -195,15 +195,21 @@ def process_consequences(
         answer["text"] for answer in lesson_question["answers"] if answer["is_correct"]
     )
 
+    # Get the explanation from the lesson question, or use a default if not available
+    explanation = lesson_question.get("explanation", "")
+
     if is_correct:
         return CORRECT_ANSWER_CONSEQUENCES.format(
-            correct_answer=correct_answer, question=lesson_question["question"]
+            correct_answer=correct_answer,
+            question=lesson_question["question"],
+            explanation=explanation,
         )
     else:
         return INCORRECT_ANSWER_CONSEQUENCES.format(
             chosen_answer=chosen_answer,
             correct_answer=correct_answer,
             question=lesson_question["question"],
+            explanation=explanation,
         )
 
 
@@ -387,6 +393,7 @@ The character's {agency.get("type", "choice")} ({agency.get("name", "from Chapte
         agency_guidance=agency_guidance,
         question=lesson_question["question"],
         formatted_answers=formatted_answers,
+        topic=lesson_question["topic"],
     )
 
 
@@ -416,8 +423,21 @@ def build_reflect_chapter_prompt(
         if answer["is_correct"]
     )
 
+    # Get the explanation from the question data and create explanation guidance
+    explanation = previous_lesson.question.get("explanation", "")
+    explanation_guidance = (
+        f'Use this explanation to guide reflection: "{explanation}"'
+        if explanation
+        else "Help the character understand the concept through thoughtful reflection."
+    )
+
     # Select the appropriate configuration
     config = REFLECT_CONFIG["correct"] if is_correct else REFLECT_CONFIG["incorrect"]
+
+    # Format the exploration_goal with the actual question
+    formatted_exploration_goal = config["exploration_goal"].format(
+        question=previous_lesson.question["question"]
+    )
 
     # Get agency guidance if available
     agency_guidance = ""
@@ -487,9 +507,10 @@ def build_reflect_chapter_prompt(
         )
         if not is_correct
         else config["correct_answer_info"],
+        explanation_guidance=explanation_guidance,
         reflective_technique=reflective_technique,
         acknowledgment_guidance=config["acknowledgment_guidance"],
-        exploration_goal=config["exploration_goal"],
+        exploration_goal=formatted_exploration_goal,
         theme=state.selected_theme,
         agency_guidance=agency_guidance,
         reflect_choice_format=REFLECT_CHOICE_FORMAT,

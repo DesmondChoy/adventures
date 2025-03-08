@@ -1,5 +1,30 @@
 # Active Context
 
+## Recent Enhancement: Topic Introduction in Lesson Chapters (2025-03-09)
+
+1. **Improved Topic Introduction in Lesson Chapters:**
+   * Problem: LESSON_CHAPTER_PROMPT was directly referencing the specific question in the topic introduction
+   * Solution:
+     - Modified template in `prompt_templates.py` to use `{topic}` instead of directly referencing the question
+     - Updated `build_lesson_chapter_prompt` function in `prompt_engineering.py` to pass the topic parameter when formatting the template
+   * Result:
+     - Lesson chapters now introduce the broader topic (like "Farm Animals" or "Singapore History") rather than directly referencing the specific question
+     - Creates a more natural flow for educational content by introducing the broader topic area first before narrowing down to the specific question
+     - Uses the topic value that's already available in the lesson data from CSV files
+
+## Recent Enhancement: Explanation Integration in Learning Impact (2025-03-08)
+
+1. **Enhanced Learning Impact with Explanation Integration:**
+   * Problem: CORRECT_ANSWER_CONSEQUENCES and INCORRECT_ANSWER_CONSEQUENCES templates weren't using the explanation column from lesson data
+   * Solution:
+     - Modified templates in `prompt_templates.py` to include the explanation in the learning impact section
+     - Updated `process_consequences` function in `prompt_engineering.py` to extract and pass the explanation from lesson data
+   * Result:
+     - When a student answers a question, the prompt now includes the specific explanation from the lesson data
+     - Provides more context for learning moments, especially for incorrect answers
+     - Helps the LLM create more educational content with accurate explanations
+     - Example: For the Singapore riots question, it now includes the detailed explanation about ethnic tensions and political conflicts
+
 ## Development Tools
 
 1. **Code Complexity Analyzer (`tools/code_complexity_analyzer.py`):**
@@ -18,14 +43,14 @@
 1. **Adventure Flow (`app/routers/web.py`, `app/services/chapter_manager.py`):**
    * ChapterType enum: LESSON, STORY, REFLECT, CONCLUSION
    * Content sources in `prompt_engineering.py`:
-     - LESSON: `lessons.csv` + LLM wrapper
+     - LESSON: Lessons from `app/data/lessons/*.csv` + LLM wrapper
      - STORY: Full LLM generation with choices
      - REFLECT: Narrative-driven follow-up to LESSON
      - CONCLUSION: Resolution without choices
 
 2. **Chapter Sequencing (`chapter_manager.py`):**
    * First chapter: STORY
-   * Second-to-last: STORY
+   * Second-to-last chapter: STORY
    * Last chapter: CONCLUSION
    * 50% of remaining: LESSON (subject to available questions)
    * 50% of LESSON chapters: REFLECT (follow LESSON)
@@ -44,32 +69,83 @@
    * Provides caching for performance optimization
    * Offers methods for accessing specific story categories
 
+5. **Lesson Data Management (`app/data/lesson_loader.py`):**
+   * Loads lesson data exclusively from individual CSV files in `app/data/lessons/` directory
+   * Uses pandas' built-in CSV parsing with proper quoting parameters
+   * Handles various file encodings (utf-8, latin1, cp1252)
+   * Standardizes difficulty levels to "Reasonably Challenging" and "Very Challenging"
+   * Provides case-insensitive methods to filter lessons by topic and difficulty
+   * Implements robust topic matching with fallback strategies
+   * Supports caching for performance optimization
+   * Includes detailed logging for debugging
+
 ## Recent Changes
 
-### Fixed Choice Card Images Display (2025-03-07)
-- Problem: Choice card images at the end of the first chapter were being cut off, particularly on mobile devices
-- Root Cause:
-  * The `.choice-image-container` class had a `max-height: 200px` constraint with `overflow: hidden`
-  * On desktop, the layout changed to a row format with text on the left and image on the right
-  * On mobile, the column layout with the height constraint was causing images to be truncated
+### Enhanced Learning Impact with Explanation Integration (2025-03-08)
+- Problem: The CORRECT_ANSWER_CONSEQUENCES and INCORRECT_ANSWER_CONSEQUENCES templates weren't using the explanation column from lesson data
 - Solution:
-  * Removed the `max-height: 200px` constraint from the `.choice-image-container` class to fix desktop display
-  * Added a mobile-specific media query to ensure proper image display on smaller screens:
-    ```css
-    @media (max-width: 767px) {
-        .choice-image-container img {
-            width: 100%;
-            height: auto;
-            object-fit: contain;
-        }
-    }
+  * Modified templates in `prompt_templates.py` to include the explanation:
+    ```python
+    INCORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
+    - Acknowledge the misunderstanding about {question}
+    - Create a valuable learning moment from this correction: "{explanation}"
+    - Show how this new understanding affects their approach to challenges"""
     ```
-  * Changed `object-fit: cover` to `object-fit: contain` for mobile to ensure the entire image is visible
+  * Updated `process_consequences` function in `prompt_engineering.py` to extract and pass the explanation from lesson data
 - Result:
-  * Images now display fully on both desktop and mobile devices
-  * Desktop maintains the side-by-side layout with properly sized images
-  * Mobile shows the complete image in the stacked layout without any cropping
-  * Improved user experience with complete visibility of important visual content
+  * When a student answers a question incorrectly, the prompt now includes the specific explanation from the lesson data
+  * For example, if a student incorrectly answers a question about the 1964 Singapore riots, the prompt will include the detailed explanation about ethnic tensions and political conflicts
+  * This provides more context for the learning moment and helps the LLM create more educational content
+
+### Fixed Question Placeholder in REFLECT Chapters (2025-03-08)
+- Problem: The `{question}` placeholder in the exploration_goal wasn't being properly replaced in REFLECT chapters
+- Solution:
+  * Modified `build_reflect_chapter_prompt` in `prompt_engineering.py` to format the exploration_goal with the actual question before inserting it into the prompt:
+    ```python
+    # Format the exploration_goal with the actual question
+    formatted_exploration_goal = config["exploration_goal"].format(
+        question=previous_lesson.question["question"]
+    )
+    ```
+  * Updated the REFLECT_CHAPTER_PROMPT.format() call to use the formatted_exploration_goal instead of the raw config["exploration_goal"]
+- Result:
+  * REFLECT chapters now properly include the actual question in the exploration_goal
+  * The LLM receives the correct guidance to help the character discover the correct understanding of the specific question
+  * Fixed the issue where "the correct understanding of {question}" wasn't loading correctly in the REFLECT chapter prompt
+
+### Question Difficulty Default Setting (2025-03-08)
+- Problem: "Very Challenging" questions were being selected instead of defaulting to "Reasonably Challenging" as expected
+- Solution:
+  * Modified the `sample_question()` function in `app/init_data.py` to set the default difficulty parameter to "Reasonably Challenging"
+  * Updated the docstring to reflect this default value
+  * Kept the existing logic that falls back to all difficulties if fewer than 3 questions are available for the specified difficulty
+  * Added a note about a future UI toggle that will allow users to select difficulty level
+- Result:
+  * Questions now default to "Reasonably Challenging" when no difficulty is explicitly provided
+  * Maintains flexibility for a future UI toggle to override this default
+  * Ensures consistent behavior regardless of how the function is called
+- Future Enhancement:
+  * A UI toggle will be implemented to allow users to select between "Reasonably Challenging" and "Very Challenging" difficulty levels
+  * The WebSocket router and adventure state manager already support passing a difficulty parameter
+  * The UI implementation will involve adding a toggle in the lesson selection screen
+
+### Lesson Data Refactoring (2025-03-08)
+- Problem: Lesson data was stored in a single CSV file (`app/data/lessons.csv`), making it difficult to maintain and update
+- Solution:
+  * Created a new `LessonLoader` class in `app/data/lesson_loader.py` that:
+    - Loads lessons from individual CSV files in the `app/data/lessons/` directory
+    - Handles various file encodings and formats
+    - Standardizes the difficulty levels to "Reasonably Challenging" and "Very Challenging"
+    - Provides methods to filter lessons by topic and difficulty
+  * Updated the `sample_question` function in `app/init_data.py` to use the new `LessonLoader` class and support filtering by difficulty
+  * Updated the `init_lesson_topics` function in `app/init_data.py` to handle both old and new formats
+  * Updated `tests/simulations/story_simulation.py` to use the new `LessonLoader` class
+  * Removed the old `app/data/lessons.csv` file as it's no longer needed
+- Result:
+  * More maintainable lesson data structure with individual files per topic
+  * Support for filtering lessons by difficulty level
+  * Improved error handling and logging
+  * Completed the transition to the new data structure
 
 ### Mobile Paragraph Interaction Enhancement (2025-03-07)
 - Problem: On mobile, the indigo accent line for paragraphs only worked after the entire chapter finished streaming, and clicking multiple paragraphs would highlight all of them simultaneously

@@ -41,7 +41,10 @@ def load_story_data() -> Dict[str, Any]:
 def load_lesson_data() -> pd.DataFrame:
     """Load lesson data with error handling."""
     try:
-        return pd.read_csv("app/data/lessons.csv")
+        from app.data.lesson_loader import LessonLoader
+
+        loader = LessonLoader()
+        return loader.load_all_lessons()
     except Exception as e:
         logger.error("Failed to load lesson data", extra={"error": str(e)})
         return pd.DataFrame(columns=["topic"])  # Provide default value

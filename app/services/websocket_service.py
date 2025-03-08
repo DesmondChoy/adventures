@@ -663,9 +663,20 @@ async def generate_chapter(
                 for chapter in state.chapters
                 if chapter.chapter_type == ChapterType.LESSON and chapter.response
             ]
-            question = sample_question(lesson_topic, exclude_questions=used_questions)
+
+            # Get difficulty from state metadata if available (for future difficulty toggle)
+            difficulty = state.metadata.get("difficulty", "Reasonably Challenging")
+
+            # Sample question with optional difficulty parameter
+            question = sample_question(
+                lesson_topic, exclude_questions=used_questions, difficulty=difficulty
+            )
+
             logger.debug(f"DEBUG: Selected question: {question['question']}")
             logger.debug(f"DEBUG: Answers: {question['answers']}")
+            logger.debug(
+                f"DEBUG: Difficulty: {question.get('difficulty', 'Not specified')}"
+            )
         except ValueError as e:
             logger.error(f"Error sampling question: {e}")
             raise

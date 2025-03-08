@@ -118,10 +118,15 @@ LESSON_CHAPTER_PROMPT = """# Current Context
 {lesson_history}
 {agency_guidance}
 
-2. Core Question Integration: Include this exact question in your narrative: "{question}"
-3. Story Object Method: Create ONE visually interesting element that naturally connects to the question
-4. Narrative Integration: Make the question feel like a natural part of the character's journey
-5. Educational Context: Establish clear stakes for why answering matters to the characters
+2. Topic Introduction: Introduce the topic of {topic} early in the chapter, through character observations, dialogue, or events. Build a sense of curiosity or need-to-know around this topic.
+3. Motivation: Create a situation where "{question}" MUST be asked to progress. The question should be a direct consequence of the narrative events.
+4. Narrative Device (Choose one):
+    - The character could overhear a conversation, find a cryptic message, or encounter a puzzling situation that directly leads to the question.
+    - Another character could pose the question as a challenge or riddle.
+    - The character's internal monologue could lead them to formulate the question
+    - Story Object: Introduce a visual element (an object, a place, a symbol) that embodies the topic of the question. The character's interaction with this element should naturally lead to the question being raised.
+5. Agency Connection: How can their Agency Connection choice help them understand or investigate the situation?
+6. Use the exact question and do not rephrase it.
 
 # Available Answers
 {formatted_answers}
@@ -144,9 +149,10 @@ REFLECT_CHAPTER_PROMPT = """# Current Context
 # Chapter Development Guidelines
 1. Reflection Purpose: The character previously answered: "{question}" with "{chosen_answer}" ({answer_status})
 {correct_answer_info}.
-2. Narrative Acknowledgment: {acknowledgment_guidance}
-3. Socratic Exploration: Guide the character to {exploration_goal} through thoughtful questions
-4. Story Integration: Connect this reflection to the ongoing narrative and theme of "{theme}"
+2. Educational Context: {explanation_guidance}
+3. Narrative Acknowledgment: {acknowledgment_guidance}
+4. Socratic Exploration: Guide the character to {exploration_goal} through thoughtful questions
+5. Story Integration: Connect this reflection to the ongoing narrative and theme of "{theme}"
 
 {agency_guidance}
 
@@ -401,13 +407,13 @@ Use this specific storytelling technique for the reflection:
 # ------------------------------
 
 CORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
-- Show how understanding {question} connects to their current situation
-- Build confidence from this success that carries into future challenges
+- Show how understanding "{question}" connects to their current situation
+- Build confidence from this success that carries into future challenges: "{explanation}"
 - Integrate this knowledge naturally into the character's approach"""
 
 INCORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
-- Acknowledge the misunderstanding about {question}
-- Create a valuable learning moment from this correction
+- Acknowledge the misunderstanding about "{question}"
+- Create a valuable learning moment from this correction: "{explanation}"
 - Show how this new understanding affects their approach to challenges"""
 
 # Agency guidance templates
@@ -441,13 +447,13 @@ REFLECT_CONFIG = {
     "correct": {
         "answer_status": "Correct",
         "acknowledgment_guidance": "Create a story event that acknowledges success",
-        "exploration_goal": "deepen their understanding of {question} and explore broader implications",
+        "exploration_goal": 'deepen their understanding of "{question}" and explore broader implications',
         "correct_answer_info": "This was the correct answer.",
     },
     "incorrect": {
         "answer_status": "Incorrect",
         "acknowledgment_guidance": "Create a story event that gently corrects the mistake",
-        "exploration_goal": "discover the correct understanding of {question} through guided reflection",
+        "exploration_goal": 'discover the correct understanding of "{question}" through guided reflection',
         "correct_answer_info": 'The correct answer was: "{correct_answer}".',
     },
 }

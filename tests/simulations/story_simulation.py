@@ -193,9 +193,16 @@ def load_story_data():
 
 
 def load_lesson_data():
-    """Load lesson data from CSV file."""
+    """Load lesson data from CSV files in the lessons directory."""
     try:
-        return pd.read_csv("app/data/lessons.csv")
+        # Import here to avoid circular imports
+        sys.path.insert(
+            0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+        )
+        from app.data.lesson_loader import LessonLoader
+
+        loader = LessonLoader()
+        return loader.load_all_lessons()
     except Exception as e:
         simulation_logger.error(f"Failed to load lesson data: {e}")
         return pd.DataFrame(columns=["topic"])

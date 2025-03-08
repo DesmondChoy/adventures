@@ -1,5 +1,245 @@
 # Progress Log
 
+## 2025-03-09: Improved Topic Introduction in Lesson Chapters
+
+### Enhanced Topic Introduction in Lesson Chapters
+- Problem: LESSON_CHAPTER_PROMPT was directly referencing the specific question in the topic introduction
+- Root Cause:
+  * The template used `Introduce the topic of this question:"{question}"` which focused too narrowly on the specific question
+  * This made the narrative flow less natural, as it jumped directly to the specific question rather than introducing the broader topic first
+  * The broader topic information (like "Farm Animals" or "Singapore History") was already available in the lesson data but wasn't being utilized
+- Solution:
+  * Modified the LESSON_CHAPTER_PROMPT template in `prompt_templates.py` to use the broader topic:
+    ```python
+    # Changed from:
+    2. Topic Introduction: Introduce the topic of this question:"{question}" early in the chapter, through character observations, dialogue, or events. Build a sense of curiosity or need-to-know around this topic.
+    
+    # To:
+    2. Topic Introduction: Introduce the topic of {topic} early in the chapter, through character observations, dialogue, or events. Build a sense of curiosity or need-to-know around this topic.
+    ```
+  * Updated the `build_lesson_chapter_prompt` function in `prompt_engineering.py` to pass the topic parameter when formatting the template:
+    ```python
+    return LESSON_CHAPTER_PROMPT.format(
+        # other parameters...
+        question=lesson_question["question"],
+        formatted_answers=formatted_answers,
+        topic=lesson_question["topic"],  # Added this line
+    )
+    ```
+- Result:
+  * Lesson chapters now introduce the broader topic (like "Farm Animals" or "Singapore History") rather than directly referencing the specific question
+  * Creates a more natural flow for educational content by introducing the broader topic area first before narrowing down to the specific question
+  * Uses the topic value that's already available in the lesson data from CSV files
+  * Improves the narrative quality by allowing for a more gradual introduction to the educational content
+
+## 2025-03-08: Enhanced CORRECT_ANSWER_CONSEQUENCES and INCORRECT_ANSWER_CONSEQUENCES Templates
+
+### Improved Learning Impact with Explanation Integration
+- Problem: The CORRECT_ANSWER_CONSEQUENCES and INCORRECT_ANSWER_CONSEQUENCES templates weren't using the explanation column from lesson data
+- Root Cause:
+  * The explanation field was loaded from CSV files and stored in the question data
+  * However, it wasn't being included in the templates for learning impact
+  * This meant valuable educational content wasn't being shown in the story when a student answered a question
+- Solution:
+  * Modified the templates in `prompt_templates.py` to include the explanation:
+    ```python
+    CORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
+    - Show how understanding {question} connects to their current situation
+    - Build confidence from this success that carries into future challenges: "{explanation}"
+    - Integrate this knowledge naturally into the character's approach"""
+
+    INCORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
+    - Acknowledge the misunderstanding about {question}
+    - Create a valuable learning moment from this correction: "{explanation}"
+    - Show how this new understanding affects their approach to challenges"""
+    ```
+  * Updated the `process_consequences` function in `prompt_engineering.py` to extract and pass the explanation:
+    ```python
+    # Get the explanation from the lesson question, or use a default if not available
+    explanation = lesson_question.get("explanation", "")
+    
+    if is_correct:
+        return CORRECT_ANSWER_CONSEQUENCES.format(
+            correct_answer=correct_answer,
+            question=lesson_question["question"],
+            explanation=explanation,
+        )
+    else:
+        return INCORRECT_ANSWER_CONSEQUENCES.format(
+            chosen_answer=chosen_answer,
+            correct_answer=correct_answer,
+            question=lesson_question["question"],
+            explanation=explanation,
+        )
+    ```
+- Result:
+  * When a student answers a question incorrectly, the prompt now includes the specific explanation from the lesson data
+  * For example, if a student incorrectly answers a question about the 1964 Singapore riots, the prompt will include the detailed explanation about ethnic tensions and political conflicts
+  * This provides more context for the learning moment and helps the LLM create more educational content
+  * The implementation is minimal and focused, affecting only the consequences templates
+  * Gracefully handles cases where explanations might be missing by using an empty string as default
+
+## 2025-03-08: Fixed Question Difficulty Default in WebSocket Service
+
+### Fixed Question Difficulty Default in WebSocket Service
+- Problem: "Very Challenging" questions were still being selected for Chapter 2 despite the fix to default to "Reasonably Challenging" in the `sample_question()` function
+- Root Cause:
+  * While the `sample_question()` function in `app/init_data.py` was correctly updated to default to "Reasonably Challenging"
+  * In `websocket_service.py`, the difficulty was being retrieved from state metadata with a default of `None`:
+    ```python
+    # Get difficulty from state metadata if available (for future difficulty toggle)
+    difficulty = state.metadata.get("difficulty", None)
+    ```
+  * This `None` value was then passed to `sample_question()`, which overrode the default parameter value
+  * Even though `sample_question()` had a default parameter of "Reasonably Challenging", it was never used because `None` was explicitly passed
+- Solution:
+  * Modified the code in `websocket_service.py` to use "Reasonably Challenging" as the default when retrieving from state metadata:
+    ```python
+    # Get difficulty from state metadata if available (for future difficulty toggle)
+    difficulty = state.metadata.get("difficulty", "Reasonably Challenging")
+    ```
+  * This ensures that even if no difficulty is set in the state metadata, it will default to "Reasonably Challenging"
+- Result:
+  * Questions now consistently default to "Reasonably Challenging" when no difficulty is explicitly provided
+  * Fixed the specific issue with the question "What does it mean when a farm animal exhibits repetitive behaviors?" in Chapter 2
+  * Maintains flexibility for a future UI toggle to override this default
+  * Ensures consistent behavior regardless of how the function is called
+
+## 2025-03-08: Fixed Question Placeholder in REFLECT Chapters
+
+### Fixed Missing Question Placeholder Replacement in Reflection Chapters
+- Problem: The `{question}` placeholder in the exploration_goal wasn't being properly replaced in REFLECT chapters
+- Root Cause:
+  * In `prompt_templates.py`, the REFLECT_CONFIG dictionary contains an exploration_goal with a `{question}` placeholder:
+    ```python
+    "exploration_goal": "discover the correct understanding of {question} through guided reflection"
+    ```
+  * When this config was used in `prompt_engineering.py` to build the REFLECT chapter prompt, the `{question}` placeholder wasn't being replaced
+  * The placeholder was being treated as a literal string, not as a placeholder to be replaced with the actual question
+- Solution:
+  * Modified `build_reflect_chapter_prompt` in `prompt_engineering.py` to format the exploration_goal with the actual question before inserting it into the prompt:
+    ```python
+    # Format the exploration_goal with the actual question
+    formatted_exploration_goal = config["exploration_goal"].format(
+        question=previous_lesson.question["question"]
+    )
+    ```
+  * Updated the REFLECT_CHAPTER_PROMPT.format() call to use the formatted_exploration_goal instead of the raw config["exploration_goal"]
+- Result:
+  * REFLECT chapters now properly include the actual question in the exploration_goal
+  * The LLM receives the correct guidance to help the character discover the correct understanding of the specific question
+  * Fixed the issue where "the correct understanding of {question}" wasn't loading correctly in the REFLECT chapter prompt
+
+## 2025-03-08: Utilized Explanation Column in REFLECT Chapters
+
+### Enhanced Educational Content in Reflection Chapters
+- Problem: The `explanation` column in lesson CSV files wasn't being utilized in the prompts
+- Root Cause:
+  * The explanation field was loaded from CSV files and stored in the question data
+  * However, it wasn't being passed to the LLM in any of the prompt templates
+  * This meant valuable educational content was being ignored in the story generation
+- Solution:
+  * Modified `REFLECT_CHAPTER_PROMPT` in `prompt_templates.py` to include a new "Educational Context" section
+  * Added an `explanation_guidance` parameter to the template
+  * Updated `build_reflect_chapter_prompt` in `prompt_engineering.py` to:
+    - Extract the explanation from the question data
+    - Create an explanation guidance string that incorporates the explanation
+    - Add a fallback message for cases where no explanation is provided
+    - Pass the explanation_guidance parameter to the template
+- Result:
+  * REFLECT chapters now include the explanation from the CSV file
+  * The LLM can create more educationally sound reflection chapters
+  * Students receive better explanations of concepts, regardless of whether they answered correctly or incorrectly
+  * The implementation is minimal and focused, only affecting REFLECT chapters
+  * Gracefully handles cases where explanations might be missing
+
+## 2025-03-08: Fixed Question Difficulty Default
+
+### Set Default Difficulty for Question Sampling
+- Problem: "Very Challenging" questions were being selected instead of defaulting to "Reasonably Challenging" as expected
+- Root Cause:
+  * The `sample_question()` function in `app/init_data.py` had no default value for the `difficulty` parameter
+  * Without an explicit difficulty setting, the system randomly sampled from all available questions regardless of difficulty
+  * A TODO comment indicated this was meant to be controlled by a UI toggle that hasn't been implemented yet
+- Solution:
+  * Modified the `sample_question()` function to set the default difficulty parameter to "Reasonably Challenging"
+  * Updated the docstring to reflect this default value
+  * Kept the existing logic that falls back to all difficulties if fewer than 3 questions are available for the specified difficulty
+- Result:
+  * Questions now default to "Reasonably Challenging" when no difficulty is explicitly provided
+  * Maintains flexibility for a future UI toggle to override this default
+  * Ensures consistent behavior regardless of how the function is called
+
+## 2025-03-08: Completed Lesson Data Refactoring
+
+### Removed Legacy Lessons CSV File and Updated References
+- Problem: The old `app/data/lessons.csv` file was still present and referenced in some parts of the code, despite the refactoring to use individual CSV files
+- Root Cause:
+  * The refactoring to use individual CSV files in the `app/data/lessons/` directory was incomplete
+  * The `tests/simulations/story_simulation.py` file still directly referenced the old CSV file
+  * The old CSV file was still present in the repository
+- Solution:
+  * Updated `tests/simulations/story_simulation.py` to use the `LessonLoader` class instead of directly loading from the old CSV file
+  * Removed the old `app/data/lessons.csv` file as it's no longer needed
+  * Updated documentation in memory-bank files to reflect the completed transition
+- Result:
+  * Completed the transition to the new data structure
+  * Removed redundant code and files
+  * Improved consistency across the codebase
+  * Simplified the lesson loading process
+
+## 2025-03-08: Fixed Lesson Loader CSV Format Handling
+
+### Enhanced CSV Parsing and Topic Matching
+- Problem: The `LessonLoader` class wasn't correctly parsing the new CSV format with quoted fields, causing errors when filtering by topic
+- Root Cause:
+  * CSV files were reformatted with proper quotes around each field
+  * The custom parsing logic in `LessonLoader` wasn't handling the quoted fields correctly
+  * Topic matching was case-sensitive and didn't handle whitespace variations
+  * Only 1 lesson was being found for "Human Body" topic when there should be 50
+- Solution:
+  * Completely rewrote the `load_all_lessons` method to use pandas' built-in CSV parsing with proper quoting parameters
+  * Enhanced the `get_lessons_by_topic` method to use case-insensitive matching
+  * Added fallback strategies for topic matching:
+    - First try exact case-insensitive matching
+    - Then try with stripped whitespace
+    - Finally try partial matching if needed
+  * Updated `get_lessons_by_difficulty` and `get_lessons_by_topic_and_difficulty` to use the same case-insensitive approach
+  * Added detailed logging to help diagnose any future issues
+  * Removed the fallback to the old CSV file since it's no longer needed
+- Result:
+  * Successfully loads all 150 lessons from the CSV files in the `app/data/lessons/` directory
+  * Correctly finds all 50 lessons for the "Human Body" topic
+  * More robust topic and difficulty matching with case-insensitive comparisons
+  * Better error handling and logging for easier debugging
+  * Fixed the "Need at least 3 questions, but only have 1" error in adventure state initialization
+
+## 2025-03-07: Lesson Data Refactoring
+
+### Improved Lesson Data Management with Individual Files
+- Problem: Lesson data was stored in a single CSV file (`app/data/lessons.csv`), making it difficult to maintain and update
+- Root Cause:
+  * All lesson data was in a single CSV file, making it hard to organize by topic
+  * No support for filtering by difficulty level
+  * Limited flexibility for adding new lessons or updating existing ones
+  * Potential for data corruption when editing a large CSV file
+- Solution:
+  * Created a new `LessonLoader` class in `app/data/lesson_loader.py` that:
+    - Attempts to load lessons from individual CSV files in the `app/data/lessons/` directory
+    - Falls back to the old `app/data/lessons.csv` file if needed
+    - Handles various file encodings and formats
+    - Standardizes the difficulty levels to "Reasonably Challenging" and "Very Challenging"
+    - Provides methods to filter lessons by topic and difficulty
+  * Updated the `sample_question` function in `app/init_data.py` to use the new `LessonLoader` class and support filtering by difficulty
+  * Updated the `init_lesson_topics` function in `app/init_data.py` to handle both old and new formats
+  * Ensured backward compatibility with the existing code
+- Result:
+  * More maintainable lesson data structure with individual files per topic
+  * Support for filtering lessons by difficulty level
+  * Improved error handling and logging
+  * Backward compatibility with the old CSV file
+  * Smooth transition path from old to new data structure
+
 ## 2025-03-07: CSS File Consolidation
 
 ### Improved Frontend Architecture with CSS Consolidation
@@ -463,174 +703,4 @@
 ### Removed Unnecessary `tone` Field from Story Categories
 - Problem: The `tone` field in story categories wasn't being passed into the LLM prompt used to generate chapters
 - Solution:
-  * Removed the `tone` field from each story category in `app/data/new_stories.yaml`
-  * Modified `app/services/chapter_manager.py` to remove `tone` from the `non_random_elements` dictionary
-  * Updated `app/database.py` to remove the `tone` Column from the `StoryCategory` class
-  * Changed `app/init_data.py` to remove the `tone` field when creating the `db_category` object
-  * Recreated the database to apply the schema changes
-- Result: Simplified data model by removing unused field, ensuring database schema matches actual usage in the application
-
-## 2025-03-03: LLM Response Formatting Improvement
-
-### Fixed "Chapter" Prefix in LLM Responses
-- Problem: Despite system prompt instructions not to begin with "Chapter X", some LLM responses still started with the word "chapter"
-- Solution:
-  * Updated regex pattern in three locations within `websocket_service.py` to catch both numbered and unnumbered chapter prefixes
-  * Changed pattern from `r"^Chapter\s+\d+:\s*"` to `r"^Chapter(?:\s+\d+)?:?\s*"`
-  * Applied the fix in `process_choice()`, `stream_and_send_chapter()`, and `generate_chapter()` functions
-- Result: All variations of "chapter" prefixes (with or without numbers) are now removed before content is streamed to users
-
-## 2025-03-03: Image Generation Visual Details Fix
-
-### Fixed Missing Visual Details in Agency Choice Images
-- Problem: Visual details in square brackets were not being included in image generation prompts for agency choices
-- Root Cause:
-  * `categories` dictionary in `prompt_templates.py` wasn't directly accessible
-  * Agency name extraction in `image_generation_service.py` wasn't properly handling the "As a..." format
-  * Matching logic in `websocket_service.py` wasn't effectively finding the correct agency option with visual details
-- Solution:
-  * Exposed `categories` dictionary at the module level in `prompt_templates.py`
-  * Enhanced `enhance_prompt()` to extract agency names from "As a..." choice texts
-  * Added fallback mechanism to look up visual details directly from the `categories` dictionary
-  * Implemented multi-stage matching approach in `websocket_service.py` for more accurate agency option identification
-- Result: Image generation prompts now correctly include visual details in square brackets, producing more accurate and consistent images for agency choices
-
-## 2025-03-02: Image Generation Gender Consistency
-
-### Fixed Character Gender Inconsistency in Image Generation
-- Problem: Image model was generating male characters for agency roles (e.g., Craftsperson) despite female protagonist in narrative
-- Solution:
-  * Modified `enhance_prompt()` in `image_generation_service.py` to accept and incorporate choice text from narrative
-  * Updated `stream_and_send_chapter()` in `websocket_service.py` to pass choice text to image generation
-  * Directly included narrative text with gender indicators (e.g., "Elara", "herself") in image prompts
-- Result: Generated images maintain gender consistency with narrative, properly depicting female protagonist
-
-## 2025-03-02: Prompt Template Optimizations
-
-### Fixed Duplicate Plot Twist Guidance
-- Problem: Plot twist guidance was being duplicated in Chapter 2 prompts
-- Solution:
-  * Modified `_get_phase_guidance()` to return only base phase guidance without plot twist guidance
-  * Maintained separate plot twist guidance in `build_story_chapter_prompt()` with the `{plot_twist_guidance}` placeholder
-  * Updated docstring to clarify the function's more specific purpose
-- Result: Eliminated duplicate "Plot Twist Development" sections in story chapter prompts
-
-### Removed Duplicate Phase Guidance
-- Problem: Phase guidance was duplicated in prompts (prepended in `build_user_prompt()` and extracted in chapter builders)
-- Solution:
-  * Removed "Exposition Focus" line from all templates in `prompt_templates.py`
-  * Removed exposition focus extraction in all chapter building functions
-  * Modified template `.format()` calls to remove the parameter
-- Result: Reduced token usage and improved maintainability
-
-### Reintegrated Phase Guidance Function
-- Problem: `_get_phase_guidance()` was defined but unused
-- Solution:
-  * Modified `build_user_prompt()` to get phase guidance and prepend to all prompts
-  * Maintained original chapter-specific functions
-  * Centralized phase guidance logic
-- Result: Consistent phase guidance across all chapter types
-
-## 2025-03-01: Image Generation and Prompt Improvements
-
-### Enhanced Image Generation Reliability
-- Problem: Image generation failing with "NoneType has no len()" error
-- Solution:
-  * Increased retries from 2 to 5 in `generate_image_async()` and `_generate_image()`
-  * Added robust null checking for API responses
-  * Implemented graceful fallbacks for failed generation
-- Result: More reliable image generation with better error handling
-
-### Standardized Image Generation Configuration
-- Problem: Inconsistent configuration between services
-- Solution:
-  * Changed environment variable from `GEMINI_API_KEY` to `GOOGLE_API_KEY`
-  * Updated API initialization to use `genai.configure()`
-  * Enhanced debug logging similar to GeminiService
-- Result: Consistent configuration across services
-
-### Fixed Image Generation API Compatibility
-- Problem: Incompatibility with Google Generative AI SDK
-- Solution:
-  * Updated imports to use correct SDK
-  * Modified client initialization and method calls
-  * Updated response handling for new API structure
-- Result: Working image generation for Chapter 1 agency choices
-
-### Streamlined LLM Prompts for All Chapters
-- Problem: Inconsistent prompt styles across chapters
-- Solution:
-  * Extended streamlined approach to all chapter types
-  * Created unified `build_prompt()` function
-  * Removed redundant files and conditional checks
-  * Consolidated templates and engineering functions
-- Result: Consistent, maintainable prompts with reduced token usage
-
-## 2025-02-28: Agency Implementation and Narrative Improvements
-
-### Fixed F-String Syntax Error
-- Problem: Trailing space in f-string causing syntax error
-- Solution: Removed trailing space in agency guidance section
-- Result: Fixed application startup issue
-
-### Agency Implementation
-- Problem: Lack of meaningful user agency throughout adventure
-- Solution:
-  * Added four agency categories in first chapter (items, companions, roles, abilities)
-  * Implemented agency detection and storage in `websocket_service.py`
-  * Added reference tracking in `adventure_state_manager.py`
-  * Created evolution system in REFLECT chapters
-- Result: Meaningful agency that evolves throughout the adventure
-
-### REFLECT Chapter Narrative Integration
-- Problem: REFLECT chapters felt like detached tests
-- Solution:
-  * Created unified narrative approach for correct/incorrect answers
-  * Removed "correct/incorrect" structure from choices
-  * Made all choices story-driven without educational labels
-  * Used Socratic method for deeper understanding
-- Result: More natural integration of educational content
-
-### Removed Obsolete Code
-- Problem: Unused `CHOICE_FORMAT_INSTRUCTIONS` constant
-- Solution: Removed constant and its import
-- Result: Improved code maintainability
-
-### UI Improvements
-- Problem: "Swipe to explore" tip showing on desktop
-- Solution: Added media query to hide on screens > 768px
-- Result: Device-appropriate UI hints
-
-### Story Object Method for Lessons
-- Problem: Disconnect between narrative and educational content
-- Solution:
-  * Implemented Story Object Method for intuitive narrative bridges
-  * Required exact question to appear verbatim in narrative
-  * Allowed more natural placement of questions
-- Result: Better integration of educational content
-
-## 2025-02-27: Prompt Engineering Enhancements
-
-### Phase-Specific Choice Instructions
-- Problem: Generic choice instructions across all story phases
-- Solution:
-  * Created `BASE_CHOICE_FORMAT` with common instructions
-  * Added phase-specific guidance dictionary
-  * Implemented `get_choice_instructions(phase)` function
-- Result: More contextually appropriate choices for each phase
-
-### Markdown Structure for Prompts
-- Problem: Poor organization in LLM prompts
-- Solution:
-  * Implemented markdown-based structure
-  * Created clear visual hierarchy
-  * Enhanced formatting for lesson content
-- Result: Better organized, more effective prompts
-
-### Enhanced REFLECT Chapter Implementation
-- Problem: Limited variety in REFLECT challenges
-- Solution:
-  * Added multiple challenge types for correct answers
-  * Restructured incorrect answer handling
-  * Added challenge type tracking in metadata
-- Result: More varied and engaging REFLECT chapters
+  * Removed the `tone`

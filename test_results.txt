@@ -1,0 +1,6 @@
+Total lessons: 150
+Available topics: ['Farm Animals', 'Human Body', 'Singapore History']
+Available difficulties: ['Reasonably Challenging', 'Very Challenging']
+Human Body lessons: 50
+Reasonably Challenging lessons: 75
+Human Body + Reasonably Challenging: 25
