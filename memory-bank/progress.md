@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2025-03-09: Improved Topic Introduction in Lesson Chapters
+
+### Enhanced Topic Introduction in Lesson Chapters
+- Problem: LESSON_CHAPTER_PROMPT was directly referencing the specific question in the topic introduction
+- Root Cause:
+  * The template used `Introduce the topic of this question:"{question}"` which focused too narrowly on the specific question
+  * This made the narrative flow less natural, as it jumped directly to the specific question rather than introducing the broader topic first
+  * The broader topic information (like "Farm Animals" or "Singapore History") was already available in the lesson data but wasn't being utilized
+- Solution:
+  * Modified the LESSON_CHAPTER_PROMPT template in `prompt_templates.py` to use the broader topic:
+    ```python
+    # Changed from:
+    2. Topic Introduction: Introduce the topic of this question:"{question}" early in the chapter, through character observations, dialogue, or events. Build a sense of curiosity or need-to-know around this topic.
+    
+    # To:
+    2. Topic Introduction: Introduce the topic of {topic} early in the chapter, through character observations, dialogue, or events. Build a sense of curiosity or need-to-know around this topic.
+    ```
+  * Updated the `build_lesson_chapter_prompt` function in `prompt_engineering.py` to pass the topic parameter when formatting the template:
+    ```python
+    return LESSON_CHAPTER_PROMPT.format(
+        # other parameters...
+        question=lesson_question["question"],
+        formatted_answers=formatted_answers,
+        topic=lesson_question["topic"],  # Added this line
+    )
+    ```
+- Result:
+  * Lesson chapters now introduce the broader topic (like "Farm Animals" or "Singapore History") rather than directly referencing the specific question
+  * Creates a more natural flow for educational content by introducing the broader topic area first before narrowing down to the specific question
+  * Uses the topic value that's already available in the lesson data from CSV files
+  * Improves the narrative quality by allowing for a more gradual introduction to the educational content
+
 ## 2025-03-08: Enhanced CORRECT_ANSWER_CONSEQUENCES and INCORRECT_ANSWER_CONSEQUENCES Templates
 
 ### Improved Learning Impact with Explanation Integration

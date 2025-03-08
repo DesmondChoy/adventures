@@ -393,6 +393,7 @@ The character's {agency.get("type", "choice")} ({agency.get("name", "from Chapte
         agency_guidance=agency_guidance,
         question=lesson_question["question"],
         formatted_answers=formatted_answers,
+        topic=lesson_question["topic"],
     )
 
 

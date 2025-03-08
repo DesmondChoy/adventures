@@ -1,5 +1,17 @@
 # Active Context
 
+## Recent Enhancement: Topic Introduction in Lesson Chapters (2025-03-09)
+
+1. **Improved Topic Introduction in Lesson Chapters:**
+   * Problem: LESSON_CHAPTER_PROMPT was directly referencing the specific question in the topic introduction
+   * Solution:
+     - Modified template in `prompt_templates.py` to use `{topic}` instead of directly referencing the question
+     - Updated `build_lesson_chapter_prompt` function in `prompt_engineering.py` to pass the topic parameter when formatting the template
+   * Result:
+     - Lesson chapters now introduce the broader topic (like "Farm Animals" or "Singapore History") rather than directly referencing the specific question
+     - Creates a more natural flow for educational content by introducing the broader topic area first before narrowing down to the specific question
+     - Uses the topic value that's already available in the lesson data from CSV files
+
 ## Recent Enhancement: Explanation Integration in Learning Impact (2025-03-08)
 
 1. **Enhanced Learning Impact with Explanation Integration:**

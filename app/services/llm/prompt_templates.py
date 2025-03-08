@@ -118,10 +118,15 @@ LESSON_CHAPTER_PROMPT = """# Current Context
 {lesson_history}
 {agency_guidance}
 
-2. Core Question Integration: Include this exact question in your narrative: "{question}"
-3. Story Object Method: Create ONE visually interesting element that naturally connects to the question
-4. Narrative Integration: Make the question feel like a natural part of the character's journey
-5. Educational Context: Establish clear stakes for why answering matters to the characters
+2. Topic Introduction: Introduce the topic of {topic} early in the chapter, through character observations, dialogue, or events. Build a sense of curiosity or need-to-know around this topic.
+3. Motivation: Create a situation where "{question}" MUST be asked to progress. The question should be a direct consequence of the narrative events.
+4. Narrative Device (Choose one):
+    - The character could overhear a conversation, find a cryptic message, or encounter a puzzling situation that directly leads to the question.
+    - Another character could pose the question as a challenge or riddle.
+    - The character's internal monologue could lead them to formulate the question
+    - Story Object: Introduce a visual element (an object, a place, a symbol) that embodies the topic of the question. The character's interaction with this element should naturally lead to the question being raised.
+5. Agency Connection: How can their Agency Connection choice help them understand or investigate the situation?
+6. Use the exact question and do not rephrase it.
 
 # Available Answers
 {formatted_answers}
