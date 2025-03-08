@@ -1,5 +1,52 @@
 # Progress Log
 
+## 2025-03-08: Enhanced CORRECT_ANSWER_CONSEQUENCES and INCORRECT_ANSWER_CONSEQUENCES Templates
+
+### Improved Learning Impact with Explanation Integration
+- Problem: The CORRECT_ANSWER_CONSEQUENCES and INCORRECT_ANSWER_CONSEQUENCES templates weren't using the explanation column from lesson data
+- Root Cause:
+  * The explanation field was loaded from CSV files and stored in the question data
+  * However, it wasn't being included in the templates for learning impact
+  * This meant valuable educational content wasn't being shown in the story when a student answered a question
+- Solution:
+  * Modified the templates in `prompt_templates.py` to include the explanation:
+    ```python
+    CORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
+    - Show how understanding {question} connects to their current situation
+    - Build confidence from this success that carries into future challenges: "{explanation}"
+    - Integrate this knowledge naturally into the character's approach"""
+
+    INCORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
+    - Acknowledge the misunderstanding about {question}
+    - Create a valuable learning moment from this correction: "{explanation}"
+    - Show how this new understanding affects their approach to challenges"""
+    ```
+  * Updated the `process_consequences` function in `prompt_engineering.py` to extract and pass the explanation:
+    ```python
+    # Get the explanation from the lesson question, or use a default if not available
+    explanation = lesson_question.get("explanation", "")
+    
+    if is_correct:
+        return CORRECT_ANSWER_CONSEQUENCES.format(
+            correct_answer=correct_answer,
+            question=lesson_question["question"],
+            explanation=explanation,
+        )
+    else:
+        return INCORRECT_ANSWER_CONSEQUENCES.format(
+            chosen_answer=chosen_answer,
+            correct_answer=correct_answer,
+            question=lesson_question["question"],
+            explanation=explanation,
+        )
+    ```
+- Result:
+  * When a student answers a question incorrectly, the prompt now includes the specific explanation from the lesson data
+  * For example, if a student incorrectly answers a question about the 1964 Singapore riots, the prompt will include the detailed explanation about ethnic tensions and political conflicts
+  * This provides more context for the learning moment and helps the LLM create more educational content
+  * The implementation is minimal and focused, affecting only the consequences templates
+  * Gracefully handles cases where explanations might be missing by using an empty string as default
+
 ## 2025-03-08: Fixed Question Difficulty Default in WebSocket Service
 
 ### Fixed Question Difficulty Default in WebSocket Service

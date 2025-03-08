@@ -402,13 +402,13 @@ Use this specific storytelling technique for the reflection:
 # ------------------------------
 
 CORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
-- Show how understanding {question} connects to their current situation
-- Build confidence from this success that carries into future challenges
+- Show how understanding "{question}" connects to their current situation
+- Build confidence from this success that carries into future challenges: "{explanation}"
 - Integrate this knowledge naturally into the character's approach"""
 
 INCORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
-- Acknowledge the misunderstanding about {question}
-- Create a valuable learning moment from this correction
+- Acknowledge the misunderstanding about "{question}"
+- Create a valuable learning moment from this correction: "{explanation}"
 - Show how this new understanding affects their approach to challenges"""
 
 # Agency guidance templates

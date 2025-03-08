@@ -195,15 +195,21 @@ def process_consequences(
         answer["text"] for answer in lesson_question["answers"] if answer["is_correct"]
     )
 
+    # Get the explanation from the lesson question, or use a default if not available
+    explanation = lesson_question.get("explanation", "")
+
     if is_correct:
         return CORRECT_ANSWER_CONSEQUENCES.format(
-            correct_answer=correct_answer, question=lesson_question["question"]
+            correct_answer=correct_answer,
+            question=lesson_question["question"],
+            explanation=explanation,
         )
     else:
         return INCORRECT_ANSWER_CONSEQUENCES.format(
             chosen_answer=chosen_answer,
             correct_answer=correct_answer,
             question=lesson_question["question"],
+            explanation=explanation,
         )
 
 

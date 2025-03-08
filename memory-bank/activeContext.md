@@ -1,5 +1,18 @@
 # Active Context
 
+## Recent Enhancement: Explanation Integration in Learning Impact (2025-03-08)
+
+1. **Enhanced Learning Impact with Explanation Integration:**
+   * Problem: CORRECT_ANSWER_CONSEQUENCES and INCORRECT_ANSWER_CONSEQUENCES templates weren't using the explanation column from lesson data
+   * Solution:
+     - Modified templates in `prompt_templates.py` to include the explanation in the learning impact section
+     - Updated `process_consequences` function in `prompt_engineering.py` to extract and pass the explanation from lesson data
+   * Result:
+     - When a student answers a question, the prompt now includes the specific explanation from the lesson data
+     - Provides more context for learning moments, especially for incorrect answers
+     - Helps the LLM create more educational content with accurate explanations
+     - Example: For the Singapore riots question, it now includes the detailed explanation about ethnic tensions and political conflicts
+
 ## Development Tools
 
 1. **Code Complexity Analyzer (`tools/code_complexity_analyzer.py`):**
@@ -55,6 +68,22 @@
    * Includes detailed logging for debugging
 
 ## Recent Changes
+
+### Enhanced Learning Impact with Explanation Integration (2025-03-08)
+- Problem: The CORRECT_ANSWER_CONSEQUENCES and INCORRECT_ANSWER_CONSEQUENCES templates weren't using the explanation column from lesson data
+- Solution:
+  * Modified templates in `prompt_templates.py` to include the explanation:
+    ```python
+    INCORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
+    - Acknowledge the misunderstanding about {question}
+    - Create a valuable learning moment from this correction: "{explanation}"
+    - Show how this new understanding affects their approach to challenges"""
+    ```
+  * Updated `process_consequences` function in `prompt_engineering.py` to extract and pass the explanation from lesson data
+- Result:
+  * When a student answers a question incorrectly, the prompt now includes the specific explanation from the lesson data
+  * For example, if a student incorrectly answers a question about the 1964 Singapore riots, the prompt will include the detailed explanation about ethnic tensions and political conflicts
+  * This provides more context for the learning moment and helps the LLM create more educational content
 
 ### Fixed Question Placeholder in REFLECT Chapters (2025-03-08)
 - Problem: The `{question}` placeholder in the exploration_goal wasn't being properly replaced in REFLECT chapters
