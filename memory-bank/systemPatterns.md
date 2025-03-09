@@ -13,6 +13,7 @@ graph TD
     WSS <--> IMG[Image Generation Service]
     CM <--> SL[Story Loader]
     SL <--> SF[(Story Files)]
+    LLM <--> PF[Paragraph Formatter]
 
     subgraph Client Side
         LP[localStorage] <--> CSM[Client State Manager]
@@ -29,6 +30,7 @@ graph TD
         CM
         LLM
         IMG
+        PF
     end
 
     subgraph Content Sources
@@ -110,6 +112,14 @@ graph TD
   * Supports GPT-4o and Gemini
   * Standardized response handling
   * Error recovery mechanisms
+  * Paragraph formatting integration
+
+- **Paragraph Formatting** (`app/services/llm/paragraph_formatter.py`)
+  * Detects text that needs paragraph formatting
+  * Reformats text with proper paragraph breaks
+  * Multiple retry attempts with progressive prompting
+  * Buffer-based approach for streaming optimization
+  * Comprehensive logging for debugging
 
 ### 6. Image Generation
 - **Service** (`app/services/image_generation_service.py`)
@@ -308,7 +318,93 @@ flowchart TD
     end
 ```
 
-### 2. Agency Pattern
+### 3. Paragraph Formatting Pattern
+```mermaid
+flowchart TD
+    subgraph Paragraph_Formatting_Flow
+        LLM[LLM Service] --> |"Generate response"| WSS[WebSocket Service]
+        WSS --> |"Collect initial buffer"| Buffer[Buffer Collection]
+        Buffer --> |"Check formatting needs"| NeedsFormatting{Needs Formatting?}
+        
+        NeedsFormatting -->|"No"| StreamNormally[Stream Normally]
+        NeedsFormatting -->|"Yes"| CollectFull[Collect Full Response]
+        
+        CollectFull --> |"Send to"| PF[Paragraph Formatter]
+        PF --> |"Multiple retry attempts"| Reformatted[Reformatted Text]
+        Reformatted --> |"Send to client"| Client[Web Client]
+        StreamNormally --> |"Send to client"| Client
+    end
+    
+    subgraph Paragraph_Formatter
+        needs_paragraphing --> |"Check length"| Length[Text Length > 300]
+        needs_paragraphing --> |"Check existing breaks"| Breaks["Contains \n\n?"]
+        needs_paragraphing --> |"Count sentences"| Sentences[Sentence Count > 3]
+        needs_paragraphing --> |"Check dialogue"| Dialogue[Dialogue Markers > 2]
+        
+        Length --> |"Combine checks"| FormatDecision[Formatting Decision]
+        Breaks --> |"Combine checks"| FormatDecision
+        Sentences --> |"Combine checks"| FormatDecision
+        Dialogue --> |"Combine checks"| FormatDecision
+        
+        FormatDecision --> |"If needed"| reformat_text[reformat_text_with_paragraphs]
+        
+        reformat_text --> |"Attempt 1: Basic"| Attempt1[Basic Instructions]
+        Attempt1 --> |"Check success"| Success1{Success?}
+        Success1 -->|"Yes"| Return1[Return Formatted]
+        Success1 -->|"No"| Attempt2[Add Emphasis]
+        
+        Attempt2 --> |"Check success"| Success2{Success?}
+        Success2 -->|"Yes"| Return2[Return Formatted]
+        Success2 -->|"No"| Attempt3[Very Explicit]
+        
+        Attempt3 --> |"Check success"| Success3{Success?}
+        Success3 -->|"Yes"| Return3[Return Formatted]
+        Success3 -->|"No"| Fallback[Return Original]
+    end
+```
+
+- **Detection Logic** (`needs_paragraphing()`)
+  * Multiple criteria for determining formatting needs:
+    - Text length > 300 characters
+    - Absence of existing paragraph breaks (`\n\n`)
+    - Sentence count > 3 (using regex pattern `r"[.!?]\s+[A-Z]"`)
+    - Dialogue markers > 2 (using regex pattern `r'["\'"].+?["\']'`)
+  * Returns boolean indicating whether text needs formatting
+
+- **Reformatting Strategy** (`reformat_text_with_paragraphs()`)
+  * Multiple retry attempts with progressive prompting:
+    - First attempt: Basic formatting instructions
+    - Second attempt: Adds emphasis on including blank lines
+    - Third attempt: Adds very explicit instructions about double line breaks
+  * Temperature variation for different attempts:
+    - First attempt: Lower temperature (0.3) for more deterministic results
+    - Subsequent attempts: Higher temperature (0.7) for more variation
+  * Provider-agnostic implementation:
+    - Uses the same LLM service that generated the original content
+    - Handles both OpenAI and Gemini services
+    - Detects service type by class name to avoid circular imports
+  * Verification of reformatted text:
+    - Checks for presence of paragraph breaks (`\n\n`)
+    - Falls back to original text if reformatting fails
+  * Comprehensive logging:
+    - Logs full prompts and responses
+    - Tracks success/failure of each attempt
+    - Includes service type, model, and temperature settings
+
+- **Integration with LLM Services** (`providers.py`)
+  * Two-phase approach in both OpenAIService and GeminiService:
+    - Phase 1: Collect initial buffer to check formatting needs
+    - Phase 2: If formatting needed, collect full response and reformat; if not, stream normally
+  * Buffer-based optimization:
+    - Only checks first ~1000 characters for formatting needs
+    - Allows streaming to begin immediately if no formatting needed
+    - Collects full response only when formatting is required
+  * Full response tracking:
+    - Maintains complete response regardless of formatting needs
+    - Logs the full response for debugging and monitoring
+    - Returns either reformatted text or original full response
+
+### 4. Agency Pattern
 - **First Chapter Choice**
   * Four categories: Items, Companions, Roles, Abilities
   * Stored in `state.metadata["agency"]`
@@ -319,7 +415,7 @@ flowchart TD
   * CLIMAX phase: Agency plays pivotal role
   * CONCLUSION: Agency has meaningful resolution
 
-### 3. Narrative Continuity
+### 5. Narrative Continuity
 - **Story Elements Consistency**
   * Setting, characters, theme maintained
   * Plot twist development across phases
@@ -330,7 +426,7 @@ flowchart TD
   * STORY: Continue from chosen path with consequences
   * REFLECT: Build on previous lesson understanding
 
-### 4. Testing Framework
+### 6. Testing Framework
 - **Simulation** (`tests/simulations/story_simulation.py`)
   * Generates structured log data
   * Verifies complete workflow
@@ -342,7 +438,7 @@ flowchart TD
   * `tests/data/test_story_elements.py`: Tests random element selection
   * `tests/data/test_chapter_manager.py`: Tests adventure state initialization
 
-### 5. Text Streaming
+### 7. Text Streaming
 - **Content Delivery**
   * Word-by-word streaming (0.02s delay)
   * Paragraph breaks (0.1s delay)
@@ -360,7 +456,7 @@ flowchart TD
     words -->|Stream with delay| Client
 ```
 
-### 6. Prompt Engineering Pattern (`app/services/llm/prompt_templates.py`)
+### 8. Prompt Engineering Pattern (`app/services/llm/prompt_templates.py`)
 - **Prompt Structure and Organization**:
   * Modular template design with separate templates for different chapter types
   * Consistent section ordering across templates

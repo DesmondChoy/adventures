@@ -1,5 +1,29 @@
 # Active Context
 
+## Recent Enhancement: Paragraph Formatting for LLM Responses (2025-03-09)
+
+1. **Implemented Paragraph Formatting for LLM Responses:**
+   * Problem: LLM responses occasionally lacked proper paragraph breaks, causing text to render as one continuous paragraph
+   * Solution:
+     - Created a new `paragraph_formatter.py` module with functions to detect and fix text without proper paragraph formatting
+     - Implemented `needs_paragraphing()` function to detect text that needs formatting based on length, existing paragraph breaks, sentence count, and dialogue markers
+     - Added `reformat_text_with_paragraphs()` function that uses the same LLM service to add proper paragraph breaks
+     - Implemented multiple retry attempts (up to 3) with progressively stronger formatting instructions
+     - Modified both OpenAIService and GeminiService to check for paragraph formatting needs and apply reformatting when necessary
+     - Added comprehensive logging of prompts and responses for debugging
+   * Implementation Details:
+     - Buffer-based approach: Collects initial text buffer to check formatting needs
+     - If formatting needed, collects full response before reformatting
+     - If not needed, streams text normally for better user experience
+     - Tracks full response regardless of formatting needs for proper logging
+     - Uses the same LLM service that generated the original content for reformatting
+     - Verifies reformatted text contains paragraph breaks before returning
+   * Result:
+     - Ensures all LLM responses have proper paragraph formatting for better readability
+     - Maintains streaming experience when formatting isn't needed
+     - Provides detailed logging for monitoring and debugging
+     - Gracefully handles cases where reformatting fails
+
 ## Recent Enhancement: Fixed Chapter Image Display on Desktop (2025-03-09)
 
 1. **Fixed Chapter Image Display on Desktop:**
@@ -490,66 +514,4 @@
 ### Removed Unused `tone` Field (2025-03-03)
 - Removed the unused `tone` field from story categories as it wasn't being passed to LLM prompts
 - Updated `app/data/new_stories.yaml` to remove the `tone` field from each story category
-- Modified `app/services/chapter_manager.py` to remove `tone` from the `non_random_elements` dictionary
-- Updated `app/database.py` to remove the `tone` Column from the `StoryCategory` class
-- Changed `app/init_data.py` to remove the `tone` field when creating the `db_category` object
-- Recreated the database to apply the schema changes
-
-### LLM Response Formatting Improvement (2025-03-03)
-- Fixed issue with LLM responses sometimes beginning with "chapter" despite system prompt instructions
-- Updated regex pattern in `websocket_service.py` to catch and remove both numbered and unnumbered chapter prefixes
-- Changed pattern from `r"^Chapter\s+\d+:\s*"` to `r"^Chapter(?:\s+\d+)?:?\s*"`
-- Applied fix in three key locations in the processing pipeline to ensure consistent formatting
-
-### Image Generation Visual Details Fix (2025-03-03)
-- Fixed issue with visual details not being included in image generation prompts for agency choices
-- Exposed `categories` dictionary in `prompt_templates.py` for direct access by other modules
-- Enhanced `enhance_prompt()` in `image_generation_service.py` to better extract agency names from choice text
-- Added fallback mechanism to look up visual details directly from the `categories` dictionary
-- Improved matching logic in `websocket_service.py` to find the correct agency option with visual details
-- Implemented multi-stage matching approach for more accurate agency option identification
-
-### Image Generation Gender Consistency (2025-03-02)
-- Modified `enhance_prompt()` in `image_generation_service.py` to accept choice text parameter
-- Updated `stream_and_send_chapter()` in `websocket_service.py` to pass choice text to image generation
-- Incorporated narrative text with gender indicators directly into image prompts
-- Improved consistency between narrative protagonist (female) and generated images
-
-### Streamlined Prompts for All Chapters (2025-03-01)
-- Extended streamlined approach to all chapter types in `prompt_templates.py` and `prompt_engineering.py`
-- Created unified `build_prompt()` function for all chapter types
-- Removed redundant files and conditional checks in `providers.py`
-- Reduced token usage while preserving essential guidance
-
-### Enhanced Image Generation (2025-03-01)
-- Increased retries from 2 to 5 in `generate_image_async()` and `_generate_image()`
-- Added robust null checking to prevent "NoneType has no len()" errors
-- Standardized to use `GOOGLE_API_KEY` environment variable
-- Implemented graceful fallbacks for failed image generation
-
-### Agency Implementation (2025-02-28)
-- First chapter agency choice from four categories stored in `state.metadata["agency"]`
-- Agency evolution in REFLECT chapters based on correct/incorrect answers
-- Agency tracking in `update_agency_references()` in `adventure_state_manager.py`
-- Agency guidance templates in `prompt_templates.py`
-
-### Narrative Improvements (2025-02-28)
-- Story Object Method in `build_lesson_chapter_prompt()` for intuitive narrative bridges
-- Unified REFLECT chapter approach in `build_reflect_chapter_prompt()`
-- Phase-specific choice instructions via `get_choice_instructions(phase)`
-- Markdown-based prompt structure for better organization
-
-## Testing Framework
-
-- **Simulation (`tests/simulations/story_simulation.py`):**
-  * Generates structured log data with standardized prefixes
-  * Verifies complete workflow execution
-  * Validates component integration
-
-- **Test Files:**
-  * `tests/simulations/test_simulation_functionality.py`: Verifies chapter sequences, ratios, state transitions
-  * `tests/simulations/test_simulation_errors.py`: Tests error handling, recovery, logging configuration
-  * `tests/simulations/run_simulation_tests.py`: Orchestrates server, simulation, and test execution
-  * `tests/data/test_story_loader.py`: Tests story data loading functionality
-  * `tests/data/test_story_elements.py`: Tests random element selection
-  * `tests/data/test_chapter_manager.py`: Tests adventure state initialization
+- Modified `app/services/chapter_manager.
