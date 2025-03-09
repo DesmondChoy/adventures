@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import FileResponse
 import pandas as pd
 import logging
 import uuid
@@ -62,14 +63,15 @@ def get_session_context(request: Request) -> dict:
     }
 
 
-@router.get("/")
-async def root(request: Request):
-    """Render the landing page with story and lesson choices."""
+@router.get("/adventure")
+async def adventure(request: Request):
+    """Render the adventure page with story and lesson choices."""
     context = get_session_context(request)
 
     try:
         logger.info(
-            "Loading landing page", extra={**context, "path": "/", "method": "GET"}
+            "Loading adventure page",
+            extra={**context, "path": "/adventure", "method": "GET"},
         )
 
         story_data = load_story_data()
@@ -79,7 +81,7 @@ async def root(request: Request):
         story_categories = story_data  # story_data already contains the categories
 
         logger.info(
-            "Preparing landing page data",
+            "Preparing adventure page data",
             extra={
                 **context,
                 "available_categories": list(story_categories.keys()),
@@ -96,6 +98,26 @@ async def root(request: Request):
                 **context,
             },
         )
+    except Exception as e:
+        logger.error(
+            "Error rendering adventure page",
+            extra={**context, "path": "/adventure", "method": "GET", "error": str(e)},
+        )
+        raise
+
+
+@router.get("/")
+async def root(request: Request):
+    """Serve the landing page."""
+    context = get_session_context(request)
+
+    try:
+        logger.info(
+            "Loading landing page", extra={**context, "path": "/", "method": "GET"}
+        )
+
+        # Serve the landing page from static files
+        return FileResponse("app/static/landing/index.html")
     except Exception as e:
         logger.error(
             "Error rendering landing page",
