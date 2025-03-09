@@ -119,6 +119,31 @@
     border-radius: 0.5rem;
 }
 
+/* Chapter image styles */
+.chapter-image-container {
+    width: 100%;
+    max-height: 300px;
+    overflow: hidden;
+    margin-bottom: 2.5rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease-in-out;
+}
+
+.chapter-image-container img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    border-radius: 0.75rem;
+}
+
+@media (min-width: 768px) {
+    .chapter-image-container {
+        max-height: 600px;
+        margin-bottom: 3rem;
+    }
+}
+
 .choice-content {
     display: flex;
     flex-direction: column;

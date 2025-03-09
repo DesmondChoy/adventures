@@ -130,7 +130,13 @@
                 <div id="loader" class="loader-container hidden">
                     <div class="loader loader-primary loader-md"></div>
                 </div>
+                
                 <div id="storyContent" class="prose max-w-none mb-6 markdown-content whitespace-pre-wrap"></div>
+                
+                <!-- Chapter image container (initially hidden) - moved after story content -->
+                <div id="chapterImageContainer" class="chapter-image-container hidden mb-6">
+                    <img id="chapterImage" src="" alt="Chapter illustration" class="fade-in">
+                </div>
                 
                 <div id="choicesContainer" class="flex flex-col gap-3 w-full">
                     <!-- Choices will be inserted here -->
@@ -450,6 +456,9 @@ function startAdventure() {
                 } else if (data.type === 'choice_image_update') {
                     // Handle image updates for choices
                     updateChoiceWithImage(data.choice_index, data.image_data);
+                } else if (data.type === 'chapter_image_update') {
+                    // Handle image updates for chapters
+                    updateChapterImage(data.chapter_number, data.image_data);
                 } else {
                     // For any other message types, hide the loader as a fallback
                     hideLoader();
@@ -511,6 +520,25 @@ function startAdventure() {
                     img.classList.add('show');
                 }, 50);
             }
+        }
+        
+        // Function to update the chapter image
+        function updateChapterImage(chapterNumber, imageData) {
+            const imageContainer = document.getElementById('chapterImageContainer');
+            const image = document.getElementById('chapterImage');
+            
+            // Set the image source
+            image.src = `data:image/jpeg;base64,${imageData}`;
+            image.alt = `Illustration for Chapter ${chapterNumber}`;
+            
+            // Show the container
+            imageContainer.classList.remove('hidden');
+            
+            // Add fade-in animation
+            image.classList.add('fade-in');
+            setTimeout(() => {
+                image.classList.add('show');
+            }, 50);
         }
 
         function sendMessage(message) {
@@ -609,6 +637,10 @@ function startAdventure() {
                 // Clear UI for next chapter
                 document.getElementById('storyContent').textContent = '';
                 document.getElementById('choicesContainer').innerHTML = '';
+                
+                // Hide the chapter image container for the new chapter
+                // It will be shown again when the new image is ready
+                document.getElementById('chapterImageContainer').classList.add('hidden');
             }
         }
 

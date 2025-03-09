@@ -634,6 +634,7 @@ def build_prompt(
     state: AdventureState,
     lesson_question: Optional[LessonQuestion] = None,
     previous_lessons: Optional[List[LessonResponse]] = None,
+    context: Optional[Dict[str, Any]] = None,
 ) -> Tuple[str, str]:
     """Create system and user prompts for the LLM.
 
@@ -643,10 +644,20 @@ def build_prompt(
         state: The current adventure state
         lesson_question: Optional question data for lesson chapters
         previous_lessons: Optional history of previous lesson responses
+        context: Optional context with additional parameters
 
     Returns:
         A tuple containing (system_prompt, user_prompt)
     """
+    # Check if we have a prompt override in the context
+    if context and "prompt_override" in context:
+        # Use a simple system prompt for direct text generation
+        system_prompt = (
+            "You are a helpful assistant that follows instructions precisely."
+        )
+        user_prompt = context["prompt_override"]
+        return system_prompt, user_prompt
+
     # Build the system prompt
     system_prompt = build_system_prompt(state)
 

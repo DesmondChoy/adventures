@@ -5,6 +5,10 @@ import google.generativeai as genai
 from app.models.story import AdventureState, ChapterType
 from app.services.llm.base import BaseLLMService
 from app.services.llm.prompt_engineering import build_prompt
+from app.services.llm.paragraph_formatter import (
+    needs_paragraphing,
+    reformat_text_with_paragraphs,
+)
 import logging
 
 logger = logging.getLogger("story_app")
@@ -33,6 +37,7 @@ class OpenAIService(BaseLLMService):
             state=state,
             lesson_question=question,
             previous_lessons=previous_lessons,
+            context=context,
         )
 
         # Log the prompts
@@ -52,15 +57,55 @@ class OpenAIService(BaseLLMService):
                 stream=True,
             )
 
-            collected_response = ""
+            # First, collect a buffer to check if paragraphing is needed
+            buffer_size = 1000  # Characters to check for paragraph formatting
+            collected_text = ""
+            full_response = ""  # Track the full response regardless of streaming
+            buffer_complete = False
+            needs_formatting = False
+
+            # Phase 1: Collect initial buffer to check formatting
             async for chunk in stream:
                 if chunk.choices[0].delta.content is not None:
                     content = chunk.choices[0].delta.content
-                    collected_response += content
-                    yield content
+                    full_response += content  # Always track full response
+                    collected_text += content
 
-            # Log the complete response after streaming
-            logger.info("LLM Response", extra={"llm_response": collected_response})
+                    # Once we have enough text, check if it needs paragraphing
+                    if not buffer_complete and len(collected_text) >= buffer_size:
+                        buffer_complete = True
+                        needs_formatting = needs_paragraphing(collected_text)
+
+                        # If no formatting needed, start yielding the buffer
+                        if not needs_formatting:
+                            yield collected_text
+                            collected_text = ""  # Reset after yielding
+                        # If formatting needed, continue collecting without yielding
+
+                    # If buffer check is complete and no formatting needed, stream normally
+                    elif buffer_complete and not needs_formatting:
+                        yield content
+
+            # Phase 2: If formatting is needed, reformat and yield the complete text
+            if needs_formatting:
+                logger.info(
+                    "Detected text without proper paragraph formatting, reformatting..."
+                )
+                reformatted_text = await reformat_text_with_paragraphs(
+                    self, collected_text
+                )
+                yield reformatted_text
+                logger.info("Sent reformatted text with proper paragraphing")
+
+            # Log the complete response
+            logger.info(
+                "LLM Response",
+                extra={
+                    "llm_response": reformatted_text
+                    if needs_formatting
+                    else full_response
+                },
+            )
 
         except Exception as e:
             logger.error(
@@ -107,6 +152,7 @@ class GeminiService(BaseLLMService):
             state=state,
             lesson_question=question,
             previous_lessons=previous_lessons,
+            context=context,
         )
 
         print("\n=== DEBUG: LLM Prompt Request ===")
@@ -126,15 +172,51 @@ class GeminiService(BaseLLMService):
             # Generate content with streaming
             response = model.generate_content(user_prompt, stream=True)
 
-            collected_response = ""
+            # First, collect a buffer to check if paragraphing is needed
+            buffer_size = 1000  # Characters to check for paragraph formatting
+            collected_text = ""
+            full_response = ""  # Track the full response regardless of streaming
+            buffer_complete = False
+            needs_formatting = False
+
+            # Phase 1: Collect initial buffer to check formatting
+            chunk_count = 0
             for chunk in response:
                 if chunk.text:
-                    collected_response += chunk.text
-                    yield chunk.text
+                    content = chunk.text
+                    full_response += content  # Always track full response
+                    collected_text += content
+                    chunk_count += 1
 
-            # Log the complete response after streaming
+                    # Once we have enough text, check if it needs paragraphing
+                    if not buffer_complete and len(collected_text) >= buffer_size:
+                        buffer_complete = True
+                        needs_formatting = needs_paragraphing(collected_text)
+
+                        # If no formatting needed, start yielding the buffer
+                        if not needs_formatting:
+                            yield collected_text
+                            collected_text = ""  # Reset after yielding
+                        # If formatting needed, continue collecting without yielding
+
+                    # If buffer check is complete and no formatting needed, stream normally
+                    elif buffer_complete and not needs_formatting:
+                        yield content
+
+            # Phase 2: If formatting is needed, reformat and yield the complete text
+            if needs_formatting:
+                print(
+                    "Detected text without proper paragraph formatting, reformatting..."
+                )
+                reformatted_text = await reformat_text_with_paragraphs(
+                    self, collected_text
+                )
+                yield reformatted_text
+                print("Sent reformatted text with proper paragraphing")
+
+            # Log the complete response
             print("\n=== DEBUG: LLM Response ===")
-            print(collected_response)
+            print(reformatted_text if needs_formatting else full_response)
             print("========================\n")
 
         except Exception as e:
