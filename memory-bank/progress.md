@@ -1,5 +1,27 @@
 # Progress Log
 
+## 2025-03-09: Fixed Chapter Image Display on Desktop
+
+### Fixed Chapter Image Display Issues Across Devices
+- Problem: Chapter images were being cropped on desktop but displaying correctly on mobile
+- Root Cause:
+  * The CSS for chapter images used `object-fit: cover` which crops images to fill the container
+  * The container had a fixed max-height (300px on mobile, 450px on desktop)
+  * The `overflow: hidden` property was preventing the full image from being visible
+  * This caused the top and bottom of images to be cut off on desktop, particularly for taller images
+- Solution:
+  * Changed `object-fit` from "cover" to "contain" to preserve the image's aspect ratio
+  * Kept `overflow: hidden` to prevent layout issues
+  * Increased the max-height for desktop from 450px to 600px
+  * Added additional margin between the image and choice buttons
+  * Used media queries to apply different styles for desktop and mobile
+- Result:
+  * Images now display correctly on both desktop and mobile
+  * Full image is visible without cropping on all devices
+  * Proper spacing between image and choice buttons
+  * Consistent user experience across all device sizes
+  * No changes required to server-side code or image generation logic
+
 ## 2025-03-09: Improved Chapter Image Positioning
 
 ### Optimized Chapter Image Placement for Young Users
