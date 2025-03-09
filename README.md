@@ -12,13 +12,14 @@ This app aims to promote learning and curiosity by weaving together educational 
    - Every adventure is unique and choices (story paths or correct/incorrect answers) affects the narrative
    - Characters in the story encourage curiosity and learning
    - Make a pivotal agency choice in the first chapter that evolves throughout your journey
+   - Story Object Method seamlessly integrates educational content into the narrative flow
    - Visual representations of agency choices through AI-generated images
    - WIP: Users can upload their own settings and/or lesson topics.
 
 2. **Technical Innovation**
    - LLM-powered dynamic storytelling with agency system and AI-generated images
    - Real-time WebSocket state management with robust error recovery and connection handling
-   - Provider-agnostic AI integration with standardized configuration
+   - Provider-agnostic AI integration supporting GPT-4o/Gemini 2.0 Flash for text and Imagen3 for image generation
    - Advanced narrative techniques (Story Object Method, phase-specific guidance, plot twist development)
    - Comprehensive state tracking with client-side persistence and metadata management
 
@@ -60,7 +61,7 @@ graph TD
     end
 
     subgraph Content Sources
-        CSV[lessons.csv] --> CM
+        CSV[lessons/*.csv] --> CM
         LLM --> CM
         IMG --> WSS
         SF --> SL
@@ -117,7 +118,8 @@ app/
 │   ├── websocket_service.py       # WebSocket business logic
 │   └── llm/                       # LLM integration with prompt engineering
 ├── data/              
-│   ├── lessons.csv                # Educational content
+│   ├── lessons/                   # Individual lesson topic CSV files
+│   ├── lesson_loader.py           # Lesson data loading and filtering
 │   ├── story_loader.py            # Story data loading and caching
 │   └── stories/                   # Individual story category files
 ├── middleware/                    # Custom middleware components
@@ -126,7 +128,12 @@ app/
 │   ├── css/
 │   │   ├── typography.css         # Typography system
 │   │   ├── theme.css              # Color variables and theme
-│   │   └── carousel.css           # 3D carousel component
+│   │   ├── layout.css             # Structural elements and screen transitions
+│   │   ├── components.css         # Reusable UI components
+│   │   └── carousel-component.css # 3D carousel component
+│   ├── js/
+│   │   ├── carousel-manager.js    # Carousel functionality
+│   │   └── font-size-manager.js   # Mobile font size controls
 │   └── images/                    # Static assets
 └── utils/                         # Utility functions
 ```
