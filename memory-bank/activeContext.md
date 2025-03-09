@@ -1,5 +1,22 @@
 # Active Context
 
+## Recent Enhancement: Landing Page Integration (2025-03-09)
+
+1. **Integrated Landing Page:**
+   * Implementation:
+     - Created a responsive landing page at `app/static/landing/index.html` with modern design and animations
+     - Updated web router in `app/routers/web.py` to serve the landing page at the root URL (/)
+     - Configured navigation between landing page and adventure selection page (/adventure)
+   * Features:
+     - Modern, visually appealing design with animations and clean layout
+     - Sections for "How It Works", "Features", and "Adventure Preview"
+     - Multiple "Start your adventure" buttons linking to the adventure selection page
+     - Fully responsive design for both desktop and mobile devices
+   * User Flow:
+     - Users first see the landing page when visiting the site
+     - Landing page explains the concept and benefits of the educational adventure app
+     - Clicking any "Start your adventure" button takes users to the adventure selection page
+
 ## Recent Enhancement: Topic Introduction in Lesson Chapters (2025-03-09)
 
 1. **Improved Topic Introduction in Lesson Chapters:**
