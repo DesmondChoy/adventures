@@ -33,6 +33,7 @@ class OpenAIService(BaseLLMService):
             state=state,
             lesson_question=question,
             previous_lessons=previous_lessons,
+            context=context,
         )
 
         # Log the prompts
@@ -107,6 +108,7 @@ class GeminiService(BaseLLMService):
             state=state,
             lesson_question=question,
             previous_lessons=previous_lessons,
+            context=context,
         )
 
         print("\n=== DEBUG: LLM Prompt Request ===")

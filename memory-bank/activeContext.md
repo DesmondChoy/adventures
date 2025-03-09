@@ -1,5 +1,27 @@
 # Active Context
 
+## Recent Enhancement: Images for Every Chapter (2025-03-09)
+
+1. **Added Images for Every Chapter:**
+   * Problem: Images were only shown for the first chapter's agency choices
+   * Solution:
+     - Modified `ImageGenerationService` to generate images for all chapters
+     - Added `generate_chapter_summary` method to create visual summaries from previous chapter content
+     - Updated `enhance_prompt` to handle chapter summaries as input for image generation
+     - Modified `stream_and_send_chapter` in `websocket_service.py` to generate images for all chapters
+     - Added a new message type (`chapter_image_update`) for sending chapter images to the client
+     - Updated the frontend to display chapter images at the top of each chapter
+   * Implementation Details:
+     - Used the LLM to generate concise visual summaries of previous chapter content
+     - Combined summaries with agency choice and story elements to create image prompts
+     - Generated images asynchronously to avoid blocking story progression
+     - Added smooth fade-in animations for chapter images
+   * Result:
+     - Every chapter now has a relevant image at the top
+     - Images are generated based on the content of the previous chapter
+     - Agency choices are consistently referenced in the images
+     - Enhanced visual storytelling experience throughout the adventure
+
 ## Recent Enhancement: Landing Page Integration (2025-03-09)
 
 1. **Integrated Landing Page:**

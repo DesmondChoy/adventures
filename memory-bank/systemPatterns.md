@@ -119,45 +119,78 @@ graph TD
   * Progressive enhancement (text first, images as available)
   * Enhanced prompt construction with `enhance_prompt()`
   * Visual details extraction from agency options
+  * Chapter summary generation with `generate_chapter_summary()`
+  * LLM-based summarization of chapter content for image prompts
 
-- **Agency Choice Image Generation Pattern**
+- **Image Generation Patterns**
+
 ```mermaid
 flowchart TD
     subgraph WebSocketService
-        stream_and_send_chapter --> |"For Chapter 1\nSTORY type"| build_agency_lookup
-        build_agency_lookup --> |"Import categories\ndirectly"| categories[prompt_templates.py\ncategories dictionary]
-        build_agency_lookup --> |"Create lookup\nwith variations"| agency_lookup
-        stream_and_send_chapter --> |"For each choice"| extract_agency_name
-        extract_agency_name --> |"From 'As a...'\nformat"| agency_name
-        extract_agency_name --> find_agency_option
-        find_agency_option --> |"Try direct match\nwith agency name"| categories
-        find_agency_option --> |"Try match with\nfull choice text"| categories
-        find_agency_option --> |"Fallback to\nagency_lookup"| agency_lookup
-        find_agency_option --> |"If found"| original_option
-        find_agency_option --> |"If not found"| use_choice_text
-        original_option --> enhance_prompt
-        use_choice_text --> enhance_prompt
+        stream_and_send_chapter --> ChapterCheck{Chapter 1?}
+        
+        ChapterCheck -->|"Yes\nAgency Choice Images"| FirstChapterFlow[First Chapter Flow]
+        ChapterCheck -->|"No\nChapter Content Images"| OtherChapterFlow[Other Chapters Flow]
+        
+        subgraph FirstChapterFlow
+            build_agency_lookup --> |"Import categories\ndirectly"| categories[prompt_templates.py\ncategories dictionary]
+            build_agency_lookup --> |"Create lookup\nwith variations"| agency_lookup
+            extract_agency_name --> |"From 'As a...'\nformat"| agency_name
+            extract_agency_name --> find_agency_option
+            find_agency_option --> |"Try direct match\nwith agency name"| categories
+            find_agency_option --> |"Try match with\nfull choice text"| categories
+            find_agency_option --> |"Fallback to\nagency_lookup"| agency_lookup
+            find_agency_option --> |"If found"| original_option
+            find_agency_option --> |"If not found"| use_choice_text
+            original_option --> enhance_prompt_agency[enhance_prompt]
+            use_choice_text --> enhance_prompt_agency
+        end
+        
+        subgraph OtherChapterFlow
+            get_previous_chapter --> |"Extract content"| previous_content
+            previous_content --> generate_chapter_summary
+            generate_chapter_summary --> |"LLM-based\nsummarization"| chapter_summary
+            chapter_summary --> enhance_prompt_chapter[enhance_prompt]
+        end
     end
     
     subgraph ImageGenerationService
-        enhance_prompt --> extract_name
-        extract_name --> |"Handle 'As a...'\nformat"| clean_name
-        enhance_prompt --> extract_visual_details
-        extract_visual_details --> |"From square\nbrackets"| visual_details
-        enhance_prompt --> |"If no visual details\nin original prompt"| lookup_visual_details
-        lookup_visual_details --> |"Import categories\ndirectly"| categories
-        lookup_visual_details --> |"Find matching\nagency option"| found_visual_details
-        clean_name --> build_components
-        visual_details --> build_components
-        found_visual_details --> build_components
-        build_components --> |"Join with commas"| final_prompt
-        final_prompt --> generate_image_async
+        enhance_prompt_agency --> AgencyPrompt[Agency Prompt Flow]
+        enhance_prompt_chapter --> ChapterPrompt[Chapter Summary Flow]
+        
+        subgraph AgencyPrompt
+            extract_name --> |"Handle 'As a...'\nformat"| clean_name
+            extract_visual_details --> |"From square\nbrackets"| visual_details
+            lookup_visual_details --> |"Import categories\ndirectly"| categories2[categories dictionary]
+            lookup_visual_details --> |"Find matching\nagency option"| found_visual_details
+            clean_name --> agency_components[build_components]
+            visual_details --> agency_components
+            found_visual_details --> agency_components
+        end
+        
+        subgraph ChapterPrompt
+            process_chapter_summary --> |"Use summary as\nmain subject"| chapter_components[build_components]
+            add_agency_reference --> |"Include agency\nfrom metadata"| chapter_components
+            add_story_name --> |"Add story name\nfrom metadata"| chapter_components
+            add_sensory_details --> |"Add visual\nsensory details"| chapter_components
+        end
+        
+        agency_components --> |"Join with commas"| final_prompt_agency[final_prompt]
+        chapter_components --> |"Join with commas"| final_prompt_chapter[final_prompt]
+        
+        final_prompt_agency --> generate_image_async
+        final_prompt_chapter --> generate_image_async
+        
+        generate_chapter_summary --> |"Uses LLM to\nsummarize content"| LLMService[LLM Service]
+        LLMService --> |"Prompt override\nfor direct text"| prompt_engineering[Prompt Engineering]
+        LLMService --> |"Streaming response"| summary_result[Summary Result]
     end
     
     generate_image_async --> |"Async processing"| _generate_image
     _generate_image --> |"API call with\n5 retries"| image_data
     image_data --> |"Base64 encoded"| WebSocketService
-    WebSocketService --> |"Send to client"| Client[Web Client]
+    WebSocketService --> |"Send to client\nwith message type"| Client[Web Client]
+    WebSocketService --> |"chapter_image_update\nmessage type"| Client
 ```
 
 ## Key Patterns

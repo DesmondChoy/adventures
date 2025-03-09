@@ -277,8 +277,10 @@ async def stream_and_send_chapter(
     if not isinstance(chapter_type, ChapterType):
         chapter_type = ChapterType(chapter_type)
 
-    # Start image generation for Chapter 1 agency choices
+    # Start image generation
     image_tasks = []
+
+    # For Chapter 1, generate images for agency choices
     if current_chapter_number == 1 and chapter_type == ChapterType.STORY:
         logger.info("Starting image generation for Chapter 1 agency choices")
 
@@ -382,6 +384,37 @@ async def stream_and_send_chapter(
             logger.debug(
                 f"Started image generation task for choice {i + 1}: {choice.text}"
             )
+    # For chapters after the first, generate a single image based on previous chapter
+    elif current_chapter_number > 1:
+        logger.info(f"Starting image generation for Chapter {current_chapter_number}")
+
+        try:
+            # Get the previous chapter's content
+            previous_chapter = state.chapters[-1]  # The most recently added chapter
+            previous_content = previous_chapter.content
+
+            # Generate a summary of the previous chapter for the image prompt
+            chapter_summary = await image_service.generate_chapter_summary(
+                previous_content
+            )
+
+            # Create the image prompt using the summary
+            prompt = image_service.enhance_prompt(
+                "", state, chapter_summary=chapter_summary
+            )
+
+            # Start the image generation task
+            image_tasks.append(
+                (
+                    "chapter",
+                    asyncio.create_task(image_service.generate_image_async(prompt)),
+                )
+            )
+            logger.debug(
+                f"Started image generation for chapter {current_chapter_number} with summary: {chapter_summary}"
+            )
+        except Exception as e:
+            logger.error(f"Error generating chapter image: {str(e)}")
 
     # Split content into paragraphs and stream
     paragraphs = [p.strip() for p in content_to_stream.split("\n\n") if p.strip()]
@@ -466,49 +499,52 @@ async def stream_and_send_chapter(
         }
     )
 
-    # Only hide the loader after all image tasks are complete for Chapter 1
-    # For other chapters, hide it immediately since there are no image tasks
-    if not image_tasks:
-        # No image tasks, hide loader immediately
-        logger.info(
-            f"No image tasks for chapter {current_chapter_number}, hiding loader immediately"
-        )
-        await websocket.send_json({"type": "hide_loader"})
+    # Hide loader after streaming content, but before waiting for image tasks
+    await websocket.send_json({"type": "hide_loader"})
 
     # If we have image tasks, wait for them to complete and send updates
     if image_tasks:
         logger.info(
             f"Chapter {current_chapter_number}: Waiting for {len(image_tasks)} image generation tasks to complete"
         )
-        for i, task in image_tasks:
+        for identifier, task in image_tasks:
             try:
-                logger.info(f"Awaiting image generation task {i + 1}...")
+                logger.info(f"Awaiting image generation task for {identifier}...")
                 image_data = await task
                 if image_data:
-                    logger.info(f"Image generated for choice {i + 1}, sending update")
-                    # Send image update for this choice
-                    await websocket.send_json(
-                        {
-                            "type": "choice_image_update",
-                            "choice_index": i,
-                            "image_data": image_data,
-                        }
-                    )
+                    # For Chapter 1 agency choices
+                    if isinstance(identifier, int):
+                        logger.info(
+                            f"Image generated for choice {identifier + 1}, sending update"
+                        )
+                        # Send image update for this choice
+                        await websocket.send_json(
+                            {
+                                "type": "choice_image_update",
+                                "choice_index": identifier,
+                                "image_data": image_data,
+                            }
+                        )
+                    # For chapter images (chapters after the first)
+                    elif identifier == "chapter":
+                        logger.info(
+                            f"Image generated for chapter {current_chapter_number}, sending update"
+                        )
+                        # Send image update for the chapter
+                        await websocket.send_json(
+                            {
+                                "type": "chapter_image_update",
+                                "chapter_number": current_chapter_number,
+                                "image_data": image_data,
+                            }
+                        )
                 else:
-                    logger.warning(f"No image data generated for choice {i + 1}")
-                    # Could implement a fallback here if needed
-                    # For example, use a placeholder image or skip image display
+                    logger.warning(f"No image data generated for {identifier}")
             except Exception as e:
                 logger.error(
-                    f"Error waiting for image generation task {i + 1}: {str(e)}"
+                    f"Error waiting for image generation task {identifier}: {str(e)}"
                 )
                 # Log the error but continue processing other tasks
-
-        # Hide loader after all image tasks are complete
-        logger.info(
-            f"All image tasks complete for chapter {current_chapter_number}, hiding loader"
-        )
-        await websocket.send_json({"type": "hide_loader"})
 
 
 async def send_story_complete(

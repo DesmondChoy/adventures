@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2025-03-09: Images for Every Chapter
+
+### Added Images to All Chapters for Enhanced Visual Storytelling
+- Problem: Images were only shown for the first chapter's agency choices, missing opportunities for visual storytelling in later chapters
+- Root Cause:
+  * The image generation functionality was only implemented for the first chapter
+  * No mechanism existed to generate images based on chapter content for subsequent chapters
+  * The frontend only displayed images for agency choices in the first chapter
+- Solution:
+  * Modified `ImageGenerationService` to generate images for all chapters:
+    - Added `generate_chapter_summary` method to create visual summaries from previous chapter content
+    - Updated `enhance_prompt` to handle chapter summaries as input for image generation
+    - Implemented LLM-based summarization of chapter content for image prompts
+  * Updated `prompt_engineering.py` to support prompt overrides:
+    - Added a context parameter to the `build_prompt` function
+    - Implemented special handling for prompt_override in the context
+    - Modified both LLM service providers to pass the context parameter
+  * Enhanced `websocket_service.py` to generate images for all chapters:
+    - Added code to generate chapter summaries from previous chapter content
+    - Created image generation tasks for all chapters, not just the first one
+    - Added a new message type (`chapter_image_update`) for sending chapter images
+  * Updated the frontend to display chapter images at the top of each chapter:
+    - Added a container for chapter images
+    - Implemented handling for the new `chapter_image_update` message type
+    - Added smooth fade-in animations for chapter images
+- Result:
+  * Every chapter now has a relevant image at the top
+  * Images are generated based on the content of the previous chapter
+  * Agency choices are consistently referenced in the images
+  * Enhanced visual storytelling experience throughout the adventure
+  * Improved user engagement with visual elements for every chapter
+
 ## 2025-03-09: Landing Page Integration
 
 ### Integrated Landing Page as Application Entry Point
