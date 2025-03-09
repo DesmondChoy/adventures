@@ -147,8 +147,8 @@ flowchart TD
         end
         
         subgraph OtherChapterFlow
-            get_previous_chapter --> |"Extract content"| previous_content
-            previous_content --> generate_chapter_summary
+            get_current_chapter --> |"Extract content from\nmost recently added chapter"| current_content
+            current_content --> generate_chapter_summary
             generate_chapter_summary --> |"LLM-based\nsummarization"| chapter_summary
             chapter_summary --> enhance_prompt_chapter[enhance_prompt]
         end

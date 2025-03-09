@@ -1,5 +1,28 @@
 # Progress Log
 
+## 2025-03-09: Improved Chapter Image Positioning
+
+### Optimized Chapter Image Placement for Young Users
+- Problem: Chapter images were displayed at the top of content, causing children to wait for images before reading text
+- Root Cause:
+  * Images were positioned above the story content in the UI
+  * Children aged 6-12 had to wait for image generation before engaging with the text
+  * This created a perceived delay and potential disengagement
+  * The layout didn't follow the natural "read first, then see illustration" pattern common in children's books
+- Solution:
+  * Moved the `<div id="chapterImageContainer">` element in index.html to appear after the story content but before the choices container
+  * Added a mb-6 margin-bottom class to ensure proper spacing between the image and the choice buttons
+  * Kept all existing functionality intact, including the fade-in animation and asynchronous loading
+  * No changes required to server-side code or image generation logic
+- Result:
+  * Immediate Engagement - Children can start reading text immediately without waiting for image generation
+  * Reduced Perceived Delay - The delay in image loading becomes less noticeable when they're already engaged with the story content
+  * Better Narrative Flow - The image now serves as a visual summary of what they've just read, reinforcing the content
+  * Natural Reading Pattern - Follows a more natural "read first, then see illustration" pattern common in children's books
+  * Smoother Transition - Creates a visual break between the story content and choice selection
+  * More effective layout for children in the 6-12 age range
+  * Creates a more seamless and engaging experience
+
 ## 2025-03-09: Images for Every Chapter
 
 ### Added Images to All Chapters for Enhanced Visual Storytelling
@@ -27,7 +50,7 @@
     - Added smooth fade-in animations for chapter images
 - Result:
   * Every chapter now has a relevant image at the top
-  * Images are generated based on the content of the previous chapter
+  * Images are generated based on the content of the current chapter (better for children aged 6-12)
   * Agency choices are consistently referenced in the images
   * Enhanced visual storytelling experience throughout the adventure
   * Improved user engagement with visual elements for every chapter

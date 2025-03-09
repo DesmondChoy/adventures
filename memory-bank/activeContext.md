@@ -1,5 +1,25 @@
 # Active Context
 
+## Recent Enhancement: Improved Chapter Image Positioning (2025-03-09)
+
+1. **Moved Chapter Image Position:**
+   * Problem: Chapter images were displayed at the top of content, causing children to wait for images before reading
+   * Solution:
+     - Moved the `<div id="chapterImageContainer">` element in index.html to appear after the story content but before the choices container
+     - Added a mb-6 margin-bottom class to ensure proper spacing between the image and the choice buttons
+     - Kept all existing functionality intact, including the fade-in animation and asynchronous loading
+   * Benefits for Young Users (Ages 6-12):
+     - Immediate Engagement - Children can start reading text immediately without waiting for image generation
+     - Reduced Perceived Delay - The delay in image loading becomes less noticeable when they're already engaged with the story content
+     - Better Narrative Flow - The image now serves as a visual summary of what they've just read, reinforcing the content
+     - Natural Reading Pattern - Follows a more natural "read first, then see illustration" pattern common in children's books
+     - Smoother Transition - Creates a visual break between the story content and choice selection
+   * Result:
+     - More effective layout for children in the 6-12 age range
+     - Allows children to start reading immediately while the image is being generated in the background
+     - Creates a more seamless and engaging experience
+     - No changes required to server-side code or image generation logic
+
 ## Recent Enhancement: Images for Every Chapter (2025-03-09)
 
 1. **Added Images for Every Chapter:**
@@ -18,7 +38,7 @@
      - Added smooth fade-in animations for chapter images
    * Result:
      - Every chapter now has a relevant image at the top
-     - Images are generated based on the content of the previous chapter
+     - Images are generated based on the content of the current chapter (better for children aged 6-12)
      - Agency choices are consistently referenced in the images
      - Enhanced visual storytelling experience throughout the adventure
 

@@ -389,13 +389,13 @@ async def stream_and_send_chapter(
         logger.info(f"Starting image generation for Chapter {current_chapter_number}")
 
         try:
-            # Get the previous chapter's content
-            previous_chapter = state.chapters[-1]  # The most recently added chapter
-            previous_content = previous_chapter.content
+            # Get the current chapter's content (most recently added chapter)
+            current_chapter = state.chapters[-1]  # The most recently added chapter
+            current_content = current_chapter.content
 
-            # Generate a summary of the previous chapter for the image prompt
+            # Generate a summary of the current chapter for the image prompt
             chapter_summary = await image_service.generate_chapter_summary(
-                previous_content
+                current_content
             )
 
             # Create the image prompt using the summary

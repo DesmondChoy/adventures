@@ -133,7 +133,7 @@ class ImageGenerationService:
             original_prompt: The basic text prompt
             adventure_state: Optional AdventureState object containing story elements
             choice_text: Optional text of the selected choice to include in the prompt
-            chapter_summary: Optional summary of the previous chapter for non-first chapters
+            chapter_summary: Optional summary of the current chapter for non-first chapters
 
         Returns:
             Enhanced prompt with elements in the specified order
@@ -238,7 +238,7 @@ class ImageGenerationService:
         """Generate a concise visual summary from chapter content.
 
         Args:
-            chapter_content: The full text of the chapter
+            chapter_content: The full text of the chapter (current chapter being displayed)
 
         Returns:
             A concise visual summary (25-40 words) highlighting the most
