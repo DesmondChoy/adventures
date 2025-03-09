@@ -144,29 +144,34 @@ class ImageGenerationService:
         # Build components in the specified order
         components = []
 
-        # If we have a chapter summary, use that as the main subject
-        if chapter_summary:
-            components.append(f"Fantasy illustration of {chapter_summary}")
-
-            # If we have agency information in the adventure state, include it
+        # Log all input parameters for debugging
+        logger.debug(f"enhance_prompt called with:")
+        logger.debug(f"  original_prompt: '{original_prompt}'")
+        logger.debug(f"  chapter_summary: '{chapter_summary}'")
+        if adventure_state:
+            logger.debug(
+                f"  adventure_state: present with {len(getattr(adventure_state, 'chapters', []))} chapters"
+            )
             if (
-                adventure_state
-                and hasattr(adventure_state, "metadata")
+                hasattr(adventure_state, "metadata")
                 and "agency" in adventure_state.metadata
             ):
-                agency = adventure_state.metadata["agency"]
-                agency_description = agency.get("description", "")
-                if agency_description:
-                    # Extract just the agency name/item without extra details
-                    agency_name = (
-                        agency_description.split(" - ")[0].strip()
-                        if " - " in agency_description
-                        else agency_description
-                    )
-                    if ":" in agency_name:
-                        agency_name = agency_name.split(":", 1)[1].strip()
-                    components.append(f"featuring {agency_name}")
-                    logger.debug(f"Added agency to chapter image: {agency_name}")
+                logger.debug(
+                    f"  agency: {adventure_state.metadata['agency'].get('description', 'None')}"
+                )
+
+        # If we have a chapter summary, use that as the main subject
+        if chapter_summary:
+            logger.debug(f"Using chapter summary in prompt: '{chapter_summary}'")
+            # Ensure chapter_summary is not empty or just whitespace
+            if chapter_summary and chapter_summary.strip():
+                components.append(f"Fantasy illustration of {chapter_summary}")
+                logger.debug(f"Added chapter summary to components")
+            else:
+                logger.warning("Chapter summary is empty or whitespace only")
+                # Use a fallback approach - add a generic component
+                components.append("Fantasy illustration of a scene from the story")
+                logger.debug("Added generic scene component as fallback")
         else:
             # Extract the combined name and visual details up to the closing bracket
             name_with_details = ""
@@ -207,6 +212,26 @@ class ImageGenerationService:
             # 1. Start with "Fantasy illustration of [Agency Name with Visual Details]"
             components.append(f"Fantasy illustration of {name_with_details}")
 
+        # Add agency information from adventure state regardless of chapter type
+        if (
+            adventure_state
+            and hasattr(adventure_state, "metadata")
+            and "agency" in adventure_state.metadata
+        ):
+            agency = adventure_state.metadata["agency"]
+            agency_description = agency.get("description", "")
+            if agency_description:
+                # Extract just the agency name/item without extra details
+                agency_name = (
+                    agency_description.split(" - ")[0].strip()
+                    if " - " in agency_description
+                    else agency_description
+                )
+                if ":" in agency_name:
+                    agency_name = agency_name.split(":", 1)[1].strip()
+                components.append(f"featuring {agency_name}")
+                logger.debug(f"Added agency to chapter image: {agency_name}")
+
         # 2. Add story name if available
         story_name = ""
         if (
@@ -241,7 +266,7 @@ class ImageGenerationService:
             chapter_content: The full text of the chapter (current chapter being displayed)
 
         Returns:
-            A concise visual summary (25-40 words) highlighting the most
+            A concise visual summary (20 words or less) highlighting the most
             image-worthy elements
         """
         try:
@@ -250,7 +275,7 @@ class ImageGenerationService:
 
             # Create a custom prompt for the chapter summary
             custom_prompt = f"""
-            Summarize the following chapter content in a single vivid visual scene (25-40 words).
+            Summarize the following chapter content in a single vivid visual scene (20 words or less).
             Focus only on visual elements, settings, characters, and actions.
             Exclude dialogue and abstract concepts.
             Format as a scene description suitable for image generation.
@@ -270,24 +295,87 @@ class ImageGenerationService:
                     self.chapters = []
                     self.metadata = {"prompt_override": True}
 
-            # Collect the summary from the streaming response
-            summary = ""
-            async for chunk in llm.generate_chapter_stream(
-                story_config={},
-                state=MinimalState(),
-                question=None,
-                previous_lessons=None,
-                context={"prompt_override": custom_prompt},
-            ):
-                summary += chunk
+            # Check if we're using Gemini or OpenAI
+            is_gemini = (
+                isinstance(llm, LLMService) or "Gemini" in llm.__class__.__name__
+            )
+            logger.debug(f"Using LLM service: {llm.__class__.__name__}")
 
-            summary = summary.strip()
+            # For Gemini, use a direct approach instead of streaming
+            if is_gemini:
+                try:
+                    # Initialize the model with system prompt
+                    from google import generativeai as genai
+
+                    model = genai.GenerativeModel(
+                        model_name="gemini-2.0-flash",
+                        system_instruction="You are a helpful assistant that follows instructions precisely.",
+                    )
+
+                    # Generate content without streaming for summary
+                    response = model.generate_content(custom_prompt)
+
+                    # Extract the text directly
+                    raw_summary = response.text
+                    logger.debug(f"Direct Gemini response: '{raw_summary}'")
+                except Exception as e:
+                    logger.error(f"Error with direct Gemini call: {str(e)}")
+                    # Fallback to streaming approach
+                    chunks = []
+                    async for chunk in llm.generate_chapter_stream(
+                        story_config={},
+                        state=MinimalState(),
+                        question=None,
+                        previous_lessons=None,
+                        context={"prompt_override": custom_prompt},
+                    ):
+                        chunks.append(chunk)
+                    raw_summary = "".join(chunks)
+            else:
+                # For OpenAI, use the streaming approach
+                chunks = []
+                async for chunk in llm.generate_chapter_stream(
+                    story_config={},
+                    state=MinimalState(),
+                    question=None,
+                    previous_lessons=None,
+                    context={"prompt_override": custom_prompt},
+                ):
+                    chunks.append(chunk)
+                raw_summary = "".join(chunks)
+
+            logger.debug(f"Raw collected summary before strip: '{raw_summary}'")
+            logger.debug(f"Raw collected summary length: {len(raw_summary)}")
+
+            # Strip whitespace
+            summary = raw_summary.strip()
+            logger.debug(f"Stripped summary length: {len(summary)}")
 
             # Truncate if needed
             if len(summary.split()) > 50:
                 summary = " ".join(summary.split()[:40]) + "..."
+                logger.debug(f"Truncated summary: '{summary}'")
 
-            logger.info(f"Generated chapter summary: {summary}")
+            logger.info(f"Generated chapter summary: '{summary}'")
+
+            # Ensure the summary is not empty - use a more robust check
+            if (
+                not summary or len(summary) < 5
+            ):  # Consider very short summaries as empty too
+                logger.warning(
+                    f"Generated summary is empty or too short: '{summary}', using fallback"
+                )
+                # Use a simple fallback summary based on the first paragraph
+                paragraphs = [p for p in chapter_content.split("\n\n") if p.strip()]
+                if paragraphs:
+                    first_para = paragraphs[0]
+                    words = first_para.split()[:30]
+                    summary = " ".join(words) + "..."
+                    logger.info(f"Using fallback summary: {summary}")
+                else:
+                    summary = "A scene from the story"
+                    logger.info("Using generic fallback summary")
+
             return summary
         except Exception as e:
             logger.error(f"Error generating chapter summary: {str(e)}")
@@ -301,6 +389,11 @@ class ImageGenerationService:
 
     def _lookup_visual_details(self, name):
         """Helper method to look up visual details from categories."""
+        # If name is empty or too short, don't attempt lookup
+        if not name or len(name.strip()) < 3:
+            logger.debug("Name is empty or too short for visual details lookup")
+            return ""
+
         try:
             from app.services.llm.prompt_templates import categories
 
@@ -308,11 +401,23 @@ class ImageGenerationService:
             for category_options in categories.values():
                 for option in category_options:
                     option_name = option.split("[")[0].strip().lower()
-                    if name.lower() == option_name or name.lower() in option_name:
+                    # Use more strict matching to prevent false positives
+                    if name.lower() == option_name or (
+                        len(name) > 3
+                        and name.lower() in option_name
+                        and len(name) / len(option_name)
+                        > 0.5  # Name must be at least half the length of option
+                    ):
                         # Extract visual details from the option
                         option_visual_match = re.search(r"\[(.*?)\]", option)
                         if option_visual_match:
+                            logger.debug(
+                                f"Found matching visual details for '{name}' in '{option_name}'"
+                            )
                             return option_visual_match.group(1)
+
+            # If we get here, no match was found
+            logger.debug(f"No matching visual details found for '{name}'")
         except Exception as e:
             logger.error(f"Error looking up visual details: {e}")
 

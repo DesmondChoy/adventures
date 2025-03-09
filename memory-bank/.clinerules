@@ -40,6 +40,32 @@
    - Story simulations: `tests/simulations/story_simulation.py`
    - Data tests: `tests/data/` (story loader, elements, chapter manager)
 
+### LLM Service Provider Differences
+
+1. Streaming Response Handling:
+   - OpenAI and Gemini APIs handle streaming responses differently
+   - For OpenAI: Async streaming works reliably with `async for chunk in response`
+   - For Gemini: Direct API calls are more reliable than streaming for short responses
+   - When implementing features that use LLM responses:
+     * Check which service is being used: `isinstance(llm, LLMService) or "Gemini" in llm.__class__.__name__`
+     * Implement service-specific handling for critical features
+     * For short, single-response use cases (like summaries), prefer direct API calls with Gemini
+     * For long, streaming responses, implement robust chunk collection
+
+2. Error Handling Differences:
+   - OpenAI errors typically include detailed error messages and status codes
+   - Gemini errors may be less specific and require additional logging
+   - Always implement robust fallback mechanisms for LLM-dependent features
+   - Use try/except blocks with specific error types when possible
+   - Log both the error type and message for debugging
+
+3. Response Format Differences:
+   - OpenAI responses typically follow requested formats more consistently
+   - Gemini may require more explicit formatting instructions
+   - When parsing responses, implement flexible parsing that can handle variations
+   - Add validation to ensure critical information is extracted correctly
+   - Consider using regex patterns that can handle different response structures
+
 ### Critical Implementation Rules
 1. State Management:
    - `AdventureState` MUST be single source of truth

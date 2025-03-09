@@ -398,6 +398,10 @@ async def stream_and_send_chapter(
                 current_content
             )
 
+            logger.debug(
+                f"Chapter summary before passing to enhance_prompt: '{chapter_summary}'"
+            )
+
             # Create the image prompt using the summary
             prompt = image_service.enhance_prompt(
                 "", state, chapter_summary=chapter_summary
