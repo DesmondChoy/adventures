@@ -82,7 +82,7 @@ class OpenAIService(BaseLLMService):
                     "Detected text without proper paragraph formatting, reformatting..."
                 )
                 reformatted_text = await reformat_text_with_paragraphs(
-                    self, collected_text
+                    self, full_response
                 )
                 yield reformatted_text
                 logger.info("Sent reformatted text with proper paragraphing")
@@ -177,7 +177,7 @@ class OpenAIService(BaseLLMService):
                     "Detected text without proper paragraph formatting, reformatting..."
                 )
                 reformatted_text = await reformat_text_with_paragraphs(
-                    self, collected_text
+                    self, full_response
                 )
                 yield reformatted_text
                 logger.info("Sent reformatted text with proper paragraphing")
@@ -282,7 +282,7 @@ class GeminiService(BaseLLMService):
                     "Detected text without proper paragraph formatting, reformatting..."
                 )
                 reformatted_text = await reformat_text_with_paragraphs(
-                    self, collected_text
+                    self, full_response
                 )
                 yield reformatted_text
                 logger.info("Sent reformatted text with proper paragraphing")
@@ -379,7 +379,7 @@ class GeminiService(BaseLLMService):
                     "Detected text without proper paragraph formatting, reformatting..."
                 )
                 reformatted_text = await reformat_text_with_paragraphs(
-                    self, collected_text
+                    self, full_response
                 )
                 yield reformatted_text
                 print("Sent reformatted text with proper paragraphing")

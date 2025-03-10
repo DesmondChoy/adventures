@@ -1,5 +1,27 @@
 # Progress Log
 
+## 2025-03-10: Fixed Paragraph Formatter Bug
+
+### Fixed Paragraph Formatter Using Incomplete Text
+- Problem: Paragraph formatter was detecting text without proper paragraph formatting, but only reformatting the initial buffer instead of the full response
+- Root Cause:
+  * In both OpenAIService and GeminiService, when text needed formatting, the system was passing `collected_text` (initial buffer) to the reformatting function instead of `full_response` (complete text)
+  * This resulted in properly formatted initial text but the remainder of the response still lacked paragraph breaks
+  * Debug logs showed the detection was working, but the reformatted text wasn't being fully utilized
+- Solution:
+  * Modified all instances in both service classes to use `full_response` instead of `collected_text` when reformatting is needed:
+    - Updated OpenAIService.generate_with_prompt
+    - Updated OpenAIService.generate_chapter_stream
+    - Updated GeminiService.generate_with_prompt
+    - Updated GeminiService.generate_chapter_stream
+  * Maintained the existing retry mechanism (up to 3 attempts with progressively stronger formatting instructions)
+  * No changes were needed to the paragraph detection logic or the reformatting function itself
+- Result:
+  * Complete LLM responses now have proper paragraph formatting throughout the entire text
+  * Improved readability for users, especially for longer responses
+  * Maintained the streaming experience when formatting isn't needed
+  * Fixed the issue where debug logs showed detection and reformatting but the output still lacked proper formatting
+
 ## 2025-03-10: Implemented Summary Page After CONCLUSION Chapter
 
 ### Added Summary Page Feature

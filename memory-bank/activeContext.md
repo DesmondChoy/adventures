@@ -1,5 +1,27 @@
 # Active Context
 
+## Fixed Bug: Paragraph Formatter Using Incomplete Text (2025-03-10)
+
+1. **Fixed Paragraph Formatter Bug:**
+   * Problem: Paragraph formatter was detecting text without proper paragraph formatting, but only reformatting the initial buffer (first ~1000 characters) instead of the full response
+   * Root Cause:
+     - In both OpenAIService and GeminiService, when text needed formatting, the system was passing `collected_text` (initial buffer) to the reformatting function instead of `full_response` (complete text)
+     - This resulted in properly formatted initial text but the remainder of the response still lacked paragraph breaks
+     - Debug logs showed the detection was working, but the reformatted text wasn't being fully utilized
+   * Solution:
+     - Modified all instances in both service classes to use `full_response` instead of `collected_text` when reformatting is needed
+     - Updated the code in OpenAIService.generate_with_prompt, OpenAIService.generate_chapter_stream, GeminiService.generate_with_prompt, and GeminiService.generate_chapter_stream
+     - Maintained the existing retry mechanism (up to 3 attempts with progressively stronger formatting instructions)
+   * Implementation Details:
+     - The fix was a simple but critical change from `collected_text` to `full_response` in the reformatting function calls
+     - No changes were needed to the paragraph detection logic or the reformatting function itself
+     - The existing retry mechanism and logging were preserved
+   * Result:
+     - Complete LLM responses now have proper paragraph formatting throughout the entire text
+     - Improved readability for users, especially for longer responses
+     - Maintained the streaming experience when formatting isn't needed
+     - Fixed the issue where debug logs showed detection and reformatting but the output still lacked proper formatting
+
 ## Implemented Enhancement: Summary Page After CONCLUSION Chapter (2025-03-10)
 
 1. **Summary Page Implementation:**
