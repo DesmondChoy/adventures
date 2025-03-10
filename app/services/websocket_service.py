@@ -167,6 +167,38 @@ async def process_choice(
 
                 logger.debug(f"Stored agency choice from Chapter 1: {choice_text}")
 
+        # Generate a chapter summary for the previous chapter
+        try:
+            logger.info(
+                f"Generating summary for chapter {previous_chapter.chapter_number}"
+            )
+            chapter_summary = await image_service.generate_chapter_summary(
+                previous_chapter.content
+            )
+
+            # Store the chapter summary in the state
+            if len(state.chapter_summaries) < previous_chapter.chapter_number:
+                # If this is the first summary, we might need to add placeholders for previous chapters
+                while (
+                    len(state.chapter_summaries) < previous_chapter.chapter_number - 1
+                ):
+                    state.chapter_summaries.append("Chapter summary not available")
+                state.chapter_summaries.append(chapter_summary)
+            else:
+                # Replace the summary at the correct index
+                state.chapter_summaries[previous_chapter.chapter_number - 1] = (
+                    chapter_summary
+                )
+
+            logger.info(
+                f"Stored summary for chapter {previous_chapter.chapter_number}: {chapter_summary}"
+            )
+        except Exception as e:
+            logger.error(f"Error generating chapter summary: {str(e)}")
+            # Don't fail the whole process if summary generation fails
+            if len(state.chapter_summaries) < previous_chapter.chapter_number:
+                state.chapter_summaries.append("Chapter summary not available")
+
         state.current_chapter_id = chosen_path
 
     # Calculate new chapter number and update story phase
@@ -639,8 +671,9 @@ from app.services.llm.prompt_engineering import build_summary_chapter_prompt
 async def generate_summary_content(state: AdventureState) -> str:
     """Generate summary content for the SUMMARY chapter.
 
-    This function uses the LLM service to generate a summary of the adventure,
-    including a recap of the story and the learning journey.
+    This function uses the stored chapter summaries to create a chronological
+    recap of the adventure, along with a learning report showing all questions
+    and answers.
 
     Args:
         state: The current adventure state
@@ -649,21 +682,98 @@ async def generate_summary_content(state: AdventureState) -> str:
         The generated summary content
     """
     try:
-        # Get the system and user prompts from prompt_engineering
-        system_prompt, user_prompt = build_summary_chapter_prompt(state)
+        # Check if we have chapter summaries
+        if state.chapter_summaries and len(state.chapter_summaries) > 0:
+            logger.info(
+                f"Using {len(state.chapter_summaries)} stored chapter summaries for summary content"
+            )
 
-        # Generate the summary content
-        summary_content = ""
-        async for chunk in llm_service.generate_with_prompt(
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-        ):
-            summary_content += chunk
+            # Create the summary content with chapter summaries
+            summary_content = "# Adventure Summary\n\n"
 
-        logger.info(
-            "Generated summary content", extra={"content_length": len(summary_content)}
-        )
-        return summary_content
+            # Add journey recap section with chapter summaries
+            summary_content += "## Your Journey Recap\n\n"
+
+            for i, summary in enumerate(state.chapter_summaries, 1):
+                # Get the chapter type for context
+                chapter_type = "Unknown"
+                if i <= len(state.chapters):
+                    chapter_type = state.chapters[i - 1].chapter_type.value.capitalize()
+
+                summary_content += f"### Chapter {i} ({chapter_type})\n"
+                summary_content += f"{summary}\n\n"
+
+            # Add learning report section
+            summary_content += "## Learning Report\n\n"
+
+            # Get all lesson chapters
+            lesson_chapters = [
+                chapter
+                for chapter in state.chapters
+                if chapter.chapter_type == ChapterType.LESSON and chapter.response
+            ]
+
+            if lesson_chapters:
+                for i, chapter in enumerate(lesson_chapters, 1):
+                    lesson_response = chapter.response
+                    question = lesson_response.question["question"]
+                    chosen_answer = lesson_response.chosen_answer
+                    is_correct = lesson_response.is_correct
+
+                    # Find the correct answer
+                    correct_answer = next(
+                        answer["text"]
+                        for answer in lesson_response.question["answers"]
+                        if answer["is_correct"]
+                    )
+
+                    # Get explanation if available
+                    explanation = lesson_response.question.get("explanation", "")
+
+                    summary_content += f"### Question {i}: {question}\n"
+                    summary_content += f"- Your answer: {chosen_answer} "
+                    summary_content += (
+                        f"({'✓ Correct' if is_correct else '✗ Incorrect'})\n"
+                    )
+
+                    if not is_correct:
+                        summary_content += f"- Correct answer: {correct_answer}\n"
+
+                    if explanation:
+                        summary_content += f"- Explanation: {explanation}\n"
+
+                    summary_content += "\n"
+            else:
+                summary_content += "You didn't encounter any educational questions in this adventure.\n\n"
+
+            # Add conclusion
+            summary_content += "Thank you for joining us on this learning odyssey!\n"
+
+            logger.info(
+                "Generated summary content from stored summaries",
+                extra={"content_length": len(summary_content)},
+            )
+            return summary_content
+        else:
+            logger.warning(
+                "No chapter summaries available, falling back to LLM-generated summary"
+            )
+            # Fall back to the original method if no summaries are available
+            system_prompt, user_prompt = build_summary_chapter_prompt(state)
+
+            # Generate the summary content
+            summary_content = ""
+            async for chunk in llm_service.generate_with_prompt(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+            ):
+                summary_content += chunk
+
+            logger.info(
+                "Generated fallback summary content",
+                extra={"content_length": len(summary_content)},
+            )
+            return summary_content
 
     except Exception as e:
         logger.error(f"Error generating summary content: {str(e)}")

@@ -139,6 +139,12 @@ class AdventureState(BaseModel):
         description="The selected plot twist that will develop throughout the adventure",
     )
 
+    # Chapter summaries for the SUMMARY chapter
+    chapter_summaries: List[str] = Field(
+        default_factory=list,
+        description="Summaries of each chapter for display in the SUMMARY chapter",
+    )
+
     # Metadata for element consistency and plot development
     metadata: Dict[str, Any] = Field(
         default_factory=dict,
