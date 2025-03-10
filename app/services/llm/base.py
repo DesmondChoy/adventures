@@ -65,3 +65,13 @@ class BaseLLMService(ABC):
     ) -> AsyncGenerator[str, None]:
         """Generate the chapter content (story or lesson) as a stream of chunks."""
         pass
+
+    @abstractmethod
+    async def generate_with_prompt(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> AsyncGenerator[str, None]:
+        """Generate content with custom system and user prompts as a stream of chunks."""
+        pass

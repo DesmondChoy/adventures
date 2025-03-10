@@ -11,6 +11,7 @@ class ChapterType(str, Enum):
     STORY = "story"
     CONCLUSION = "conclusion"
     REFLECT = "reflect"  # New chapter type for deeper understanding after LESSON
+    SUMMARY = "summary"  # New chapter type for adventure summary after CONCLUSION
 
 
 class StoryChoice(BaseModel):
@@ -93,8 +94,13 @@ class ChapterData(BaseModel):
 
         if chapter_type == ChapterType.STORY and len(v.choices) != 3:
             raise ValueError("Story chapters must have exactly 3 choices")
-        if chapter_type == ChapterType.CONCLUSION and len(v.choices) != 0:
-            raise ValueError("Conclusion chapters must have exactly 0 choices")
+        if (
+            chapter_type in (ChapterType.CONCLUSION, ChapterType.SUMMARY)
+            and len(v.choices) != 0
+        ):
+            raise ValueError(
+                f"{chapter_type.value.capitalize()} chapters must have exactly 0 choices"
+            )
         return v
 
 

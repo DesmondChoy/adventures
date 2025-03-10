@@ -630,6 +630,75 @@ def build_user_prompt(
     return prompt
 
 
+def build_summary_chapter_prompt(state: AdventureState) -> Tuple[str, str]:
+    """Create system and user prompts for generating a summary of the adventure.
+
+    This function builds prompts specifically for the SUMMARY chapter type,
+    which recaps the entire adventure and highlights the educational content.
+
+    Args:
+        state: The current adventure state containing all chapters and responses
+
+    Returns:
+        A tuple containing (system_prompt, user_prompt)
+    """
+    # Create a system prompt for the summary
+    system_prompt = """You are creating a visually engaging summary page for an educational adventure story. 
+This summary should recap the entire journey and highlight the educational content in a way that's engaging for children aged 6-12.
+The summary should have two main sections:
+1. A narrative journey recap that highlights key moments from each chapter
+2. A learning report that shows all questions, answers, and whether they were answered correctly
+
+Format your response with clear section headings and use engaging, child-friendly language.
+Do not include any choices or interactive elements in your response."""
+
+    # Create a user prompt with details about the adventure
+    user_prompt = f"""Create a summary page for an educational adventure in {state.metadata["non_random_elements"]["name"]}.
+
+Adventure Details:
+- Theme: {state.selected_theme}
+- Moral Teaching: {state.selected_moral_teaching}
+- Setting: {state.selected_narrative_elements.get("settings", "Unknown")}
+- Agency Choice: {state.metadata.get("agency", {}).get("description", "Unknown")}
+
+Chapter Recap:
+"""
+
+    # Add chapter content summaries
+    for chapter in state.chapters:
+        # Get a short excerpt from each chapter (first 100 characters)
+        excerpt = (
+            chapter.content[:100] + "..."
+            if len(chapter.content) > 100
+            else chapter.content
+        )
+        user_prompt += f"- Chapter {chapter.chapter_number} ({chapter.chapter_type.value}): {excerpt}\n"
+
+    # Add learning questions and responses
+    user_prompt += "\nLearning Questions and Responses:\n"
+    for chapter in state.chapters:
+        if chapter.chapter_type == ChapterType.LESSON and chapter.response:
+            question = chapter.response.question["question"]
+            chosen_answer = chapter.response.chosen_answer
+            is_correct = chapter.response.is_correct
+            correct_answer = next(
+                answer["text"]
+                for answer in chapter.response.question["answers"]
+                if answer["is_correct"]
+            )
+            explanation = chapter.response.question.get("explanation", "")
+
+            user_prompt += f"- Question: {question}\n"
+            user_prompt += f"  - Chosen Answer: {chosen_answer}\n"
+            user_prompt += f"  - Correct Answer: {correct_answer}\n"
+            user_prompt += f"  - Result: {'Correct' if is_correct else 'Incorrect'}\n"
+            if explanation:
+                user_prompt += f"  - Explanation: {explanation}\n"
+            user_prompt += "\n"
+
+    return system_prompt, user_prompt
+
+
 def build_prompt(
     state: AdventureState,
     lesson_question: Optional[LessonQuestion] = None,

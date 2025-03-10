@@ -452,13 +452,26 @@ function startAdventure() {
                 } else if (data.type === 'story') {
                     appendStoryText(data.content);
                 } else if (data.type === 'story_complete') {
-                    displayStats(data.state);
+                    // Check if we should show the summary button
+                    if (data.state && data.state.show_summary_button) {
+                        displayStatsWithSummaryButton(data.state);
+                    } else {
+                        displayStats(data.state);
+                    }
                 } else if (data.type === 'choice_image_update') {
                     // Handle image updates for choices
                     updateChoiceWithImage(data.choice_index, data.image_data);
                 } else if (data.type === 'chapter_image_update') {
                     // Handle image updates for chapters
                     updateChapterImage(data.chapter_number, data.image_data);
+                } else if (data.type === 'summary_start') {
+                    // Clear content for summary
+                    document.getElementById('storyContent').innerHTML = '';
+                    document.getElementById('choicesContainer').innerHTML = '';
+                    showLoader();
+                } else if (data.type === 'summary_complete') {
+                    // Display the complete summary
+                    displaySummaryComplete(data.state);
                 } else {
                     // For any other message types, hide the loader as a fallback
                     hideLoader();
@@ -982,6 +995,69 @@ function startAdventure() {
                     </button>
                 </div>`;
             document.getElementById('choicesContainer').innerHTML = statsHtml;
+        }
+        
+        function displayStatsWithSummaryButton(state) {
+            const statsHtml = `
+                <div class="text-center p-4">
+                    <h3 class="text-lg font-semibold text-green-800 mb-2">Journey Complete!</h3>
+                    <div class="text-sm text-green-700">
+                        <p>Total Lessons: ${state.stats.total_lessons}</p>
+                        <p>Correct Answers: ${state.stats.correct_lesson_answers}</p>
+                        <p>Success Rate: ${state.stats.completion_percentage}%</p>
+                    </div>
+                    <div class="flex flex-col gap-3 mt-4">
+                        <button onclick="requestSummary()" 
+                                class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-[1.02] duration-300">
+                            <span class="text-lg">✨ Reveal Your Adventure Summary ✨</span>
+                            <p class="text-sm opacity-80 mt-1">See your journey and learning highlights</p>
+                        </button>
+                        <button onclick="resetApplicationState()" 
+                                class="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                            Start New Journey
+                        </button>
+                    </div>
+                </div>`;
+            document.getElementById('choicesContainer').innerHTML = statsHtml;
+        }
+        
+        function requestSummary() {
+            if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
+                showLoader();
+                // Clear the stream buffer
+                streamBuffer = '';
+                if (renderTimeout) {
+                    clearTimeout(renderTimeout);
+                }
+                
+                // Reset active paragraphs
+                activeParagraphs.clear();
+                
+                // Send request for summary
+                sendMessage({
+                    type: 'request_summary',
+                    state: stateManager.loadState()
+                });
+            } else {
+                showError('Connection lost. Please refresh the page.');
+            }
+        }
+        
+        function displaySummaryComplete(state) {
+            hideLoader();
+            
+            // Update chapter number to show we're in the summary
+            updateProgress(state.current_chapter.chapter_number, state.stats.total_lessons);
+            
+            // Add a return button at the bottom
+            const returnButton = `
+                <div class="text-center p-4">
+                    <button onclick="resetApplicationState()" 
+                            class="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                        Start New Journey
+                    </button>
+                </div>`;
+            document.getElementById('choicesContainer').innerHTML = returnButton;
         }
     </script>
     

@@ -23,6 +23,91 @@ class OpenAIService(BaseLLMService):
         if not os.getenv("OPENAI_API_KEY"):
             logger.warning("OPENAI_API_KEY is not set in environment variables!")
 
+    async def generate_with_prompt(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> AsyncGenerator[str, None]:
+        """Generate content with custom system and user prompts as a stream of chunks."""
+        # Log the prompts
+        logger.info(
+            "LLM Custom Prompt Request",
+            extra={"llm_prompt": f"System: {system_prompt}\n\nUser: {user_prompt}"},
+        )
+
+        try:
+            stream = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.7,  # Slightly lower temperature for more factual content
+                stream=True,
+            )
+
+            # First, collect a buffer to check if paragraphing is needed
+            buffer_size = 1000  # Characters to check for paragraph formatting
+            collected_text = ""
+            full_response = ""  # Track the full response regardless of streaming
+            buffer_complete = False
+            needs_formatting = False
+
+            # Phase 1: Collect initial buffer to check formatting
+            async for chunk in stream:
+                if chunk.choices[0].delta.content is not None:
+                    content = chunk.choices[0].delta.content
+                    full_response += content  # Always track full response
+                    collected_text += content
+
+                    # Once we have enough text, check if it needs paragraphing
+                    if not buffer_complete and len(collected_text) >= buffer_size:
+                        buffer_complete = True
+                        needs_formatting = needs_paragraphing(collected_text)
+
+                        # If no formatting needed, start yielding the buffer
+                        if not needs_formatting:
+                            yield collected_text
+                            collected_text = ""  # Reset after yielding
+                        # If formatting needed, continue collecting without yielding
+
+                    # If buffer check is complete and no formatting needed, stream normally
+                    elif buffer_complete and not needs_formatting:
+                        yield content
+
+            # Phase 2: If formatting is needed, reformat and yield the complete text
+            if needs_formatting:
+                logger.info(
+                    "Detected text without proper paragraph formatting, reformatting..."
+                )
+                reformatted_text = await reformat_text_with_paragraphs(
+                    self, collected_text
+                )
+                yield reformatted_text
+                logger.info("Sent reformatted text with proper paragraphing")
+
+            # Log the complete response
+            logger.info(
+                "LLM Response",
+                extra={
+                    "llm_response": reformatted_text
+                    if needs_formatting
+                    else full_response
+                },
+            )
+
+        except Exception as e:
+            logger.error(
+                "LLM Request Failed",
+                extra={
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "llm_prompt": f"System: {system_prompt}\n\nUser: {user_prompt}",
+                },
+            )
+            raise  # Re-raise the exception after logging
+
     async def generate_chapter_stream(
         self,
         story_config: Dict[str, Any],
@@ -137,6 +222,91 @@ class GeminiService(BaseLLMService):
                 max_output_tokens=8000,  # Adjust based on your needs
             ),
         )
+
+    async def generate_with_prompt(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> AsyncGenerator[str, None]:
+        """Generate content with custom system and user prompts as a stream of chunks."""
+        logger.info(
+            "LLM Custom Prompt Request (Gemini)",
+            extra={"llm_prompt": f"System: {system_prompt}\n\nUser: {user_prompt}"},
+        )
+
+        try:
+            # Initialize the model with system prompt
+            model = genai.GenerativeModel(
+                model_name=self.model,
+                system_instruction=system_prompt,
+            )
+
+            # Generate content with streaming
+            response = model.generate_content(user_prompt, stream=True)
+
+            # First, collect a buffer to check if paragraphing is needed
+            buffer_size = 1000  # Characters to check for paragraph formatting
+            collected_text = ""
+            full_response = ""  # Track the full response regardless of streaming
+            buffer_complete = False
+            needs_formatting = False
+
+            # Phase 1: Collect initial buffer to check formatting
+            chunk_count = 0
+            for chunk in response:
+                if chunk.text:
+                    content = chunk.text
+                    full_response += content  # Always track full response
+                    collected_text += content
+                    chunk_count += 1
+
+                    # Once we have enough text, check if it needs paragraphing
+                    if not buffer_complete and len(collected_text) >= buffer_size:
+                        buffer_complete = True
+                        needs_formatting = needs_paragraphing(collected_text)
+
+                        # If no formatting needed, start yielding the buffer
+                        if not needs_formatting:
+                            yield collected_text
+                            collected_text = ""  # Reset after yielding
+                        # If formatting needed, continue collecting without yielding
+
+                    # If buffer check is complete and no formatting needed, stream normally
+                    elif buffer_complete and not needs_formatting:
+                        yield content
+
+            # Phase 2: If formatting is needed, reformat and yield the complete text
+            if needs_formatting:
+                logger.info(
+                    "Detected text without proper paragraph formatting, reformatting..."
+                )
+                reformatted_text = await reformat_text_with_paragraphs(
+                    self, collected_text
+                )
+                yield reformatted_text
+                logger.info("Sent reformatted text with proper paragraphing")
+
+            # Log the complete response
+            logger.info(
+                "LLM Response (Gemini)",
+                extra={
+                    "llm_response": reformatted_text
+                    if needs_formatting
+                    else full_response
+                },
+            )
+
+        except Exception as e:
+            logger.error(
+                "LLM Request Failed (Gemini)",
+                extra={
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "llm_prompt": f"System: {system_prompt}\n\nUser: {user_prompt}",
+                },
+            )
+            raise  # Re-raise the exception after logging
 
     async def generate_chapter_stream(
         self,

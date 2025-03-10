@@ -3,7 +3,7 @@ import random
 import logging
 import math
 from datetime import datetime
-from app.models.story import ChapterType, AdventureState
+from app.models.story import ChapterType, AdventureState, ChapterData, ChapterContent
 from app.data.story_loader import StoryLoader
 
 logger = logging.getLogger("story_app")
@@ -320,6 +320,8 @@ class ChapterManager:
                 chapter_types.append(ChapterType.REFLECT)
             elif chapter_type == "CONCLUSION":
                 chapter_types.append(ChapterType.CONCLUSION)
+            elif chapter_type == "SUMMARY":
+                chapter_types.append(ChapterType.SUMMARY)
 
         # Validate the sequence
         is_valid = ChapterManager.check_chapter_sequence(chapter_types)
@@ -392,6 +394,18 @@ class ChapterManager:
             )
             return False
 
+        # SUMMARY chapters can only appear after CONCLUSION
+        for i, chapter_type in enumerate(seq):
+            if chapter_type == "SUMMARY" and (i == 0 or seq[i - 1] != "CONCLUSION"):
+                logger.warning(
+                    "SUMMARY chapter placement check failed - must follow CONCLUSION",
+                    extra={
+                        "position": i + 1,
+                        "before": seq[i - 1] if i > 0 else "None",
+                    },
+                )
+                return False
+
         # Check REFLECT placement: LESSON before, STORY after
         for i in range(1, len(seq) - 1):
             if seq[i] == "REFLECT":
@@ -458,6 +472,57 @@ class ChapterManager:
             },
         )
         return question_count
+
+    @staticmethod
+    def create_summary_chapter(state: AdventureState) -> ChapterData:
+        """Create a summary chapter that follows the CONCLUSION chapter.
+
+        This method creates a new ChapterData object with the SUMMARY chapter type.
+        The summary chapter should only be created after the CONCLUSION chapter.
+
+        Args:
+            state: The current adventure state
+
+        Returns:
+            A new ChapterData object with the SUMMARY chapter type
+
+        Raises:
+            ValueError: If the last chapter is not a CONCLUSION chapter
+        """
+        # Verify that the last chapter is a CONCLUSION chapter
+        if (
+            not state.chapters
+            or state.chapters[-1].chapter_type != ChapterType.CONCLUSION
+        ):
+            raise ValueError(
+                "Summary chapter can only be created after a CONCLUSION chapter"
+            )
+
+        # Create a new chapter number (one more than the last chapter)
+        new_chapter_number = len(state.chapters) + 1
+
+        # Create an empty ChapterContent with no choices
+        chapter_content = ChapterContent(
+            content="",  # Will be filled by the LLM service
+            choices=[],  # No choices for summary chapter
+        )
+
+        # Create the new chapter data
+        summary_chapter = ChapterData(
+            chapter_number=new_chapter_number,
+            content="",  # Will be filled by the LLM service
+            chapter_type=ChapterType.SUMMARY,
+            response=None,
+            chapter_content=chapter_content,
+            question=None,
+        )
+
+        logger.info(
+            f"Created SUMMARY chapter {new_chapter_number}",
+            extra={"chapter_number": new_chapter_number},
+        )
+
+        return summary_chapter
 
     @staticmethod
     def initialize_adventure_state(

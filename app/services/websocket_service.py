@@ -612,7 +612,7 @@ async def send_story_complete(
         await websocket.send_text("\n\n")
         await asyncio.sleep(PARAGRAPH_DELAY)
 
-    # Then send the completion message with stats
+    # Then send the completion message with stats and a button to view the summary
     await websocket.send_json(
         {
             "type": "story_complete",
@@ -627,9 +627,143 @@ async def send_story_complete(
                         else 0
                     ),
                 },
+                "show_summary_button": True,  # Signal to show the summary button
             },
         }
     )
+
+
+from app.services.llm.prompt_engineering import build_summary_chapter_prompt
+
+
+async def generate_summary_content(state: AdventureState) -> str:
+    """Generate summary content for the SUMMARY chapter.
+
+    This function uses the LLM service to generate a summary of the adventure,
+    including a recap of the story and the learning journey.
+
+    Args:
+        state: The current adventure state
+
+    Returns:
+        The generated summary content
+    """
+    try:
+        # Get the system and user prompts from prompt_engineering
+        system_prompt, user_prompt = build_summary_chapter_prompt(state)
+
+        # Generate the summary content
+        summary_content = ""
+        async for chunk in llm_service.generate_with_prompt(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+        ):
+            summary_content += chunk
+
+        logger.info(
+            "Generated summary content", extra={"content_length": len(summary_content)}
+        )
+        return summary_content
+
+    except Exception as e:
+        logger.error(f"Error generating summary content: {str(e)}")
+        # Return a fallback summary if generation fails
+        return """# Adventure Summary
+
+## Your Journey Recap
+You've completed an amazing educational adventure! Throughout your journey, you explored new worlds, 
+made important choices, and learned valuable lessons.
+
+## Learning Report
+You answered several educational questions during your adventure. Some were challenging, 
+but each one helped you grow and learn.
+
+Thank you for joining us on this learning odyssey!
+"""
+
+
+async def process_summary_request(
+    state_manager: AdventureStateManager,
+    websocket: WebSocket,
+) -> None:
+    """Process a request for the summary page and send it to the client.
+
+    Args:
+        state_manager: The state manager instance
+        websocket: The WebSocket connection
+    """
+    state = state_manager.get_current_state()
+    if not state:
+        await websocket.send_json(
+            {"type": "error", "message": "No active adventure state"}
+        )
+        return
+
+    try:
+        # Create a summary chapter
+        summary_chapter = chapter_manager.create_summary_chapter(state)
+
+        # Generate summary content
+        summary_content = await generate_summary_content(state)
+
+        # Update the chapter content
+        summary_chapter.content = summary_content
+        summary_chapter.chapter_content.content = summary_content
+
+        # Add the chapter to the state
+        state_manager.append_new_chapter(summary_chapter)
+
+        # Stream the content to the client
+        await websocket.send_json({"type": "summary_start"})
+
+        # Split content into paragraphs and stream
+        paragraphs = [p.strip() for p in summary_content.split("\n\n") if p.strip()]
+
+        for paragraph in paragraphs:
+            # For headings, send them as a whole
+            if paragraph.startswith("#"):
+                await websocket.send_text(paragraph + "\n\n")
+                await asyncio.sleep(PARAGRAPH_DELAY)
+                continue
+
+            # For regular paragraphs, stream word by word
+            words = paragraph.split()
+            for word in words:
+                await websocket.send_text(word + " ")
+                await asyncio.sleep(WORD_DELAY)
+
+            await websocket.send_text("\n\n")
+            await asyncio.sleep(PARAGRAPH_DELAY)
+
+        # Send the complete summary data
+        await websocket.send_json(
+            {
+                "type": "summary_complete",
+                "state": {
+                    "current_chapter_id": state.current_chapter_id,
+                    "current_chapter": {
+                        "chapter_number": summary_chapter.chapter_number,
+                        "content": summary_content,
+                        "chapter_type": ChapterType.SUMMARY.value,
+                    },
+                    "stats": {
+                        "total_lessons": state.total_lessons,
+                        "correct_lesson_answers": state.correct_lesson_answers,
+                        "completion_percentage": round(
+                            (state.correct_lesson_answers / state.total_lessons * 100)
+                            if state.total_lessons > 0
+                            else 0
+                        ),
+                    },
+                },
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error processing summary request: {str(e)}")
+        await websocket.send_json(
+            {"type": "error", "message": f"Error generating summary: {str(e)}"}
+        )
 
 
 async def generate_chapter(
