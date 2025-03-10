@@ -1,5 +1,68 @@
 # Active Context
 
+## Planned Enhancement: Summary Page After CONCLUSION Chapter (2025-03-10)
+
+1. **Summary Page Implementation Plan:**
+   * Purpose: Create an engaging visual summary of the adventure journey and learning experience after the CONCLUSION chapter
+   * User Experience: 
+     - A button at the end of the CONCLUSION chapter leads to a summary page
+     - Summary shows a visual timeline of the adventure journey
+     - Timeline features chapter highlights and agency evolution
+     - Learning report displays questions, answers, and explanations
+     - Parent insights section highlights educational methodology
+   * Implementation Stages (TODO):
+     - **Stage 1: Backend Model Updates**
+       * Add SUMMARY as a new ChapterType in story.py
+       * Update ChapterData validation to accommodate SUMMARY type
+       * Modify ChapterManager to handle the special SUMMARY chapter case
+     
+     - **Stage 2: Backend Services Implementation**
+       * Create service methods for generating adventure timeline data
+       * Implement functions to extract chapter highlights from content
+       * Build agency evolution tracking from metadata
+       * Develop learning report generation from AdventureState
+       * Update WebSocketService to handle summary requests/responses
+     
+     - **Stage 3: Frontend UI Development**
+       * Create new container for summary page in index.html
+       * Develop button at end of CONCLUSION chapter
+       * Build animated timeline visualization component
+       * Implement learning report card design
+       * Design parent insights section
+     
+     - **Stage 4: Animation and Interaction**
+       * Implement smooth transitions to summary screen
+       * Create timeline animation with chapter progression
+       * Develop agency evolution visualization
+       * Add interactivity to learning report cards
+     
+     - **Stage 5: Integration and Testing**
+       * Connect frontend to backend services
+       * Test with various adventure scenarios
+       * Verify data accuracy and consistency
+       * Optimize performance for mobile and desktop
+   
+   * Design Principles:
+     - Use consistent visual theming with the existing app
+     - Focus on animated, visual representation rather than text-heavy content
+     - Avoid technical terms like "STORY" or "LESSON" in user-facing elements
+     - Present content as a flowing adventure journey
+     - Create separate, clear sections for parents to understand educational value
+
+   * Educational Value for Parents:
+     - Highlight how the Socratic method was used in reflection chapters
+     - Show learning progression through the adventure
+     - Demonstrate connections between learning moments and story elements
+     - Provide clear documentation of questions, answers, and explanations
+     - Visualize the child's learning journey in an engaging format
+
+   * Data Sources:
+     - Timeline Content: Chapter content in AdventureState.chapters
+     - Chapter Highlights: Generated summaries using LLM service
+     - Agency Evolution: Metadata and references in AdventureState
+     - Learning Report: Question data with user responses in AdventureState
+     - Educational Insights: Analysis of REFLECT chapters and learning progression
+
 ## Recent Enhancement: Fixed Chapter Summary Generation for Image Prompts (2025-03-10)
 
 1. **Fixed Chapter Summary Generation for Image Prompts:**
@@ -372,177 +435,3 @@
   * Improved readability with consistent styling
   * Better maintainability with organized CSS
   * Enhanced visual hierarchy with consistent accent colors
-
-### CSS Files Reorganization (2025-03-06)
-- Problem: There were too many standalone CSS files, making it difficult to maintain and understand the styling structure
-- Solution:
-  * Merged multiple CSS files into a more organized structure:
-    - Consolidated `header-controls.css`, `font-controls.css`, `loader.css`, and `choice-cards.css` into `components.css`
-    - Renamed `carousel.css` to `carousel-component.css` to better reflect its purpose
-    - Kept `layout.css`, `theme.css`, and `typography.css` as separate files for their specific purposes
-  * Updated the HTML file to reference the new CSS structure:
-    - Removed references to the merged files
-    - Added reference to the renamed carousel component file
-  * Organized CSS files by their purpose:
-    - `components.css` - Reusable UI components (toast notifications, buttons, loaders, choice cards, etc.)
-    - `carousel-component.css` - Specialized carousel component styles
-    - `layout.css` - Structural elements, containers, and screen transitions
-    - `theme.css` - Color schemes and theme variables
-    - `typography.css` - Text styling and formatting
-- Result:
-  * More maintainable CSS structure with clear separation of concerns
-  * Reduced number of CSS files from 9 to 5
-  * Better organization of styles by their purpose
-  * Improved developer experience with easier-to-find styles
-  * No change in functionality or appearance for end users
-
-### CSS Modularization and Transition Improvements (2025-03-06)
-- Problem: CSS was scattered throughout the HTML file with inline styles and lacked organization
-- Solution:
-  * Created two new CSS files:
-    - `app/static/css/layout.css` - Contains structural elements, containers, and screen transitions
-    - `app/static/css/components.css` - Contains reusable UI components like toasts, buttons, and animations
-  * Removed inline styles and replaced them with proper CSS classes:
-    - Moved debug info styles to the components.css file
-    - Added screen transition classes to all screen containers
-    - Created a toast notification component for error messages
-    - Added fade-in animation classes for images
-  * Enhanced screen transitions:
-    - Added proper transition effects between screens
-    - Improved the navigation functions to handle transitions correctly
-    - Added comments to clarify the transition logic
-  * Improved code maintainability:
-    - Organized CSS into logical modules
-    - Added descriptive comments to explain the purpose of each section
-    - Used consistent naming conventions for classes
-- Result:
-  * More maintainable codebase with better organized CSS
-  * Smoother screen transitions throughout the application
-  * Improved user experience with consistent animations
-  * Reduced code duplication and better separation of concerns
-
-### Carousel Component Refactoring (2025-03-06)
-- Problem: The carousel functionality in `index.html` was complex and difficult to maintain with over 1,200 lines of code
-- Solution:
-  * Created a reusable `Carousel` class in a new `app/static/js/carousel-manager.js` file
-  * Encapsulated all carousel-related functionality including rotation, selection, and event handling
-  * Updated HTML to use the new class for both category and lesson carousels
-  * Removed redundant carousel functions and global variables from the main JavaScript code
-  * Implemented proper keyboard navigation through the new class
-- Result:
-  * Improved code organization with carousel functionality isolated in its own module
-  * Reduced duplication by using the same class for both carousels
-  * Enhanced maintainability with changes to carousel behavior only needed in one place
-  * Better encapsulation with carousel state managed within the class rather than using global variables
-
-### Fixed Loading Spinner Visibility for Chapter 1 (2025-03-05)
-- Problem: The loading spinner was disappearing too quickly for Chapter 1 but working fine for other chapters
-- Root Cause:
-  * The loader was being hidden immediately after content streaming but before image generation tasks for Chapter 1 were complete
-  * CSS issues with the loader overlay were causing visibility problems
-  * The WebSocket connection handler was hiding the loader too early in the process
-- Solution:
-  * Modified `stream_and_send_chapter()` in `websocket_service.py` to only hide the loader after all image tasks are complete
-  * Updated the WebSocket connection handler in `index.html` to not hide the loader immediately after connection
-  * Enhanced the `showLoader()` and `hideLoader()` functions with better error handling and logging
-  * Fixed CSS issues in `loader.css` to ensure proper visibility of the loader overlay
-  * Added `!important` to the hidden class to prevent style conflicts
-- Result: The loading spinner now remains visible during the entire image generation process for Chapter 1, providing a better user experience by accurately reflecting the loading state
-
-### Fixed Subprocess Python Interpreter Issue in Simulation Tests (2025-03-05)
-- Problem: The `run_simulation_tests.py` script was failing to run the story simulation properly with a `ModuleNotFoundError: No module named 'websockets'` error, even though the package was installed in the virtual environment
-- Root Cause: When the script used commands like `["python", "tests/simulations/story_simulation.py"]` to create subprocesses, it wasn't necessarily using the same Python interpreter that was running the main script
-- Solution:
-  * Modified `run_simulation_tests.py` to use `sys.executable` instead of "python" when creating subprocess commands
-  * Changed the command for getting the run ID from `["python", "tests/simulations/story_simulation.py", "--output-run-id"]` to `[sys.executable, "tests/simulations/story_simulation.py", "--output-run-id"]`
-  * Changed the command for running the actual simulation from `["python", "tests/simulations/story_simulation.py"]` to `[sys.executable, "tests/simulations/story_simulation.py"]`
-  * This ensures that the subprocess uses the same Python interpreter that's running the main script, which has access to all the installed packages in the virtual environment
-- Result: The story simulation now runs correctly when executed through `run_simulation_tests.py`, properly generating chapters and allowing making choices
-
-### Mobile Font Size Controls Implementation (2025-03-04)
-- Problem: Mobile users needed a way to adjust font size for better readability
-- Solution:
-  * Created a new `font-size-manager.js` file to handle font size adjustments
-  * Added font size controls (plus/minus buttons and percentage display) to the header row
-  * Removed the progress bar as it wasn't needed
-  * Styled controls using the app's indigo theme colors
-  * Implemented show/hide behavior on scroll (matching chapter indicator behavior)
-  * Made controls only visible on mobile devices (screen width ≤ 768px)
-  * Ensured font size defaults to 100% for new users
-  * Saved user preferences to localStorage for persistence
-- Result: Mobile users can now easily adjust text size for better readability while maintaining the app's visual design
-
-### Debug Toggle Removal (2025-03-04)
-- Problem: Debug toggle button was visible to users on both desktop and mobile
-- Solution:
-  * Removed the "Toggle Debug Info" button from the UI
-  * Kept the debug info div in the HTML but hidden by default
-  * Added a comment explaining how developers can still access it via the console
-- Result: Cleaner user interface without developer tools visible to end users
-
-### Optimized Image Generation Prompts (2025-03-04)
-- Problem: Image generation prompts were bloated with redundant information, causing inconsistent results
-- Solution:
-  * Restructured prompt format to focus on essential elements: `Fantasy illustration of [Agency Name] in [Story Name], [Visual Details], with [adventure_state.selected_sensory_details["visuals"]], [Base Style]`
-  * Rewrote `enhance_prompt()` in `image_generation_service.py` to extract the complete agency name with visual details up to the closing bracket
-  * Added a helper method `_lookup_visual_details()` to find visual details when not present in the original prompt
-  * Simplified agency option extraction in `websocket_service.py` to be more direct and reliable
-- Result: More consistent image generation with reduced token usage and improved visual quality by focusing on essential elements
-
-### Fixed Outdated References to new_stories.yaml (2025-03-04)
-- Problem: After refactoring story data into individual files, some parts of the codebase were still referencing the old `new_stories.yaml` file, causing errors
-- Solution:
-  * Updated `app/routers/web.py` to use the new `StoryLoader` class instead of directly loading from the old YAML file
-  * Updated `app/services/websocket_service.py` to use the `StoryLoader` class in the `generate_chapter()` function
-  * Updated `app/init_data.py` to use the `StoryLoader` class in the `load_story_data()` function
-  * Updated `tests/simulations/story_simulation.py` to use the `StoryLoader` class in the `load_story_data()` function
-- Result: Fixed "Failed to load story data" and "Error generating chapter: [Errno 2] No such file or directory: 'app/data/new_stories.yaml'" errors, ensuring all parts of the application use the new story data structure
-
-### Fixed Character Encoding Issue in Story Loader (2025-03-04)
-- Problem: Character encoding error when loading YAML files: `'charmap' codec can't decode byte 0x9d in position 3643: character maps to <undefined>`
-- Solution:
-  * Modified `load_all_stories()` method in `app/data/story_loader.py` to explicitly use UTF-8 encoding when opening files
-  * Changed `with open(file_path, "r") as f:` to `with open(file_path, "r", encoding="utf-8") as f:`
-- Result: Fixed character encoding issues when loading story files, ensuring proper handling of special characters in YAML content
-
-### Story Data Organization Refactoring (2025-03-04)
-- Problem: All story categories were in a single YAML file, making maintenance difficult and increasing risk of syntax errors
-- Solution:
-  * Created a dedicated `app/data/stories/` directory to store individual story files
-  * Split the monolithic `new_stories.yaml` into individual files for each story category
-  * Implemented a dedicated `StoryLoader` class in `app/data/story_loader.py`
-  * Updated `chapter_manager.py` to use the new loader
-  * Created proper test files in `tests/data/` directory
-- Result: Improved maintainability, reduced risk of syntax errors, better scalability for adding new stories, and enhanced collaboration potential
-
-### Dynamic Adventure Topic Reference in Exposition Phase (2025-03-04)
-- Problem: World building guidance in Exposition phase was generic and didn't reference the specific adventure topic selected by the user
-- Solution:
-  * Modified the BASE_PHASE_GUIDANCE dictionary in `prompt_templates.py` to add an {adventure_topic} placeholder in the "World Building" section of the "Exposition" phase guidance
-  * Updated the `_get_phase_guidance()` function in `prompt_engineering.py` to replace the placeholder with the actual adventure topic name from `state.metadata["non_random_elements"]["name"]`
-- Result: Exposition phase guidance now dynamically references the specific adventure topic (e.g., "Jade Mountain") selected by the user, creating a more tailored and immersive storytelling experience
-
-### Renamed `setting_types` to `settings` and Removed `story_rules` (2025-03-03)
-- Problem: Needed to simplify the data model and update field naming for clarity
-- Solution:
-  * Renamed `setting_types` to `settings` in all story categories in `app/data/new_stories.yaml`
-  * Removed all `story_rules` sections from each story category in `app/data/new_stories.yaml`
-  * Updated the validator in `app/models/story.py` to use `settings` instead of `setting_types` and removed `story_rules` from required categories
-  * Modified `app/services/chapter_manager.py` to update the required categories and selection logic
-  * Updated references in `app/services/llm/prompt_engineering.py` to use `settings` instead of `setting_types` and removed references to `story_rules`
-  * Updated the `SYSTEM_PROMPT_TEMPLATE` in `app/services/llm/prompt_templates.py` to use `settings` and removed the `story_rules` line
-  * Updated `app/services/image_generation_service.py` to use `settings` instead of `setting_types`
-- Result: Simplified data model while maintaining core functionality; system now uses `settings` instead of `setting_types` and no longer requires or uses `story_rules` in narrative generation
-
-### Removed Unused `character_archetypes` Field (2025-03-03)
-- Removed the unused `character_archetypes` field from story categories
-- Updated `app/data/new_stories.yaml` to remove the `character_archetypes` sections from each story category
-- Modified `app/models/story.py` to remove `character_archetypes` from the required categories in validation
-- Updated `app/services/chapter_manager.py` to remove `character_archetypes` from the required categories
-- Removed `character_archetypes` from the system prompt template in `app/services/llm/prompt_templates.py`
-- Removed the `character_archetypes` parameter from the system prompt formatting in `app/services/llm/prompt_engineering.py`
-
-### Removed Unused `tone` Field (2025-03-03)
-- Removed the unused `tone` field from story categories as it wasn't being passed to LLM prompts
-- Updated `app/data/new_stories.yaml` to remove the `tone` field from each story category
-- Modified `app/services/chapter_manager.
