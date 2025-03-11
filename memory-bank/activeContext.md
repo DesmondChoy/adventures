@@ -1,5 +1,33 @@
 # Active Context
 
+## Updated Story Simulation for Chapter Summaries Support (2025-03-11)
+
+1. **Enhanced Story Simulation for Chapter Summaries Testing:**
+   * Purpose: Update the story simulation to support the new chapter summaries approach
+   * Implementation Details:
+     - Updated initial state structure to include the `chapter_summaries` field
+     - Added detection and logging of chapter summaries as they're received from the server
+     - Implemented structured logging for chapter summary events with "EVENT:CHAPTER_SUMMARY" prefix
+     - Added a comprehensive log at the end of simulation with all chapter summaries
+     - Enhanced human-readable output with chapter summary display
+     - Added detailed usage instructions to the file
+   * Technical Approach:
+     - Modified the initial state message to include an empty `chapter_summaries` array
+     - Added logic to detect and log chapter summaries in the state updates from the server
+     - Implemented structured logging with event types like "EVENT:CHAPTER_SUMMARIES_UPDATED" and "EVENT:CHAPTER_SUMMARY"
+     - Added a final "EVENT:ALL_CHAPTER_SUMMARIES" log at the end of the simulation
+     - Added a human-readable display of all chapter summaries at the end of the run
+   * Benefits:
+     - Enables testing of the SUMMARY chapter functionality without manually going through all 10 chapters
+     - Provides structured data for automated testing of the chapter summaries feature
+     - Captures chapter summaries in a format that can be easily extracted and analyzed
+     - Maintains alignment with how chapter summaries are implemented in the actual application
+   * Usage:
+     - Run the simulation with `python tests/simulations/story_simulation.py`
+     - Check the generated log file for chapter summaries
+     - Extract the summaries from the "EVENT:ALL_CHAPTER_SUMMARIES" log entry
+     - Use the summaries to test the SUMMARY chapter implementation independently
+
 ## Fixed Bug: Paragraph Formatter Using Incomplete Text (2025-03-10)
 
 1. **Fixed Paragraph Formatter Bug:**
