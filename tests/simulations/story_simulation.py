@@ -32,6 +32,41 @@ Updates (2025-02-25):
 - Fixed story length to match codebase (constant 10 chapters)
 - Optimized for automated testing by removing real-time content streaming
 - Enhanced logging for better test analysis and debugging
+
+Updates (2025-03-11):
+- Added support for the new chapter summaries approach
+- Updated initial state to include chapter_summaries field
+- Added detection and logging of chapter summaries as they're generated
+- Added structured logging for chapter summary events
+- Added comprehensive summary log at the end of simulation
+- Enhanced human-readable output with chapter summary display
+
+Usage Instructions:
+1. Prerequisites:
+   - Ensure the FastAPI server is running at http://localhost:8000
+   - Verify that story data and lesson data are properly loaded
+
+2. Basic Execution:
+   $ python tests/simulations/story_simulation.py
+
+3. Command-line Options:
+   - Specify a story category:
+     $ python tests/simulations/story_simulation.py --category "enchanted_forest_tales"
+   - Specify a lesson topic:
+     $ python tests/simulations/story_simulation.py --topic "Singapore History"
+   - Output only the run ID (useful for test scripts):
+     $ python tests/simulations/story_simulation.py --output-run-id
+
+4. Output:
+   - Simulation progress is displayed in the console
+   - Detailed logs are written to logs/simulations/simulation_[DATE]_[RUN_ID].log
+   - Chapter summaries are logged with the prefix "EVENT:CHAPTER_SUMMARY"
+   - Final comprehensive summary with all chapters is logged as "EVENT:ALL_CHAPTER_SUMMARIES"
+
+5. Working with Chapter Summaries:
+   - Chapter summaries are automatically captured in the log file
+   - Extract them from the "EVENT:ALL_CHAPTER_SUMMARIES" log entry
+   - Use the summaries to test the SUMMARY chapter implementation independently
 """
 
 import asyncio
@@ -295,6 +330,7 @@ async def simulate_story():
                         "selected_plot_twist": "",
                         "planned_chapter_types": [],
                         "current_storytelling_phase": "Exposition",
+                        "chapter_summaries": [],  # Added for the new summary approach
                         "metadata": {},
                     }
                 }
@@ -351,6 +387,41 @@ async def simulate_story():
                                             response_state = response_data.get(
                                                 "state", {}
                                             )
+
+                                            # Check for chapter summaries in the state
+                                            if "chapter_summaries" in response_state:
+                                                chapter_summaries = response_state[
+                                                    "chapter_summaries"
+                                                ]
+                                                if chapter_summaries:
+                                                    simulation_logger.info(
+                                                        "EVENT:CHAPTER_SUMMARIES_UPDATED",
+                                                        extra={
+                                                            "chapter_number": current_chapter,
+                                                            "summaries_count": len(
+                                                                chapter_summaries
+                                                            ),
+                                                            "timestamp": datetime.now().isoformat(),
+                                                            "run_id": run_id,
+                                                        },
+                                                    )
+
+                                                    # Log each individual summary
+                                                    for i, summary in enumerate(
+                                                        chapter_summaries, 1
+                                                    ):
+                                                        if (
+                                                            i <= current_chapter
+                                                        ):  # Only log summaries for completed chapters
+                                                            simulation_logger.info(
+                                                                "EVENT:CHAPTER_SUMMARY",
+                                                                extra={
+                                                                    "chapter_number": i,
+                                                                    "summary": summary,
+                                                                    "timestamp": datetime.now().isoformat(),
+                                                                    "run_id": run_id,
+                                                                },
+                                                            )
 
                                             # Log chapter type information if available
                                             if "current_chapter" in response_state:
@@ -756,6 +827,30 @@ async def simulate_story():
                     await websocket.close()
                 except Exception as e:
                     simulation_logger.debug(f"Error during websocket cleanup: {e}")
+
+    # Log all chapter summaries at the end for easy extraction
+    if response_state and "chapter_summaries" in response_state:
+        chapter_summaries = response_state["chapter_summaries"]
+        if chapter_summaries:
+            # Create a comprehensive log of all summaries for easy extraction
+            simulation_logger.info(
+                "EVENT:ALL_CHAPTER_SUMMARIES",
+                extra={
+                    "run_id": run_id,
+                    "timestamp": datetime.now().isoformat(),
+                    "story_category": story_category,
+                    "lesson_topic": lesson_topic,
+                    "summaries_count": len(chapter_summaries),
+                    "chapter_summaries": chapter_summaries,
+                },
+            )
+
+            # Print summaries for human readability
+            print_separator("Chapter Summaries")
+            for i, summary in enumerate(chapter_summaries, 1):
+                print(f"Chapter {i} Summary:")
+                print(f"{summary}")
+                print("-" * 40)
 
     # Log simulation end with summary statistics
     simulation_logger.info(
