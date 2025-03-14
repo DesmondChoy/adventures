@@ -1,5 +1,61 @@
 # Active Context
 
+## Fixed Simulation Log Summary Extraction for Complete Chapter Summaries (2025-03-15)
+
+1. **Fixed Chapter Summary Extraction from Simulation Logs:**
+   * Problem: The `show_summary_from_log.py` script wasn't extracting all chapter summaries from simulation logs, resulting in dummy summaries for chapters 9-10
+   * Root Causes:
+     - The script wasn't extracting summaries from the STORY_COMPLETE event in the log file
+     - Chapter 10 (conclusion) content was generated after the STORY_COMPLETE event
+     - The extraction logic wasn't handling the different event types and formats properly
+   * Solution:
+     - **Enhanced `extract_chapter_summaries_from_log` in `debug_summary_chapter.py`:**
+       * Added code to extract summaries from the STORY_COMPLETE event
+       * Fixed logger variable scope issues for proper error handling
+       * Added detailed logging to track where summaries are found
+     - **Enhanced `show_summary_from_log.py` script:**
+       * Added code to extract chapter summaries from the STORY_COMPLETE event
+       * Added code to extract chapter 10 content from the "Final chapter content" message
+       * Implemented summary generation for chapter 10 using the first few sentences
+       * Improved mapping of summaries to their respective chapter numbers
+   * Reference: For details on the story simulation structure, see the "Story Simulation Structure" section in systemPatterns.md
+   * Verification:
+     - Successfully extracted all 9 chapter summaries from the STORY_COMPLETE event
+     - Successfully generated a summary for chapter 10 from the "Final chapter content" message
+     - Properly displayed all 10 chapter summaries in the summary chapter
+     - Included all 3 educational questions in the Learning Report section
+   * Result:
+     - The script now correctly extracts all chapter summaries from simulation logs
+     - No more dummy summaries for chapters 9-10
+     - Complete summary chapter with all 10 chapters and educational questions
+     - Better understanding of the story simulation structure for future development
+
+## Improved Chapter Summaries with Narrative Focus (2025-03-14)
+
+1. **Enhanced Chapter Summary Generation:**
+   * Problem: Chapter summaries were optimized for image generation (visual scenes) rather than narrative progression, making the SUMMARY chapter less cohesive and educational
+   * Root Cause:
+     - The hardcoded prompt in `generate_chapter_summary()` was focused on "vivid visual scene" descriptions
+     - Summaries excluded dialogue and abstract concepts, focusing only on visual elements
+     - The 20-word limit constrained the ability to capture educational content and character development
+   * Solution:
+     - **Created New Prompt Template:**
+       * Added `SUMMARY_CHAPTER_PROMPT` to `app/services/llm/prompt_templates.py`
+       * Designed the prompt to focus on narrative events, character development, and educational content
+       * Increased word count guidance to 30-40 words for more comprehensive summaries
+     - **Updated Image Generation Service:**
+       * Imported the new prompt template in `app/services/image_generation_service.py`
+       * Replaced the hardcoded visual-focused prompt with the narrative-focused template
+       * Maintained the same LLM service call structure for compatibility
+   * Verification:
+     - Analyzed simulation logs to confirm chapter summaries are being generated
+     - Verified the summaries now include narrative elements and educational content
+   * Result:
+     - Chapter summaries now capture key story events and character development
+     - Summaries include important choices and educational content when present
+     - Consistent third-person, past tense voice throughout all summaries
+     - The SUMMARY chapter provides a more cohesive and educational recap of the adventure
+
 ## Enhanced Simulation Log Summary Viewer with Educational Questions (2025-03-14)
 
 1. **Enhanced Simulation Log Summary Viewer:**

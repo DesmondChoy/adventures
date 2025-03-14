@@ -19,21 +19,111 @@ async def show_summary_from_log(log_file_path):
     try:
         # Extract chapter summaries from log
         print(f"Extracting summaries from: {log_file_path}")
-        summaries, lesson_questions = extract_chapter_summaries_from_log(log_file_path)
-        print(f"Found {len(summaries)} chapter summaries")
+        all_summaries, lesson_questions = extract_chapter_summaries_from_log(
+            log_file_path
+        )
+        print(f"Found {len(all_summaries)} chapter summaries")
         print(f"Found {len(lesson_questions)} lesson questions")
 
-        # If we have some summaries but not 10, add dummy summaries for the missing ones
-        if len(summaries) < 10:
-            print(
-                f"Found {len(summaries)} chapter summaries, but need 10. Adding dummy summaries for the missing chapters."
-            )
-            existing_count = len(summaries)
-            for i in range(existing_count + 1, 11):
-                summaries.append(
-                    f"This is a dummy summary for Chapter {i}. It was created because this chapter summary was not found in the log file."
-                )
-            print(f"Added {10 - existing_count} dummy summaries")
+        # Process summaries to get unique ones for each chapter
+        # The EVENT:CHAPTER_SUMMARY events in the log include chapter_number
+        # We'll use this to organize summaries by chapter
+        chapter_summaries = {}
+
+        # First, try to extract chapter numbers and summaries from the log file directly
+        with open(log_file_path, "r") as f:
+            for line in f:
+                # Extract from individual CHAPTER_SUMMARY events
+                if "EVENT:CHAPTER_SUMMARY" in line:
+                    try:
+                        data = json.loads(line)
+                        if "chapter_number" in data and "summary" in data:
+                            chapter_num = data["chapter_number"]
+                            summary = data["summary"]
+                            # Store the latest summary for each chapter
+                            chapter_summaries[chapter_num] = summary
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+
+                # Extract from STORY_COMPLETE event
+                if "EVENT:STORY_COMPLETE" in line:
+                    try:
+                        data = json.loads(line)
+                        if "final_state" in data:
+                            # Parse the final_state JSON string
+                            final_state_str = data["final_state"]
+                            final_state_data = json.loads(final_state_str)
+
+                            # Check if this final state contains chapter_summaries
+                            if (
+                                "chapter_summaries" in final_state_data
+                                and final_state_data["chapter_summaries"]
+                            ):
+                                # Map summaries to chapter numbers
+                                story_complete_summaries = final_state_data[
+                                    "chapter_summaries"
+                                ]
+                                for i, summary in enumerate(
+                                    story_complete_summaries, 1
+                                ):
+                                    chapter_summaries[i] = summary
+                                print(
+                                    f"Extracted {len(story_complete_summaries)} chapter summaries from STORY_COMPLETE event"
+                                )
+                    except Exception as e:
+                        print(f"Error parsing STORY_COMPLETE: {e}")
+                        pass
+
+                # Extract final chapter content for chapter 10
+                if "Final chapter content" in line:
+                    try:
+                        data = json.loads(line)
+                        if "message" in data:
+                            # Extract the content from the message
+                            message = data["message"]
+                            if message.startswith("Final chapter content:"):
+                                # Extract the content after the prefix
+                                content = message[
+                                    len("Final chapter content:") :
+                                ].strip()
+
+                                # Create a summary for chapter 10 from the content
+                                # Use the first few sentences as a summary
+                                sentences = content.split(". ")
+                                summary = ". ".join(sentences[:3]) + "."
+
+                                # Add the summary to chapter_summaries
+                                chapter_summaries[10] = summary
+                                print(
+                                    "Extracted chapter 10 summary from Final chapter content"
+                                )
+                    except Exception as e:
+                        print(f"Error parsing Final chapter content: {e}")
+                        pass
+
+        # If we couldn't extract chapter numbers, use the first 10 unique summaries
+        if not chapter_summaries and all_summaries:
+            # Get unique summaries while preserving order
+            unique_summaries = []
+            for summary in all_summaries:
+                if summary not in unique_summaries:
+                    unique_summaries.append(summary)
+
+            # Use up to 10 unique summaries
+            for i, summary in enumerate(unique_summaries[:10], 1):
+                chapter_summaries[i] = summary
+
+        # Ensure we have exactly 10 chapters
+        summaries = []
+        for i in range(1, 11):
+            if i in chapter_summaries:
+                summaries.append(chapter_summaries[i])
+            else:
+                dummy_summary = f"This is a dummy summary for Chapter {i}. It was created because this chapter summary was not found in the log file."
+                summaries.append(dummy_summary)
+                print(f"Added dummy summary for Chapter {i}")
+
+        print(f"Processed {len(summaries)} chapter summaries for the summary chapter")
     except ValueError as e:
         print(f"Error: {e}")
         return

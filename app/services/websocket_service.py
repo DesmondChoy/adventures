@@ -1150,6 +1150,4 @@ async def generate_chapter(
     logger.debug("\n=== DEBUG: Story Choices ===")
     for i, choice in enumerate(story_choices, 1):
         logger.debug(f"Choice {i}: {choice.text} (next_chapter: {choice.next_chapter})")
-    logger.debug("========================\n")
-
     return ChapterContent(content=story_content, choices=story_choices), question

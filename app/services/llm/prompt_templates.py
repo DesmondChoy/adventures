@@ -196,6 +196,20 @@ CONCLUSION_CHAPTER_PROMPT = """# Current Context
 6. DO NOT include any choices or decision points
 7. End with a sense of closure while highlighting transformation"""
 
+SUMMARY_CHAPTER_PROMPT = """Create a concise summary of this chapter (30-40 words) that:
+1. Captures the key narrative events and character development
+2. Includes any important choices or decisions made
+3. Mentions educational content if present
+4. Can stand alone but also work as part of a sequential chapter-by-chapter recap
+
+The summary should be written in third person, past tense, and maintain the adventure's narrative tone.
+
+CHAPTER CONTENT:
+{chapter_content}
+
+CHAPTER SUMMARY:
+"""
+
 # Choice format instructions
 # --------------------------
 

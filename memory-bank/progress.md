@@ -1,5 +1,52 @@
 # Progress Log
 
+## 2025-03-14: Improved Chapter Summaries with Narrative Focus
+
+### Enhanced Chapter Summary Generation
+- Problem: Chapter summaries were optimized for image generation (visual scenes) rather than narrative progression, making the SUMMARY chapter less cohesive and educational
+- Root Cause:
+  * The hardcoded prompt in `generate_chapter_summary()` was focused on "vivid visual scene" descriptions
+  * Summaries excluded dialogue and abstract concepts, focusing only on visual elements
+  * The 20-word limit constrained the ability to capture educational content and character development
+- Solution:
+  * Created New Prompt Template:
+    - Added `SUMMARY_CHAPTER_PROMPT` to `app/services/llm/prompt_templates.py`:
+      ```python
+      SUMMARY_CHAPTER_PROMPT = """Create a concise summary of this chapter (30-40 words) that:
+      1. Captures the key narrative events and character development
+      2. Includes any important choices or decisions made
+      3. Mentions educational content if present
+      4. Can stand alone but also work as part of a sequential chapter-by-chapter recap
+
+      The summary should be written in third person, past tense, and maintain the adventure's narrative tone.
+
+      CHAPTER CONTENT:
+      {chapter_content}
+
+      CHAPTER SUMMARY:
+      """
+      ```
+    - Designed the prompt to focus on narrative events, character development, and educational content
+    - Increased word count guidance to 30-40 words for more comprehensive summaries
+  * Updated Image Generation Service:
+    - Imported the new prompt template in `app/services/image_generation_service.py`:
+      ```python
+      from app.services.llm.prompt_templates import SUMMARY_CHAPTER_PROMPT
+      ```
+    - Replaced the hardcoded visual-focused prompt with the narrative-focused template:
+      ```python
+      # Create a custom prompt for the chapter summary using the template
+      custom_prompt = SUMMARY_CHAPTER_PROMPT.format(
+          chapter_content=chapter_content
+      )
+      ```
+    - Maintained the same LLM service call structure for compatibility
+- Result:
+  * Chapter summaries now capture key story events and character development
+  * Summaries include important choices and educational content when present
+  * Consistent third-person, past tense voice throughout all summaries
+  * The SUMMARY chapter provides a more cohesive and educational recap of the adventure
+
 ## 2025-03-14: Enhanced Simulation Log Summary Viewer with Educational Questions
 
 ### Enhanced Simulation Log Summary Viewer with Educational Questions

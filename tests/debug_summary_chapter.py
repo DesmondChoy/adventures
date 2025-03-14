@@ -146,6 +146,35 @@ def extract_chapter_summaries_from_log(log_file):
                     logger.error(f"Error parsing STATE_TRANSITION: {e}")
                     pass
 
+            # Extract chapter summaries from STORY_COMPLETE event
+            if not all_summaries_found and "EVENT:STORY_COMPLETE" in line:
+                try:
+                    data = json.loads(line)
+                    if "final_state" in data:
+                        # The final_state is a JSON string that needs to be parsed again
+                        final_state_str = data["final_state"]
+                        final_state_data = json.loads(final_state_str)
+
+                        # Check if this final state contains chapter_summaries
+                        if (
+                            "chapter_summaries" in final_state_data
+                            and final_state_data["chapter_summaries"]
+                        ):
+                            chapter_summaries = final_state_data["chapter_summaries"]
+                            if len(chapter_summaries) > len(summaries):
+                                logging.getLogger("debug_summary").info(
+                                    f"Found {len(chapter_summaries)} chapter summaries in STORY_COMPLETE event"
+                                )
+                                summaries = chapter_summaries
+                                all_summaries_found = (
+                                    True  # These are the most complete summaries
+                                )
+                except Exception as e:
+                    logging.getLogger("debug_summary").error(
+                        f"Error parsing STORY_COMPLETE: {e}"
+                    )
+                    pass
+
     # If no summaries were found, raise an exception
     if not summaries:
         raise ValueError(
