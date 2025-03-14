@@ -16,33 +16,27 @@ from tests.debug_summary_chapter import (
 
 
 async def show_summary_from_log(log_file_path):
-    # Extract chapter summaries from log
-    print(f"Extracting summaries from: {log_file_path}")
-    summaries, lesson_questions = extract_chapter_summaries_from_log(log_file_path)
-    print(f"Found {len(summaries)} chapter summaries")
-    print(f"Found {len(lesson_questions)} lesson questions")
+    try:
+        # Extract chapter summaries from log
+        print(f"Extracting summaries from: {log_file_path}")
+        summaries, lesson_questions = extract_chapter_summaries_from_log(log_file_path)
+        print(f"Found {len(summaries)} chapter summaries")
+        print(f"Found {len(lesson_questions)} lesson questions")
 
-    # If no summaries found, create some dummy summaries for testing
-    if not summaries:
-        print(
-            "No chapter summaries found in log file. Creating dummy summaries for testing."
-        )
-        summaries = [
-            f"This is a dummy summary for Chapter {i}. It was created because no real summaries were found in the log file."
-            for i in range(1, 11)
-        ]
-        print(f"Created {len(summaries)} dummy summaries")
-    # If we have some summaries but not 10, add dummy summaries for the missing ones
-    elif len(summaries) < 10:
-        print(
-            f"Found {len(summaries)} chapter summaries, but need 10. Adding dummy summaries for the missing chapters."
-        )
-        existing_count = len(summaries)
-        for i in range(existing_count + 1, 11):
-            summaries.append(
-                f"This is a dummy summary for Chapter {i}. It was created because this chapter summary was not found in the log file."
+        # If we have some summaries but not 10, add dummy summaries for the missing ones
+        if len(summaries) < 10:
+            print(
+                f"Found {len(summaries)} chapter summaries, but need 10. Adding dummy summaries for the missing chapters."
             )
-        print(f"Added {10 - existing_count} dummy summaries")
+            existing_count = len(summaries)
+            for i in range(existing_count + 1, 11):
+                summaries.append(
+                    f"This is a dummy summary for Chapter {i}. It was created because this chapter summary was not found in the log file."
+                )
+            print(f"Added {10 - existing_count} dummy summaries")
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
 
     # Create test state with these summaries
     state = await create_test_state(summaries)

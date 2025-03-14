@@ -515,6 +515,8 @@ async def stream_and_send_chapter(
                 },
                 "question": sampled_question,
             },
+            # Include chapter_summaries in the response for simulation logging
+            "chapter_summaries": state.chapter_summaries,
         },
     }
     logger.debug("\n=== DEBUG: Chapter Update Message ===")
@@ -660,6 +662,8 @@ async def send_story_complete(
                     ),
                 },
                 "show_summary_button": True,  # Signal to show the summary button
+                # Include chapter_summaries in the response for simulation logging
+                "chapter_summaries": state.chapter_summaries,
             },
         }
     )
@@ -875,6 +879,8 @@ async def process_summary_request(
                             else 0
                         ),
                     },
+                    # Include chapter_summaries in the response for simulation logging
+                    "chapter_summaries": state.chapter_summaries,
                 },
             }
         )

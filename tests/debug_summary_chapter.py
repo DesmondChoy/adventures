@@ -55,7 +55,6 @@ def extract_chapter_summaries_from_log(log_file):
     """Extract chapter summaries from the simulation log."""
     summaries = []
     all_summaries_found = False
-    chapter_contents = {}  # Store chapter content by chapter number
     lesson_questions = []  # Store lesson questions
 
     with open(log_file, "r") as f:
@@ -141,52 +140,17 @@ def extract_chapter_summaries_from_log(log_file):
                             if len(chapter_summaries) > len(summaries):
                                 summaries = chapter_summaries
 
-                        # Extract chapter content to use as fallback summaries
-                        if "current_chapter" in state_data:
-                            chapter_info = state_data["current_chapter"]
-                            chapter_number = chapter_info.get("chapter_number")
-
-                            # Try to get content from different possible locations
-                            chapter_content = ""
-
-                            # First try direct content field
-                            if "content" in chapter_info:
-                                chapter_content = chapter_info.get("content", "")
-
-                            # If no content found, try chapter_content.content
-                            if (
-                                not chapter_content
-                                and "chapter_content" in chapter_info
-                            ):
-                                chapter_content_obj = chapter_info.get(
-                                    "chapter_content", {}
-                                )
-                                if (
-                                    isinstance(chapter_content_obj, dict)
-                                    and "content" in chapter_content_obj
-                                ):
-                                    chapter_content = chapter_content_obj.get(
-                                        "content", ""
-                                    )
-
-                            if chapter_number and chapter_content:
-                                # Store the first paragraph (or up to 200 chars) as a summary
-                                paragraphs = chapter_content.split("\n\n")
-                                if paragraphs:
-                                    first_paragraph = paragraphs[0].strip()
-                                    # Limit to 200 characters and add ellipsis if needed
-                                    if len(first_paragraph) > 200:
-                                        first_paragraph = first_paragraph[:197] + "..."
-                                    chapter_contents[chapter_number] = first_paragraph
+                        # We no longer extract chapter content as fallback summaries
                 except Exception as e:
                     logger = logging.getLogger("debug_summary")
                     logger.error(f"Error parsing STATE_TRANSITION: {e}")
                     pass
 
-    # If no summaries were found, use the extracted chapter content as summaries
-    if not summaries and chapter_contents:
-        # Sort by chapter number and get just the summaries
-        summaries = [chapter_contents[i] for i in sorted(chapter_contents.keys())]
+    # If no summaries were found, raise an exception
+    if not summaries:
+        raise ValueError(
+            "No chapter summaries found in the log file. Cannot proceed without explicit summaries."
+        )
 
     return summaries, lesson_questions
 
