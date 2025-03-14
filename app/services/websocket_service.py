@@ -802,14 +802,24 @@ async def process_summary_request(
         state_manager: The state manager instance
         websocket: The WebSocket connection
     """
-    state = state_manager.get_current_state()
-    if not state:
-        await websocket.send_json(
-            {"type": "error", "message": "No active adventure state"}
-        )
-        return
-
     try:
+        # Get the client's state from the request
+        data = await websocket.receive_json()
+        validated_state = data.get("state")
+
+        # Update the state manager with the client's state if provided
+        if validated_state:
+            logger.debug("Updating state from client for summary request")
+            state_manager.update_state_from_client(validated_state)
+
+        # Get the current state after the update
+        state = state_manager.get_current_state()
+        if not state:
+            await websocket.send_json(
+                {"type": "error", "message": "No active adventure state"}
+            )
+            return
+
         # Create a summary chapter
         summary_chapter = chapter_manager.create_summary_chapter(state)
 

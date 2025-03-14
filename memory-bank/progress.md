@@ -1,5 +1,249 @@
 # Progress Log
 
+## 2025-03-14: Enhanced Simulation Log Summary Viewer with Educational Questions
+
+### Enhanced Simulation Log Summary Viewer with Educational Questions
+- Problem: The `show_summary_from_log.py` script was not extracting chapter summaries from simulation logs and was showing dummy summaries instead. Additionally, educational questions encountered during the adventure were not being displayed in the Learning Report section.
+- Root Causes:
+  * The script wasn't properly extracting chapter content from STATE_TRANSITION events in the log file
+  * No mechanism to extract educational questions from the log file
+  * The AdventureState model didn't have a field to store lesson questions
+- Solution:
+  * Enhanced Chapter Summary Extraction:
+    - Modified `extract_chapter_summaries_from_log` to extract chapter content from STATE_TRANSITION events:
+      ```python
+      # Also try to extract from STATE_TRANSITION events which contain chapter content
+      if not all_summaries_found and "EVENT:STATE_TRANSITION" in line:
+          try:
+              data = json.loads(line)
+              if "state" in data:
+                  # The state is a JSON string that needs to be parsed again
+                  state_str = data["state"]
+                  state_data = json.loads(state_str)
+
+                  # Check if this state contains chapter_summaries
+                  if "chapter_summaries" in state_data and state_data["chapter_summaries"]:
+                      chapter_summaries = state_data["chapter_summaries"]
+                      if len(chapter_summaries) > len(summaries):
+                          summaries = chapter_summaries
+
+                  # Extract chapter content to use as fallback summaries
+                  if "current_chapter" in state_data:
+                      chapter_info = state_data["current_chapter"]
+                      chapter_number = chapter_info.get("chapter_number")
+
+                      # Try to get content from different possible locations
+                      chapter_content = ""
+
+                      # First try direct content field
+                      if "content" in chapter_info:
+                          chapter_content = chapter_info.get("content", "")
+
+                      # If no content found, try chapter_content.content
+                      if not chapter_content and "chapter_content" in chapter_info:
+                          chapter_content_obj = chapter_info.get("chapter_content", {})
+                          if isinstance(chapter_content_obj, dict) and "content" in chapter_content_obj:
+                              chapter_content = chapter_content_obj.get("content", "")
+
+                      if chapter_number and chapter_content:
+                          # Store the first paragraph (or up to 200 chars) as a summary
+                          paragraphs = chapter_content.split("\n\n")
+                          if paragraphs:
+                              first_paragraph = paragraphs[0].strip()
+                              # Limit to 200 characters and add ellipsis if needed
+                              if len(first_paragraph) > 200:
+                                  first_paragraph = first_paragraph[:197] + "..."
+                              chapter_contents[chapter_number] = first_paragraph
+          except Exception as e:
+              logger = logging.getLogger("debug_summary")
+              logger.error(f"Error parsing STATE_TRANSITION: {e}")
+              pass
+      ```
+    - Added support for different content formats (direct content field and chapter_content.content)
+    - Implemented fallback to use the first paragraph of chapter content as a summary
+  * Added Lesson Question Extraction:
+    - Updated `extract_chapter_summaries_from_log` to extract educational questions from EVENT:LESSON_QUESTION entries:
+      ```python
+      # Look for lesson questions
+      if "EVENT:LESSON_QUESTION" in line:
+          try:
+              data = json.loads(line)
+              if "question" in data:
+                  question = data.get("question", "")
+                  topic = data.get("topic", "")
+                  subtopic = data.get("subtopic", "")
+                  correct_answer = data.get("correct_answer", "")
+
+                  if question and correct_answer:
+                      lesson_questions.append({
+                          "question": question,
+                          "topic": topic,
+                          "subtopic": subtopic,
+                          "correct_answer": correct_answer
+                      })
+          except Exception as e:
+              logger = logging.getLogger("debug_summary")
+              logger.error(f"Error parsing LESSON_QUESTION: {e}")
+              pass
+      ```
+    - Modified the function to return both summaries and lesson questions:
+      ```python
+      return summaries, lesson_questions
+      ```
+    - Added a `lesson_questions` field to the AdventureState model:
+      ```python
+      # Lesson questions for the SUMMARY chapter
+      lesson_questions: List[Dict[str, Any]] = Field(
+          default_factory=list,
+          description="Educational questions encountered during the adventure for display in the SUMMARY chapter",
+      )
+      ```
+  * Improved Summary Display:
+    - Updated `show_summary_from_log.py` to handle the new return value from `extract_chapter_summaries_from_log`
+    - Added handling for cases with fewer than 10 summaries by adding dummy summaries for missing chapters
+    - Replaced the default "You didn't encounter any educational questions" message with actual questions:
+      ```python
+      # If we have lesson questions, add them to the summary content
+      if lesson_questions:
+          # Find the Learning Report section
+          learning_report_index = summary_content.find("## Learning Report")
+          if learning_report_index != -1:
+              # Extract everything before the Learning Report section
+              before_learning_report = summary_content[: learning_report_index + len("## Learning Report")]
+
+              # Find the default "You didn't encounter any educational questions" message
+              default_message_index = summary_content.find(
+                  "You didn't encounter any educational questions", learning_report_index
+              )
+              
+              # Extract everything after the Learning Report section but before the default message
+              if default_message_index != -1:
+                  # Find the start of the paragraph containing the default message
+                  paragraph_start = summary_content.rfind(
+                      "\n\n", learning_report_index, default_message_index
+                  )
+                  if paragraph_start == -1:
+                      paragraph_start = learning_report_index + len("## Learning Report")
+
+                  # Find the end of the paragraph containing the default message
+                  paragraph_end = summary_content.find("\n\n", default_message_index)
+                  if paragraph_end == -1:
+                      paragraph_end = len(summary_content)
+
+                  # Extract content before and after the default message paragraph
+                  before_default = summary_content[
+                      learning_report_index + len("## Learning Report") : paragraph_start
+                  ]
+                  after_default = summary_content[paragraph_end:]
+
+                  # Combine to skip the default message
+                  after_learning_report = after_default
+              else:
+                  # If default message not found, just get everything after the Learning Report header
+                  after_learning_report_index = summary_content.find(
+                      "\n\n", learning_report_index
+                  )
+                  if after_learning_report_index == -1:
+                      after_learning_report = ""
+                  else:
+                      after_learning_report = summary_content[
+                          after_learning_report_index:
+                      ]
+
+              # Create a new Learning Report section with the lesson questions
+              learning_report = "\n\nDuring your adventure, you encountered the following educational questions:\n\n"
+              for i, question in enumerate(lesson_questions, 1):
+                  learning_report += f"{i}. **Question**: {question['question']}\n"
+                  learning_report += f"   **Topic**: {question['topic']}"
+                  if question["subtopic"]:
+                      learning_report += f" - {question['subtopic']}"
+                  learning_report += (
+                      f"\n   **Correct Answer**: {question['correct_answer']}\n\n"
+                  )
+
+              # Combine everything
+              summary_content = (
+                  before_learning_report + learning_report + after_learning_report
+              )
+      ```
+- Result:
+  * The script now correctly extracts chapter summaries from simulation logs
+  * Educational questions are displayed in the Learning Report section
+  * The summary provides a complete overview of the adventure, including both narrative and educational content
+  * Works with both new and existing simulation log files
+
+### Fixed SUMMARY Chapter Functionality
+- Problem: After clicking the "Reveal Your Adventure Summary" button at the end of a 10-chapter adventure, the application showed a loading spinner but never actually loaded the summary page
+- Root Causes:
+  * State synchronization issue: The backend wasn't properly receiving the state from the client when processing summary requests
+  * Error handling: There was no proper error handling or timeout detection in the frontend
+- Solution:
+  * Backend Fix in `websocket_service.py`:
+    - Modified the `process_summary_request` function to properly receive and update the state from the client:
+      ```python
+      async def process_summary_request(state_manager, websocket):
+          try:
+              # Get the client's state from the request
+              data = await websocket.receive_json()
+              validated_state = data.get("state")
+
+              # Update the state manager with the client's state if provided
+              if validated_state:
+                  logger.debug("Updating state from client for summary request")
+                  state_manager.update_state_from_client(validated_state)
+
+              # Get the current state after the update
+              state = state_manager.get_current_state()
+              # ... rest of the function ...
+      ```
+    - Added better error handling to provide more useful feedback when issues occur
+  * Frontend Fix in `index.html`:
+    - Enhanced the `requestSummary` function with better error handling and a timeout:
+      ```javascript
+      function requestSummary() {
+          if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
+              showLoader();
+              // Clear content and reset state
+              document.getElementById('storyContent').innerHTML = '';
+              document.getElementById('choicesContainer').innerHTML = '';
+              streamBuffer = '';
+              if (renderTimeout) {
+                  clearTimeout(renderTimeout);
+              }
+
+              // Log the request for debugging
+              console.log("Sending summary request to server");
+
+              // Send request for summary
+              sendMessage({
+                  type: 'request_summary',
+                  state: stateManager.loadState()
+              });
+
+              // Add a timeout to detect if the request is hanging
+              setTimeout(() => {
+                  if (document.getElementById('loaderOverlay').classList.contains('active')) {
+                      console.warn("Summary request timed out after 10 seconds");
+                      hideLoader();
+                      showError("Summary request timed out. Please try again.");
+                  }
+              }, 10000);
+          } else {
+              showError('Connection lost. Please refresh the page.');
+          }
+      }
+      ```
+    - Added code to clear content and reset state before sending the request
+    - Implemented a 10-second timeout to detect if the request is hanging
+  * Created two debug scripts to test the functionality:
+    - `tests/debug_summary_chapter.py` - Tests the summary content generation
+    - `tests/debug_websocket_router.py` - Tests the WebSocket router handling of summary requests
+- Result:
+  * The "Reveal Your Adventure Summary" button now works correctly
+  * Users can see the summary page after completing an adventure
+  * Better error handling and user feedback if issues occur
+  * Improved reliability of the summary feature
+
 ## 2025-03-11: Enhanced Summary Implementation with Progressive Chapter Summaries
 
 ### Improved SUMMARY Chapter with Progressive Chapter Summaries

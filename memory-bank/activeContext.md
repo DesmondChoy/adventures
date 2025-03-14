@@ -1,5 +1,60 @@
 # Active Context
 
+## Enhanced Simulation Log Summary Viewer with Educational Questions (2025-03-14)
+
+1. **Enhanced Simulation Log Summary Viewer:**
+   * Problem: The `show_summary_from_log.py` script was not extracting chapter summaries from simulation logs and was showing dummy summaries instead. Additionally, educational questions encountered during the adventure were not being displayed in the Learning Report section.
+   * Root Causes:
+     - The script wasn't properly extracting chapter content from STATE_TRANSITION events in the log file
+     - No mechanism to extract educational questions from the log file
+     - The AdventureState model didn't have a field to store lesson questions
+   * Solution:
+     - **Enhanced Chapter Summary Extraction:**
+       * Modified `extract_chapter_summaries_from_log` to extract chapter content from STATE_TRANSITION events
+       * Added support for different content formats (direct content field and chapter_content.content)
+       * Implemented fallback to use the first paragraph of chapter content as a summary
+     - **Added Lesson Question Extraction:**
+       * Updated `extract_chapter_summaries_from_log` to extract educational questions from EVENT:LESSON_QUESTION entries
+       * Added a `lesson_questions` field to the AdventureState model to store the questions
+       * Enhanced the summary display to show questions, topics, and correct answers
+     - **Improved Summary Display:**
+       * Added handling for cases with fewer than 10 summaries by adding dummy summaries for missing chapters
+       * Replaced the default "You didn't encounter any educational questions" message with actual questions
+       * Formatted the Learning Report section to display educational content
+   * Verification:
+     - Tested with multiple simulation log files
+     - Successfully extracted chapter summaries and lesson questions
+     - Properly displayed the Learning Report section with educational questions
+   * Result:
+     - The script now correctly extracts chapter summaries from simulation logs
+     - Educational questions are displayed in the Learning Report section
+     - The summary provides a complete overview of the adventure, including both narrative and educational content
+
+2. **Fixed SUMMARY Chapter Functionality:**
+   * Problem: After clicking the "Reveal Your Adventure Summary" button at the end of a 10-chapter adventure, the application showed a loading spinner but never actually loaded the summary page.
+   * Root Causes:
+     - State synchronization issue: The backend wasn't properly receiving the state from the client when processing summary requests
+     - Error handling: There was no proper error handling or timeout detection in the frontend
+   * Solution:
+     - **Backend Fix in `websocket_service.py`**:
+       * Modified the `process_summary_request` function to properly receive and update the state from the client
+       * Added code to get the client's state from the request and update the state manager
+       * Improved error handling to provide better feedback when issues occur
+     - **Frontend Fix in `index.html`**:
+       * Enhanced the `requestSummary` function with better error handling and a timeout
+       * Added code to clear content and reset state before sending the request
+       * Implemented a 10-second timeout to detect if the request is hanging
+       * Added better error messaging for users
+   * Verification:
+     - Created two debug scripts to test the functionality:
+       * `tests/debug_summary_chapter.py` - Tests the summary content generation
+       * `tests/debug_websocket_router.py` - Tests the WebSocket router handling of summary requests
+     - Both scripts successfully generate and display summary content
+   * Result:
+     - The "Reveal Your Adventure Summary" button now works correctly
+     - Users can see the summary page after completing an adventure
+     - Better error handling and user feedback if issues occur
+
 ## Updated Story Simulation for Chapter Summaries Support (2025-03-11)
 
 1. **Enhanced Story Simulation for Chapter Summaries Testing:**

@@ -145,6 +145,12 @@ class AdventureState(BaseModel):
         description="Summaries of each chapter for display in the SUMMARY chapter",
     )
 
+    # Lesson questions for the SUMMARY chapter
+    lesson_questions: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Educational questions encountered during the adventure for display in the SUMMARY chapter",
+    )
+
     # Metadata for element consistency and plot development
     metadata: Dict[str, Any] = Field(
         default_factory=dict,
