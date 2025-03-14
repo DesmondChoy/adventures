@@ -187,7 +187,6 @@ WEBSOCKET_TIMEOUT = 30  # seconds
 # Global variables for cleanup
 websocket = None
 should_exit = False
-logged_summary_chapters = set()  # Track which chapter summaries we've already logged
 
 
 def signal_handler(signum, frame):
@@ -407,15 +406,13 @@ async def simulate_story():
                                                         },
                                                     )
 
-                                                    # Log each individual summary, but only if we haven't logged it before
+                                                    # Log each individual summary
                                                     for i, summary in enumerate(
                                                         chapter_summaries, 1
                                                     ):
                                                         if (
                                                             i <= current_chapter
-                                                            and i
-                                                            not in logged_summary_chapters
-                                                        ):  # Only log new summaries for completed chapters
+                                                        ):  # Only log summaries for completed chapters
                                                             simulation_logger.info(
                                                                 "EVENT:CHAPTER_SUMMARY",
                                                                 extra={
@@ -424,10 +421,6 @@ async def simulate_story():
                                                                     "timestamp": datetime.now().isoformat(),
                                                                     "run_id": run_id,
                                                                 },
-                                                            )
-                                                            # Mark this chapter as logged
-                                                            logged_summary_chapters.add(
-                                                                i
                                                             )
 
                                             # Log chapter type information if available

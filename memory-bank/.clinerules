@@ -3,11 +3,12 @@
 ## Core Concepts
 
 ### Naming Conventions
-1. Chapter: Unit of progression in ChapterType enum (LESSON, STORY, REFLECT, or CONCLUSION)
+1. Chapter: Unit of progression in ChapterType enum (LESSON, STORY, REFLECT, CONCLUSION, or SUMMARY)
    - LESSON: Educational content from `lessons.csv` with LLM narrative wrapper using Story Object Method
    - STORY: Fully LLM-generated narrative content with choices, first chapter includes agency choice
    - REFLECT: Follow-up to LESSON chapters with narrative-driven approach to test deeper understanding
    - CONCLUSION: Final chapter with no choices, providing story resolution
+   - SUMMARY: Special chapter that follows CONCLUSION, providing a recap of the adventure and learning journey
 2. State: Complete application state in `AdventureState` class
 3. Adventure: Overall user journey tracked in `AdventureState`
 4. Agency: User's first chapter choice that evolves throughout the adventure
@@ -127,7 +128,19 @@
    - This ensures proper handling of special characters in story content
    - Default Windows encoding (cp1252) cannot handle certain special characters
 
-7. Frontend Component Architecture:
+7. SUMMARY Chapter Implementation:
+   - SUMMARY chapter MUST follow the CONCLUSION chapter
+   - AdventureState MUST include a `chapter_summaries` field to store summaries
+   - Chapter summaries MUST be generated progressively after each user choice
+   - Use the existing `generate_chapter_summary` method from ImageGenerationService
+   - Store summaries in the AdventureState's chapter_summaries list
+   - Add error handling to ensure the main flow continues even if summary generation fails
+   - The `generate_summary_content` function MUST use stored summaries when available
+   - Include fallback to the original LLM-based summary generation if no summaries are available
+   - Maintain backward compatibility with the existing summary functionality
+   - Preserve chapter context by showing chapter numbers and types in the summary
+
+8. Frontend Component Architecture:
    - Use modular JavaScript classes for UI components
    - Implement the Carousel class with these requirements:
      * Constructor must accept configuration options (elementId, itemCount, dataAttribute, inputId, onSelect)

@@ -11,6 +11,7 @@ class ChapterType(str, Enum):
     STORY = "story"
     CONCLUSION = "conclusion"
     REFLECT = "reflect"  # New chapter type for deeper understanding after LESSON
+    SUMMARY = "summary"  # New chapter type for adventure summary after CONCLUSION
 
 
 class StoryChoice(BaseModel):
@@ -93,8 +94,13 @@ class ChapterData(BaseModel):
 
         if chapter_type == ChapterType.STORY and len(v.choices) != 3:
             raise ValueError("Story chapters must have exactly 3 choices")
-        if chapter_type == ChapterType.CONCLUSION and len(v.choices) != 0:
-            raise ValueError("Conclusion chapters must have exactly 0 choices")
+        if (
+            chapter_type in (ChapterType.CONCLUSION, ChapterType.SUMMARY)
+            and len(v.choices) != 0
+        ):
+            raise ValueError(
+                f"{chapter_type.value.capitalize()} chapters must have exactly 0 choices"
+            )
         return v
 
 
@@ -131,6 +137,18 @@ class AdventureState(BaseModel):
     selected_plot_twist: str = Field(
         default="",
         description="The selected plot twist that will develop throughout the adventure",
+    )
+
+    # Chapter summaries for the SUMMARY chapter
+    chapter_summaries: List[str] = Field(
+        default_factory=list,
+        description="Summaries of each chapter for display in the SUMMARY chapter",
+    )
+
+    # Lesson questions for the SUMMARY chapter
+    lesson_questions: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Educational questions encountered during the adventure for display in the SUMMARY chapter",
     )
 
     # Metadata for element consistency and plot development

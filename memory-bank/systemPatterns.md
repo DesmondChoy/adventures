@@ -69,6 +69,20 @@ graph TD
   * No consecutive LESSON chapters
   * STORY chapters follow REFLECT chapters
 
+- **Story Simulation Structure**
+  * A complete story consists of 9 interactive chapters plus 1 conclusion chapter
+  * The STORY_COMPLETE event is triggered after chapter 9 (the last interactive chapter)
+  * The STORY_COMPLETE event contains summaries for chapters 1-9
+  * Chapter 10 (conclusion) content is generated after the STORY_COMPLETE event
+  * Chapter 10 has no user choices (it's a CONCLUSION type chapter)
+  * The current_chapter_id in the STORY_COMPLETE event is "chapter_9_0"
+  * Simulation logs contain various event types:
+    - EVENT:CHAPTER_SUMMARY - Individual chapter summaries
+    - EVENT:STATE_TRANSITION - State updates including chapter content
+    - EVENT:STORY_COMPLETE - Final state with all chapter summaries (1-9)
+    - EVENT:LESSON_QUESTION - Educational questions encountered during the adventure
+    - "Final chapter content" - Content for chapter 10 (conclusion)
+
 - **Content Sources**
   * LESSON: `lessons.csv` + LLM wrapper
   * STORY: Full LLM generation with choices

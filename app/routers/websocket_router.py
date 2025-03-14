@@ -5,6 +5,7 @@ from app.services.websocket_service import (
     process_choice,
     stream_and_send_chapter,
     send_story_complete,
+    process_summary_request,
 )
 
 router = APIRouter()
@@ -37,7 +38,8 @@ async def story_websocket(
             data = await websocket.receive_json()
             # logger.debug(f"Received data: {data}")
 
-            # Extract state and choice data
+            # Extract message type, state and choice data
+            message_type = data.get("type", "process_choice")
             validated_state = data.get("state")
             choice_data = data.get("choice")
 
@@ -64,7 +66,16 @@ async def story_websocket(
                 logger.debug(f"Choice data: {choice_data}")
             logger.debug("==============================\n")
 
-            # Validate required fields
+            # Handle different message types
+            if message_type == "request_summary":
+                logger.info("Received request for summary page")
+                await process_summary_request(
+                    state_manager=state_manager,
+                    websocket=websocket,
+                )
+                continue
+
+            # For regular choice processing, validate required fields
             if not validated_state:
                 logger.error("Missing state in message")
                 await websocket.send_text("Missing state in message")

@@ -1,5 +1,217 @@
 # Active Context
 
+## Fixed Simulation Log Summary Extraction for Complete Chapter Summaries (2025-03-15)
+
+1. **Fixed Chapter Summary Extraction from Simulation Logs:**
+   * Problem: The `show_summary_from_log.py` script wasn't extracting all chapter summaries from simulation logs, resulting in dummy summaries for chapters 9-10
+   * Root Causes:
+     - The script wasn't extracting summaries from the STORY_COMPLETE event in the log file
+     - Chapter 10 (conclusion) content was generated after the STORY_COMPLETE event
+     - The extraction logic wasn't handling the different event types and formats properly
+   * Solution:
+     - **Enhanced `extract_chapter_summaries_from_log` in `debug_summary_chapter.py`:**
+       * Added code to extract summaries from the STORY_COMPLETE event
+       * Fixed logger variable scope issues for proper error handling
+       * Added detailed logging to track where summaries are found
+     - **Enhanced `show_summary_from_log.py` script:**
+       * Added code to extract chapter summaries from the STORY_COMPLETE event
+       * Added code to extract chapter 10 content from the "Final chapter content" message
+       * Implemented summary generation for chapter 10 using the first few sentences
+       * Improved mapping of summaries to their respective chapter numbers
+   * Reference: For details on the story simulation structure, see the "Story Simulation Structure" section in systemPatterns.md
+   * Verification:
+     - Successfully extracted all 9 chapter summaries from the STORY_COMPLETE event
+     - Successfully generated a summary for chapter 10 from the "Final chapter content" message
+     - Properly displayed all 10 chapter summaries in the summary chapter
+     - Included all 3 educational questions in the Learning Report section
+   * Result:
+     - The script now correctly extracts all chapter summaries from simulation logs
+     - No more dummy summaries for chapters 9-10
+     - Complete summary chapter with all 10 chapters and educational questions
+     - Better understanding of the story simulation structure for future development
+
+## Improved Chapter Summaries with Narrative Focus (2025-03-14)
+
+1. **Enhanced Chapter Summary Generation:**
+   * Problem: Chapter summaries were optimized for image generation (visual scenes) rather than narrative progression, making the SUMMARY chapter less cohesive and educational
+   * Root Cause:
+     - The hardcoded prompt in `generate_chapter_summary()` was focused on "vivid visual scene" descriptions
+     - Summaries excluded dialogue and abstract concepts, focusing only on visual elements
+     - The 20-word limit constrained the ability to capture educational content and character development
+   * Solution:
+     - **Created New Prompt Template:**
+       * Added `SUMMARY_CHAPTER_PROMPT` to `app/services/llm/prompt_templates.py`
+       * Designed the prompt to focus on narrative events, character development, and educational content
+       * Increased word count guidance to 30-40 words for more comprehensive summaries
+     - **Updated Image Generation Service:**
+       * Imported the new prompt template in `app/services/image_generation_service.py`
+       * Replaced the hardcoded visual-focused prompt with the narrative-focused template
+       * Maintained the same LLM service call structure for compatibility
+   * Verification:
+     - Analyzed simulation logs to confirm chapter summaries are being generated
+     - Verified the summaries now include narrative elements and educational content
+   * Result:
+     - Chapter summaries now capture key story events and character development
+     - Summaries include important choices and educational content when present
+     - Consistent third-person, past tense voice throughout all summaries
+     - The SUMMARY chapter provides a more cohesive and educational recap of the adventure
+
+## Enhanced Simulation Log Summary Viewer with Educational Questions (2025-03-14)
+
+1. **Enhanced Simulation Log Summary Viewer:**
+   * Problem: The `show_summary_from_log.py` script was not extracting chapter summaries from simulation logs and was showing dummy summaries instead. Additionally, educational questions encountered during the adventure were not being displayed in the Learning Report section.
+   * Root Causes:
+     - The script wasn't properly extracting chapter content from STATE_TRANSITION events in the log file
+     - No mechanism to extract educational questions from the log file
+     - The AdventureState model didn't have a field to store lesson questions
+   * Solution:
+     - **Enhanced Chapter Summary Extraction:**
+       * Modified `extract_chapter_summaries_from_log` to extract chapter content from STATE_TRANSITION events
+       * Added support for different content formats (direct content field and chapter_content.content)
+       * Implemented fallback to use the first paragraph of chapter content as a summary
+     - **Added Lesson Question Extraction:**
+       * Updated `extract_chapter_summaries_from_log` to extract educational questions from EVENT:LESSON_QUESTION entries
+       * Added a `lesson_questions` field to the AdventureState model to store the questions
+       * Enhanced the summary display to show questions, topics, and correct answers
+     - **Improved Summary Display:**
+       * Added handling for cases with fewer than 10 summaries by adding dummy summaries for missing chapters
+       * Replaced the default "You didn't encounter any educational questions" message with actual questions
+       * Formatted the Learning Report section to display educational content
+   * Verification:
+     - Tested with multiple simulation log files
+     - Successfully extracted chapter summaries and lesson questions
+     - Properly displayed the Learning Report section with educational questions
+   * Result:
+     - The script now correctly extracts chapter summaries from simulation logs
+     - Educational questions are displayed in the Learning Report section
+     - The summary provides a complete overview of the adventure, including both narrative and educational content
+
+2. **Fixed SUMMARY Chapter Functionality:**
+   * Problem: After clicking the "Reveal Your Adventure Summary" button at the end of a 10-chapter adventure, the application showed a loading spinner but never actually loaded the summary page.
+   * Root Causes:
+     - State synchronization issue: The backend wasn't properly receiving the state from the client when processing summary requests
+     - Error handling: There was no proper error handling or timeout detection in the frontend
+   * Solution:
+     - **Backend Fix in `websocket_service.py`**:
+       * Modified the `process_summary_request` function to properly receive and update the state from the client
+       * Added code to get the client's state from the request and update the state manager
+       * Improved error handling to provide better feedback when issues occur
+     - **Frontend Fix in `index.html`**:
+       * Enhanced the `requestSummary` function with better error handling and a timeout
+       * Added code to clear content and reset state before sending the request
+       * Implemented a 10-second timeout to detect if the request is hanging
+       * Added better error messaging for users
+   * Verification:
+     - Created two debug scripts to test the functionality:
+       * `tests/debug_summary_chapter.py` - Tests the summary content generation
+       * `tests/debug_websocket_router.py` - Tests the WebSocket router handling of summary requests
+     - Both scripts successfully generate and display summary content
+   * Result:
+     - The "Reveal Your Adventure Summary" button now works correctly
+     - Users can see the summary page after completing an adventure
+     - Better error handling and user feedback if issues occur
+
+## Updated Story Simulation for Chapter Summaries Support (2025-03-11)
+
+1. **Enhanced Story Simulation for Chapter Summaries Testing:**
+   * Purpose: Update the story simulation to support the new chapter summaries approach
+   * Implementation Details:
+     - Updated initial state structure to include the `chapter_summaries` field
+     - Added detection and logging of chapter summaries as they're received from the server
+     - Implemented structured logging for chapter summary events with "EVENT:CHAPTER_SUMMARY" prefix
+     - Added a comprehensive log at the end of simulation with all chapter summaries
+     - Enhanced human-readable output with chapter summary display
+     - Added detailed usage instructions to the file
+   * Technical Approach:
+     - Modified the initial state message to include an empty `chapter_summaries` array
+     - Added logic to detect and log chapter summaries in the state updates from the server
+     - Implemented structured logging with event types like "EVENT:CHAPTER_SUMMARIES_UPDATED" and "EVENT:CHAPTER_SUMMARY"
+     - Added a final "EVENT:ALL_CHAPTER_SUMMARIES" log at the end of the simulation
+     - Added a human-readable display of all chapter summaries at the end of the run
+   * Benefits:
+     - Enables testing of the SUMMARY chapter functionality without manually going through all 10 chapters
+     - Provides structured data for automated testing of the chapter summaries feature
+     - Captures chapter summaries in a format that can be easily extracted and analyzed
+     - Maintains alignment with how chapter summaries are implemented in the actual application
+   * Usage:
+     - Run the simulation with `python tests/simulations/story_simulation.py`
+     - Check the generated log file for chapter summaries
+     - Extract the summaries from the "EVENT:ALL_CHAPTER_SUMMARIES" log entry
+     - Use the summaries to test the SUMMARY chapter implementation independently
+
+## Fixed Bug: Paragraph Formatter Using Incomplete Text (2025-03-10)
+
+1. **Fixed Paragraph Formatter Bug:**
+   * Problem: Paragraph formatter was detecting text without proper paragraph formatting, but only reformatting the initial buffer (first ~1000 characters) instead of the full response
+   * Root Cause:
+     - In both OpenAIService and GeminiService, when text needed formatting, the system was passing `collected_text` (initial buffer) to the reformatting function instead of `full_response` (complete text)
+     - This resulted in properly formatted initial text but the remainder of the response still lacked paragraph breaks
+     - Debug logs showed the detection was working, but the reformatted text wasn't being fully utilized
+   * Solution:
+     - Modified all instances in both service classes to use `full_response` instead of `collected_text` when reformatting is needed
+     - Updated the code in OpenAIService.generate_with_prompt, OpenAIService.generate_chapter_stream, GeminiService.generate_with_prompt, and GeminiService.generate_chapter_stream
+     - Maintained the existing retry mechanism (up to 3 attempts with progressively stronger formatting instructions)
+   * Implementation Details:
+     - The fix was a simple but critical change from `collected_text` to `full_response` in the reformatting function calls
+     - No changes were needed to the paragraph detection logic or the reformatting function itself
+     - The existing retry mechanism and logging were preserved
+   * Result:
+     - Complete LLM responses now have proper paragraph formatting throughout the entire text
+     - Improved readability for users, especially for longer responses
+     - Maintained the streaming experience when formatting isn't needed
+     - Fixed the issue where debug logs showed detection and reformatting but the output still lacked proper formatting
+
+## Enhanced Summary Implementation with Progressive Chapter Summaries (2025-03-11)
+
+1. **Enhanced Summary Implementation:**
+   * Purpose: Improve the SUMMARY chapter by generating and storing chapter summaries throughout the adventure
+   * User Experience: 
+     - Same button at the end of the CONCLUSION chapter leads to a summary page
+     - Summary now shows a chronological recap with detailed summaries of each chapter
+     - Learning report still displays questions, answers, and explanations
+     - Provides a more detailed and journey-like conclusion to the adventure
+   * Implementation Completed:
+     - **Backend Model Updates**
+       * Added `chapter_summaries` field to the AdventureState model to store summaries
+       * Maintained compatibility with existing SUMMARY chapter type
+     
+     - **Backend Services Implementation**
+       * Modified `process_choice` function to generate chapter summaries after each choice
+       * Completely rewrote `generate_summary_content` function to use stored summaries
+       * Maintained the existing `process_summary_request` function
+       * Added error handling to ensure the main flow continues even if summary generation fails
+     
+     - **Integration with Existing Systems**
+       * Leveraged the existing `generate_chapter_summary` method from ImageGenerationService
+       * Reused the same summary generation logic that's already used for image prompts
+       * Added fallback to the original LLM-based summary generation if no summaries are available
+     
+     - **Technical Advantages**
+       * Distributed processing - summaries generated throughout the adventure
+       * More resilient - if one chapter summary fails, others can still be displayed
+       * Reduced wait time at the end of the adventure
+       * Better captures "in-the-moment" details that might be lost in a retrospective summary
+   
+   * Design Principles Applied:
+     - Maintained consistent visual theming with the existing app
+     - Created a more detailed chronological recap of the adventure journey
+     - Preserved chapter context by showing chapter numbers and types
+     - Maintained the same learning report format for educational value
+     - Improved reliability through distributed processing
+
+   * Educational Value for Parents:
+     - More detailed visualization of the child's journey through each chapter
+     - Clearer connections between specific chapters and learning moments
+     - Same comprehensive documentation of questions, answers, and explanations
+     - Better captures the evolution of the story and learning progression
+
+   * Technical Implementation Details:
+     - Added chapter_summaries field to AdventureState model
+     - Modified process_choice to generate and store summaries asynchronously
+     - Rewrote generate_summary_content to use stored summaries
+     - Added fallback to original LLM-based summary if needed
+     - Maintained backward compatibility with existing summary functionality
+
 ## Recent Enhancement: Fixed Chapter Summary Generation for Image Prompts (2025-03-10)
 
 1. **Fixed Chapter Summary Generation for Image Prompts:**
@@ -372,177 +584,3 @@
   * Improved readability with consistent styling
   * Better maintainability with organized CSS
   * Enhanced visual hierarchy with consistent accent colors
-
-### CSS Files Reorganization (2025-03-06)
-- Problem: There were too many standalone CSS files, making it difficult to maintain and understand the styling structure
-- Solution:
-  * Merged multiple CSS files into a more organized structure:
-    - Consolidated `header-controls.css`, `font-controls.css`, `loader.css`, and `choice-cards.css` into `components.css`
-    - Renamed `carousel.css` to `carousel-component.css` to better reflect its purpose
-    - Kept `layout.css`, `theme.css`, and `typography.css` as separate files for their specific purposes
-  * Updated the HTML file to reference the new CSS structure:
-    - Removed references to the merged files
-    - Added reference to the renamed carousel component file
-  * Organized CSS files by their purpose:
-    - `components.css` - Reusable UI components (toast notifications, buttons, loaders, choice cards, etc.)
-    - `carousel-component.css` - Specialized carousel component styles
-    - `layout.css` - Structural elements, containers, and screen transitions
-    - `theme.css` - Color schemes and theme variables
-    - `typography.css` - Text styling and formatting
-- Result:
-  * More maintainable CSS structure with clear separation of concerns
-  * Reduced number of CSS files from 9 to 5
-  * Better organization of styles by their purpose
-  * Improved developer experience with easier-to-find styles
-  * No change in functionality or appearance for end users
-
-### CSS Modularization and Transition Improvements (2025-03-06)
-- Problem: CSS was scattered throughout the HTML file with inline styles and lacked organization
-- Solution:
-  * Created two new CSS files:
-    - `app/static/css/layout.css` - Contains structural elements, containers, and screen transitions
-    - `app/static/css/components.css` - Contains reusable UI components like toasts, buttons, and animations
-  * Removed inline styles and replaced them with proper CSS classes:
-    - Moved debug info styles to the components.css file
-    - Added screen transition classes to all screen containers
-    - Created a toast notification component for error messages
-    - Added fade-in animation classes for images
-  * Enhanced screen transitions:
-    - Added proper transition effects between screens
-    - Improved the navigation functions to handle transitions correctly
-    - Added comments to clarify the transition logic
-  * Improved code maintainability:
-    - Organized CSS into logical modules
-    - Added descriptive comments to explain the purpose of each section
-    - Used consistent naming conventions for classes
-- Result:
-  * More maintainable codebase with better organized CSS
-  * Smoother screen transitions throughout the application
-  * Improved user experience with consistent animations
-  * Reduced code duplication and better separation of concerns
-
-### Carousel Component Refactoring (2025-03-06)
-- Problem: The carousel functionality in `index.html` was complex and difficult to maintain with over 1,200 lines of code
-- Solution:
-  * Created a reusable `Carousel` class in a new `app/static/js/carousel-manager.js` file
-  * Encapsulated all carousel-related functionality including rotation, selection, and event handling
-  * Updated HTML to use the new class for both category and lesson carousels
-  * Removed redundant carousel functions and global variables from the main JavaScript code
-  * Implemented proper keyboard navigation through the new class
-- Result:
-  * Improved code organization with carousel functionality isolated in its own module
-  * Reduced duplication by using the same class for both carousels
-  * Enhanced maintainability with changes to carousel behavior only needed in one place
-  * Better encapsulation with carousel state managed within the class rather than using global variables
-
-### Fixed Loading Spinner Visibility for Chapter 1 (2025-03-05)
-- Problem: The loading spinner was disappearing too quickly for Chapter 1 but working fine for other chapters
-- Root Cause:
-  * The loader was being hidden immediately after content streaming but before image generation tasks for Chapter 1 were complete
-  * CSS issues with the loader overlay were causing visibility problems
-  * The WebSocket connection handler was hiding the loader too early in the process
-- Solution:
-  * Modified `stream_and_send_chapter()` in `websocket_service.py` to only hide the loader after all image tasks are complete
-  * Updated the WebSocket connection handler in `index.html` to not hide the loader immediately after connection
-  * Enhanced the `showLoader()` and `hideLoader()` functions with better error handling and logging
-  * Fixed CSS issues in `loader.css` to ensure proper visibility of the loader overlay
-  * Added `!important` to the hidden class to prevent style conflicts
-- Result: The loading spinner now remains visible during the entire image generation process for Chapter 1, providing a better user experience by accurately reflecting the loading state
-
-### Fixed Subprocess Python Interpreter Issue in Simulation Tests (2025-03-05)
-- Problem: The `run_simulation_tests.py` script was failing to run the story simulation properly with a `ModuleNotFoundError: No module named 'websockets'` error, even though the package was installed in the virtual environment
-- Root Cause: When the script used commands like `["python", "tests/simulations/story_simulation.py"]` to create subprocesses, it wasn't necessarily using the same Python interpreter that was running the main script
-- Solution:
-  * Modified `run_simulation_tests.py` to use `sys.executable` instead of "python" when creating subprocess commands
-  * Changed the command for getting the run ID from `["python", "tests/simulations/story_simulation.py", "--output-run-id"]` to `[sys.executable, "tests/simulations/story_simulation.py", "--output-run-id"]`
-  * Changed the command for running the actual simulation from `["python", "tests/simulations/story_simulation.py"]` to `[sys.executable, "tests/simulations/story_simulation.py"]`
-  * This ensures that the subprocess uses the same Python interpreter that's running the main script, which has access to all the installed packages in the virtual environment
-- Result: The story simulation now runs correctly when executed through `run_simulation_tests.py`, properly generating chapters and allowing making choices
-
-### Mobile Font Size Controls Implementation (2025-03-04)
-- Problem: Mobile users needed a way to adjust font size for better readability
-- Solution:
-  * Created a new `font-size-manager.js` file to handle font size adjustments
-  * Added font size controls (plus/minus buttons and percentage display) to the header row
-  * Removed the progress bar as it wasn't needed
-  * Styled controls using the app's indigo theme colors
-  * Implemented show/hide behavior on scroll (matching chapter indicator behavior)
-  * Made controls only visible on mobile devices (screen width ≤ 768px)
-  * Ensured font size defaults to 100% for new users
-  * Saved user preferences to localStorage for persistence
-- Result: Mobile users can now easily adjust text size for better readability while maintaining the app's visual design
-
-### Debug Toggle Removal (2025-03-04)
-- Problem: Debug toggle button was visible to users on both desktop and mobile
-- Solution:
-  * Removed the "Toggle Debug Info" button from the UI
-  * Kept the debug info div in the HTML but hidden by default
-  * Added a comment explaining how developers can still access it via the console
-- Result: Cleaner user interface without developer tools visible to end users
-
-### Optimized Image Generation Prompts (2025-03-04)
-- Problem: Image generation prompts were bloated with redundant information, causing inconsistent results
-- Solution:
-  * Restructured prompt format to focus on essential elements: `Fantasy illustration of [Agency Name] in [Story Name], [Visual Details], with [adventure_state.selected_sensory_details["visuals"]], [Base Style]`
-  * Rewrote `enhance_prompt()` in `image_generation_service.py` to extract the complete agency name with visual details up to the closing bracket
-  * Added a helper method `_lookup_visual_details()` to find visual details when not present in the original prompt
-  * Simplified agency option extraction in `websocket_service.py` to be more direct and reliable
-- Result: More consistent image generation with reduced token usage and improved visual quality by focusing on essential elements
-
-### Fixed Outdated References to new_stories.yaml (2025-03-04)
-- Problem: After refactoring story data into individual files, some parts of the codebase were still referencing the old `new_stories.yaml` file, causing errors
-- Solution:
-  * Updated `app/routers/web.py` to use the new `StoryLoader` class instead of directly loading from the old YAML file
-  * Updated `app/services/websocket_service.py` to use the `StoryLoader` class in the `generate_chapter()` function
-  * Updated `app/init_data.py` to use the `StoryLoader` class in the `load_story_data()` function
-  * Updated `tests/simulations/story_simulation.py` to use the `StoryLoader` class in the `load_story_data()` function
-- Result: Fixed "Failed to load story data" and "Error generating chapter: [Errno 2] No such file or directory: 'app/data/new_stories.yaml'" errors, ensuring all parts of the application use the new story data structure
-
-### Fixed Character Encoding Issue in Story Loader (2025-03-04)
-- Problem: Character encoding error when loading YAML files: `'charmap' codec can't decode byte 0x9d in position 3643: character maps to <undefined>`
-- Solution:
-  * Modified `load_all_stories()` method in `app/data/story_loader.py` to explicitly use UTF-8 encoding when opening files
-  * Changed `with open(file_path, "r") as f:` to `with open(file_path, "r", encoding="utf-8") as f:`
-- Result: Fixed character encoding issues when loading story files, ensuring proper handling of special characters in YAML content
-
-### Story Data Organization Refactoring (2025-03-04)
-- Problem: All story categories were in a single YAML file, making maintenance difficult and increasing risk of syntax errors
-- Solution:
-  * Created a dedicated `app/data/stories/` directory to store individual story files
-  * Split the monolithic `new_stories.yaml` into individual files for each story category
-  * Implemented a dedicated `StoryLoader` class in `app/data/story_loader.py`
-  * Updated `chapter_manager.py` to use the new loader
-  * Created proper test files in `tests/data/` directory
-- Result: Improved maintainability, reduced risk of syntax errors, better scalability for adding new stories, and enhanced collaboration potential
-
-### Dynamic Adventure Topic Reference in Exposition Phase (2025-03-04)
-- Problem: World building guidance in Exposition phase was generic and didn't reference the specific adventure topic selected by the user
-- Solution:
-  * Modified the BASE_PHASE_GUIDANCE dictionary in `prompt_templates.py` to add an {adventure_topic} placeholder in the "World Building" section of the "Exposition" phase guidance
-  * Updated the `_get_phase_guidance()` function in `prompt_engineering.py` to replace the placeholder with the actual adventure topic name from `state.metadata["non_random_elements"]["name"]`
-- Result: Exposition phase guidance now dynamically references the specific adventure topic (e.g., "Jade Mountain") selected by the user, creating a more tailored and immersive storytelling experience
-
-### Renamed `setting_types` to `settings` and Removed `story_rules` (2025-03-03)
-- Problem: Needed to simplify the data model and update field naming for clarity
-- Solution:
-  * Renamed `setting_types` to `settings` in all story categories in `app/data/new_stories.yaml`
-  * Removed all `story_rules` sections from each story category in `app/data/new_stories.yaml`
-  * Updated the validator in `app/models/story.py` to use `settings` instead of `setting_types` and removed `story_rules` from required categories
-  * Modified `app/services/chapter_manager.py` to update the required categories and selection logic
-  * Updated references in `app/services/llm/prompt_engineering.py` to use `settings` instead of `setting_types` and removed references to `story_rules`
-  * Updated the `SYSTEM_PROMPT_TEMPLATE` in `app/services/llm/prompt_templates.py` to use `settings` and removed the `story_rules` line
-  * Updated `app/services/image_generation_service.py` to use `settings` instead of `setting_types`
-- Result: Simplified data model while maintaining core functionality; system now uses `settings` instead of `setting_types` and no longer requires or uses `story_rules` in narrative generation
-
-### Removed Unused `character_archetypes` Field (2025-03-03)
-- Removed the unused `character_archetypes` field from story categories
-- Updated `app/data/new_stories.yaml` to remove the `character_archetypes` sections from each story category
-- Modified `app/models/story.py` to remove `character_archetypes` from the required categories in validation
-- Updated `app/services/chapter_manager.py` to remove `character_archetypes` from the required categories
-- Removed `character_archetypes` from the system prompt template in `app/services/llm/prompt_templates.py`
-- Removed the `character_archetypes` parameter from the system prompt formatting in `app/services/llm/prompt_engineering.py`
-
-### Removed Unused `tone` Field (2025-03-03)
-- Removed the unused `tone` field from story categories as it wasn't being passed to LLM prompts
-- Updated `app/data/new_stories.yaml` to remove the `tone` field from each story category
-- Modified `app/services/chapter_manager.

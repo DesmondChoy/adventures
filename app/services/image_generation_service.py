@@ -9,6 +9,7 @@ import logging
 import re
 import time
 from app.services.llm import LLMService
+from app.services.llm.prompt_templates import SUMMARY_CHAPTER_PROMPT
 
 logger = logging.getLogger("story_app")
 
@@ -273,18 +274,10 @@ class ImageGenerationService:
             # Use the LLM service to generate a summary
             llm = LLMService()
 
-            # Create a custom prompt for the chapter summary
-            custom_prompt = f"""
-            Summarize the following chapter content in a single vivid visual scene (20 words or less).
-            Focus only on visual elements, settings, characters, and actions.
-            Exclude dialogue and abstract concepts.
-            Format as a scene description suitable for image generation.
-            
-            CHAPTER CONTENT:
-            {chapter_content}
-            
-            VISUAL SUMMARY:
-            """
+            # Create a custom prompt for the chapter summary using the template
+            custom_prompt = SUMMARY_CHAPTER_PROMPT.format(
+                chapter_content=chapter_content
+            )
 
             # We need to override the prompt engineering system
             # Create a minimal AdventureState-like object with just what we need

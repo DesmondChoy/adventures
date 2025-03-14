@@ -1,5 +1,379 @@
 # Progress Log
 
+## 2025-03-14: Improved Chapter Summaries with Narrative Focus
+
+### Enhanced Chapter Summary Generation
+- Problem: Chapter summaries were optimized for image generation (visual scenes) rather than narrative progression, making the SUMMARY chapter less cohesive and educational
+- Root Cause:
+  * The hardcoded prompt in `generate_chapter_summary()` was focused on "vivid visual scene" descriptions
+  * Summaries excluded dialogue and abstract concepts, focusing only on visual elements
+  * The 20-word limit constrained the ability to capture educational content and character development
+- Solution:
+  * Created New Prompt Template:
+    - Added `SUMMARY_CHAPTER_PROMPT` to `app/services/llm/prompt_templates.py`:
+      ```python
+      SUMMARY_CHAPTER_PROMPT = """Create a concise summary of this chapter (30-40 words) that:
+      1. Captures the key narrative events and character development
+      2. Includes any important choices or decisions made
+      3. Mentions educational content if present
+      4. Can stand alone but also work as part of a sequential chapter-by-chapter recap
+
+      The summary should be written in third person, past tense, and maintain the adventure's narrative tone.
+
+      CHAPTER CONTENT:
+      {chapter_content}
+
+      CHAPTER SUMMARY:
+      """
+      ```
+    - Designed the prompt to focus on narrative events, character development, and educational content
+    - Increased word count guidance to 30-40 words for more comprehensive summaries
+  * Updated Image Generation Service:
+    - Imported the new prompt template in `app/services/image_generation_service.py`:
+      ```python
+      from app.services.llm.prompt_templates import SUMMARY_CHAPTER_PROMPT
+      ```
+    - Replaced the hardcoded visual-focused prompt with the narrative-focused template:
+      ```python
+      # Create a custom prompt for the chapter summary using the template
+      custom_prompt = SUMMARY_CHAPTER_PROMPT.format(
+          chapter_content=chapter_content
+      )
+      ```
+    - Maintained the same LLM service call structure for compatibility
+- Result:
+  * Chapter summaries now capture key story events and character development
+  * Summaries include important choices and educational content when present
+  * Consistent third-person, past tense voice throughout all summaries
+  * The SUMMARY chapter provides a more cohesive and educational recap of the adventure
+
+## 2025-03-14: Enhanced Simulation Log Summary Viewer with Educational Questions
+
+### Enhanced Simulation Log Summary Viewer with Educational Questions
+- Problem: The `show_summary_from_log.py` script was not extracting chapter summaries from simulation logs and was showing dummy summaries instead. Additionally, educational questions encountered during the adventure were not being displayed in the Learning Report section.
+- Root Causes:
+  * The script wasn't properly extracting chapter content from STATE_TRANSITION events in the log file
+  * No mechanism to extract educational questions from the log file
+  * The AdventureState model didn't have a field to store lesson questions
+- Solution:
+  * Enhanced Chapter Summary Extraction:
+    - Modified `extract_chapter_summaries_from_log` to extract chapter content from STATE_TRANSITION events:
+      ```python
+      # Also try to extract from STATE_TRANSITION events which contain chapter content
+      if not all_summaries_found and "EVENT:STATE_TRANSITION" in line:
+          try:
+              data = json.loads(line)
+              if "state" in data:
+                  # The state is a JSON string that needs to be parsed again
+                  state_str = data["state"]
+                  state_data = json.loads(state_str)
+
+                  # Check if this state contains chapter_summaries
+                  if "chapter_summaries" in state_data and state_data["chapter_summaries"]:
+                      chapter_summaries = state_data["chapter_summaries"]
+                      if len(chapter_summaries) > len(summaries):
+                          summaries = chapter_summaries
+
+                  # Extract chapter content to use as fallback summaries
+                  if "current_chapter" in state_data:
+                      chapter_info = state_data["current_chapter"]
+                      chapter_number = chapter_info.get("chapter_number")
+
+                      # Try to get content from different possible locations
+                      chapter_content = ""
+
+                      # First try direct content field
+                      if "content" in chapter_info:
+                          chapter_content = chapter_info.get("content", "")
+
+                      # If no content found, try chapter_content.content
+                      if not chapter_content and "chapter_content" in chapter_info:
+                          chapter_content_obj = chapter_info.get("chapter_content", {})
+                          if isinstance(chapter_content_obj, dict) and "content" in chapter_content_obj:
+                              chapter_content = chapter_content_obj.get("content", "")
+
+                      if chapter_number and chapter_content:
+                          # Store the first paragraph (or up to 200 chars) as a summary
+                          paragraphs = chapter_content.split("\n\n")
+                          if paragraphs:
+                              first_paragraph = paragraphs[0].strip()
+                              # Limit to 200 characters and add ellipsis if needed
+                              if len(first_paragraph) > 200:
+                                  first_paragraph = first_paragraph[:197] + "..."
+                              chapter_contents[chapter_number] = first_paragraph
+          except Exception as e:
+              logger = logging.getLogger("debug_summary")
+              logger.error(f"Error parsing STATE_TRANSITION: {e}")
+              pass
+      ```
+    - Added support for different content formats (direct content field and chapter_content.content)
+    - Implemented fallback to use the first paragraph of chapter content as a summary
+  * Added Lesson Question Extraction:
+    - Updated `extract_chapter_summaries_from_log` to extract educational questions from EVENT:LESSON_QUESTION entries:
+      ```python
+      # Look for lesson questions
+      if "EVENT:LESSON_QUESTION" in line:
+          try:
+              data = json.loads(line)
+              if "question" in data:
+                  question = data.get("question", "")
+                  topic = data.get("topic", "")
+                  subtopic = data.get("subtopic", "")
+                  correct_answer = data.get("correct_answer", "")
+
+                  if question and correct_answer:
+                      lesson_questions.append({
+                          "question": question,
+                          "topic": topic,
+                          "subtopic": subtopic,
+                          "correct_answer": correct_answer
+                      })
+          except Exception as e:
+              logger = logging.getLogger("debug_summary")
+              logger.error(f"Error parsing LESSON_QUESTION: {e}")
+              pass
+      ```
+    - Modified the function to return both summaries and lesson questions:
+      ```python
+      return summaries, lesson_questions
+      ```
+    - Added a `lesson_questions` field to the AdventureState model:
+      ```python
+      # Lesson questions for the SUMMARY chapter
+      lesson_questions: List[Dict[str, Any]] = Field(
+          default_factory=list,
+          description="Educational questions encountered during the adventure for display in the SUMMARY chapter",
+      )
+      ```
+  * Improved Summary Display:
+    - Updated `show_summary_from_log.py` to handle the new return value from `extract_chapter_summaries_from_log`
+    - Added handling for cases with fewer than 10 summaries by adding dummy summaries for missing chapters
+    - Replaced the default "You didn't encounter any educational questions" message with actual questions:
+      ```python
+      # If we have lesson questions, add them to the summary content
+      if lesson_questions:
+          # Find the Learning Report section
+          learning_report_index = summary_content.find("## Learning Report")
+          if learning_report_index != -1:
+              # Extract everything before the Learning Report section
+              before_learning_report = summary_content[: learning_report_index + len("## Learning Report")]
+
+              # Find the default "You didn't encounter any educational questions" message
+              default_message_index = summary_content.find(
+                  "You didn't encounter any educational questions", learning_report_index
+              )
+              
+              # Extract everything after the Learning Report section but before the default message
+              if default_message_index != -1:
+                  # Find the start of the paragraph containing the default message
+                  paragraph_start = summary_content.rfind(
+                      "\n\n", learning_report_index, default_message_index
+                  )
+                  if paragraph_start == -1:
+                      paragraph_start = learning_report_index + len("## Learning Report")
+
+                  # Find the end of the paragraph containing the default message
+                  paragraph_end = summary_content.find("\n\n", default_message_index)
+                  if paragraph_end == -1:
+                      paragraph_end = len(summary_content)
+
+                  # Extract content before and after the default message paragraph
+                  before_default = summary_content[
+                      learning_report_index + len("## Learning Report") : paragraph_start
+                  ]
+                  after_default = summary_content[paragraph_end:]
+
+                  # Combine to skip the default message
+                  after_learning_report = after_default
+              else:
+                  # If default message not found, just get everything after the Learning Report header
+                  after_learning_report_index = summary_content.find(
+                      "\n\n", learning_report_index
+                  )
+                  if after_learning_report_index == -1:
+                      after_learning_report = ""
+                  else:
+                      after_learning_report = summary_content[
+                          after_learning_report_index:
+                      ]
+
+              # Create a new Learning Report section with the lesson questions
+              learning_report = "\n\nDuring your adventure, you encountered the following educational questions:\n\n"
+              for i, question in enumerate(lesson_questions, 1):
+                  learning_report += f"{i}. **Question**: {question['question']}\n"
+                  learning_report += f"   **Topic**: {question['topic']}"
+                  if question["subtopic"]:
+                      learning_report += f" - {question['subtopic']}"
+                  learning_report += (
+                      f"\n   **Correct Answer**: {question['correct_answer']}\n\n"
+                  )
+
+              # Combine everything
+              summary_content = (
+                  before_learning_report + learning_report + after_learning_report
+              )
+      ```
+- Result:
+  * The script now correctly extracts chapter summaries from simulation logs
+  * Educational questions are displayed in the Learning Report section
+  * The summary provides a complete overview of the adventure, including both narrative and educational content
+  * Works with both new and existing simulation log files
+
+### Fixed SUMMARY Chapter Functionality
+- Problem: After clicking the "Reveal Your Adventure Summary" button at the end of a 10-chapter adventure, the application showed a loading spinner but never actually loaded the summary page
+- Root Causes:
+  * State synchronization issue: The backend wasn't properly receiving the state from the client when processing summary requests
+  * Error handling: There was no proper error handling or timeout detection in the frontend
+- Solution:
+  * Backend Fix in `websocket_service.py`:
+    - Modified the `process_summary_request` function to properly receive and update the state from the client:
+      ```python
+      async def process_summary_request(state_manager, websocket):
+          try:
+              # Get the client's state from the request
+              data = await websocket.receive_json()
+              validated_state = data.get("state")
+
+              # Update the state manager with the client's state if provided
+              if validated_state:
+                  logger.debug("Updating state from client for summary request")
+                  state_manager.update_state_from_client(validated_state)
+
+              # Get the current state after the update
+              state = state_manager.get_current_state()
+              # ... rest of the function ...
+      ```
+    - Added better error handling to provide more useful feedback when issues occur
+  * Frontend Fix in `index.html`:
+    - Enhanced the `requestSummary` function with better error handling and a timeout:
+      ```javascript
+      function requestSummary() {
+          if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
+              showLoader();
+              // Clear content and reset state
+              document.getElementById('storyContent').innerHTML = '';
+              document.getElementById('choicesContainer').innerHTML = '';
+              streamBuffer = '';
+              if (renderTimeout) {
+                  clearTimeout(renderTimeout);
+              }
+
+              // Log the request for debugging
+              console.log("Sending summary request to server");
+
+              // Send request for summary
+              sendMessage({
+                  type: 'request_summary',
+                  state: stateManager.loadState()
+              });
+
+              // Add a timeout to detect if the request is hanging
+              setTimeout(() => {
+                  if (document.getElementById('loaderOverlay').classList.contains('active')) {
+                      console.warn("Summary request timed out after 10 seconds");
+                      hideLoader();
+                      showError("Summary request timed out. Please try again.");
+                  }
+              }, 10000);
+          } else {
+              showError('Connection lost. Please refresh the page.');
+          }
+      }
+      ```
+    - Added code to clear content and reset state before sending the request
+    - Implemented a 10-second timeout to detect if the request is hanging
+  * Created two debug scripts to test the functionality:
+    - `tests/debug_summary_chapter.py` - Tests the summary content generation
+    - `tests/debug_websocket_router.py` - Tests the WebSocket router handling of summary requests
+- Result:
+  * The "Reveal Your Adventure Summary" button now works correctly
+  * Users can see the summary page after completing an adventure
+  * Better error handling and user feedback if issues occur
+  * Improved reliability of the summary feature
+
+## 2025-03-11: Enhanced Summary Implementation with Progressive Chapter Summaries
+
+### Improved SUMMARY Chapter with Progressive Chapter Summaries
+- Problem: The original SUMMARY chapter implementation generated the entire summary at the end of the adventure, which could be slow and less detailed
+- Solution:
+  * Enhanced the AdventureState model to store chapter summaries throughout the adventure:
+    - Added `chapter_summaries` field to the AdventureState model to store summaries as they're generated
+    - Maintained compatibility with the existing SUMMARY chapter type
+  * Modified the process_choice function to generate summaries progressively:
+    - Added code to generate a chapter summary after each user choice
+    - Used the existing `generate_chapter_summary` method from ImageGenerationService
+    - Stored summaries in the AdventureState's chapter_summaries list
+    - Added error handling to ensure the main flow continues even if summary generation fails
+  * Rewrote the generate_summary_content function to use stored summaries:
+    - Created a chronological recap using the stored chapter summaries
+    - Preserved chapter context by showing chapter numbers and types
+    - Maintained the same learning report format for educational value
+    - Added fallback to the original LLM-based summary generation if no summaries are available
+  * Leveraged existing infrastructure:
+    - Reused the same summary generation logic that's already used for image prompts
+    - Maintained backward compatibility with the existing summary functionality
+    - Kept the same UI flow with the "Reveal Your Adventure Summary" button
+- Technical Advantages:
+  * Distributed processing - summaries generated throughout the adventure instead of all at once at the end
+  * More resilient - if one chapter summary fails, others can still be displayed
+  * Reduced wait time at the end of the adventure
+  * Better captures "in-the-moment" details that might be lost in a retrospective summary
+- User Experience Benefits:
+  * More detailed visualization of the journey through each chapter
+  * Clearer connections between specific chapters and learning moments
+  * Faster summary generation at the end of the adventure
+  * More journey-like experience showing how the story evolved
+
+## 2025-03-10: Fixed Paragraph Formatter Bug
+
+### Fixed Paragraph Formatter Using Incomplete Text
+- Problem: Paragraph formatter was detecting text without proper paragraph formatting, but only reformatting the initial buffer instead of the full response
+- Root Cause:
+  * In both OpenAIService and GeminiService, when text needed formatting, the system was passing `collected_text` (initial buffer) to the reformatting function instead of `full_response` (complete text)
+  * This resulted in properly formatted initial text but the remainder of the response still lacked paragraph breaks
+  * Debug logs showed the detection was working, but the reformatted text wasn't being fully utilized
+- Solution:
+  * Modified all instances in both service classes to use `full_response` instead of `collected_text` when reformatting is needed:
+    - Updated OpenAIService.generate_with_prompt
+    - Updated OpenAIService.generate_chapter_stream
+    - Updated GeminiService.generate_with_prompt
+    - Updated GeminiService.generate_chapter_stream
+  * Maintained the existing retry mechanism (up to 3 attempts with progressively stronger formatting instructions)
+  * No changes were needed to the paragraph detection logic or the reformatting function itself
+- Result:
+  * Complete LLM responses now have proper paragraph formatting throughout the entire text
+  * Improved readability for users, especially for longer responses
+  * Maintained the streaming experience when formatting isn't needed
+  * Fixed the issue where debug logs showed detection and reformatting but the output still lacked proper formatting
+
+## 2025-03-10: Implemented Summary Page After CONCLUSION Chapter
+
+### Added Summary Page Feature
+- Problem: The adventure ended abruptly after the CONCLUSION chapter without a proper summary of the journey
+- Solution:
+  * Added a new SUMMARY chapter type to provide a recap of the adventure:
+    - Updated `story.py` to add SUMMARY to the ChapterType enum
+    - Modified ChapterData validation to accommodate SUMMARY chapters
+    - Added a create_summary_chapter method to ChapterManager
+  * Implemented backend services for summary generation:
+    - Created `build_summary_chapter_prompt` function in `prompt_engineering.py` to generate prompts for the summary
+    - Added `generate_summary_content` function in `websocket_service.py` to use the LLM to generate the summary content
+    - Implemented `process_summary_request` function to handle summary requests from the client
+  * Enhanced the frontend to support the summary page:
+    - Added a "Reveal Your Adventure Summary" button at the end of the CONCLUSION chapter
+    - Implemented handlers for summary-related WebSocket messages
+    - Added smooth transitions between conclusion and summary pages
+  * Followed architectural best practices:
+    - Separated prompt engineering logic from service layer implementation
+    - Used consistent naming conventions with other chapter-related functions
+    - Maintained clear separation of concerns between components
+- Result:
+  * Users now have a satisfying conclusion to their adventure with a summary page
+  * The summary includes a narrative recap of the journey and a learning report
+  * Questions, answers, and explanations are displayed in an organized format
+  * The implementation follows the existing architectural patterns
+  * The feature enhances the educational value of the application
+
 ## 2025-03-10: Fixed Chapter Summary Generation for Image Prompts
 
 ### Fixed Chapter Summary Generation for Image Prompts
