@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2025-03-15: Separated Image Scene Generation from Chapter Summaries
+
+### Implemented Dedicated Image Scene Generation
+- Problem: The application was using chapter summaries for both narrative recaps and image generation, creating a compromise between two different needs
+- Root Cause:
+  * Chapter summaries needed to be comprehensive narrative overviews (30-40 words covering key events and educational content)
+  * Image generation needs vivid visual scenes focused on the most dramatic or visually compelling moments (20-30 words of pure visual description)
+  * Using the same text for both purposes created sub-optimal results for one or both uses
+- Solution:
+  * Added New Template in `prompt_templates.py`:
+    - Created `IMAGE_SCENE_PROMPT` specifically for extracting the most visually compelling moment from a chapter:
+      ```python
+      IMAGE_SCENE_PROMPT = """Identify the single most visually striking moment from this chapter that would make a compelling illustration. 
+
+      Focus on:
+      1. A specific dramatic action or emotional peak
+      2. Clear visual elements (character poses, expressions, environmental details)
+      3. The moment with the most visual energy or emotional impact
+      4. Elements that best represent the chapter's theme or turning point
+
+      Describe ONLY this scene in 20-30 words using vivid, specific language. Focus purely on the visual elements and action, not narrative explanation. Do not include character names or story title.
+
+      CHAPTER CONTENT:
+      {chapter_content}
+
+      SCENE DESCRIPTION:
+      """
+      ```
+    - Added the new prompt to the imports in `chapter_manager.py`
+  * Added New Method in `ChapterManager`:
+    - Created `generate_image_scene` method that uses the new prompt to extract the most visually striking moment
+    - Implemented similar structure to `generate_chapter_summary` but with different focus
+    - Added robust error handling and fallback mechanisms
+  * Updated WebSocket Service:
+    - Modified `stream_and_send_chapter` to use `generate_image_scene` instead of `generate_chapter_summary` for image generation
+    - Kept the same `enhance_prompt` mechanism to add agency, story, and visual details
+- Result:
+  * Chapter summaries now focus on comprehensive narrative overviews (better for SUMMARY chapter)
+  * Image generation now focuses on the most visually compelling moments (better for illustrations)
+  * More dynamic, exciting illustrations that capture specific dramatic moments
+  * Clearer separation of concerns between the two different needs
+
 ## 2025-03-15: Removed Chapter Summary Truncation for Complete Summaries
 
 ### Removed Artificial Truncation of Chapter Summaries

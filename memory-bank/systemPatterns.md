@@ -143,8 +143,25 @@ graph TD
   * Progressive enhancement (text first, images as available)
   * Enhanced prompt construction with `enhance_prompt()`
   * Visual details extraction from agency options
-  * Chapter summary generation with `generate_chapter_summary()`
-  * LLM-based summarization of chapter content for image prompts
+  * Dedicated image scene generation with `generate_image_scene()`
+  * Separate chapter summary generation with `generate_chapter_summary()`
+
+- **Dual-Purpose Content Generation**
+  * **Chapter Summaries** (`generate_chapter_summary()`)
+    - Focus on narrative events and character development
+    - 30-40 words covering key events and educational content
+    - Used for SUMMARY chapter and adventure recap
+    - Written in third person, past tense narrative style
+    - Includes important choices and educational content
+    - Template: `SUMMARY_CHAPTER_PROMPT` in `prompt_templates.py`
+  
+  * **Image Scenes** (`generate_image_scene()`)
+    - Focus on the most visually striking moment from a chapter
+    - 20-30 words of pure visual description
+    - Used exclusively for image generation
+    - Describes specific dramatic action or emotional peak
+    - Focuses on visual elements like poses, expressions, environment
+    - Template: `IMAGE_SCENE_PROMPT` in `prompt_templates.py`
 
 - **Image Generation Patterns**
 
@@ -172,9 +189,9 @@ flowchart TD
         
         subgraph OtherChapterFlow
             get_current_chapter --> |"Extract content from\nmost recently added chapter"| current_content
-            current_content --> generate_chapter_summary
-            generate_chapter_summary --> |"LLM-based\nsummarization"| chapter_summary
-            chapter_summary --> enhance_prompt_chapter[enhance_prompt]
+            current_content --> generate_image_scene
+            generate_image_scene --> |"LLM-based\nvisual scene extraction"| image_scene
+            image_scene --> enhance_prompt_chapter[enhance_prompt]
         end
     end
     
@@ -206,8 +223,9 @@ flowchart TD
         final_prompt_chapter --> generate_image_async
         
         generate_chapter_summary --> |"Uses LLM to\nsummarize content"| LLMService[LLM Service]
+        generate_image_scene --> |"Uses LLM to\nextract visual scene"| LLMService
         LLMService --> |"Prompt override\nfor direct text"| prompt_engineering[Prompt Engineering]
-        LLMService --> |"Streaming response"| summary_result[Summary Result]
+        LLMService --> |"Streaming response"| result[Result]
     end
     
     generate_image_async --> |"Async processing"| _generate_image
