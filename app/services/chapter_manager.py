@@ -2,9 +2,12 @@ from typing import List, Dict, Any
 import random
 import logging
 import math
+import re
 from datetime import datetime
 from app.models.story import ChapterType, AdventureState, ChapterData, ChapterContent
 from app.data.story_loader import StoryLoader
+from app.services.llm import LLMService
+from app.services.llm.prompt_templates import SUMMARY_CHAPTER_PROMPT
 
 logger = logging.getLogger("story_app")
 
@@ -635,3 +638,119 @@ class ChapterManager:
                 exc_info=True,
             )
             raise ValueError(error_msg) from e
+
+    @staticmethod
+    async def generate_chapter_summary(chapter_content: str) -> str:
+        """Generate a concise visual summary from chapter content.
+
+        Args:
+            chapter_content: The full text of the chapter (current chapter being displayed)
+
+        Returns:
+            A concise visual summary (40 words or less) highlighting the most
+            image-worthy elements
+        """
+        try:
+            # Use the LLM service to generate a summary
+            llm = LLMService()
+
+            # Create a custom prompt for the chapter summary using the template
+            custom_prompt = SUMMARY_CHAPTER_PROMPT.format(
+                chapter_content=chapter_content
+            )
+
+            # We need to override the prompt engineering system
+            # Create a minimal AdventureState-like object with just what we need
+            class MinimalState:
+                def __init__(self):
+                    self.current_chapter_id = "summary"
+                    self.story_length = 1
+                    self.chapters = []
+                    self.metadata = {"prompt_override": True}
+
+            # Check if we're using Gemini or OpenAI
+            is_gemini = (
+                isinstance(llm, LLMService) or "Gemini" in llm.__class__.__name__
+            )
+            logger.debug(f"Using LLM service: {llm.__class__.__name__}")
+
+            # For Gemini, use a direct approach instead of streaming
+            if is_gemini:
+                try:
+                    # Initialize the model with system prompt
+                    from google import generativeai as genai
+
+                    model = genai.GenerativeModel(
+                        model_name="gemini-2.0-flash",
+                        system_instruction="You are a helpful assistant that follows instructions precisely.",
+                    )
+
+                    # Generate content without streaming for summary
+                    response = model.generate_content(custom_prompt)
+
+                    # Extract the text directly
+                    raw_summary = response.text
+                    logger.debug(f"Direct Gemini response: '{raw_summary}'")
+                except Exception as e:
+                    logger.error(f"Error with direct Gemini call: {str(e)}")
+                    # Fallback to streaming approach
+                    chunks = []
+                    async for chunk in llm.generate_chapter_stream(
+                        story_config={},
+                        state=MinimalState(),
+                        question=None,
+                        previous_lessons=None,
+                        context={"prompt_override": custom_prompt},
+                    ):
+                        chunks.append(chunk)
+                    raw_summary = "".join(chunks)
+            else:
+                # For OpenAI, use the streaming approach
+                chunks = []
+                async for chunk in llm.generate_chapter_stream(
+                    story_config={},
+                    state=MinimalState(),
+                    question=None,
+                    previous_lessons=None,
+                    context={"prompt_override": custom_prompt},
+                ):
+                    chunks.append(chunk)
+                raw_summary = "".join(chunks)
+
+            logger.debug(f"Raw collected summary before strip: '{raw_summary}'")
+            logger.debug(f"Raw collected summary length: {len(raw_summary)}")
+
+            # Strip whitespace
+            summary = raw_summary.strip()
+            logger.debug(f"Stripped summary length: {len(summary)}")
+
+            logger.info(f"Generated chapter summary: '{summary}'")
+
+            # Ensure the summary is not empty - use a more robust check
+            if (
+                not summary or len(summary) < 5
+            ):  # Consider very short summaries as empty too
+                logger.warning(
+                    f"Generated summary is empty or too short: '{summary}', using fallback"
+                )
+                # Use a simple fallback summary based on the first paragraph
+                paragraphs = [p for p in chapter_content.split("\n\n") if p.strip()]
+                if paragraphs:
+                    first_para = paragraphs[0]
+                    words = first_para.split()[:30]
+                    summary = " ".join(words) + "..."
+                    logger.info(f"Using fallback summary: {summary}")
+                else:
+                    summary = "A scene from the story"
+                    logger.info("Using generic fallback summary")
+
+            return summary
+        except Exception as e:
+            logger.error(f"Error generating chapter summary: {str(e)}")
+            # Return a simplified summary based on the first paragraph
+            paragraphs = [p for p in chapter_content.split("\n\n") if p.strip()]
+            if paragraphs:
+                first_para = paragraphs[0]
+                words = first_para.split()[:30]
+                return " ".join(words) + "..."
+            return "A scene from the story"

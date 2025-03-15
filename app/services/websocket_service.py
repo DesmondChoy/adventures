@@ -172,7 +172,7 @@ async def process_choice(
             logger.info(
                 f"Generating summary for chapter {previous_chapter.chapter_number}"
             )
-            chapter_summary = await image_service.generate_chapter_summary(
+            chapter_summary = await chapter_manager.generate_chapter_summary(
                 previous_chapter.content
             )
 
@@ -426,7 +426,7 @@ async def stream_and_send_chapter(
             current_content = current_chapter.content
 
             # Generate a summary of the current chapter for the image prompt
-            chapter_summary = await image_service.generate_chapter_summary(
+            chapter_summary = await chapter_manager.generate_chapter_summary(
                 current_content
             )
 
