@@ -210,6 +210,22 @@ CHAPTER CONTENT:
 CHAPTER SUMMARY:
 """
 
+IMAGE_SCENE_PROMPT = """Identify the single most visually striking moment from this chapter that would make a compelling illustration. 
+
+Focus on:
+1. A specific dramatic action or emotional peak
+2. Clear visual elements (character poses, expressions, environmental details)
+3. The moment with the most visual energy or emotional impact
+4. Elements that best represent the chapter's theme or turning point
+
+Describe ONLY this scene in 20-30 words using vivid, specific language. Focus purely on the visual elements and action, not narrative explanation. Do not include character names or story title.
+
+CHAPTER CONTENT:
+{chapter_content}
+
+SCENE DESCRIPTION:
+"""
+
 # Choice format instructions
 # --------------------------
 

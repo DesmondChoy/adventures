@@ -425,18 +425,16 @@ async def stream_and_send_chapter(
             current_chapter = state.chapters[-1]  # The most recently added chapter
             current_content = current_chapter.content
 
-            # Generate a summary of the current chapter for the image prompt
-            chapter_summary = await chapter_manager.generate_chapter_summary(
-                current_content
-            )
+            # Generate a description of the most visually striking moment from the chapter
+            image_scene = await chapter_manager.generate_image_scene(current_content)
 
             logger.debug(
-                f"Chapter summary before passing to enhance_prompt: '{chapter_summary}'"
+                f"Image scene before passing to enhance_prompt: '{image_scene}'"
             )
 
-            # Create the image prompt using the summary
+            # Create the image prompt using the image scene
             prompt = image_service.enhance_prompt(
-                "", state, chapter_summary=chapter_summary
+                "", state, chapter_summary=image_scene
             )
 
             # Start the image generation task
@@ -447,7 +445,7 @@ async def stream_and_send_chapter(
                 )
             )
             logger.debug(
-                f"Started image generation for chapter {current_chapter_number} with summary: {chapter_summary}"
+                f"Started image generation for chapter {current_chapter_number} with image scene: {image_scene}"
             )
         except Exception as e:
             logger.error(f"Error generating chapter image: {str(e)}")

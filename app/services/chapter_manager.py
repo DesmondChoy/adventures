@@ -7,7 +7,7 @@ from datetime import datetime
 from app.models.story import ChapterType, AdventureState, ChapterData, ChapterContent
 from app.data.story_loader import StoryLoader
 from app.services.llm import LLMService
-from app.services.llm.prompt_templates import SUMMARY_CHAPTER_PROMPT
+from app.services.llm.prompt_templates import SUMMARY_CHAPTER_PROMPT, IMAGE_SCENE_PROMPT
 
 logger = logging.getLogger("story_app")
 
@@ -640,15 +640,131 @@ class ChapterManager:
             raise ValueError(error_msg) from e
 
     @staticmethod
-    async def generate_chapter_summary(chapter_content: str) -> str:
-        """Generate a concise visual summary from chapter content.
+    async def generate_image_scene(chapter_content: str) -> str:
+        """Generate a description of the most visually striking moment from the chapter.
 
         Args:
             chapter_content: The full text of the chapter (current chapter being displayed)
 
         Returns:
-            A concise visual summary (40 words or less) highlighting the most
-            image-worthy elements
+            A vivid description (20-30 words) of the most visually striking moment
+            from the chapter, suitable for image generation
+        """
+        try:
+            # Use the LLM service to generate an image scene
+            llm = LLMService()
+
+            # Create a custom prompt for the image scene using the template
+            custom_prompt = IMAGE_SCENE_PROMPT.format(chapter_content=chapter_content)
+
+            # We need to override the prompt engineering system
+            # Create a minimal AdventureState-like object with just what we need
+            class MinimalState:
+                def __init__(self):
+                    self.current_chapter_id = "image_scene"
+                    self.story_length = 1
+                    self.chapters = []
+                    self.metadata = {"prompt_override": True}
+
+            # Check if we're using Gemini or OpenAI
+            is_gemini = (
+                isinstance(llm, LLMService) or "Gemini" in llm.__class__.__name__
+            )
+            logger.debug(f"Using LLM service for image scene: {llm.__class__.__name__}")
+
+            # For Gemini, use a direct approach instead of streaming
+            if is_gemini:
+                try:
+                    # Initialize the model with system prompt
+                    from google import generativeai as genai
+
+                    model = genai.GenerativeModel(
+                        model_name="gemini-2.0-flash",
+                        system_instruction="You are a helpful assistant that follows instructions precisely.",
+                    )
+
+                    # Generate content without streaming for image scene
+                    response = model.generate_content(custom_prompt)
+
+                    # Extract the text directly
+                    raw_scene = response.text
+                    logger.debug(
+                        f"Direct Gemini response for image scene: '{raw_scene}'"
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Error with direct Gemini call for image scene: {str(e)}"
+                    )
+                    # Fallback to streaming approach
+                    chunks = []
+                    async for chunk in llm.generate_chapter_stream(
+                        story_config={},
+                        state=MinimalState(),
+                        question=None,
+                        previous_lessons=None,
+                        context={"prompt_override": custom_prompt},
+                    ):
+                        chunks.append(chunk)
+                    raw_scene = "".join(chunks)
+            else:
+                # For OpenAI, use the streaming approach
+                chunks = []
+                async for chunk in llm.generate_chapter_stream(
+                    story_config={},
+                    state=MinimalState(),
+                    question=None,
+                    previous_lessons=None,
+                    context={"prompt_override": custom_prompt},
+                ):
+                    chunks.append(chunk)
+                raw_scene = "".join(chunks)
+
+            logger.debug(f"Raw collected image scene before strip: '{raw_scene}'")
+            logger.debug(f"Raw collected image scene length: {len(raw_scene)}")
+
+            # Strip whitespace
+            scene = raw_scene.strip()
+            logger.debug(f"Stripped image scene length: {len(scene)}")
+
+            logger.info(f"Generated image scene: '{scene}'")
+
+            # Ensure the scene is not empty - use a more robust check
+            if not scene or len(scene) < 5:  # Consider very short scenes as empty too
+                logger.warning(
+                    f"Generated image scene is empty or too short: '{scene}', using fallback"
+                )
+                # Use a simple fallback scene based on the first paragraph
+                paragraphs = [p for p in chapter_content.split("\n\n") if p.strip()]
+                if paragraphs:
+                    first_para = paragraphs[0]
+                    words = first_para.split()[:20]
+                    scene = " ".join(words) + "..."
+                    logger.info(f"Using fallback image scene: {scene}")
+                else:
+                    scene = "A dramatic moment from the story"
+                    logger.info("Using generic fallback image scene")
+
+            return scene
+        except Exception as e:
+            logger.error(f"Error generating image scene: {str(e)}")
+            # Return a simplified scene based on the first paragraph
+            paragraphs = [p for p in chapter_content.split("\n\n") if p.strip()]
+            if paragraphs:
+                first_para = paragraphs[0]
+                words = first_para.split()[:20]
+                return " ".join(words) + "..."
+            return "A dramatic moment from the story"
+
+    @staticmethod
+    async def generate_chapter_summary(chapter_content: str) -> str:
+        """Generate a concise summary of the chapter content.
+
+        Args:
+            chapter_content: The full text of the chapter (current chapter being displayed)
+
+        Returns:
+            A concise summary (30-40 words) highlighting the key narrative events
+            and character development
         """
         try:
             # Use the LLM service to generate a summary
