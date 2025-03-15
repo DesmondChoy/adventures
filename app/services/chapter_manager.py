@@ -756,11 +756,15 @@ class ChapterManager:
             return "A dramatic moment from the story"
 
     @staticmethod
-    async def generate_chapter_summary(chapter_content: str) -> str:
+    async def generate_chapter_summary(
+        chapter_content: str, chosen_choice: str = None, choice_context: str = ""
+    ) -> str:
         """Generate a concise summary of the chapter content.
 
         Args:
             chapter_content: The full text of the chapter (current chapter being displayed)
+            chosen_choice: The text of the choice made at the end of the chapter (if any)
+            choice_context: Additional context about the choice (e.g., whether it was correct/incorrect)
 
         Returns:
             A concise summary (30-40 words) highlighting the key narrative events
@@ -772,7 +776,14 @@ class ChapterManager:
 
             # Create a custom prompt for the chapter summary using the template
             custom_prompt = SUMMARY_CHAPTER_PROMPT.format(
-                chapter_content=chapter_content
+                chapter_content=chapter_content,
+                chosen_choice=chosen_choice or "No choice was made",
+                choice_context=choice_context,
+            )
+
+            # Log the full prompt for debugging
+            logger.debug(
+                f"\n=== DEBUG: Full SUMMARY_CHAPTER_PROMPT sent to LLM ===\n{custom_prompt}\n===================================\n"
             )
 
             # We need to override the prompt engineering system
@@ -833,14 +844,14 @@ class ChapterManager:
                     chunks.append(chunk)
                 raw_summary = "".join(chunks)
 
-            logger.debug(f"Raw collected summary before strip: '{raw_summary}'")
-            logger.debug(f"Raw collected summary length: {len(raw_summary)}")
+            # logger.debug(f"Raw collected summary before strip: '{raw_summary}'")
+            # logger.debug(f"Raw collected summary length: {len(raw_summary)}")
 
             # Strip whitespace
             summary = raw_summary.strip()
-            logger.debug(f"Stripped summary length: {len(summary)}")
+            # logger.debug(f"Stripped summary length: {len(summary)}")
 
-            logger.info(f"Generated chapter summary: '{summary}'")
+            # logger.info(f"Generated chapter summary: '{summary}'")
 
             # Ensure the summary is not empty - use a more robust check
             if (

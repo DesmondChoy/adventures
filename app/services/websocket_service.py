@@ -172,8 +172,24 @@ async def process_choice(
             logger.info(
                 f"Generating summary for chapter {previous_chapter.chapter_number}"
             )
+
+            # Extract the choice text and context from the response
+            choice_text = ""
+            choice_context = ""
+
+            if isinstance(previous_chapter.response, StoryResponse):
+                choice_text = previous_chapter.response.choice_text
+                # No additional context needed for STORY chapters
+            elif isinstance(previous_chapter.response, LessonResponse):
+                choice_text = previous_chapter.response.chosen_answer
+                choice_context = (
+                    " (Correct answer)"
+                    if previous_chapter.response.is_correct
+                    else " (Incorrect answer)"
+                )
+
             chapter_summary = await chapter_manager.generate_chapter_summary(
-                previous_chapter.content
+                previous_chapter.content, choice_text, choice_context
             )
 
             # Store the chapter summary in the state

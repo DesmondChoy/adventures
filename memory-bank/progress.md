@@ -1,5 +1,75 @@
 # Progress Log
 
+## 2025-03-16: Enhanced Chapter Summary Generation with Educational Context
+
+### Completely Redesigned SUMMARY_CHAPTER_PROMPT Template
+- Problem: Previous chapter summaries lacked educational context and didn't emphasize the choices made
+- Solution:
+  * Implemented a completely redesigned SUMMARY_CHAPTER_PROMPT with a more structured format:
+    ```python
+    SUMMARY_CHAPTER_PROMPT = """
+    This is one chapter from a Choose Your Own Adventure story. At the end of each chapter, the user is presented with choices.
+    Combine CHAPTER CONTENT and CHOICE MADE to create a natural, organic and concise summary (70-100 words) of that captures the key narrative events and character development.
+
+    The summary should be written in third person, past tense, and maintain the adventure's narrative tone. 
+    If there are educational questions relating to CHOICE MADE, quote the entire question without paraphrasing it. 
+    This summary will be used together with future chapter summaries as a recap to the whole adventure spanning multiple chapters.
+
+    # CHAPTER CONTENT
+    {chapter_content}
+
+    # CHOICE MADE
+    "{chosen_choice}" - {choice_context}
+
+    # CHAPTER SUMMARY
+    """
+    ```
+  * Increased summary length from 30-40 words to 70-100 words for more comprehensive recaps
+  * Added explicit instructions to quote educational questions verbatim
+  * Added clear section headings for better prompt organization
+
+### Added Choice Context for Educational Feedback
+- Problem: Chapter summaries didn't indicate whether educational choices were correct or incorrect
+- Solution:
+  * Added `choice_context` parameter to `generate_chapter_summary` method in `chapter_manager.py`:
+    ```python
+    async def generate_chapter_summary(
+        chapter_content: str, chosen_choice: str = None, choice_context: str = ""
+    ) -> str:
+    ```
+  * Updated `process_choice` function in `websocket_service.py` to construct appropriate context:
+    ```python
+    # Extract the choice text and context from the response
+    choice_text = ""
+    choice_context = ""
+    
+    if isinstance(previous_chapter.response, StoryResponse):
+        choice_text = previous_chapter.response.choice_text
+        # No additional context needed for STORY chapters
+    elif isinstance(previous_chapter.response, LessonResponse):
+        choice_text = previous_chapter.response.chosen_answer
+        choice_context = " (Correct answer)" if previous_chapter.response.is_correct else " (Incorrect answer)"
+    ```
+  * Added error handling to ensure the main flow continues even if summary generation fails
+
+### Enhanced Debugging for Chapter Summary Generation
+- Problem: Difficult to debug issues with chapter summary generation
+- Solution:
+  * Added comprehensive debug logging in `generate_chapter_summary` method:
+    ```python
+    # Log the full prompt for debugging
+    logger.debug(f"\n=== DEBUG: Full SUMMARY_CHAPTER_PROMPT sent to LLM ===\n{custom_prompt}\n===================================\n")
+    ```
+  * This allows developers to see the exact prompt sent to the LLM, including all substituted values
+
+### Benefits of the New Implementation
+- More detailed and comprehensive chapter summaries (70-100 words vs. 30-40 words)
+- Educational content is preserved with verbatim question quoting
+- Feedback on correct/incorrect answers is included for educational chapters
+- Improved narrative flow with better context from choices made
+- Extensible design that can accommodate future chapter types
+- Easier debugging with comprehensive logging
+
 ## 2025-03-15: Separated Image Scene Generation from Chapter Summaries
 
 ### Implemented Dedicated Image Scene Generation
