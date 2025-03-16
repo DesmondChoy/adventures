@@ -56,8 +56,40 @@ def extract_chapter_summaries_from_log(log_file):
     summaries = []
     all_summaries_found = False
     lesson_questions = []  # Store lesson questions
+    lesson_answers = {}  # Store lesson answers by chapter number
 
     with open(log_file, "r") as f:
+        # First pass: collect lesson answers
+        for line in f:
+            # Look for lesson answers
+            if "EVENT:LESSON_ANSWER" in line:
+                try:
+                    data = json.loads(line)
+                    # The data might be directly in the JSON object or in the "extra" field
+                    if "chapter_number" in data:
+                        chapter_number = data.get("chapter_number")
+                        if chapter_number:
+                            lesson_answers[chapter_number] = {
+                                "chosen_answer": data.get("selected_answer", ""),
+                                "is_correct": data.get("is_correct", False),
+                            }
+                    elif "extra" in data:
+                        extra = data["extra"]
+                        chapter_number = extra.get("chapter_number")
+                        if chapter_number:
+                            lesson_answers[chapter_number] = {
+                                "chosen_answer": extra.get("selected_answer", ""),
+                                "is_correct": extra.get("is_correct", False),
+                            }
+                except Exception as e:
+                    logger = logging.getLogger("debug_summary")
+                    logger.error(f"Error parsing LESSON_ANSWER: {e}")
+                    pass
+
+        # Reset file pointer to beginning
+        f.seek(0)
+
+        # Second pass: process everything else
         for line in f:
             # First try to find individual chapter summaries
             if "EVENT:CHAPTER_SUMMARY" in line:
@@ -102,21 +134,54 @@ def extract_chapter_summaries_from_log(log_file):
             if "EVENT:LESSON_QUESTION" in line:
                 try:
                     data = json.loads(line)
-                    if "question" in data:
+                    chapter_number = None
+
+                    # Extract chapter number from the data
+                    if "chapter_number" in data:
+                        # Data is directly in the JSON object
+                        chapter_number = data.get("chapter_number")
                         question = data.get("question", "")
                         topic = data.get("topic", "")
                         subtopic = data.get("subtopic", "")
                         correct_answer = data.get("correct_answer", "")
+                        explanation = data.get("explanation", "")
+                    elif "extra" in data:
+                        # Data is in the "extra" field
+                        extra = data["extra"]
+                        chapter_number = extra.get("chapter_number")
+                        question = extra.get("question", "")
+                        topic = extra.get("topic", "")
+                        subtopic = extra.get("subtopic", "")
+                        correct_answer = extra.get("correct_answer", "")
+                        explanation = extra.get("explanation", "")
+                    else:
+                        # Fallback to looking for fields directly in the data
+                        question = data.get("question", "")
+                        topic = data.get("topic", "")
+                        subtopic = data.get("subtopic", "")
+                        correct_answer = data.get("correct_answer", "")
+                        explanation = data.get("explanation", "")
 
-                        if question and correct_answer:
-                            lesson_questions.append(
-                                {
-                                    "question": question,
-                                    "topic": topic,
-                                    "subtopic": subtopic,
-                                    "correct_answer": correct_answer,
-                                }
-                            )
+                    # Get chosen answer and correctness from lesson_answers if available
+                    chosen_answer = ""
+                    is_correct = False
+                    if chapter_number and chapter_number in lesson_answers:
+                        answer_data = lesson_answers[chapter_number]
+                        chosen_answer = answer_data.get("chosen_answer", "")
+                        is_correct = answer_data.get("is_correct", False)
+
+                    if question and correct_answer:
+                        lesson_questions.append(
+                            {
+                                "question": question,
+                                "topic": topic,
+                                "subtopic": subtopic,
+                                "correct_answer": correct_answer,
+                                "chosen_answer": chosen_answer,
+                                "is_correct": is_correct,
+                                "explanation": explanation,
+                            }
+                        )
                 except Exception as e:
                     logger = logging.getLogger("debug_summary")
                     logger.error(f"Error parsing LESSON_QUESTION: {e}")

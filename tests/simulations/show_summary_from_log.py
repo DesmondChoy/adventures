@@ -141,66 +141,56 @@ async def show_summary_from_log(log_file_path):
     if lesson_questions:
         # Find the Learning Report section
         learning_report_index = summary_content.find("## Learning Report")
-        if learning_report_index != -1:
-            # Extract everything before the Learning Report section
-            before_learning_report = summary_content[
-                : learning_report_index + len("## Learning Report")
-            ]
 
-            # Find the default "You didn't encounter any educational questions" message
-            default_message_index = summary_content.find(
-                "You didn't encounter any educational questions", learning_report_index
-            )
+        # If Learning Report section not found, add it
+        if learning_report_index == -1:
+            # Add Learning Report section at the end of the summary content
+            summary_content += "\n\n# Learning Report"
+            learning_report_index = summary_content.find("# Learning Report")
 
-            # Extract everything after the Learning Report section but before the default message
-            if default_message_index != -1:
-                # Find the start of the paragraph containing the default message
-                paragraph_start = summary_content.rfind(
-                    "\n\n", learning_report_index, default_message_index
-                )
-                if paragraph_start == -1:
-                    paragraph_start = learning_report_index + len("## Learning Report")
+        # Extract everything before the Learning Report section
+        before_learning_report = summary_content[
+            : learning_report_index + len("# Learning Report")
+        ]
 
-                # Find the end of the paragraph containing the default message
-                paragraph_end = summary_content.find("\n\n", default_message_index)
-                if paragraph_end == -1:
-                    paragraph_end = len(summary_content)
+        # Create a new Learning Report section with the lesson questions
+        learning_report = "\n\nDuring your adventure, you encountered the following educational questions:\n\n"
+        for i, question in enumerate(lesson_questions, 1):
+            learning_report += f"{i}. **Question**: {question['question']}\n"
+            learning_report += f"   **Topic**: {question['topic']}"
+            if question["subtopic"]:
+                learning_report += f" - {question['subtopic']}"
 
-                # Extract content before and after the default message paragraph
-                before_default = summary_content[
-                    learning_report_index + len("## Learning Report") : paragraph_start
-                ]
-                after_default = summary_content[paragraph_end:]
+            # Add chosen answer if available
+            if "chosen_answer" in question and question["chosen_answer"]:
+                learning_report += f"\n   **Your Answer**: {question['chosen_answer']} "
+                if "is_correct" in question:
+                    learning_report += (
+                        f"({'Correct' if question['is_correct'] else 'Incorrect'})"
+                    )
 
-                # Combine to skip the default message
-                after_learning_report = after_default
-            else:
-                # If default message not found, just get everything after the Learning Report header
-                after_learning_report_index = summary_content.find(
-                    "\n\n", learning_report_index
-                )
-                if after_learning_report_index == -1:
-                    after_learning_report = ""
-                else:
-                    after_learning_report = summary_content[
-                        after_learning_report_index:
-                    ]
+                # Only show correct answer if the user's answer was incorrect
+                if "is_correct" in question and not question["is_correct"]:
+                    learning_report += (
+                        f"\n   **Correct Answer**: {question['correct_answer']}"
+                    )
 
-            # Create a new Learning Report section with the lesson questions
-            learning_report = "\n\nDuring your adventure, you encountered the following educational questions:\n\n"
-            for i, question in enumerate(lesson_questions, 1):
-                learning_report += f"{i}. **Question**: {question['question']}\n"
-                learning_report += f"   **Topic**: {question['topic']}"
-                if question["subtopic"]:
-                    learning_report += f" - {question['subtopic']}"
-                learning_report += (
-                    f"\n   **Correct Answer**: {question['correct_answer']}\n\n"
-                )
+            # Add explanation if available (always show regardless of correctness)
+            if "explanation" in question and question["explanation"]:
+                learning_report += f"\n   **Explanation**: {question['explanation']}"
 
-            # Combine everything
-            summary_content = (
-                before_learning_report + learning_report + after_learning_report
-            )
+            learning_report += "\n\n"
+
+        # Add thank you message at the end
+        learning_report += "Thank you for joining us on this learning odyssey!"
+
+        # We don't need any content after the Learning Report section
+        after_learning_report = ""
+
+        # Combine everything
+        summary_content = (
+            before_learning_report + learning_report + after_learning_report
+        )
 
     # Display the summary
     print("\n" + "=" * 80)

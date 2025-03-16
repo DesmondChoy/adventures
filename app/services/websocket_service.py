@@ -722,7 +722,7 @@ async def generate_summary_content(state: AdventureState) -> str:
                 summary_content += f"{summary}\n\n"
 
             # Add learning report section
-            summary_content += "## Learning Report\n\n"
+            summary_content += "\n\n# Learning Report\n\n"
 
             # Get all lesson chapters
             lesson_chapters = [

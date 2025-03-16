@@ -510,6 +510,9 @@ async def simulate_story():
                                                                 ),
                                                                 None,
                                                             ),
+                                                            "explanation": question_data.get(
+                                                                "explanation", ""
+                                                            ),  # Add explanation field
                                                             "timestamp": datetime.now().isoformat(),
                                                         },
                                                     )

@@ -1,5 +1,31 @@
 # Active Context
 
+## Improved Learning Report Display in Simulation Log Summary (2025-03-16)
+
+1. **Enhanced Learning Report Display in Simulation Log Summary Viewer:**
+   * Problem: The learning report in `show_summary_from_log.py` was showing redundant information for correctly answered questions
+   * Root Cause:
+     - For both correct and incorrect answers, the script was displaying both "Your Answer" and "Correct Answer"
+     - This created redundancy when the user's answer was correct, as the same text appeared twice
+   * Solution:
+     - Modified the learning report generation in `show_summary_from_log.py` to:
+       * Always show "Your Answer" with a "(Correct)" or "(Incorrect)" indicator
+       * Only show "Correct Answer" when the user's answer was incorrect
+       * Always show the explanation regardless of correctness
+     - Added code to handle cases where the Learning Report section isn't found in the summary content
+     - Ensured the thank you message is preserved at the end of the report
+   * Implementation Details:
+     - Updated the logic in the lesson question processing loop
+     - Added conditional display of the correct answer based on the `is_correct` flag
+     - Improved handling of missing Learning Report sections in the summary content
+     - Removed debug output for cleaner console output
+   * Result:
+     - More streamlined learning report that avoids redundancy
+     - For correct answers: Shows only "Your Answer: [answer] (Correct)" followed by the explanation
+     - For incorrect answers: Shows both "Your Answer: [answer] (Incorrect)" and "Correct Answer: [correct_answer]" followed by the explanation
+     - Clearer educational feedback for users
+     - Consistent display of explanations for all questions
+
 ## Enhanced Chapter Summary Generation with Educational Context (2025-03-16)
 
 1. **Completely Redesigned SUMMARY_CHAPTER_PROMPT Template:**
