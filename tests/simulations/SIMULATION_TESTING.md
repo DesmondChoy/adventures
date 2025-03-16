@@ -77,6 +77,11 @@ The simulation uses a sophisticated logging system:
   - `EVENT:LESSON_ANSWER` - Logs lesson answer correctness
   - `EVENT:STORY_COMPLETE` - Logs story completion with statistics
   - `EVENT:PROCESS_START` - Logs the start of a process like `process_consequences`
+  - `EVENT:CHAPTER_SUMMARY` - Logs individual chapter summaries as they're generated
+  - `EVENT:CHAPTER_SUMMARIES_UPDATED` - Logs when the chapter_summaries array is updated
+  - `EVENT:SUMMARY_START` - Logs the start of the SUMMARY chapter generation
+  - `EVENT:SUMMARY_COMPLETE` - Logs the completion of the SUMMARY chapter
+  - `EVENT:FINAL_CHAPTER_SUMMARIES` - Logs the complete set of all chapter summaries
 
 ### Utility Functions
 

@@ -1,5 +1,25 @@
 # Active Context
 
+## Updated Story Simulation for Complete Chapter Summaries (2025-03-16)
+
+1. **Enhanced Story Simulation for CONCLUSION Chapter Summary:**
+   * Problem: The simulation was ending prematurely after the CONCLUSION chapter, before the CONCLUSION chapter summary could be generated
+   * Solution:
+     - Modified the "story_complete" handler to send a "reveal_summary" choice instead of immediately returning
+     - Added handlers for "summary_start" and "summary_complete" message types
+     - Enhanced logging for SUMMARY chapter content and events
+     - Added "EVENT:FINAL_CHAPTER_SUMMARIES" log entry for the complete set of summaries
+   * Implementation Details:
+     - After receiving the "story_complete" message, the simulation now sends a "reveal_summary" choice
+     - This simulates the user clicking the "Reveal Your Adventure Summary" button
+     - The simulation then processes the SUMMARY chapter and captures all 10 chapter summaries
+     - New log events track the summary generation process
+   * Benefits:
+     - All 10 chapter summaries (including CONCLUSION) are now captured in the simulation log
+     - The simulation accurately reflects the complete user journey through the application
+     - Provides comprehensive test data for verifying the chapter summary functionality
+     - Ensures the SUMMARY chapter is properly tested in automated simulations
+
 ## Improved CONCLUSION Chapter Summary Generation (2025-03-16)
 
 1. **Consistent Chapter Summary Generation for All Chapters:**

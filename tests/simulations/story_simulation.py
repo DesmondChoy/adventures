@@ -41,6 +41,13 @@ Updates (2025-03-11):
 - Added comprehensive summary log at the end of simulation
 - Enhanced human-readable output with chapter summary display
 
+Updates (2025-03-16):
+- Added support for the "reveal_summary" choice after CONCLUSION chapter
+- Implemented handling for summary_start and summary_complete message types
+- Enhanced logging for SUMMARY chapter content and events
+- Ensured all 10 chapter summaries (including CONCLUSION) are captured
+- Added EVENT:FINAL_CHAPTER_SUMMARIES log entry for complete summary data
+
 Usage Instructions:
 1. Prerequisites:
    - Ensure the FastAPI server is running at http://localhost:8000
@@ -65,8 +72,11 @@ Usage Instructions:
 
 5. Working with Chapter Summaries:
    - Chapter summaries are automatically captured in the log file
-   - Extract them from the "EVENT:ALL_CHAPTER_SUMMARIES" log entry
-   - Use the summaries to test the SUMMARY chapter implementation independently
+   - Individual summaries are logged with "EVENT:CHAPTER_SUMMARY" as they're generated
+   - Complete set of summaries (including CONCLUSION chapter) is logged with "EVENT:FINAL_CHAPTER_SUMMARIES"
+   - The simulation now automatically sends the "reveal_summary" choice after the CONCLUSION chapter
+   - Summary chapter content is captured and logged with "EVENT:SUMMARY_COMPLETE"
+   - Use these logs to test the SUMMARY chapter implementation independently
 """
 
 import asyncio
@@ -620,6 +630,103 @@ async def simulate_story():
                                             print(
                                                 f"Success Rate: {stats.get('completion_percentage', 0)}%"
                                             )
+
+                                            # Instead of returning, send a "reveal_summary" choice to generate the CONCLUSION chapter summary
+                                            print_separator(
+                                                "Requesting Adventure Summary"
+                                            )
+                                            simulation_logger.info(
+                                                "Sending 'reveal_summary' choice to generate CONCLUSION chapter summary"
+                                            )
+
+                                            # Prepare and send the reveal_summary choice message
+                                            reveal_summary_message = {
+                                                "state": response_data.get("state", {}),
+                                                "choice": {
+                                                    "chosen_path": "reveal_summary",
+                                                    "choice_text": "Reveal Your Adventure Summary",
+                                                },
+                                            }
+                                            await websocket.send(
+                                                json.dumps(reveal_summary_message)
+                                            )
+                                            simulation_logger.debug(
+                                                f"Sent reveal_summary choice: {json.dumps(reveal_summary_message, indent=2)}"
+                                            )
+
+                                            # Continue processing responses to capture the summary chapter
+                                            continue
+
+                                        elif response_type == "summary_start":
+                                            # Handle the start of the summary chapter
+                                            simulation_logger.info(
+                                                "EVENT:SUMMARY_START",
+                                                extra={
+                                                    "timestamp": datetime.now().isoformat(),
+                                                    "run_id": run_id,
+                                                },
+                                            )
+                                            print_separator("Summary Chapter Started")
+                                            # Clear story content to collect the summary content
+                                            story_content = []
+                                            continue
+
+                                        elif response_type == "summary_complete":
+                                            # Handle the completion of the summary chapter
+                                            stats = response_data.get("state", {}).get(
+                                                "stats", {}
+                                            )
+
+                                            # Log the accumulated summary content
+                                            if story_content:
+                                                full_content = "".join(story_content)
+                                                content_length = len(full_content)
+                                                simulation_logger.info(
+                                                    f"Summary chapter content complete ({content_length} chars)"
+                                                )
+                                                # Print for human readability
+                                                print_separator(
+                                                    "Summary Chapter Content"
+                                                )
+                                                print(full_content)
+
+                                            # Check for chapter summaries in the state
+                                            if "chapter_summaries" in response_data.get(
+                                                "state", {}
+                                            ):
+                                                chapter_summaries = response_data[
+                                                    "state"
+                                                ]["chapter_summaries"]
+                                                if chapter_summaries:
+                                                    simulation_logger.info(
+                                                        "EVENT:FINAL_CHAPTER_SUMMARIES",
+                                                        extra={
+                                                            "summaries_count": len(
+                                                                chapter_summaries
+                                                            ),
+                                                            "chapter_summaries": chapter_summaries,
+                                                            "timestamp": datetime.now().isoformat(),
+                                                            "run_id": run_id,
+                                                        },
+                                                    )
+
+                                            # Log summary completion
+                                            simulation_logger.info(
+                                                "EVENT:SUMMARY_COMPLETE",
+                                                extra={
+                                                    "timestamp": datetime.now().isoformat(),
+                                                    "run_id": run_id,
+                                                    "final_state": json.dumps(
+                                                        response_data.get("state", {})
+                                                    ),
+                                                },
+                                            )
+
+                                            print_separator("Summary Complete")
+                                            print(
+                                                "Adventure summary has been generated and displayed."
+                                            )
+                                            # Now we can return as the simulation is truly complete
                                             return
                                 except json.JSONDecodeError:
                                     # Not JSON, must be story content or completion
