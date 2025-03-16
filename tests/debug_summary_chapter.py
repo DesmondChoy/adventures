@@ -3,14 +3,16 @@ import os
 import json
 import asyncio
 import logging
+import glob
+import re
 from pprint import pformat
+from datetime import datetime
 
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.models.story import AdventureState, ChapterType, ChapterData
 from app.services.websocket_service import (
-    process_summary_request,
     generate_summary_content,
 )
 from app.services.adventure_state_manager import AdventureStateManager
@@ -46,9 +48,9 @@ class MockWebSocket:
     async def receive_json(self):
         """Mock method to simulate receiving JSON data."""
         if self.test_state:
-            return {"type": "request_summary", "state": self.test_state}
+            return {"type": "choice", "id": "reveal_summary", "state": self.test_state}
         else:
-            return {"type": "request_summary", "state": {}}
+            return {"type": "choice", "id": "reveal_summary", "state": {}}
 
 
 def extract_chapter_summaries_from_log(log_file):
@@ -117,15 +119,26 @@ def extract_chapter_summaries_from_log(log_file):
                         pass
 
             # Also look for the comprehensive summary at the end
-            if "EVENT:ALL_CHAPTER_SUMMARIES" in line:
+            if (
+                "EVENT:ALL_CHAPTER_SUMMARIES" in line
+                or "EVENT:FINAL_CHAPTER_SUMMARIES" in line
+            ):
                 try:
                     data = json.loads(line)
                     if "extra" in data and "chapter_summaries" in data["extra"]:
                         all_summaries = data["extra"]["chapter_summaries"]
                         if all_summaries and len(all_summaries) > 0:
                             # If we found comprehensive summaries, use those instead
-                            summaries = all_summaries
+                            # Prepend chapter numbers to each summary
+                            numbered_summaries = []
+                            for i, summary in enumerate(all_summaries, 1):
+                                numbered_summaries.append(f"Chapter {i}: {summary}")
+
+                            summaries = numbered_summaries
                             all_summaries_found = True
+                            logger.info(
+                                f"Found {len(all_summaries)} chapter summaries in ALL_CHAPTER_SUMMARIES/FINAL_CHAPTER_SUMMARIES event"
+                            )
                             break  # No need to continue parsing
                 except json.JSONDecodeError:
                     pass
@@ -203,7 +216,15 @@ def extract_chapter_summaries_from_log(log_file):
                         ):
                             chapter_summaries = state_data["chapter_summaries"]
                             if len(chapter_summaries) > len(summaries):
-                                summaries = chapter_summaries
+                                # Prepend chapter numbers to each summary
+                                numbered_summaries = []
+                                for i, summary in enumerate(chapter_summaries, 1):
+                                    numbered_summaries.append(f"Chapter {i}: {summary}")
+
+                                summaries = numbered_summaries
+                                logger.info(
+                                    f"Found {len(chapter_summaries)} chapter summaries in STATE_TRANSITION event"
+                                )
 
                         # We no longer extract chapter content as fallback summaries
                 except Exception as e:
@@ -230,13 +251,52 @@ def extract_chapter_summaries_from_log(log_file):
                                 logging.getLogger("debug_summary").info(
                                     f"Found {len(chapter_summaries)} chapter summaries in STORY_COMPLETE event"
                                 )
-                                summaries = chapter_summaries
+                                # Prepend chapter numbers to each summary
+                                numbered_summaries = []
+                                for i, summary in enumerate(chapter_summaries, 1):
+                                    numbered_summaries.append(f"Chapter {i}: {summary}")
+
+                                summaries = numbered_summaries
                                 all_summaries_found = (
                                     True  # These are the most complete summaries
                                 )
                 except Exception as e:
                     logging.getLogger("debug_summary").error(
                         f"Error parsing STORY_COMPLETE: {e}"
+                    )
+                    pass
+
+            # Extract chapter summaries from SUMMARY_COMPLETE event
+            if not all_summaries_found and "EVENT:SUMMARY_COMPLETE" in line:
+                try:
+                    data = json.loads(line)
+                    if "state" in data:
+                        # The state is a JSON string that needs to be parsed again
+                        state_str = data["state"]
+                        state_data = json.loads(state_str)
+
+                        # Check if this state contains chapter_summaries
+                        if (
+                            "chapter_summaries" in state_data
+                            and state_data["chapter_summaries"]
+                        ):
+                            chapter_summaries = state_data["chapter_summaries"]
+                            if len(chapter_summaries) > len(summaries):
+                                logging.getLogger("debug_summary").info(
+                                    f"Found {len(chapter_summaries)} chapter summaries in SUMMARY_COMPLETE event"
+                                )
+                                # Prepend chapter numbers to each summary
+                                numbered_summaries = []
+                                for i, summary in enumerate(chapter_summaries, 1):
+                                    numbered_summaries.append(f"Chapter {i}: {summary}")
+
+                                summaries = numbered_summaries
+                                all_summaries_found = (
+                                    True  # These are the most complete summaries
+                                )
+                except Exception as e:
+                    logging.getLogger("debug_summary").error(
+                        f"Error parsing SUMMARY_COMPLETE: {e}"
                     )
                     pass
 
@@ -336,9 +396,11 @@ async def test_generate_summary_content(state):
         return None
 
 
-async def test_process_summary_request(state):
-    """Test the process_summary_request function with a mock websocket."""
-    logger.info("Testing process_summary_request function")
+async def test_process_reveal_summary(state):
+    """Test the process_choice function with 'reveal_summary' choice ID."""
+    logger.info("Testing process_choice function with 'reveal_summary' choice ID")
+
+    from app.services.websocket_service import process_choice
 
     mock_socket = MockWebSocket()
     state_manager = AdventureStateManager()
@@ -350,8 +412,23 @@ async def test_process_summary_request(state):
     state_manager.state = state
 
     try:
-        await process_summary_request(state_manager, mock_socket)
-        logger.info("process_summary_request completed without errors")
+        # Create a choice data dictionary with the 'reveal_summary' choice ID
+        choice_data = {
+            "id": "reveal_summary",
+            "text": "Reveal Your Adventure Summary",
+            "state": state.model_dump(),
+        }
+
+        # Call process_choice with the 'reveal_summary' choice ID
+        result = await process_choice(
+            state_manager=state_manager,
+            choice_data=choice_data,
+            story_category="test_category",
+            lesson_topic="test_topic",
+            websocket=mock_socket,
+        )
+
+        logger.info("process_choice with 'reveal_summary' completed without errors")
 
         # Check what was sent to the websocket
         logger.info(f"Sent {len(mock_socket.sent_json)} JSON messages")
@@ -366,31 +443,103 @@ async def test_process_summary_request(state):
         else:
             logger.warning("No summary_complete message found")
 
-        return mock_socket.sent_json, mock_socket.sent_text
+        return mock_socket.sent_json, mock_socket.sent_text, result
     except Exception as e:
-        logger.error(f"Error in process_summary_request: {e}", exc_info=True)
-        return None, None
+        logger.error(f"Error in test_process_reveal_summary: {e}", exc_info=True)
+        return None, None, None
+
+
+def find_latest_simulation_log():
+    """Find the latest timestamp simulation log file.
+
+    Returns:
+        str: Path to the latest simulation log file, or None if no logs found.
+    """
+    # Path to simulation logs directory
+    logs_dir = "logs/simulations"
+
+    # Check if the directory exists
+    if not os.path.exists(logs_dir):
+        logger.warning(f"Simulation logs directory not found: {logs_dir}")
+        return None
+
+    # Pattern for simulation log files
+    pattern = os.path.join(logs_dir, "simulation_*.log")
+
+    # Find all simulation log files
+    log_files = glob.glob(pattern)
+
+    if not log_files:
+        logger.warning(f"No simulation log files found in {logs_dir}")
+        return None
+
+    # Extract timestamp from filename and sort by timestamp
+    timestamp_pattern = re.compile(r"simulation_(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})_")
+
+    # Create a list of (file_path, timestamp) tuples
+    timestamped_files = []
+    for file_path in log_files:
+        filename = os.path.basename(file_path)
+        match = timestamp_pattern.search(filename)
+        if match:
+            timestamp_str = match.group(1)
+            try:
+                # Parse timestamp string to datetime object
+                timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d_%H-%M-%S")
+                timestamped_files.append((file_path, timestamp))
+            except ValueError:
+                logger.warning(f"Failed to parse timestamp from filename: {filename}")
+
+    if not timestamped_files:
+        logger.warning("No valid timestamped simulation log files found")
+        return None
+
+    # Sort by timestamp (newest first)
+    timestamped_files.sort(key=lambda x: x[1], reverse=True)
+
+    # Get the latest log file
+    latest_log_file = timestamped_files[0][0]
+    logger.info(f"Found latest simulation log: {os.path.basename(latest_log_file)}")
+
+    return latest_log_file
 
 
 async def main():
-    # Path to your simulation log
-    log_file = "logs/simulations/simulation_2025-03-11_23-36-15_8e1a3e7c.log"
+    # Find the latest simulation log file
+    log_file = find_latest_simulation_log()
 
-    # Extract chapter summaries
-    logger.info(f"Extracting chapter summaries from {log_file}")
-    summaries, lesson_questions = extract_chapter_summaries_from_log(log_file)
-    logger.info(f"Found {len(summaries)} chapter summaries")
-    logger.info(f"Found {len(lesson_questions)} lesson questions")
+    if log_file and os.path.exists(log_file):
+        # Extract chapter summaries
+        logger.info(f"Extracting chapter summaries from {log_file}")
+        summaries, lesson_questions = extract_chapter_summaries_from_log(log_file)
+        logger.info(f"Found {len(summaries)} chapter summaries")
+        logger.info(f"Found {len(lesson_questions)} lesson questions")
 
-    # Create test state
-    state = await create_test_state(summaries)
-    logger.info(f"Created test state with {len(state.chapters)} chapters")
+        # Create test state
+        state = await create_test_state(summaries)
+        logger.info(f"Created test state with {len(state.chapters)} chapters")
+    else:
+        # Log file doesn't exist, create a sample state with dummy summaries
+        logger.warning(f"Log file not found: {log_file}")
+        logger.info("Creating sample state with dummy summaries")
+
+        # Create dummy summaries with chapter numbers
+        dummy_summaries = [
+            f"Chapter {i}: This is a sample summary for chapter {i}. It describes the key events and character development that occurred in this chapter."
+            for i in range(1, 11)
+        ]
+
+        # Create test state with dummy summaries
+        state = await create_test_state(dummy_summaries)
+        logger.info(
+            f"Created test state with {len(state.chapters)} chapters and {len(dummy_summaries)} dummy summaries"
+        )
 
     # Test generate_summary_content
     summary_content = await test_generate_summary_content(state)
 
-    # Test process_summary_request
-    json_messages, text_messages = await test_process_summary_request(state)
+    # Test process_choice with 'reveal_summary' choice ID
+    json_messages, text_messages, result = await test_process_reveal_summary(state)
 
     logger.info("Tests completed")
 
