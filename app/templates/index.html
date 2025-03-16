@@ -1021,41 +1021,44 @@ function startAdventure() {
             document.getElementById('choicesContainer').innerHTML = statsHtml;
         }
         
-        function requestSummary() {
-            if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
-                showLoader();
-                // Clear content and reset state
-                document.getElementById('storyContent').innerHTML = '';
-                document.getElementById('choicesContainer').innerHTML = '';
-                streamBuffer = '';
-                if (renderTimeout) {
-                    clearTimeout(renderTimeout);
-                }
-                
-                // Reset active paragraphs
-                activeParagraphs.clear();
-                
-                // Log the request for debugging
-                console.log("Sending summary request to server");
-                
-                // Send request for summary
-                sendMessage({
-                    type: 'request_summary',
-                    state: stateManager.loadState()
-                });
-                
-                // Add a timeout to detect if the request is hanging
-                setTimeout(() => {
-                    if (document.getElementById('loaderOverlay').classList.contains('active')) {
-                        console.warn("Summary request timed out after 10 seconds");
-                        hideLoader();
-                        showError("Summary request timed out. Please try again.");
-                    }
-                }, 10000);
-            } else {
-                showError('Connection lost. Please refresh the page.');
-            }
+function requestSummary() {
+    if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
+        showLoader();
+        // Clear content and reset state
+        document.getElementById('storyContent').innerHTML = '';
+        document.getElementById('choicesContainer').innerHTML = '';
+        streamBuffer = '';
+        if (renderTimeout) {
+            clearTimeout(renderTimeout);
         }
+        
+        // Reset active paragraphs
+        activeParagraphs.clear();
+        
+        // Log the request for debugging
+        console.log("Sending reveal_summary choice to server");
+        
+        // Send a choice message with special ID instead of request_summary
+        sendMessage({
+            state: stateManager.loadState(),
+            choice: {
+                id: "reveal_summary",
+                text: "Reveal Your Adventure Summary"
+            }
+        });
+        
+        // Add a timeout to detect if the request is hanging
+        setTimeout(() => {
+            if (document.getElementById('loaderOverlay').classList.contains('active')) {
+                console.warn("Summary request timed out after 10 seconds");
+                hideLoader();
+                showError("Summary request timed out. Please try again.");
+            }
+        }, 10000);
+    } else {
+        showError('Connection lost. Please refresh the page.');
+    }
+}
         
         function displaySummaryComplete(state) {
             hideLoader();

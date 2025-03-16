@@ -3,6 +3,7 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-16
+- Improved CONCLUSION Chapter Summary Generation for Complete Adventure Recaps
 - Enhanced Chapter Summary Generation with Educational Context
 - Improved Learning Report Display in Simulation Log Summary
 

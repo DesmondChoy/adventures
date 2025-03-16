@@ -1,5 +1,25 @@
 # Active Context
 
+## Improved CONCLUSION Chapter Summary Generation (2025-03-16)
+
+1. **Consistent Chapter Summary Generation for All Chapters:**
+   * Problem: The CONCLUSION chapter didn't have a chapter summary to be used in the SUMMARY chapter
+   * Solution:
+     - Modified the client-side code in `index.html` to send a choice message with ID "reveal_summary" instead of a "request_summary" message
+     - Enhanced `process_choice()` in `websocket_service.py` to handle this special choice ID and generate a summary for the CONCLUSION chapter
+     - Removed the special handling for "request_summary" messages in `websocket_router.py`
+     - Removed the `process_summary_request()` function from `websocket_service.py`
+   * Implementation Details:
+     - When the "Reveal Your Adventure Summary" button is clicked, it now sends a choice with ID "reveal_summary"
+     - This choice is processed by `process_choice()` which generates a summary for the CONCLUSION chapter using `chapter_manager.generate_chapter_summary()`
+     - The summary is stored in `state.chapter_summaries` just like all other chapter summaries
+     - The SUMMARY chapter is then created and displayed with all chapter summaries, including the CONCLUSION chapter
+   * Benefits:
+     - Consistent chapter summary generation for all chapters, including the CONCLUSION chapter
+     - Complete adventure recap in the SUMMARY chapter
+     - Simplified architecture with a single code path for all chapter summaries
+     - Improved maintainability with less special-case handling
+
 ## Enhanced Chapter Summary Generation with Educational Context (2025-03-16)
 
 1. **Completely Redesigned SUMMARY_CHAPTER_PROMPT Template:**

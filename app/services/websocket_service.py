@@ -73,6 +73,102 @@ async def process_choice(
         choice_text = "Unknown choice"
         logger.debug("Choice data is not a dictionary")
 
+    # Check for special "reveal_summary" choice
+    if chosen_path == "reveal_summary":
+        logger.info("Processing reveal_summary choice")
+
+        # Get the CONCLUSION chapter
+        if state.chapters and state.chapters[-1].chapter_type == ChapterType.CONCLUSION:
+            conclusion_chapter = state.chapters[-1]
+
+            # Generate summary for the CONCLUSION chapter
+            try:
+                logger.info(f"Generating summary for CONCLUSION chapter")
+                chapter_summary = await chapter_manager.generate_chapter_summary(
+                    conclusion_chapter.content,
+                    "End of story",  # Placeholder for chosen_choice
+                    "",  # Empty choice_context
+                )
+
+                # Store the summary
+                if len(state.chapter_summaries) < conclusion_chapter.chapter_number:
+                    while (
+                        len(state.chapter_summaries)
+                        < conclusion_chapter.chapter_number - 1
+                    ):
+                        state.chapter_summaries.append("Chapter summary not available")
+                    state.chapter_summaries.append(chapter_summary)
+                else:
+                    state.chapter_summaries[conclusion_chapter.chapter_number - 1] = (
+                        chapter_summary
+                    )
+
+                logger.info(
+                    f"Stored summary for chapter {conclusion_chapter.chapter_number}: {chapter_summary}"
+                )
+            except Exception as e:
+                logger.error(f"Error generating chapter summary: {str(e)}")
+                if len(state.chapter_summaries) < conclusion_chapter.chapter_number:
+                    state.chapter_summaries.append("Chapter summary not available")
+
+        # Create and generate the SUMMARY chapter
+        summary_chapter = chapter_manager.create_summary_chapter(state)
+        summary_content = await generate_summary_content(state)
+        summary_chapter.content = summary_content
+        summary_chapter.chapter_content.content = summary_content
+
+        # Add the SUMMARY chapter to the state
+        state_manager.append_new_chapter(summary_chapter)
+
+        # Stream the summary content to the client
+        await websocket.send_json({"type": "summary_start"})
+
+        # Split content into paragraphs and stream
+        paragraphs = [p.strip() for p in summary_content.split("\n\n") if p.strip()]
+
+        for paragraph in paragraphs:
+            # For headings, send them as a whole
+            if paragraph.startswith("#"):
+                await websocket.send_text(paragraph + "\n\n")
+                await asyncio.sleep(PARAGRAPH_DELAY)
+                continue
+
+            # For regular paragraphs, stream word by word
+            words = paragraph.split()
+            for word in words:
+                await websocket.send_text(word + " ")
+                await asyncio.sleep(WORD_DELAY)
+
+            await websocket.send_text("\n\n")
+            await asyncio.sleep(PARAGRAPH_DELAY)
+
+        # Send the complete summary data
+        await websocket.send_json(
+            {
+                "type": "summary_complete",
+                "state": {
+                    "current_chapter_id": state.current_chapter_id,
+                    "current_chapter": {
+                        "chapter_number": summary_chapter.chapter_number,
+                        "content": summary_content,
+                        "chapter_type": ChapterType.SUMMARY.value,
+                    },
+                    "stats": {
+                        "total_lessons": state.total_lessons,
+                        "correct_lesson_answers": state.correct_lesson_answers,
+                        "completion_percentage": round(
+                            (state.correct_lesson_answers / state.total_lessons * 100)
+                            if state.total_lessons > 0
+                            else 0
+                        ),
+                    },
+                    "chapter_summaries": state.chapter_summaries,
+                },
+            }
+        )
+
+        return None, None, False
+
     # Handle non-start choices
     if chosen_path != "start":
         logger.debug(f"Processing non-start choice: {chosen_path}")
@@ -810,100 +906,8 @@ Thank you for joining us on this learning odyssey!
 """
 
 
-async def process_summary_request(
-    state_manager: AdventureStateManager,
-    websocket: WebSocket,
-) -> None:
-    """Process a request for the summary page and send it to the client.
-
-    Args:
-        state_manager: The state manager instance
-        websocket: The WebSocket connection
-    """
-    try:
-        # Get the client's state from the request
-        data = await websocket.receive_json()
-        validated_state = data.get("state")
-
-        # Update the state manager with the client's state if provided
-        if validated_state:
-            logger.debug("Updating state from client for summary request")
-            state_manager.update_state_from_client(validated_state)
-
-        # Get the current state after the update
-        state = state_manager.get_current_state()
-        if not state:
-            await websocket.send_json(
-                {"type": "error", "message": "No active adventure state"}
-            )
-            return
-
-        # Create a summary chapter
-        summary_chapter = chapter_manager.create_summary_chapter(state)
-
-        # Generate summary content
-        summary_content = await generate_summary_content(state)
-
-        # Update the chapter content
-        summary_chapter.content = summary_content
-        summary_chapter.chapter_content.content = summary_content
-
-        # Add the chapter to the state
-        state_manager.append_new_chapter(summary_chapter)
-
-        # Stream the content to the client
-        await websocket.send_json({"type": "summary_start"})
-
-        # Split content into paragraphs and stream
-        paragraphs = [p.strip() for p in summary_content.split("\n\n") if p.strip()]
-
-        for paragraph in paragraphs:
-            # For headings, send them as a whole
-            if paragraph.startswith("#"):
-                await websocket.send_text(paragraph + "\n\n")
-                await asyncio.sleep(PARAGRAPH_DELAY)
-                continue
-
-            # For regular paragraphs, stream word by word
-            words = paragraph.split()
-            for word in words:
-                await websocket.send_text(word + " ")
-                await asyncio.sleep(WORD_DELAY)
-
-            await websocket.send_text("\n\n")
-            await asyncio.sleep(PARAGRAPH_DELAY)
-
-        # Send the complete summary data
-        await websocket.send_json(
-            {
-                "type": "summary_complete",
-                "state": {
-                    "current_chapter_id": state.current_chapter_id,
-                    "current_chapter": {
-                        "chapter_number": summary_chapter.chapter_number,
-                        "content": summary_content,
-                        "chapter_type": ChapterType.SUMMARY.value,
-                    },
-                    "stats": {
-                        "total_lessons": state.total_lessons,
-                        "correct_lesson_answers": state.correct_lesson_answers,
-                        "completion_percentage": round(
-                            (state.correct_lesson_answers / state.total_lessons * 100)
-                            if state.total_lessons > 0
-                            else 0
-                        ),
-                    },
-                    # Include chapter_summaries in the response for simulation logging
-                    "chapter_summaries": state.chapter_summaries,
-                },
-            }
-        )
-
-    except Exception as e:
-        logger.error(f"Error processing summary request: {str(e)}")
-        await websocket.send_json(
-            {"type": "error", "message": f"Error generating summary: {str(e)}"}
-        )
+# The process_summary_request function has been removed
+# Its functionality is now handled by process_choice with the "reveal_summary" choice ID
 
 
 async def generate_chapter(

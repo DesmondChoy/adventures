@@ -5,7 +5,6 @@ from app.services.websocket_service import (
     process_choice,
     stream_and_send_chapter,
     send_story_complete,
-    process_summary_request,
 )
 
 router = APIRouter()
@@ -66,14 +65,8 @@ async def story_websocket(
                 logger.debug(f"Choice data: {choice_data}")
             logger.debug("==============================\n")
 
-            # Handle different message types
-            if message_type == "request_summary":
-                logger.info("Received request for summary page")
-                await process_summary_request(
-                    state_manager=state_manager,
-                    websocket=websocket,
-                )
-                continue
+            # All message types are now handled through process_choice
+            # The special "reveal_summary" choice is handled in process_choice
 
             # For regular choice processing, validate required fields
             if not validated_state:
