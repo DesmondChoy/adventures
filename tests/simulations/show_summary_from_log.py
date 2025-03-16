@@ -30,7 +30,11 @@ async def show_summary_from_log(log_file_path):
         # We'll use this to organize summaries by chapter
         chapter_summaries = {}
 
-        # First, try to extract chapter numbers and summaries from the log file directly
+        # Track which chapters we've found summaries for
+        found_chapters = set()
+
+        # STANDARDIZED APPROACH: First, prioritize EVENT:CHAPTER_SUMMARY logs
+        # This is the primary standardized format for all chapter summaries
         with open(log_file_path, "r") as f:
             for line in f:
                 # Extract from individual CHAPTER_SUMMARY events
@@ -42,6 +46,13 @@ async def show_summary_from_log(log_file_path):
                             summary = data["summary"]
                             # Store the latest summary for each chapter
                             chapter_summaries[chapter_num] = summary
+                            found_chapters.add(chapter_num)
+
+                            # Log when we find Chapter 10 summary specifically
+                            if chapter_num == 10:
+                                print(
+                                    f"Found Chapter 10 summary in EVENT:CHAPTER_SUMMARY (primary standardized format)"
+                                )
                     except (json.JSONDecodeError, KeyError):
                         pass
 
@@ -59,14 +70,19 @@ async def show_summary_from_log(log_file_path):
                                 "chapter_summaries" in final_state_data
                                 and final_state_data["chapter_summaries"]
                             ):
-                                # Map summaries to chapter numbers
+                                # Map summaries to chapter numbers (only for chapters we haven't found yet)
                                 story_complete_summaries = final_state_data[
                                     "chapter_summaries"
                                 ]
                                 for i, summary in enumerate(
                                     story_complete_summaries, 1
                                 ):
-                                    chapter_summaries[i] = summary
+                                    if i not in found_chapters:
+                                        chapter_summaries[i] = summary
+                                        found_chapters.add(i)
+                                        print(
+                                            f"Found Chapter {i} summary in STORY_COMPLETE event (fallback)"
+                                        )
                                 print(
                                     f"Extracted {len(story_complete_summaries)} chapter summaries from STORY_COMPLETE event"
                                 )
@@ -74,19 +90,75 @@ async def show_summary_from_log(log_file_path):
                         print(f"Error parsing STORY_COMPLETE: {e}")
                         pass
 
-                # Extract final chapter content for chapter 10
-                if "Final chapter content" in line:
+                # Extract from FINAL_CHAPTER_SUMMARIES event (added in the standardized logging)
+                if "EVENT:FINAL_CHAPTER_SUMMARIES" in line:
                     try:
+                        data = json.loads(line)
+                        if "chapter_summaries" in data:
+                            # Get the array of chapter summaries
+                            final_summaries = data["chapter_summaries"]
+                            if isinstance(final_summaries, list) and final_summaries:
+                                # Map summaries to chapter numbers (only for chapters we haven't found yet)
+                                for i, summary in enumerate(final_summaries, 1):
+                                    if i not in found_chapters:
+                                        chapter_summaries[i] = summary
+                                        found_chapters.add(i)
+                                        print(
+                                            f"Found Chapter {i} summary in EVENT:FINAL_CHAPTER_SUMMARIES (fallback)"
+                                        )
+
+                                # Log specifically for Chapter 10
+                                if (
+                                    len(final_summaries) >= 10
+                                    and 10 not in found_chapters
+                                ):
+                                    print(
+                                        f"Found Chapter 10 summary in EVENT:FINAL_CHAPTER_SUMMARIES (fallback)"
+                                    )
+
+                                print(
+                                    f"Extracted {len(final_summaries)} chapter summaries from FINAL_CHAPTER_SUMMARIES event"
+                                )
+                    except Exception as e:
+                        print(f"Error parsing FINAL_CHAPTER_SUMMARIES: {e}")
+                        pass
+
+                # Extract final chapter content for chapter 10 (supporting both old and new formats)
+                # Note: We only use this as a last resort if we haven't found Chapter 10 summary through
+                # the standardized EVENT:CHAPTER_SUMMARY format or other structured events
+                if 10 not in found_chapters and (
+                    "Final chapter content" in line or "Chapter 10 content" in line
+                ):
+                    try:
+                        # First check if this is a debug log (not a proper summary)
+                        if "Chapter 10 content preview:" in line:
+                            # Skip debug logs that contain raw content previews
+                            continue
+
                         data = json.loads(line)
                         if "message" in data:
                             # Extract the content from the message
                             message = data["message"]
+
+                            # Handle old format
                             if message.startswith("Final chapter content:"):
-                                # Extract the content after the prefix
                                 content = message[
                                     len("Final chapter content:") :
                                 ].strip()
+                                print("Found old format 'Final chapter content'")
+                            # Handle new standardized format (but only if it's not a preview)
+                            elif (
+                                message.startswith("Chapter 10 summary:")
+                                and "preview" not in message
+                            ):
+                                content = message[len("Chapter 10 summary:") :].strip()
+                                print("Found new format 'Chapter 10 summary'")
+                            else:
+                                # Skip if neither format matches
+                                continue
 
+                            # Only use this as a fallback if we haven't found Chapter 10 yet
+                            if 10 not in found_chapters:
                                 # Create a summary for chapter 10 from the content
                                 # Use the first few sentences as a summary
                                 sentences = content.split(". ")
@@ -94,8 +166,9 @@ async def show_summary_from_log(log_file_path):
 
                                 # Add the summary to chapter_summaries
                                 chapter_summaries[10] = summary
+                                found_chapters.add(10)
                                 print(
-                                    "Extracted chapter 10 summary from Final chapter content"
+                                    "Extracted chapter 10 summary from chapter content (fallback)"
                                 )
                     except Exception as e:
                         print(f"Error parsing Final chapter content: {e}")

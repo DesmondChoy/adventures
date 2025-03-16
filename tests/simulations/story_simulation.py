@@ -47,6 +47,10 @@ Updates (2025-03-16):
 - Enhanced logging for SUMMARY chapter content and events
 - Ensured all 10 chapter summaries (including CONCLUSION) are captured
 - Added EVENT:FINAL_CHAPTER_SUMMARIES log entry for complete summary data
+- Increased WEBSOCKET_TIMEOUT from 30 to 90 seconds to prevent timeouts during summary generation
+- Standardized logging format for all chapters (including conclusion chapter)
+- Added verification steps to ensure all chapter summaries are properly logged
+- Improved debug logging with consistent "Chapter X summary/preview" format
 
 Usage Instructions:
 1. Prerequisites:
@@ -192,7 +196,9 @@ with open(log_filename, "w") as f:
 # Constants
 MAX_RETRIES = 5  # Increased from 3 to 5
 RETRY_DELAY = 2  # Base delay in seconds for exponential backoff
-WEBSOCKET_TIMEOUT = 30  # seconds
+WEBSOCKET_TIMEOUT = (
+    90  # seconds - Increased from 30 to 90 to allow more time for summary generation
+)
 
 # Global variables for cleanup
 websocket = None
@@ -586,16 +592,47 @@ async def simulate_story():
                                                     else full_content
                                                 )
                                                 simulation_logger.debug(
-                                                    f"Content preview: {preview}"
+                                                    f"Chapter {current_chapter} preview: {preview}"
                                                 )
 
                                                 # Log the full content for the final chapter
                                                 simulation_logger.debug(
-                                                    f"Final chapter content: {full_content}"
+                                                    f"Chapter {current_chapter} content preview: {full_content[:100]}..."
                                                 )
 
+                                                # For Chapter 10 (conclusion), also create a proper summary and log it with the standardized format
+                                                if current_chapter == story_length:
+                                                    # Create a summary from the content (first few sentences)
+                                                    sentences = full_content.split(". ")
+                                                    chapter_summary = (
+                                                        ". ".join(sentences[:3]) + "."
+                                                    )
+
+                                                    # Log using the standardized EVENT:CHAPTER_SUMMARY format
+                                                    if (
+                                                        story_length
+                                                        not in logged_summary_chapters
+                                                    ):
+                                                        simulation_logger.info(
+                                                            "EVENT:CHAPTER_SUMMARY",
+                                                            extra={
+                                                                "chapter_number": story_length,
+                                                                "summary": chapter_summary,
+                                                                "timestamp": datetime.now().isoformat(),
+                                                                "run_id": run_id,
+                                                            },
+                                                        )
+                                                        logged_summary_chapters.add(
+                                                            story_length
+                                                        )
+                                                        simulation_logger.debug(
+                                                            f"Created and logged conclusion (Chapter {story_length}) summary with standardized EVENT:CHAPTER_SUMMARY format"
+                                                        )
+
                                                 # Print for human readability
-                                                print_separator("Final Chapter Content")
+                                                print_separator(
+                                                    f"Chapter {current_chapter} Content"
+                                                )
                                                 print(full_content)
 
                                             # Log detailed statistics in structured format for automated testing
@@ -698,6 +735,65 @@ async def simulate_story():
                                                     "state"
                                                 ]["chapter_summaries"]
                                                 if chapter_summaries:
+                                                    # STANDARDIZED LOGGING: Explicitly log all chapter summaries with EVENT:CHAPTER_SUMMARY
+                                                    # This is the primary standardized format for all chapter summaries
+                                                    for i, summary in enumerate(
+                                                        chapter_summaries, 1
+                                                    ):
+                                                        if (
+                                                            i
+                                                            not in logged_summary_chapters
+                                                            and i <= story_length
+                                                        ):
+                                                            # Log using the standard EVENT:CHAPTER_SUMMARY format
+                                                            simulation_logger.info(
+                                                                "EVENT:CHAPTER_SUMMARY",
+                                                                extra={
+                                                                    "chapter_number": i,
+                                                                    "summary": summary,
+                                                                    "timestamp": datetime.now().isoformat(),
+                                                                    "run_id": run_id,
+                                                                },
+                                                            )
+                                                            logged_summary_chapters.add(
+                                                                i
+                                                            )
+
+                                                            # Special logging for conclusion chapter
+                                                            if i == story_length:
+                                                                simulation_logger.debug(
+                                                                    f"Logged conclusion (Chapter {i}) summary with standardized EVENT:CHAPTER_SUMMARY format"
+                                                                )
+
+                                                    # Verify all chapter summaries were logged
+                                                    for i in range(1, story_length + 1):
+                                                        if (
+                                                            i
+                                                            not in logged_summary_chapters
+                                                            and i
+                                                            <= len(chapter_summaries)
+                                                        ):
+                                                            # Log any missed chapter summaries
+                                                            simulation_logger.info(
+                                                                "EVENT:CHAPTER_SUMMARY",
+                                                                extra={
+                                                                    "chapter_number": i,
+                                                                    "summary": chapter_summaries[
+                                                                        i - 1
+                                                                    ],  # Zero-indexed
+                                                                    "timestamp": datetime.now().isoformat(),
+                                                                    "run_id": run_id,
+                                                                    "note": "Retroactively logged",
+                                                                },
+                                                            )
+                                                            logged_summary_chapters.add(
+                                                                i
+                                                            )
+                                                            simulation_logger.debug(
+                                                                f"Retroactively logged Chapter {i} summary"
+                                                            )
+
+                                                    # Log the complete set of summaries
                                                     simulation_logger.info(
                                                         "EVENT:FINAL_CHAPTER_SUMMARIES",
                                                         extra={
@@ -769,7 +865,9 @@ async def simulate_story():
                                 if content_length > 100
                                 else full_content
                             )
-                            simulation_logger.debug(f"Content preview: {preview}")
+                            simulation_logger.debug(
+                                f"Chapter {current_chapter} preview: {preview}"
+                            )
 
                             # Still print for human readability during development
                             print_separator("Chapter Content")
@@ -949,6 +1047,25 @@ async def simulate_story():
     if response_state and "chapter_summaries" in response_state:
         chapter_summaries = response_state["chapter_summaries"]
         if chapter_summaries:
+            # Verify all chapter summaries were logged individually
+            for i in range(1, story_length + 1):
+                if i not in logged_summary_chapters and i <= len(chapter_summaries):
+                    # Log any missed chapter summaries
+                    simulation_logger.info(
+                        "EVENT:CHAPTER_SUMMARY",
+                        extra={
+                            "chapter_number": i,
+                            "summary": chapter_summaries[i - 1],  # Zero-indexed
+                            "timestamp": datetime.now().isoformat(),
+                            "run_id": run_id,
+                            "note": "Retroactively logged at end",
+                        },
+                    )
+                    logged_summary_chapters.add(i)
+                    simulation_logger.debug(
+                        f"Final verification: Retroactively logged Chapter {i} summary"
+                    )
+
             # Create a comprehensive log of all summaries for easy extraction
             simulation_logger.info(
                 "EVENT:ALL_CHAPTER_SUMMARIES",

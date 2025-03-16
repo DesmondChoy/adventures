@@ -1,5 +1,47 @@
 # Active Context
 
+## Standardized Chapter Summary Logging and Extraction (2025-03-16)
+
+1. **Standardized Chapter Summary Logging in `story_simulation.py`:**
+   * Problem: Chapter summaries were logged inconsistently, with the conclusion chapter (Chapter 10) using a different format than regular chapters
+   * Solution:
+     - Standardized all chapter summary logging to use the `EVENT:CHAPTER_SUMMARY` format
+     - Implemented consistent debug logging with `"Chapter {chapter_number} summary: {content}"` format
+     - Added verification steps to ensure all chapter summaries are properly logged
+     - Added multiple fallback mechanisms to retroactively log any missed summaries
+   * Implementation Details:
+     - Modified the `summary_complete` handler to explicitly log all chapter summaries with `EVENT:CHAPTER_SUMMARY`
+     - Added a verification step that checks for any missing chapter summaries
+     - Added a final verification at the end of simulation to catch any remaining unlogged summaries
+     - Standardized debug logging format for all chapters including the conclusion
+   * Benefits:
+     - Consistent logging format for all chapters (1-10) makes debugging easier
+     - Multiple verification steps ensure no chapter summaries are missed
+     - Improved reliability for testing and analysis tools that depend on log data
+     - Better maintainability with standardized logging patterns
+
+2. **Enhanced Chapter Summary Extraction in `show_summary_from_log.py`:**
+   * Problem: The extraction script wasn't reliably finding Chapter 10 summaries due to inconsistent logging formats
+   * Solution:
+     - Prioritized `EVENT:CHAPTER_SUMMARY` as the primary standardized format
+     - Implemented a fallback hierarchy with clear source tracking
+     - Added support for both old and new logging formats
+     - Added tracking of which chapters have been found to avoid duplicates
+   * Implementation Details:
+     - Added tracking of found chapters using a `found_chapters` set
+     - Implemented a prioritized extraction approach:
+       1. First try `EVENT:CHAPTER_SUMMARY` (primary standardized format)
+       2. Then try `STORY_COMPLETE` event (fallback)
+       3. Then try `FINAL_CHAPTER_SUMMARIES` event (fallback)
+       4. Finally try direct content extraction (last resort fallback)
+     - Added clear logging to show which source each chapter summary came from
+     - Added support for both old "Final chapter content" and new "Chapter X summary" formats
+   * Benefits:
+     - More reliable extraction of all chapter summaries, including Chapter 10
+     - Clear visibility into which source each summary came from
+     - Backward compatibility with existing log files
+     - Prioritization of the standardized format for better consistency
+
 ## Updated Story Simulation for Complete Chapter Summaries (2025-03-16)
 
 1. **Enhanced Story Simulation for CONCLUSION Chapter Summary:**

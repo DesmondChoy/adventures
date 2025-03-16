@@ -3,6 +3,7 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-16
+- Standardized Chapter Summary Logging and Extraction
 - Updated Story Simulation for Complete Chapter Summaries
 - Improved CONCLUSION Chapter Summary Generation for Complete Adventure Recaps
 - Enhanced Chapter Summary Generation with Educational Context
@@ -69,6 +70,7 @@
 - Responsive design for both desktop and mobile
 
 ### Recent Enhancements
+- Standardized chapter summary logging and extraction for consistent debugging
 - Enhanced chapter summaries with educational context
 - Separated image scene generation from narrative summaries
 - Improved paragraph formatting for better readability
