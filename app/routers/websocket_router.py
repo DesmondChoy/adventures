@@ -152,13 +152,14 @@ async def story_websocket(
                 if chapter_content is None:
                     continue
 
-                # If story is complete, send completion data and end
+                # If story is complete, send completion data but don't end the connection
+                # This allows processing the "reveal_summary" choice to generate Chapter 10 summary
                 if is_story_complete:
                     await send_story_complete(
                         websocket=websocket,
                         state=state_manager.get_current_state(),
                     )
-                    break
+                    continue  # Continue processing messages instead of breaking
 
                 # Stream chapter content and send updates
                 await stream_and_send_chapter(

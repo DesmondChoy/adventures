@@ -1,5 +1,98 @@
 # Active Context
 
+## New Chapter Summary Generator Script (2025-03-17)
+
+1. **Created Standalone Chapter Summary Generator Script:**
+   * Problem: Needed a way to generate consistent chapter summaries for all chapters, including Chapter 10 (CONCLUSION)
+   * Solution:
+     - Created `tests/simulations/generate_chapter_summaries.py` script that:
+       * Extracts chapter content from simulation log files
+       * Generates summaries using the same prompt template for all chapters
+       * Uses the same function to generate summaries for all chapters (no special cases)
+       * Handles missing chapters gracefully by continuing to process available chapters
+   * Implementation Details:
+     - Uses direct API call to Gemini with fallback to streaming approach
+     - Implements retry logic with exponential backoff for reliability
+     - Provides both standard and compact output formats
+     - Supports skipping JSON file creation with `--no-json` flag
+     - Includes detailed error handling and logging
+   * Benefits:
+     - Consistent summary generation for all chapters, including CONCLUSION
+     - Robust error handling that continues processing even if some chapters are missing
+     - Flexible output options for different use cases
+     - Reliable summary generation with retry logic
+
+## Ongoing Issue: Chapter 10 Summary Not Showing in Adventure Summary (2025-03-17)
+
+1. **Partial Fix for WebSocket Connection Closure Issue:**
+   * Problem: Chapter 10's summary is still not showing up properly in the adventure summary. The connection now stays open, but we're still seeing a placeholder summary instead of the actual content.
+   * Current Status:
+     - Modified `websocket_router.py` to keep the connection open after the CONCLUSION chapter
+     - Changed the `break` statement to `continue` in the `is_story_complete` condition
+     - Added enhanced logging in WebSocket service
+     - Increased timeout for summary processing
+   * Remaining Issue:
+     - Despite these changes, we're still seeing a generic placeholder for Chapter 10:
+     ```
+     ### Chapter 10 (Conclusion)
+     In the conclusion chapter, the adventure reached its resolution. The protagonist faced the final challenge and completed their journey, bringing closure to the story and reflecting on the lessons learned along the way.
+     ```
+     - This is the default placeholder text, not an actual summary generated from the chapter content
+   * Next Steps:
+     - Further investigate why the Chapter 10 summary isn't being properly generated or captured
+     - Check if the summary generation is happening but not being stored correctly
+     - Verify if the CONCLUSION chapter summary is being generated with the correct parameters
+     - Ensure the summary is being properly included in the final state
+
+2. **Enhanced Logging in WebSocket Service:**
+   * Implementation Details:
+     - Added logs for current state: `logger.info(f"Current state has {len(state.chapters)} chapters")`
+     - Added logs for chapter summaries: `logger.info(f"Current chapter summaries: {len(state.chapter_summaries)}")`
+     - Added logs for CONCLUSION chapter: `logger.info(f"Found CONCLUSION chapter: {conclusion_chapter.chapter_number}")`
+     - Added logs for summary generation: `logger.info(f"Generated CONCLUSION chapter summary: {chapter_summary[:100]}...")`
+   * Benefits:
+     - Better visibility into the summary generation process
+     - Easier debugging of issues with chapter summaries
+     - More detailed error information when problems occur
+
+3. **Increased Timeout for Summary Processing:**
+   * Implementation Details:
+     ```python
+     # Added new constant
+     SUMMARY_TIMEOUT = 120  # seconds specifically for summary operations
+     
+     # Used longer timeout for summary response
+     response_raw = await asyncio.wait_for(
+         websocket.recv(), timeout=SUMMARY_TIMEOUT
+     )
+     ```
+   * Benefits:
+     - Prevents timeouts during summary generation
+     - Allows for more complex summary processing
+     - Improves reliability of the simulation tests
+
+## Refactored Story Simulation for Improved Maintainability (2025-03-17)
+
+1. **Refactored `story_simulation.py` for Better Maintainability:**
+   * Problem: The story simulation code had duplicate sections, inconsistent chapter summary logging, and complex nested logic
+   * Solution:
+     - Created dedicated helper functions for common operations
+     - Standardized chapter summary logging with a single function
+     - Consolidated verification steps for chapter summaries
+     - Added specific error types for better error handling
+   * Implementation Details:
+     - Created `log_chapter_summary` function to standardize all chapter summary logging
+     - Implemented `verify_chapter_summaries` function to check for missed summaries
+     - Added `establish_websocket_connection` function with proper retry logic
+     - Created `send_message` function for consistent WebSocket message sending
+     - Added specific error types: `WebSocketConnectionError`, `ResponseTimeoutError`, `ResponseParsingError`
+   * Benefits:
+     - Improved maintainability with more modular code
+     - Better debugging with source tracking for chapter summaries
+     - Reduced code duplication for common operations
+     - More consistent approach to chapter summary handling
+     - Enhanced error handling with specific error types
+
 ## Standardized Chapter Summary Logging and Extraction (2025-03-16)
 
 1. **Standardized Chapter Summary Logging in `story_simulation.py`:**

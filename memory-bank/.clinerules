@@ -171,6 +171,30 @@
      * Add enhanced features when JavaScript is available
      * Provide fallbacks for older browsers
 
+9. Simulation and Testing:
+   - Standardized Logging Requirements:
+     * Use consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`, `EVENT:CHOICE_SELECTED`)
+     * Include source tracking for debugging (e.g., `source="chapter_update"`, `source="verification"`)
+     * Use structured data in log entries with standardized fields
+     * Implement multiple verification points to ensure complete data capture
+     * Use the `log_chapter_summary()` function for all chapter summary logging
+     * Use the `verify_chapter_summaries()` function to check for missed summaries
+   
+   - Error Handling Requirements:
+     * Use specific error types for different failure scenarios
+     * Implement exponential backoff for retries with configurable parameters
+     * Provide graceful degradation when services are unavailable
+     * Include comprehensive logging of error states and recovery attempts
+     * Use the `establish_websocket_connection()` function with proper retry logic
+     * Use the `send_message()` function for consistent WebSocket message sending
+   
+   - Simulation Structure:
+     * A complete simulation must include all 10 chapters plus the SUMMARY chapter
+     * The simulation must send the "reveal_summary" choice after the CONCLUSION chapter
+     * All chapter summaries must be captured and logged with standardized format
+     * The simulation must verify that all chapter summaries are properly logged
+     * The simulation must include comprehensive logging of all events and state transitions
+
 ## Documentation
 
 - Type hints are required for all functions.

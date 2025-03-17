@@ -2,6 +2,17 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-03-17
+- Created Standalone Chapter Summary Generator Script with Error Handling
+- Implemented Compact Output Format for Chapter Summaries
+- Added Graceful Handling of Missing Chapters in Summary Generation
+- Partially Fixed WebSocket Connection Closure Issue (Chapter 10 summary still showing placeholder)
+- Refactored Story Simulation for Improved Maintainability
+- Standardized Chapter Summary Logging with Dedicated Functions
+- Enhanced Error Handling with Specific Error Types
+- Improved WebSocket Connection Management
+- Reduced Code Duplication in Simulation Code
+
 ### 2025-03-16
 - Standardized Chapter Summary Logging and Extraction
 - Updated Story Simulation for Complete Chapter Summaries
@@ -70,6 +81,11 @@
 - Responsive design for both desktop and mobile
 
 ### Recent Enhancements
+- Created standalone chapter summary generator script with robust error handling
+- Implemented compact output format for chapter summaries with flexible display options
+- Added graceful handling of missing chapters in summary generation
+- Partially fixed WebSocket connection closure issue (Chapter 10 summary still showing placeholder)
+- Refactored simulation code for improved maintainability and error handling
 - Standardized chapter summary logging and extraction for consistent debugging
 - Enhanced chapter summaries with educational context
 - Separated image scene generation from narrative summaries
@@ -79,9 +95,11 @@
 - Fixed simulation log summary extraction and display
 
 ### Known Issues
-- None currently identified in the last 14 days
+- Chapter 10 summary still showing placeholder text instead of actual content
+- Need to investigate why the CONCLUSION chapter summary isn't being properly generated or captured
 
 ## Next Steps
+- Fix Chapter 10 summary generation and capture
 - Continue monitoring and optimizing LLM prompt usage
 - Consider implementing user difficulty selection UI
 - Explore additional educational content integration options

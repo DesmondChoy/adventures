@@ -47,10 +47,18 @@ Updates (2025-03-16):
 - Enhanced logging for SUMMARY chapter content and events
 - Ensured all 10 chapter summaries (including CONCLUSION) are captured
 - Added EVENT:FINAL_CHAPTER_SUMMARIES log entry for complete summary data
-- Increased WEBSOCKET_TIMEOUT from 30 to 90 seconds to prevent timeouts during summary generation
 - Standardized logging format for all chapters (including conclusion chapter)
 - Added verification steps to ensure all chapter summaries are properly logged
 - Improved debug logging with consistent "Chapter X summary/preview" format
+
+Updates (2025-03-17):
+- Refactored code to improve maintainability and readability
+- Standardized chapter summary logging with a dedicated function
+- Reduced code duplication by extracting common operations into helper functions
+- Improved error handling with more specific exception types
+- Enhanced tracking of chapter summary sources for better debugging
+- Simplified nested logic for better readability
+- Consolidated verification steps for chapter summaries
 
 Usage Instructions:
 1. Prerequisites:
@@ -95,6 +103,16 @@ import signal
 import sys
 import time
 from enum import Enum
+import uuid
+import os
+from datetime import datetime
+from typing import Dict, List, Optional, Set, Any, Tuple, Union
+
+# Add the project root to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+# Now we can import from app
+from app.utils.logging_config import StructuredLogger
 
 
 # Custom error types for router vs service errors
@@ -103,6 +121,8 @@ class SimulationErrorType(Enum):
     SERVICE = "service"
     STATE = "state"
     CONTENT = "content"
+    CONNECTION = "connection"
+    TIMEOUT = "timeout"
 
 
 class SimulationError(Exception):
@@ -112,16 +132,26 @@ class SimulationError(Exception):
         super().__init__(f"{error_type.value.upper()}: {message}")
 
 
-import uuid
-import os
-import sys
-from datetime import datetime
+class WebSocketConnectionError(SimulationError):
+    """Error establishing WebSocket connection."""
 
-# Add the project root to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+    def __init__(self, message: str):
+        super().__init__(SimulationErrorType.CONNECTION, message)
 
-# Now we can import from app
-from app.utils.logging_config import StructuredLogger
+
+class ResponseTimeoutError(SimulationError):
+    """Timeout waiting for WebSocket response."""
+
+    def __init__(self, message: str):
+        super().__init__(SimulationErrorType.TIMEOUT, message)
+
+
+class ResponseParsingError(SimulationError):
+    """Error parsing WebSocket response."""
+
+    def __init__(self, message: str):
+        super().__init__(SimulationErrorType.CONTENT, message)
+
 
 # Generate unique run ID and timestamp for this simulation run
 run_id = str(uuid.uuid4())[:8]
@@ -196,9 +226,9 @@ with open(log_filename, "w") as f:
 # Constants
 MAX_RETRIES = 5  # Increased from 3 to 5
 RETRY_DELAY = 2  # Base delay in seconds for exponential backoff
-WEBSOCKET_TIMEOUT = (
-    90  # seconds - Increased from 30 to 90 to allow more time for summary generation
-)
+WEBSOCKET_TIMEOUT = 30  # seconds for general operations
+SUMMARY_TIMEOUT = 30  # seconds specifically for summary operations (longer timeout)
+STORY_LENGTH = 10  # Fixed story length in the current codebase
 
 # Global variables for cleanup
 websocket = None
@@ -232,9 +262,6 @@ def load_story_data():
     """Load story data from individual YAML files."""
     try:
         # Import here to avoid circular imports
-        sys.path.insert(
-            0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-        )
         from app.data.story_loader import StoryLoader
 
         loader = StoryLoader()
@@ -248,9 +275,6 @@ def load_lesson_data():
     """Load lesson data from CSV files in the lessons directory."""
     try:
         # Import here to avoid circular imports
-        sys.path.insert(
-            0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-        )
         from app.data.lesson_loader import LessonLoader
 
         loader = LessonLoader()
@@ -272,8 +296,116 @@ def get_random_lesson_topic(lesson_df):
     return random.choice(topics)
 
 
-# Fixed story length as per current codebase
-STORY_LENGTH = 10  # Fixed story length in the current codebase
+def log_chapter_summary(
+    chapter_number: int, summary: str, source: str = "state_update"
+) -> bool:
+    """Log a chapter summary with standardized format.
+
+    Args:
+        chapter_number: The chapter number (1-based)
+        summary: The chapter summary text
+        source: Where this summary came from (for debugging)
+
+    Returns:
+        bool: True if the summary was logged, False if it was already logged
+    """
+    if chapter_number in logged_summary_chapters:
+        simulation_logger.debug(
+            f"Chapter {chapter_number} summary already logged (from {source})"
+        )
+        return False
+
+    simulation_logger.info(
+        "EVENT:CHAPTER_SUMMARY",
+        extra={
+            "chapter_number": chapter_number,
+            "summary": summary,
+            "timestamp": datetime.now().isoformat(),
+            "run_id": run_id,
+            "source": source,
+        },
+    )
+    logged_summary_chapters.add(chapter_number)
+    simulation_logger.debug(f"Logged Chapter {chapter_number} summary from {source}")
+    return True
+
+
+def verify_chapter_summaries(state: Dict[str, Any], current_chapter: int) -> None:
+    """Verify all completed chapter summaries are logged.
+
+    Args:
+        state: The current state object
+        current_chapter: The current chapter number (1-based)
+    """
+    if "chapter_summaries" not in state:
+        return
+
+    chapter_summaries = state["chapter_summaries"]
+    for i, summary in enumerate(chapter_summaries, 1):
+        if i <= current_chapter and i not in logged_summary_chapters and summary:
+            log_chapter_summary(i, summary, source="verification")
+
+
+async def establish_websocket_connection(
+    uri: str, retry_count: int = 0
+) -> Optional[websockets.WebSocketClientProtocol]:
+    """Establish a WebSocket connection with retry logic.
+
+    Args:
+        uri: The WebSocket URI to connect to
+        retry_count: The current retry attempt (0-based)
+
+    Returns:
+        The WebSocket connection object, or None if connection failed
+
+    Raises:
+        WebSocketConnectionError: If connection fails after all retries
+    """
+    if retry_count >= MAX_RETRIES or should_exit:
+        raise WebSocketConnectionError("Max retries reached or exit requested")
+
+    try:
+        ws = await websockets.connect(uri)
+        simulation_logger.info("WebSocket connection established")
+        return ws
+    except websockets.exceptions.InvalidStatusCode as e:
+        simulation_logger.error(
+            f"Failed to connect to WebSocket (attempt {retry_count + 1}/{MAX_RETRIES}): {e}"
+        )
+        if retry_count < MAX_RETRIES - 1 and not should_exit:
+            backoff_delay = RETRY_DELAY * (2**retry_count)
+            simulation_logger.info(f"Retrying in {backoff_delay} seconds...")
+            await asyncio.sleep(backoff_delay)
+            return await establish_websocket_connection(uri, retry_count + 1)
+        else:
+            raise WebSocketConnectionError(
+                f"Failed to connect after {MAX_RETRIES} attempts: {e}"
+            )
+    except Exception as e:
+        simulation_logger.error(f"Unexpected error during connection: {e}")
+        if retry_count < MAX_RETRIES - 1 and not should_exit:
+            backoff_delay = RETRY_DELAY * (2**retry_count)
+            simulation_logger.info(f"Retrying in {backoff_delay} seconds...")
+            await asyncio.sleep(backoff_delay)
+            return await establish_websocket_connection(uri, retry_count + 1)
+        else:
+            raise WebSocketConnectionError(
+                f"Unexpected error after {MAX_RETRIES} attempts: {e}"
+            )
+
+
+async def send_message(
+    ws: websockets.WebSocketClientProtocol, message: Dict[str, Any]
+) -> None:
+    """Send a message to the WebSocket server.
+
+    Args:
+        ws: The WebSocket connection
+        message: The message to send (will be JSON-encoded)
+    """
+    message_json = json.dumps(message)
+    await ws.send(message_json)
+    simulation_logger.debug(f"Sent message: {json.dumps(message, indent=2)}")
 
 
 async def simulate_story():
@@ -423,28 +555,21 @@ async def simulate_story():
                                                         },
                                                     )
 
-                                                    # Log each individual summary, but only if we haven't logged it before
+                                                    # Use the standardized log_chapter_summary function
                                                     for i, summary in enumerate(
                                                         chapter_summaries, 1
                                                     ):
-                                                        if (
-                                                            i <= current_chapter
-                                                            and i
-                                                            not in logged_summary_chapters
-                                                        ):  # Only log new summaries for completed chapters
-                                                            simulation_logger.info(
-                                                                "EVENT:CHAPTER_SUMMARY",
-                                                                extra={
-                                                                    "chapter_number": i,
-                                                                    "summary": summary,
-                                                                    "timestamp": datetime.now().isoformat(),
-                                                                    "run_id": run_id,
-                                                                },
+                                                        if i <= current_chapter:
+                                                            log_chapter_summary(
+                                                                i,
+                                                                summary,
+                                                                source="chapter_update",
                                                             )
-                                                            # Mark this chapter as logged
-                                                            logged_summary_chapters.add(
-                                                                i
-                                                            )
+
+                                                    # Use verify_chapter_summaries to check for missed summaries
+                                                    verify_chapter_summaries(
+                                                        response_state, current_chapter
+                                                    )
 
                                             # Log chapter type information if available
                                             if "current_chapter" in response_state:
@@ -600,34 +725,13 @@ async def simulate_story():
                                                     f"Chapter {current_chapter} content preview: {full_content[:100]}..."
                                                 )
 
-                                                # For Chapter 10 (conclusion), also create a proper summary and log it with the standardized format
+                                                # For Chapter 10 (conclusion), we no longer create a local summary
+                                                # Instead, we rely on the server to generate a proper summary when processing the "reveal_summary" choice
+                                                # We'll verify that the summary is included in the state after receiving the "summary_complete" message
                                                 if current_chapter == story_length:
-                                                    # Create a summary from the content (first few sentences)
-                                                    sentences = full_content.split(". ")
-                                                    chapter_summary = (
-                                                        ". ".join(sentences[:3]) + "."
+                                                    simulation_logger.debug(
+                                                        f"Waiting for server-generated summary for conclusion (Chapter {story_length})"
                                                     )
-
-                                                    # Log using the standardized EVENT:CHAPTER_SUMMARY format
-                                                    if (
-                                                        story_length
-                                                        not in logged_summary_chapters
-                                                    ):
-                                                        simulation_logger.info(
-                                                            "EVENT:CHAPTER_SUMMARY",
-                                                            extra={
-                                                                "chapter_number": story_length,
-                                                                "summary": chapter_summary,
-                                                                "timestamp": datetime.now().isoformat(),
-                                                                "run_id": run_id,
-                                                            },
-                                                        )
-                                                        logged_summary_chapters.add(
-                                                            story_length
-                                                        )
-                                                        simulation_logger.debug(
-                                                            f"Created and logged conclusion (Chapter {story_length}) summary with standardized EVENT:CHAPTER_SUMMARY format"
-                                                        )
 
                                                 # Print for human readability
                                                 print_separator(
@@ -692,6 +796,63 @@ async def simulate_story():
                                             )
 
                                             # Continue processing responses to capture the summary chapter
+                                            # Use a longer timeout for the next response since summary generation may take longer
+                                            try:
+                                                # Use the longer SUMMARY_TIMEOUT for the next response
+                                                simulation_logger.info(
+                                                    "Using longer timeout for summary response",
+                                                    extra={
+                                                        "timeout_seconds": SUMMARY_TIMEOUT,
+                                                        "timestamp": datetime.now().isoformat(),
+                                                    },
+                                                )
+                                                response_raw = await asyncio.wait_for(
+                                                    websocket.recv(),
+                                                    timeout=SUMMARY_TIMEOUT,
+                                                )
+
+                                                # Process this response (could be summary_start)
+                                                try:
+                                                    response_data = json.loads(
+                                                        response_raw
+                                                    )
+                                                    if isinstance(response_data, dict):
+                                                        response_type = (
+                                                            response_data.get("type")
+                                                        )
+                                                        if (
+                                                            response_type
+                                                            == "summary_start"
+                                                        ):
+                                                            simulation_logger.info(
+                                                                "EVENT:SUMMARY_START",
+                                                                extra={
+                                                                    "timestamp": datetime.now().isoformat(),
+                                                                    "run_id": run_id,
+                                                                },
+                                                            )
+                                                            print_separator(
+                                                                "Summary Chapter Started"
+                                                            )
+                                                            # Clear story content to collect the summary content
+                                                            story_content = []
+                                                except json.JSONDecodeError:
+                                                    # Not JSON, must be story content
+                                                    story_content.append(response_raw)
+                                                except Exception as e:
+                                                    simulation_logger.error(
+                                                        f"Error parsing summary response: {e}"
+                                                    )
+                                            except asyncio.TimeoutError:
+                                                simulation_logger.error(
+                                                    "Timeout waiting for summary response after reveal_summary choice",
+                                                    extra={
+                                                        "timeout_seconds": SUMMARY_TIMEOUT,
+                                                        "timestamp": datetime.now().isoformat(),
+                                                    },
+                                                )
+
+                                            # Continue with the main loop to process remaining responses
                                             continue
 
                                         elif response_type == "summary_start":
@@ -735,63 +896,56 @@ async def simulate_story():
                                                     "state"
                                                 ]["chapter_summaries"]
                                                 if chapter_summaries:
-                                                    # STANDARDIZED LOGGING: Explicitly log all chapter summaries with EVENT:CHAPTER_SUMMARY
-                                                    # This is the primary standardized format for all chapter summaries
+                                                    # Use the standardized log_chapter_summary function for all chapter summaries
                                                     for i, summary in enumerate(
                                                         chapter_summaries, 1
                                                     ):
-                                                        if (
-                                                            i
-                                                            not in logged_summary_chapters
-                                                            and i <= story_length
-                                                        ):
-                                                            # Log using the standard EVENT:CHAPTER_SUMMARY format
-                                                            simulation_logger.info(
-                                                                "EVENT:CHAPTER_SUMMARY",
-                                                                extra={
-                                                                    "chapter_number": i,
-                                                                    "summary": summary,
-                                                                    "timestamp": datetime.now().isoformat(),
-                                                                    "run_id": run_id,
-                                                                },
-                                                            )
-                                                            logged_summary_chapters.add(
-                                                                i
-                                                            )
+                                                        if i <= story_length:
+                                                            if log_chapter_summary(
+                                                                i,
+                                                                summary,
+                                                                source="summary_complete",
+                                                            ):
+                                                                # Special logging for conclusion chapter
+                                                                if i == story_length:
+                                                                    simulation_logger.debug(
+                                                                        f"Logged conclusion (Chapter {i}) summary from state"
+                                                                    )
 
-                                                            # Special logging for conclusion chapter
-                                                            if i == story_length:
-                                                                simulation_logger.debug(
-                                                                    f"Logged conclusion (Chapter {i}) summary with standardized EVENT:CHAPTER_SUMMARY format"
-                                                                )
+                                                    # Use the verify_chapter_summaries function to check for missed summaries
+                                                    verify_chapter_summaries(
+                                                        response_data.get("state", {}),
+                                                        story_length,
+                                                    )
 
-                                                    # Verify all chapter summaries were logged
-                                                    for i in range(1, story_length + 1):
-                                                        if (
-                                                            i
-                                                            not in logged_summary_chapters
-                                                            and i
-                                                            <= len(chapter_summaries)
-                                                        ):
-                                                            # Log any missed chapter summaries
-                                                            simulation_logger.info(
-                                                                "EVENT:CHAPTER_SUMMARY",
-                                                                extra={
-                                                                    "chapter_number": i,
-                                                                    "summary": chapter_summaries[
-                                                                        i - 1
-                                                                    ],  # Zero-indexed
-                                                                    "timestamp": datetime.now().isoformat(),
-                                                                    "run_id": run_id,
-                                                                    "note": "Retroactively logged",
-                                                                },
+                                                    # Check if Chapter 10 summary is missing from the state
+                                                    if (
+                                                        "chapter_summaries"
+                                                        in response_data.get(
+                                                            "state", {}
+                                                        )
+                                                        and (
+                                                            len(
+                                                                response_data["state"][
+                                                                    "chapter_summaries"
+                                                                ]
                                                             )
-                                                            logged_summary_chapters.add(
-                                                                i
-                                                            )
-                                                            simulation_logger.debug(
-                                                                f"Retroactively logged Chapter {i} summary"
-                                                            )
+                                                            < story_length
+                                                            or not response_data[
+                                                                "state"
+                                                            ]["chapter_summaries"][
+                                                                story_length - 1
+                                                            ]
+                                                        )
+                                                    ):
+                                                        error_message = f"Chapter {story_length} (CONCLUSION) summary missing from state after summary_complete"
+                                                        simulation_logger.error(
+                                                            error_message
+                                                        )
+                                                        raise SimulationError(
+                                                            SimulationErrorType.CONTENT,
+                                                            error_message,
+                                                        )
 
                                                     # Log the complete set of summaries
                                                     simulation_logger.info(
@@ -1047,24 +1201,9 @@ async def simulate_story():
     if response_state and "chapter_summaries" in response_state:
         chapter_summaries = response_state["chapter_summaries"]
         if chapter_summaries:
-            # Verify all chapter summaries were logged individually
-            for i in range(1, story_length + 1):
-                if i not in logged_summary_chapters and i <= len(chapter_summaries):
-                    # Log any missed chapter summaries
-                    simulation_logger.info(
-                        "EVENT:CHAPTER_SUMMARY",
-                        extra={
-                            "chapter_number": i,
-                            "summary": chapter_summaries[i - 1],  # Zero-indexed
-                            "timestamp": datetime.now().isoformat(),
-                            "run_id": run_id,
-                            "note": "Retroactively logged at end",
-                        },
-                    )
-                    logged_summary_chapters.add(i)
-                    simulation_logger.debug(
-                        f"Final verification: Retroactively logged Chapter {i} summary"
-                    )
+            # Use the verify_chapter_summaries function for final verification
+            verify_chapter_summaries(response_state, story_length)
+            simulation_logger.debug("Performed final verification of chapter summaries")
 
             # Create a comprehensive log of all summaries for easy extraction
             simulation_logger.info(

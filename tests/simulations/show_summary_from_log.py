@@ -12,6 +12,7 @@ from tests.debug_summary_chapter import (
     extract_chapter_summaries_from_log,
     create_test_state,
     generate_summary_content,
+    find_latest_simulation_log,
 )
 
 
@@ -126,53 +127,101 @@ async def show_summary_from_log(log_file_path):
                 # Extract final chapter content for chapter 10 (supporting both old and new formats)
                 # Note: We only use this as a last resort if we haven't found Chapter 10 summary through
                 # the standardized EVENT:CHAPTER_SUMMARY format or other structured events
-                if 10 not in found_chapters and (
-                    "Final chapter content" in line or "Chapter 10 content" in line
-                ):
-                    try:
-                        # First check if this is a debug log (not a proper summary)
-                        if "Chapter 10 content preview:" in line:
-                            # Skip debug logs that contain raw content previews
-                            continue
-
-                        data = json.loads(line)
-                        if "message" in data:
-                            # Extract the content from the message
-                            message = data["message"]
-
-                            # Handle old format
-                            if message.startswith("Final chapter content:"):
-                                content = message[
-                                    len("Final chapter content:") :
-                                ].strip()
-                                print("Found old format 'Final chapter content'")
-                            # Handle new standardized format (but only if it's not a preview)
-                            elif (
-                                message.startswith("Chapter 10 summary:")
-                                and "preview" not in message
-                            ):
-                                content = message[len("Chapter 10 summary:") :].strip()
-                                print("Found new format 'Chapter 10 summary'")
-                            else:
-                                # Skip if neither format matches
+                if 10 not in found_chapters:
+                    # First try to find any log entry with Chapter 10 content
+                    if "Final chapter content" in line or "Chapter 10 content" in line:
+                        try:
+                            # First check if this is a debug log (not a proper summary)
+                            if "Chapter 10 content preview:" in line:
+                                # Skip debug logs that contain raw content previews
                                 continue
 
-                            # Only use this as a fallback if we haven't found Chapter 10 yet
-                            if 10 not in found_chapters:
-                                # Create a summary for chapter 10 from the content
-                                # Use the first few sentences as a summary
-                                sentences = content.split(". ")
-                                summary = ". ".join(sentences[:3]) + "."
+                            data = json.loads(line)
+                            if "message" in data:
+                                # Extract the content from the message
+                                message = data["message"]
 
-                                # Add the summary to chapter_summaries
-                                chapter_summaries[10] = summary
-                                found_chapters.add(10)
-                                print(
-                                    "Extracted chapter 10 summary from chapter content (fallback)"
-                                )
-                    except Exception as e:
-                        print(f"Error parsing Final chapter content: {e}")
-                        pass
+                                # Handle old format
+                                if message.startswith("Final chapter content:"):
+                                    content = message[
+                                        len("Final chapter content:") :
+                                    ].strip()
+                                    print("Found old format 'Final chapter content'")
+                                # Handle new standardized format (but only if it's not a preview)
+                                elif (
+                                    message.startswith("Chapter 10 summary:")
+                                    and "preview" not in message
+                                ):
+                                    content = message[
+                                        len("Chapter 10 summary:") :
+                                    ].strip()
+                                    print("Found new format 'Chapter 10 summary'")
+                                else:
+                                    # Skip if neither format matches
+                                    continue
+
+                                # Only use this as a fallback if we haven't found Chapter 10 yet
+                                if 10 not in found_chapters:
+                                    # Create a summary for chapter 10 from the content
+                                    # Use a more robust sentence splitting approach
+                                    import re
+
+                                    # Split on periods followed by space or newline, preserving the period
+                                    sentences = re.split(r"\.(?=\s|\n|$)", content)
+                                    # Filter out empty sentences and join with periods
+                                    valid_sentences = [
+                                        s.strip() for s in sentences if s.strip()
+                                    ]
+                                    # Take up to 5 sentences for a more comprehensive summary
+                                    summary = ". ".join(valid_sentences[:5])
+                                    # Ensure the summary ends with a period
+                                    if summary and not summary.endswith("."):
+                                        summary += "."
+
+                                    # Add the summary to chapter_summaries
+                                    chapter_summaries[10] = summary
+                                    found_chapters.add(10)
+                                    print(
+                                        "Extracted chapter 10 summary from chapter content (fallback)"
+                                    )
+                        except Exception as e:
+                            print(f"Error parsing Final chapter content: {e}")
+                            pass
+
+                    # Also look for chapter content in EVENT:CHAPTER_CONTENT logs
+                    elif "EVENT:CHAPTER_CONTENT" in line:
+                        try:
+                            data = json.loads(line)
+                            if (
+                                "chapter_number" in data
+                                and data["chapter_number"] == 10
+                            ):
+                                content = data.get("content", "")
+                                if content:
+                                    # Use a more robust sentence splitting approach
+                                    import re
+
+                                    # Split on periods followed by space or newline, preserving the period
+                                    sentences = re.split(r"\.(?=\s|\n|$)", content)
+                                    # Filter out empty sentences and join with periods
+                                    valid_sentences = [
+                                        s.strip() for s in sentences if s.strip()
+                                    ]
+                                    # Take up to 5 sentences for a more comprehensive summary
+                                    summary = ". ".join(valid_sentences[:5])
+                                    # Ensure the summary ends with a period
+                                    if summary and not summary.endswith("."):
+                                        summary += "."
+
+                                    # Add the summary to chapter_summaries
+                                    chapter_summaries[10] = summary
+                                    found_chapters.add(10)
+                                    print(
+                                        "Extracted chapter 10 summary from EVENT:CHAPTER_CONTENT (fallback)"
+                                    )
+                        except Exception as e:
+                            print(f"Error parsing EVENT:CHAPTER_CONTENT: {e}")
+                            pass
 
         # If we couldn't extract chapter numbers, use the first 10 unique summaries
         if not chapter_summaries and all_summaries:
@@ -186,15 +235,57 @@ async def show_summary_from_log(log_file_path):
             for i, summary in enumerate(unique_summaries[:10], 1):
                 chapter_summaries[i] = summary
 
+        # Final check specifically for Chapter 10
+        if 10 not in chapter_summaries or not chapter_summaries[10]:
+            # Look for raw chapter content in the log file
+            with open(log_file_path, "r") as f:
+                conclusion_content = ""
+                for line in f:
+                    if (
+                        "Chapter 10 (Conclusion)" in line
+                        or "CONCLUSION chapter content" in line
+                    ):
+                        # Try to extract the content after this marker
+                        parts = line.split("Chapter 10 (Conclusion)")
+                        if len(parts) > 1:
+                            conclusion_content = parts[1].strip()
+                        else:
+                            parts = line.split("CONCLUSION chapter content")
+                            if len(parts) > 1:
+                                conclusion_content = parts[1].strip()
+
+                if conclusion_content:
+                    # Use a more robust sentence splitting approach
+                    import re
+
+                    # Split on periods followed by space or newline, preserving the period
+                    sentences = re.split(r"\.(?=\s|\n|$)", conclusion_content)
+                    # Filter out empty sentences and join with periods
+                    valid_sentences = [s.strip() for s in sentences if s.strip()]
+                    # Take up to 5 sentences for a more comprehensive summary
+                    summary = ". ".join(valid_sentences[:5])
+                    # Ensure the summary ends with a period
+                    if summary and not summary.endswith("."):
+                        summary += "."
+
+                    chapter_summaries[10] = summary
+                    print(
+                        "Extracted chapter 10 summary from raw content (last resort fallback)"
+                    )
+
         # Ensure we have exactly 10 chapters
         summaries = []
         for i in range(1, 11):
             if i in chapter_summaries:
                 summaries.append(chapter_summaries[i])
             else:
-                dummy_summary = f"This is a dummy summary for Chapter {i}. It was created because this chapter summary was not found in the log file."
+                # Create a more descriptive dummy summary for missing chapters
+                if i == 10:  # Special case for conclusion chapter
+                    dummy_summary = "In the conclusion chapter, the adventure reached its resolution. The protagonist faced the final challenge and completed their journey, bringing closure to the story and reflecting on the lessons learned along the way."
+                else:
+                    dummy_summary = f"This is a placeholder summary for Chapter {i}. The actual chapter summary was not found in the log file. This chapter would have continued the adventure's progression toward its conclusion."
                 summaries.append(dummy_summary)
-                print(f"Added dummy summary for Chapter {i}")
+                print(f"Added descriptive placeholder for Chapter {i}")
 
         print(f"Processed {len(summaries)} chapter summaries for the summary chapter")
     except ValueError as e:
@@ -274,23 +365,23 @@ async def show_summary_from_log(log_file_path):
 
 
 if __name__ == "__main__":
-    # Default log file path - using a relative path that works from the project root
-    # This handles running the script from either the project root or the tests/simulations directory
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.abspath(os.path.join(script_dir, "../.."))
-    default_log_path = os.path.join(
-        project_root, "logs/simulations/simulation_2025-03-11_23-36-15_8e1a3e7c.log"
-    )
+    log_file = None
 
-    log_file = default_log_path
-
-    # Allow specifying a different log file via command line
+    # Allow specifying a specific log file via command line
     if len(sys.argv) > 1:
         log_file = sys.argv[1]
-
-    # Make sure the log file exists
-    if not os.path.exists(log_file):
-        print(f"Error: Log file not found: {log_file}")
-        sys.exit(1)
+        # Make sure the specified log file exists
+        if not os.path.exists(log_file):
+            print(f"Error: Specified log file not found: {log_file}")
+            sys.exit(1)
+    else:
+        # Find the latest simulation log file
+        log_file = find_latest_simulation_log()
+        if not log_file:
+            print(
+                "Error: No simulation log files found. Please run a simulation first or specify a log file path."
+            )
+            sys.exit(1)
+        print(f"Using latest simulation log: {os.path.basename(log_file)}")
 
     asyncio.run(show_summary_from_log(log_file))

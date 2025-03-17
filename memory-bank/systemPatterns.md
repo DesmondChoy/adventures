@@ -203,3 +203,22 @@ graph TD
   * Consistent section ordering across templates
   * Clear delineation between system and user prompts
   * Hierarchical organization for improved readability
+
+### 6. Simulation and Testing Pattern
+- **Standardized Logging**:
+  * Consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`, `EVENT:CHOICE_SELECTED`)
+  * Source tracking for debugging (e.g., `source="chapter_update"`, `source="verification"`)
+  * Structured data in log entries with standardized fields
+  * Multiple verification points to ensure complete data capture
+
+- **Error Handling and Recovery**:
+  * Specific error types for different failure scenarios
+  * Exponential backoff for retries with configurable parameters
+  * Graceful degradation when services are unavailable
+  * Comprehensive logging of error states and recovery attempts
+
+- **Helper Functions for Common Operations**:
+  * `log_chapter_summary()`: Standardized chapter summary logging
+  * `verify_chapter_summaries()`: Verification of complete chapter summaries
+  * `establish_websocket_connection()`: Connection with retry logic
+  * `send_message()`: Standardized message sending

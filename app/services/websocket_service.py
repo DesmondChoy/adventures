@@ -76,10 +76,18 @@ async def process_choice(
     # Check for special "reveal_summary" choice
     if chosen_path == "reveal_summary":
         logger.info("Processing reveal_summary choice")
+        logger.info(f"Current state has {len(state.chapters)} chapters")
+        logger.info(f"Current chapter summaries: {len(state.chapter_summaries)}")
 
         # Get the CONCLUSION chapter
         if state.chapters and state.chapters[-1].chapter_type == ChapterType.CONCLUSION:
             conclusion_chapter = state.chapters[-1]
+            logger.info(
+                f"Found CONCLUSION chapter: {conclusion_chapter.chapter_number}"
+            )
+            logger.info(
+                f"CONCLUSION chapter content length: {len(conclusion_chapter.content)}"
+            )
 
             # Generate summary for the CONCLUSION chapter
             try:
@@ -90,8 +98,15 @@ async def process_choice(
                     "",  # Empty choice_context
                 )
 
+                logger.info(
+                    f"Generated CONCLUSION chapter summary: {chapter_summary[:100]}..."
+                )
+
                 # Store the summary
                 if len(state.chapter_summaries) < conclusion_chapter.chapter_number:
+                    logger.info(
+                        f"Adding placeholder summaries up to chapter {conclusion_chapter.chapter_number - 1}"
+                    )
                     while (
                         len(state.chapter_summaries)
                         < conclusion_chapter.chapter_number - 1
@@ -99,6 +114,9 @@ async def process_choice(
                         state.chapter_summaries.append("Chapter summary not available")
                     state.chapter_summaries.append(chapter_summary)
                 else:
+                    logger.info(
+                        f"Updating existing summary at index {conclusion_chapter.chapter_number - 1}"
+                    )
                     state.chapter_summaries[conclusion_chapter.chapter_number - 1] = (
                         chapter_summary
                     )
@@ -107,8 +125,13 @@ async def process_choice(
                     f"Stored summary for chapter {conclusion_chapter.chapter_number}: {chapter_summary}"
                 )
             except Exception as e:
-                logger.error(f"Error generating chapter summary: {str(e)}")
+                logger.error(
+                    f"Error generating chapter summary: {str(e)}", exc_info=True
+                )
                 if len(state.chapter_summaries) < conclusion_chapter.chapter_number:
+                    logger.warning(
+                        f"Using fallback summary for chapter {conclusion_chapter.chapter_number}"
+                    )
                     state.chapter_summaries.append("Chapter summary not available")
 
         # Create and generate the SUMMARY chapter
