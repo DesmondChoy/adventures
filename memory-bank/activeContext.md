@@ -1,5 +1,25 @@
 # Active Context
 
+## Updated Chapter Summary Generator for Simulation State JSON Files (2025-03-19)
+
+1. **Updated generate_chapter_summaries.py to Work with Simulation State JSON Files:**
+   * Problem: The script was designed to extract chapter content from log files, but now we have simulation state JSON files from the consolidated generate_all_chapters.py script
+   * Solution:
+     - Modified the script to accept simulation state JSON files instead of log files
+     - Updated the chapter content extraction to navigate the JSON structure
+     - Added a delay mechanism to prevent API timeouts and connection issues
+   * Implementation Details:
+     - Updated `load_chapter_content` function to extract chapter content directly from the JSON structure
+     - Renamed `find_latest_simulation_log` to `find_latest_simulation_state` to find the latest simulation state JSON file
+     - Added a configurable delay parameter with a default of 2.0 seconds between chapter processing
+     - Added a command-line argument `--delay` to customize the delay
+     - Updated documentation and examples to reflect the new features
+   * Benefits:
+     - Script now works with the new JSON file format produced by generate_all_chapters.py
+     - More reliable operation with the delay mechanism preventing API overload
+     - Consistent chapter summary generation for all 10 chapters
+     - Better error handling and recovery from API timeouts
+
 ## Consolidated Simulation Scripts and Renamed chapter_generator.py (2025-03-19)
 
 1. **Consolidated Simulation Scripts:**

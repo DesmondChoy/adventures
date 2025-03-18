@@ -3,6 +3,8 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-19
+- Updated generate_chapter_summaries.py to Work with Simulation State JSON Files
+- Added Delay Mechanism to Prevent API Timeouts in Chapter Summary Generation
 - Consolidated Simulation Scripts by Removing Redundant Files
 - Renamed chapter_generator.py to generate_all_chapters.py for Consistency
 - Renamed CHAPTER_GENERATOR_README.md to GENERATE_ALL_CHAPTERS.md
@@ -96,6 +98,9 @@
 - Responsive design for both desktop and mobile
 
 ### Recent Enhancements
+- Updated generate_chapter_summaries.py to work with simulation state JSON files instead of log files
+- Added delay mechanism to prevent API timeouts in chapter summary generation
+- Added command-line argument to customize delay between API calls
 - Consolidated simulation scripts for better maintainability and reduced redundancy
 - Standardized naming convention for simulation scripts with generate_all_chapters.py
 - Created standalone chapter summary generator script with robust error handling

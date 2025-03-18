@@ -1,17 +1,18 @@
 """
 Generate chapter summaries for all ten chapters of a Learning Odyssey adventure.
 
-This script extracts chapter content from simulation log files and generates
+This script extracts chapter content from simulation state JSON files and generates
 consistent summaries for all chapters using the same prompt template and approach.
 By default, it only prints the summaries to the console and does not save JSON files.
 
 Usage:
-    python tests/simulations/generate_chapter_summaries.py <log_file> [--output OUTPUT_FILE]
-    python tests/simulations/generate_chapter_summaries.py <log_file> --save-json [--output OUTPUT_FILE]
-    python tests/simulations/generate_chapter_summaries.py <log_file> --compact
+    python tests/simulations/generate_chapter_summaries.py <state_file> [--output OUTPUT_FILE]
+    python tests/simulations/generate_chapter_summaries.py <state_file> --save-json [--output OUTPUT_FILE]
+    python tests/simulations/generate_chapter_summaries.py <state_file> --compact [--delay DELAY]
 
-Example:
-    python tests/simulations/generate_chapter_summaries.py logs/simulations/simulation_2025-03-17_12345678.log
+Examples:
+    python tests/simulations/generate_chapter_summaries.py logs/simulations/simulation_state_2025-03-18_23-54-29_d92bc8a8.json
+    python tests/simulations/generate_chapter_summaries.py logs/simulations/simulation_state_2025-03-18_23-54-29_d92bc8a8.json --delay 3.5
 """
 
 import asyncio
@@ -179,68 +180,62 @@ async def generate_chapter_summary(
                 raise Exception(f"Summary generation failed after all retries: {e}")
 
 
-async def load_chapter_content(chapter_number: int, log_file: str) -> Dict[str, Any]:
-    """Load chapter content from a simulation log file with strict error handling.
+async def load_chapter_content(chapter_number: int, state_file: str) -> Dict[str, Any]:
+    """Load chapter content from a simulation state JSON file with strict error handling.
 
     Args:
         chapter_number: The chapter number to load content for
-        log_file: Path to the simulation log file
+        state_file: Path to the simulation state JSON file
 
     Returns:
         Dictionary containing chapter content and metadata
 
     Raises:
         ChapterContentError: If chapter content cannot be found
-        FileNotFoundError: If the log file doesn't exist
+        FileNotFoundError: If the state file doesn't exist
     """
-    if not os.path.exists(log_file):
-        raise FileNotFoundError(f"Log file not found: {log_file}")
+    if not os.path.exists(state_file):
+        raise FileNotFoundError(f"State file not found: {state_file}")
 
-    chapter_content = None
-    chapter_type = None
-    chosen_choice = None
+    # Load the entire state file
+    with open(state_file, "r") as f:
+        state_data = json.load(f)
 
-    with open(log_file, "r") as f:
-        for line in f:
-            # Look for chapter content in STATE_TRANSITION events
-            if "EVENT:STATE_TRANSITION" in line:
-                try:
-                    data = json.loads(line)
-                    if "state" in data:
-                        state_data = json.loads(data["state"])
-                        if "current_chapter" in state_data:
-                            chapter_info = state_data["current_chapter"]
-                            current_chapter_number = chapter_info.get("chapter_number")
+    # Extract chapters array
+    chapters = state_data.get("chapters", [])
 
-                            if current_chapter_number == chapter_number:
-                                chapter_content = chapter_info.get("content")
-                                chapter_type = chapter_info.get("chapter_type")
-                except Exception as e:
-                    logger.error(f"Error parsing log line: {e}")
+    # Find the chapter with the matching chapter_number
+    chapter_data = None
+    for chapter in chapters:
+        if chapter.get("chapter_number") == chapter_number:
+            chapter_data = chapter
+            break
 
-            # Look for choice selection events for this chapter
-            if "EVENT:CHOICE_SELECTED" in line:
-                try:
-                    data = json.loads(line)
-                    if data.get("chapter_number") == chapter_number:
-                        chosen_choice = data.get("choice_text")
-                except Exception as e:
-                    logger.error(f"Error parsing choice event: {e}")
-
-    # Strict error handling - no fallbacks
-    if not chapter_content:
+    # If chapter not found, raise error
+    if not chapter_data:
         raise ChapterContentError(
-            f"Content for Chapter {chapter_number} not found in log file"
+            f"Content for Chapter {chapter_number} not found in state file"
         )
+
+    # Extract content and chapter_type
+    chapter_content = chapter_data.get("content")
+    chapter_type = chapter_data.get("chapter_type")
+
+    # Find the choice made for this chapter from simulation_metadata
+    chosen_choice = "No choice recorded"
+    if (
+        "simulation_metadata" in state_data
+        and "random_choices" in state_data["simulation_metadata"]
+    ):
+        for choice in state_data["simulation_metadata"]["random_choices"]:
+            if choice.get("chapter_number") == chapter_number:
+                chosen_choice = choice.get("choice_text", "No choice recorded")
+                break
 
     # For CONCLUSION chapter (10), there's no choice, so use a standard placeholder
     # This ensures consistent parameters to generate_chapter_summary for all chapters
-    if chapter_number == 10 and not chosen_choice:
+    if chapter_number == 10 and chosen_choice == "No choice recorded":
         chosen_choice = "End of story"
-
-    # If no choice was found for any chapter, use a standard placeholder
-    if not chosen_choice:
-        chosen_choice = "No choice recorded"
 
     return {
         "content": chapter_content,
@@ -250,31 +245,33 @@ async def load_chapter_content(chapter_number: int, log_file: str) -> Dict[str, 
 
 
 async def generate_all_chapter_summaries(
-    log_file: str,
+    state_file: str,
     output_file: str = "chapter_summaries.json",
     skip_json: bool = True,
     compact_output: bool = False,
+    delay_between_chapters: float = 2.0,  # New parameter for delay between API calls
 ):
     """Generate summaries for all ten chapters and save to a file.
 
     Uses the EXACT SAME approach for ALL chapters with NO exceptions.
 
     Args:
-        log_file: Path to the simulation log file
+        state_file: Path to the simulation state JSON file
         output_file: Path to save the generated summaries
         skip_json: If True, skip saving to JSON file (default: True)
         compact_output: If True, use compact output format
+        delay_between_chapters: Delay in seconds between processing chapters (default: 2.0)
 
     Raises:
-        FileNotFoundError: If the log file doesn't exist
+        FileNotFoundError: If the state file doesn't exist
         ChapterContentError: If content for any chapter is missing
         Exception: If summary generation fails
     """
     summaries = []
 
-    # Validate log file exists
-    if not os.path.exists(log_file):
-        raise FileNotFoundError(f"Log file not found: {log_file}")
+    # Validate state file exists
+    if not os.path.exists(state_file):
+        raise FileNotFoundError(f"State file not found: {state_file}")
 
     # Generate summaries for all 10 chapters
     for chapter_number in range(1, 11):
@@ -282,7 +279,7 @@ async def generate_all_chapter_summaries(
             logger.info(f"Processing Chapter {chapter_number}")
 
             # Load chapter content - may raise ChapterContentError
-            chapter_data = await load_chapter_content(chapter_number, log_file)
+            chapter_data = await load_chapter_content(chapter_number, state_file)
 
             # Determine choice context (empty string by default)
             # This is the ONLY parameter that might vary, and it's based on data from the log
@@ -303,6 +300,13 @@ async def generate_all_chapter_summaries(
             )
 
             logger.info(f"Generated summary for Chapter {chapter_number}")
+
+            # Add a delay between chapters to avoid overwhelming the API
+            if chapter_number < 10:  # No need to delay after the last chapter
+                logger.info(
+                    f"Pausing for {delay_between_chapters} seconds before next chapter..."
+                )
+                await asyncio.sleep(delay_between_chapters)
         except ChapterContentError as e:
             # Log the error but continue processing other chapters
             logger.warning(f"Skipping Chapter {chapter_number}: {e}")
@@ -320,7 +324,7 @@ async def generate_all_chapter_summaries(
         print("\nCHAPTER SUMMARIES\n")
         for summary_data in summaries:
             print(
-                f"CHAPTER {summary_data['chapter_number']} ({summary_data['chapter_type']}): {summary_data['summary']}"
+                f"\nCHAPTER {summary_data['chapter_number']} ({summary_data['chapter_type']}): {summary_data['summary']}"
             )
     else:
         # Standard output format
@@ -330,7 +334,7 @@ async def generate_all_chapter_summaries(
 
         for summary_data in summaries:
             print(
-                f"Chapter {summary_data['chapter_number']} ({summary_data['chapter_type']}):"
+                f"\nChapter {summary_data['chapter_number']} ({summary_data['chapter_type']}):"
             )
             print(summary_data["summary"])
             print("-" * 40 + "\n")
@@ -338,11 +342,11 @@ async def generate_all_chapter_summaries(
     return summaries
 
 
-def find_latest_simulation_log():
-    """Find the latest timestamp simulation log file.
+def find_latest_simulation_state():
+    """Find the latest timestamp simulation state JSON file.
 
     Returns:
-        str: Path to the latest simulation log file, or None if no logs found.
+        str: Path to the latest simulation state file, or None if no state files found.
     """
     # Path to simulation logs directory
     logs_dir = "logs/simulations"
@@ -352,26 +356,28 @@ def find_latest_simulation_log():
         logger.warning(f"Simulation logs directory not found: {logs_dir}")
         return None
 
-    # Pattern for simulation log files
+    # Pattern for simulation state files
     import glob
     import re
     from datetime import datetime
 
-    pattern = os.path.join(logs_dir, "simulation_*.log")
+    pattern = os.path.join(logs_dir, "simulation_state_*.json")
 
-    # Find all simulation log files
-    log_files = glob.glob(pattern)
+    # Find all simulation state files
+    state_files = glob.glob(pattern)
 
-    if not log_files:
-        logger.warning(f"No simulation log files found in {logs_dir}")
+    if not state_files:
+        logger.warning(f"No simulation state files found in {logs_dir}")
         return None
 
     # Extract timestamp from filename and sort by timestamp
-    timestamp_pattern = re.compile(r"simulation_(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})_")
+    timestamp_pattern = re.compile(
+        r"simulation_state_(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})_"
+    )
 
     # Create a list of (file_path, timestamp) tuples
     timestamped_files = []
-    for file_path in log_files:
+    for file_path in state_files:
         filename = os.path.basename(file_path)
         match = timestamp_pattern.search(filename)
         if match:
@@ -384,17 +390,19 @@ def find_latest_simulation_log():
                 logger.warning(f"Failed to parse timestamp from filename: {filename}")
 
     if not timestamped_files:
-        logger.warning("No valid timestamped simulation log files found")
+        logger.warning("No valid timestamped simulation state files found")
         return None
 
     # Sort by timestamp (newest first)
     timestamped_files.sort(key=lambda x: x[1], reverse=True)
 
-    # Get the latest log file
-    latest_log_file = timestamped_files[0][0]
-    logger.info(f"Found latest simulation log: {os.path.basename(latest_log_file)}")
+    # Get the latest state file
+    latest_state_file = timestamped_files[0][0]
+    logger.info(
+        f"Found latest simulation state file: {os.path.basename(latest_state_file)}"
+    )
 
-    return latest_log_file
+    return latest_state_file
 
 
 if __name__ == "__main__":
@@ -402,12 +410,12 @@ if __name__ == "__main__":
 
     # Set up command line arguments
     parser = argparse.ArgumentParser(
-        description="Generate chapter summaries from simulation log"
+        description="Generate chapter summaries from simulation state file"
     )
     parser.add_argument(
-        "log_file",
+        "state_file",
         nargs="?",
-        help="Path to simulation log file (optional, will use latest if not provided)",
+        help="Path to simulation state file (optional, will use latest if not provided)",
     )
     parser.add_argument(
         "--output", default="chapter_summaries.json", help="Output file path"
@@ -420,28 +428,35 @@ if __name__ == "__main__":
     parser.add_argument(
         "--compact", action="store_true", help="Use compact output format"
     )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=2.0,
+        help="Delay in seconds between processing chapters (default: 2.0)",
+    )
     args = parser.parse_args()
 
-    log_file = args.log_file
+    state_file = args.state_file
 
-    # If no log file specified, find the latest one
-    if not log_file:
-        log_file = find_latest_simulation_log()
-        if not log_file:
+    # If no state file specified, find the latest one
+    if not state_file:
+        state_file = find_latest_simulation_state()
+        if not state_file:
             print(
-                "ERROR: No simulation log files found. Please run a simulation first or specify a log file path."
+                "ERROR: No simulation state files found. Please run a simulation first or specify a state file path."
             )
             sys.exit(1)
-        print(f"Using latest simulation log: {os.path.basename(log_file)}")
+        print(f"Using latest simulation state file: {os.path.basename(state_file)}")
 
     try:
         # Run the async function
         summaries = asyncio.run(
             generate_all_chapter_summaries(
-                log_file,
+                state_file,
                 args.output,
                 skip_json=not args.save_json,
                 compact_output=args.compact,
+                delay_between_chapters=args.delay,  # Pass the delay parameter
             )
         )
 
