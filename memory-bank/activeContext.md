@@ -1,5 +1,97 @@
 # Active Context
 
+## Consolidated Simulation Scripts and Renamed chapter_generator.py (2025-03-19)
+
+1. **Consolidated Simulation Scripts:**
+   * Problem: Multiple simulation scripts with overlapping functionality were causing confusion and maintenance issues
+   * Solution:
+     - Removed redundant simulation scripts:
+       * `story_simulation.py`: Replaced by the enhanced chapter_generator.py
+       * `generate_all_chapters.py` (old version): Functionality merged into chapter_generator.py
+       * `run_chapter_generator.py`: Simple wrapper script no longer needed
+       * `batch_generate_chapters.py`: Specialized batch script no longer necessary
+     - Renamed `chapter_generator.py` to `generate_all_chapters.py` for consistency
+     - Renamed `CHAPTER_GENERATOR_README.md` to `GENERATE_ALL_CHAPTERS.md`
+     - Updated documentation to reflect the consolidated approach
+   * Implementation Details:
+     - Updated file paths and references in the script
+     - Changed log filename pattern to match the new script name
+     - Updated logger name from "chapter_generator" to "generate_all_chapters"
+     - Updated header text in log files
+   * Benefits:
+     - Simplified codebase with fewer redundant files
+     - Clearer naming convention for simulation scripts
+     - Improved maintainability with consolidated functionality
+     - Reduced confusion for developers working with simulation tools
+
+## Fixed Chapter Generator Script for Simulation State Validation (2025-03-18)
+
+1. **Fixed SimulationState Class in chapter_generator.py:**
+   * Problem: The script was failing with `ValueError: "SimulationState" object has no field "simulation_metadata"` because AdventureState (which SimulationState extends) is a Pydantic model that doesn't allow adding arbitrary fields.
+   * Solution:
+     - Properly defined the simulation_metadata field using Pydantic's Field:
+       ```python
+       simulation_metadata: Dict[str, Any] = Field(
+           default_factory=dict, description="Metadata specific to the simulation run"
+       )
+       ```
+     - Modified the __init__ method to initialize the field properly:
+       ```python
+       def __init__(self, *args, **kwargs):
+           # Initialize with default values
+           if "simulation_metadata" not in kwargs:
+               kwargs["simulation_metadata"] = {
+                   "run_id": run_id,
+                   "timestamp": datetime.now().isoformat(),
+                   "random_choices": [],
+               }
+           super().__init__(*args, **kwargs)
+       ```
+     - Updated the save_to_file method to handle the simulation_metadata field correctly
+   * Implementation Details:
+     - Added import for Pydantic's Field
+     - Added proper type hints for the simulation_metadata field
+     - Added null checking in the record_choice method
+     - Removed redundant code in the save_to_file method
+   * Benefits:
+     - Script now runs without validation errors
+     - Properly integrates with Pydantic's validation system
+     - Maintains the same functionality while following proper OOP principles
+     - Provides better type hints for IDE support
+
+2. **Fixed WebSocketClientProtocol Deprecation Warnings:**
+   * Problem: The script was generating deprecation warnings for WebSocketClientProtocol
+   * Solution:
+     - Updated imports to use websockets.client
+     - Updated type hints to use websockets.client.WebSocketClientProtocol
+   * Implementation Details:
+     - Changed import from `import websockets` to `import websockets.client`
+     - Updated all function signatures to use the new type:
+       ```python
+       async def establish_websocket_connection(
+           uri: str, retry_count: int = 0
+       ) -> Optional[websockets.client.WebSocketClientProtocol]:
+       ```
+       ```python
+       async def send_message(
+           ws: websockets.client.WebSocketClientProtocol, message: Dict[str, Any]
+       ) -> None:
+       ```
+       ```python
+       async def process_chapter(
+           websocket: websockets.client.WebSocketClientProtocol,
+           chapter_number: int,
+           is_conclusion: bool = False,
+       ) -> Tuple[str, List[Dict[str, Any]]]:
+       ```
+       ```python
+       async def process_summary(websocket: websockets.client.WebSocketClientProtocol) -> str:
+       ```
+   * Benefits:
+     - Eliminates deprecation warnings
+     - Future-proofs the code against API changes
+     - Follows best practices for the websockets library
+
 ## New Chapter Summary Generator Script (2025-03-17)
 
 1. **Created Standalone Chapter Summary Generator Script:**
@@ -21,6 +113,27 @@
      - Robust error handling that continues processing even if some chapters are missing
      - Flexible output options for different use cases
      - Reliable summary generation with retry logic
+
+## Ongoing Issue: Chapter 10 Content Not Being Captured in Simulation Log (2025-03-18)
+
+1. **Issue with Chapter 10 Content in generate_all_chapters.py:**
+   * Problem: Chapter 10 content is visible in the terminal but not being captured in the simulation log file.
+   * Current Status:
+     - Created `generate_all_chapters.py` script to focus solely on generating all 10 chapters
+     - Modified the script to continue processing WebSocket messages after receiving the "story_complete" event
+     - Added special handling for timeouts and connection closed events when processing the conclusion chapter
+     - Added a new event type `EVENT:CONCLUSION_CHAPTER` to log the conclusion chapter content
+   * Observed Behavior:
+     - The script successfully processes chapters 1-9
+     - It logs "Chapter 10 content complete (3006 chars)" in the terminal
+     - It logs "EVENT:STORY_COMPLETE" in the log file
+     - It logs "Waiting for conclusion chapter content..." in the log file
+     - But then it times out waiting for a response: "Timeout waiting for response in chapter 10"
+   * Next Steps:
+     - Investigate why the WebSocket connection is being closed or timing out before Chapter 10 content can be fully processed
+     - Consider increasing the timeout value for the conclusion chapter
+     - Add more detailed logging to track the WebSocket connection state
+     - Explore alternative approaches to capture the conclusion chapter content
 
 ## Ongoing Issue: Chapter 10 Summary Not Showing in Adventure Summary (2025-03-17)
 
@@ -472,12 +585,4 @@
 ## Development Tools
 
 1. **Code Complexity Analyzer (`tools/code_complexity_analyzer.py`):**
-   * Identifies files that may need refactoring due to excessive code size
-   * Counts total lines, non-blank lines, and code lines (excluding comments)
-   * Supports filtering by file extension and sorting by different metrics
-   * Command-line usage: `python tools/code_complexity_analyzer.py [options]`
-   * Options:
-     - `-p, --path PATH`: Repository path (default: current directory)
-     - `-e, --extensions EXT`: File extensions to include (e.g., py js html)
-     - `-s, --sort TYPE`: Sort by total, non-blank, or code lines
-     - `-n, --number N`: Number of files to display
+   * Identifies files that may need ref

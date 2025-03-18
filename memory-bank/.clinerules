@@ -39,7 +39,8 @@
      * `carousel-manager.js`: Reusable carousel component
      * `font-size-manager.js`: Text size adjustment for mobile
 4. Tests: `tests/` directory
-   - Story simulations: `tests/simulations/story_simulation.py`
+   - Simulation scripts: `tests/simulations/generate_all_chapters.py` (main simulation script)
+   - Chapter summary generation: `tests/simulations/generate_chapter_summaries.py`
    - Data tests: `tests/data/` (story loader, elements, chapter manager)
 
 ### LLM Service Provider Differences
@@ -79,6 +80,12 @@
    - Type hints required for all state properties
    - State changes must be logged
    - Agency choice MUST be stored in `state.metadata["agency"]`
+   - When extending Pydantic models like AdventureState:
+     * New fields MUST be properly defined using Pydantic's Field
+     * Example: `new_field: Dict[str, Any] = Field(default_factory=dict, description="...")`
+     * Initialize fields in __init__ method by adding to kwargs before calling super().__init__
+     * Add null checking for all field operations to handle edge cases
+     * Use proper type hints for all fields
 
 2. Chapter Requirements:
    - First chapter MUST be STORY type with agency choice
@@ -172,6 +179,14 @@
      * Provide fallbacks for older browsers
 
 9. Simulation and Testing:
+   - Simulation Scripts Organization:
+     * `generate_all_chapters.py`: Main simulation script for generating complete adventures
+     * `generate_chapter_summaries.py`: Standalone script for generating chapter summaries from log files
+     * `chapter_tools.py`: Utility functions for working with chapters
+     * `log_utils.py`: Utility functions for log processing
+     * `analyze_chapter_state.py`: Tool for analyzing chapter state
+     * `test_chapter_sequence_validation.py` and `test_chapter_type_assignment.py`: Test files for validation
+   
    - Standardized Logging Requirements:
      * Use consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`, `EVENT:CHOICE_SELECTED`)
      * Include source tracking for debugging (e.g., `source="chapter_update"`, `source="verification"`)
@@ -187,6 +202,25 @@
      * Include comprehensive logging of error states and recovery attempts
      * Use the `establish_websocket_connection()` function with proper retry logic
      * Use the `send_message()` function for consistent WebSocket message sending
+   
+   - WebSocket Implementation Requirements:
+     * Use `import websockets.client` instead of `import websockets`
+     * Use `websockets.client.WebSocketClientProtocol` in type hints:
+       ```python
+       async def function_name(
+           websocket: websockets.client.WebSocketClientProtocol,
+           param: Type
+       ) -> ReturnType:
+       ```
+     * Implement proper timeout handling for different operation types:
+       ```python
+       STANDARD_TIMEOUT = 30  # seconds for general operations
+       CONCLUSION_TIMEOUT = 60  # seconds for conclusion chapter
+       SUMMARY_TIMEOUT = 60  # seconds for summary operations
+       ```
+     * Use `asyncio.wait_for()` with appropriate timeout values
+     * Handle connection closed events and timeouts gracefully
+     * Implement retry logic with exponential backoff for connection attempts
    
    - Simulation Structure:
      * A complete simulation must include all 10 chapters plus the SUMMARY chapter
