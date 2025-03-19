@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Summary Chapter Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/summary-chapter.css">
+  <style>
+    body {
+      background-color: #f3f4f6;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4">
+  <div class="container mx-auto">
+    <a href="/" class="block">
+      <h1 class="text-3xl font-bold text-center mb-8 hover:text-indigo-600 transition-colors">Summary Chapter Test</h1>
+    </a>
+    
+    <!-- Congratulatory View (shown first) -->
+    <div id="congratsView" class="mt-8 max-w-2xl mx-auto">
+      <div class="bg-white rounded-xl shadow-md p-6 text-center">
+        <h2 class="text-2xl font-bold text-indigo-600 mb-4 congratulation-title">
+          Adventure Complete!
+        </h2>
+        <div class="congratulation-stars">
+          <!-- Stars will be added via JavaScript -->
+        </div>
+        <button id="viewSummaries" class="mt-8 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors opacity-0">
+          View Your Adventure Summary
+        </button>
+      </div>
+    </div>
+    
+    <!-- Summary View (hidden initially) -->
+    <div id="summaryView" class="mt-8 max-w-2xl mx-auto hidden">
+      <div class="bg-white rounded-xl shadow-md p-6">
+        <!-- Summary Navigation -->
+        <div class="flex justify-between items-center mb-6">
+          <button id="prevSummary" class="px-3 py-1 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed nav-button">
+            Previous
+          </button>
+          <div class="text-sm font-medium">
+            Chapter <span id="current-summary">1</span> of <span id="total-summaries">10</span>
+          </div>
+          <button id="nextSummary" class="px-3 py-1 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed nav-button">
+            Next
+          </button>
+        </div>
+        
+        <!-- Chapter Summary Display -->
+        <div id="summaryContent" class="prose max-w-none mb-6 whitespace-pre-wrap">
+          <!-- Chapter summary will be displayed here with typewriter effect -->
+          <div class="chapter-header">
+            <h3 class="text-xl font-semibold text-indigo-700">Summary: Chapter <span class="chapter-number">1</span></h3>
+          </div>
+          <div class="chapter-summary-text">
+            <!-- Typewriter text will appear here -->
+          </div>
+          <div class="typewriter-cursor">|</div>
+        </div>
+        
+        <!-- Navigation Buttons -->
+        <div id="summaryNavigation" class="flex flex-col gap-3 w-full">
+          <!-- Navigation buttons can be added here if needed in the future -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/summary-chapter.js"></script>
+  <script>
+    // Initialize the summary manager
+    const summaryManager = new SummaryChapterManager();
+    
+    // Load the pre-generated JSON data
+    fetch('data/sample-summaries.json')
+      .then(response => response.json())
+      .then(summaries => {
+        console.log(`Loaded ${summaries.length} chapter summaries`);
+        summaryManager.initialize(summaries);
+      })
+      .catch(error => {
+        console.error('Error loading summaries:', error);
+        // Display error message to user
+        const container = document.querySelector('.container');
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'mt-8 max-w-2xl mx-auto bg-red-100 text-red-700 p-4 rounded-xl shadow-md';
+        errorMessage.innerHTML = `
+          <h2 class="text-xl font-semibold mb-2">Error Loading Summaries</h2>
+          <p>${error.message}</p>
+          <p class="mt-4">Please make sure you've generated the sample data by running:</p>
+          <pre class="bg-gray-800 text-white p-3 rounded mt-2 overflow-x-auto">python tests/simulations/generate_chapter_summaries.py --save-json --output app/static/experimental/typewriter-summary/data/sample-summaries.json</pre>
+        `;
+        container.appendChild(errorMessage);
+      });
+  </script>
+</body>
+</html>
