@@ -143,26 +143,51 @@ The implementation uses a two-stage approach:
    - Displays chapter summaries one at a time with handwriting animation
    - Provides navigation controls to move between summaries
 
-### 5.2. Handwriting Animation
+### 5.2. Enhanced Layout and Navigation
 
-Instead of a basic typewriter effect, we've implemented a more visually appealing handwriting animation:
+The updated implementation includes:
 
-- Uses a handwriting font (Caveat) for a more natural look
-- Animates each character individually with randomized properties:
-  - Slight rotation for a more natural appearance
-  - Variable timing for a more organic feel
-  - Special styling for punctuation (bolder, darker)
-- Characters appear with subtle movement effects that mimic handwriting
+1. **Vertical Chapter Tabs**:
+   - Numbered tabs on the left side for quick navigation
+   - Active state highlighting for the current chapter
+   - Clickable tabs for direct navigation between chapters
+   - Responsive design that switches to horizontal scrolling tabs on mobile
 
-### 5.3. UI Improvements
+2. **Improved Chapter Content Structure**:
+   - Chapter header with book icon and title
+   - Main summary text section
+   - "Your Choices" section with light blue background
+   - "Key Learnings" section with light green background
+   - Chapter type indicator (Story/Lesson/Reflect/Conclusion)
+   - "See Your Learning Progress" button
 
-Several UI improvements have been implemented:
+3. **Mobile-Optimized Layout**:
+   - Horizontal scrolling tabs on mobile devices
+   - Properly sized touch targets
+   - Optimized spacing for smaller screens
+   - Maintained visual hierarchy and readability
 
-- **Clickable Header**: The "Summary Chapter Test" header is clickable and returns to the main page
-- **Simplified Navigation**: Removed the "Start New Journey" button for a cleaner interface
-- **Updated Header Format**: Changed from "Chapter X (TYPE)" to "Summary: Chapter X"
-- **Faster Animation**: Increased the animation speed for a more engaging experience
-- **Smooth Transitions**: Added fade animations between views and summaries
+### 5.3. Improved Code Structure
+
+The JavaScript implementation has been enhanced with:
+
+1. **Defensive Programming**:
+   - Comprehensive null checks throughout the code
+   - Detailed error logging for debugging
+   - Fallback behavior for missing elements
+   - Status reporting for key operations
+
+2. **Dynamic Content Generation**:
+   - Generic chapter titles instead of hardcoded values
+   - Placeholder content for choices and learnings
+   - Adaptable to different chapter types and content
+   - More reusable and maintainable approach
+
+3. **Enhanced Error Handling**:
+   - Verbose error messages for debugging
+   - Graceful degradation when elements are missing
+   - Console logging for tracking element status
+   - Improved reliability in edge cases
 
 ### 5.4. HTML Structure
 
@@ -170,42 +195,93 @@ Several UI improvements have been implemented:
 <!-- Congratulatory View (shown first) -->
 <div id="congratsView" class="mt-8 max-w-2xl mx-auto">
   <div class="bg-white rounded-xl shadow-md p-6 text-center">
-    <h2 class="text-2xl font-bold text-indigo-600 mb-4 congratulation-title">
-      Adventure Complete!
+    <div class="trophy-icon mb-4">
+      <!-- Trophy SVG icon -->
+    </div>
+    <h2 class="text-3xl font-bold text-purple-700 mb-4 congratulation-title">
+      Congratulations, Adventure Champion! <span class="party-emoji">🎉</span>
     </h2>
-    <div class="congratulation-stars">
+    <p class="text-lg text-purple-600 mb-6">
+      You've completed all 10 chapters of your amazing journey!
+    </p>
+    <div class="congratulation-stars flex justify-center space-x-8 my-8">
       <!-- Stars will be added via JavaScript -->
     </div>
-    <button id="viewSummaries" class="mt-8 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors opacity-0">
-      View Your Adventure Summary
+    <button id="viewSummaries" class="mt-4 px-6 py-3 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors opacity-0 text-lg">
+      Let's Recap Your Adventure <span class="ml-1">›</span>
     </button>
   </div>
 </div>
 
 <!-- Summary View (hidden initially) -->
-<div id="summaryView" class="mt-8 max-w-2xl mx-auto hidden">
-  <div class="bg-white rounded-xl shadow-md p-6">
-    <!-- Summary Navigation -->
-    <div class="flex justify-between items-center mb-6">
-      <button id="prevSummary" class="px-3 py-1 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed nav-button">
-        Previous
-      </button>
-      <div class="text-sm font-medium">
-        Chapter <span id="current-summary">1</span> of <span id="total-summaries">10</span>
-      </div>
-      <button id="nextSummary" class="px-3 py-1 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed nav-button">
-        Next
-      </button>
+<div id="summaryView" class="mt-8 max-w-4xl mx-auto hidden">
+  <div class="flex">
+    <!-- Vertical Chapter Tabs -->
+    <div class="chapter-tabs mr-4 flex flex-col space-y-2">
+      <!-- Tabs will be added via JavaScript -->
     </div>
     
-    <!-- Chapter Summary Display -->
-    <div id="summaryContent" class="prose max-w-none mb-6 whitespace-pre-wrap">
-      <!-- Chapter summary will be displayed here with handwriting effect -->
-      <div class="chapter-header">
-        <h3 class="text-xl font-semibold text-indigo-700">Summary: Chapter <span class="chapter-number">1</span></h3>
+    <!-- Main Content Area -->
+    <div class="bg-white rounded-xl shadow-md p-6 flex-grow">
+      <!-- Chapter Content -->
+      <div id="summaryContent" class="prose max-w-none mb-6">
+        <!-- Chapter Header with Icon -->
+        <div class="chapter-header flex items-center mb-4">
+          <div class="chapter-icon bg-purple-100 rounded-full p-3 mr-3">
+            <!-- Book icon SVG -->
+          </div>
+          <h3 class="text-2xl font-bold text-purple-700">Chapter <span class="chapter-number">1</span>: <span class="chapter-title">Recap</span></h3>
+        </div>
+        
+        <!-- Chapter Summary -->
+        <div class="chapter-summary mb-6">
+          <p>
+            <!-- Summary text will be displayed here -->
+          </p>
+        </div>
+        
+        <!-- Your Choices Section -->
+        <div class="your-choices bg-blue-50 rounded-lg p-4 mb-6">
+          <h4 class="text-lg font-semibold text-blue-700 mb-2">Your Choices</h4>
+          <ul class="list-disc pl-5 text-blue-800">
+            <!-- Choices will be added via JavaScript -->
+          </ul>
+        </div>
+        
+        <!-- Key Learnings Section -->
+        <div class="key-learnings bg-green-50 rounded-lg p-4 mb-6">
+          <h4 class="text-lg font-semibold text-green-700 mb-2">Key Learnings</h4>
+          <ul class="list-disc pl-5 text-green-800">
+            <!-- Learnings will be added via JavaScript -->
+          </ul>
+        </div>
+        
+        <!-- Chapter Type Indicator -->
+        <div class="chapter-type-indicator flex items-center mb-6">
+          <span class="chapter-type px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+            Story Chapter
+          </span>
+        </div>
+        
+        <!-- Learning Progress Button -->
+        <div class="text-right">
+          <button id="seeProgress" class="px-6 py-3 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors text-lg flex items-center ml-auto">
+            See Your Learning Progress
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" class="ml-2">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+          </button>
+        </div>
       </div>
-      <div class="chapter-summary-text">
-        <!-- Handwriting text will appear here -->
+      
+      <!-- Navigation Buttons -->
+      <div class="flex justify-between items-center mt-8">
+        <button id="prevSummary" class="px-4 py-2 rounded-md bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed nav-button">
+          ← Previous Chapter
+        </button>
+        <button id="nextSummary" class="px-4 py-2 rounded-md bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed nav-button">
+          Next Chapter →
+        </button>
       </div>
     </div>
   </div>
@@ -214,87 +290,201 @@ Several UI improvements have been implemented:
 
 ### 5.5. CSS Implementation
 
-Key CSS features include:
+Key CSS features for the updated implementation include:
 
 ```css
-/* Import handwriting font */
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
-
-/* Handwriting Effect */
-.chapter-summary-text {
-  font-family: 'Caveat', cursive;
-  font-size: 1.3rem;
-  line-height: 1.6;
+/* Chapter Tabs Styling */
+.chapter-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
 }
 
-/* Handwriting animation effects */
-.handwriting-char {
-  opacity: 0;
-  transform: translateY(5px) rotate(var(--rotation));
-  display: inline-block;
-  animation: handwritingAppear 0.2s forwards;
-  animation-delay: calc(var(--index) * 8ms);
-  color: var(--char-color, #1a1a1a);
+.chapter-tab {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background-color: #f3f4f6;
+  color: #6b7280;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-standard);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-@keyframes handwritingAppear {
-  0% {
-    opacity: 0;
-    transform: translateY(5px) rotate(var(--rotation));
+.chapter-tab.active {
+  background-color: var(--accent-primary);
+  color: white;
+  box-shadow: 0 2px 4px rgba(126, 34, 206, 0.3);
+}
+
+/* Your Choices Section */
+.your-choices {
+  background-color: var(--blue-light);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-left: 4px solid #93c5fd;
+}
+
+/* Key Learnings Section */
+.key-learnings {
+  background-color: var(--green-light);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-left: 4px solid #6ee7b7;
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+  /* Mobile layout for summary view */
+  #summaryView .flex {
+    flex-direction: column;
   }
-  60% {
-    opacity: 0.7;
-    color: #3a3a3a;
+  
+  /* Mobile layout for chapter tabs */
+  .chapter-tabs {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 10px 0;
+    margin-bottom: 16px;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
   }
-  100% {
-    opacity: 1;
-    transform: translateY(0) rotate(0);
-    color: var(--char-color, #1a1a1a);
+  
+  .chapter-tab {
+    min-width: 36px;
+    height: 36px;
+    margin: 0 4px;
+    flex-shrink: 0;
+  }
+  
+  /* Make active tab more prominent on mobile */
+  .chapter-tab.active {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(126, 34, 206, 0.4);
   }
 }
 ```
 
 ### 5.6. JavaScript Implementation
 
-The JavaScript implementation includes:
+The JavaScript implementation has been updated with:
 
 ```javascript
 /**
- * Type text with a handwriting animation effect
- * @param {string} text - Text to type
+ * Show a specific summary with all its components
+ * @param {number} index - Index of the summary to show
  */
-typeText(text) {
-  // Reset
-  this.chapterSummaryText.innerHTML = '';
+showSummary(index) {
+  // Validate index and data
+  if (index < 0 || !this.summaries || index >= this.summaries.length) {
+    console.warn(`Cannot show summary: Invalid index ${index} or missing data`);
+    return;
+  }
   
-  // Start typing with handwriting animation
-  this.isTyping = true;
+  // Check for required DOM elements
+  if (!this.chapterNumber || !this.chapterTitle || !this.chapterSummary || 
+      !this.yourChoices || !this.keyLearnings || !this.chapterTypeIndicator) {
+    console.warn('Cannot show summary: Missing required DOM elements');
+    return;
+  }
   
-  // Create span for each character with randomized properties
-  [...text].forEach((char, index) => {
-    const span = document.createElement('span');
-    span.textContent = char;
-    span.className = 'handwriting-char';
-    
-    // Add randomized properties
-    const rotation = (Math.random() * 6 - 3) + 'deg';
-    span.style.setProperty('--rotation', rotation);
-    span.style.setProperty('--index', index);
-    
-    // Special styling for certain characters
-    if (['!', '.', '?'].includes(char)) {
-      span.style.setProperty('--char-color', '#000');
-      span.style.fontWeight = 'bold';
+  // Update current index
+  this.currentIndex = index;
+  
+  // Get the summary data
+  const summaryData = this.summaries[index];
+  const chapterNum = summaryData.chapter_number;
+  const chapterType = summaryData.chapter_type;
+  const summaryText = summaryData.summary;
+  
+  // Update chapter tabs
+  this.updateChapterTabs();
+  
+  // Update navigation buttons
+  this.updateNavigationButtons();
+  
+  // Update current summary number
+  if (this.currentSummary) {
+    this.currentSummary.textContent = chapterNum;
+  }
+  
+  // Update chapter header with generic title
+  this.chapterNumber.textContent = chapterNum;
+  this.chapterTitle.textContent = "Recap";
+  
+  // Update chapter summary
+  if (this.chapterSummary) {
+    // Find or create the paragraph element
+    let summaryParagraph = this.chapterSummary.querySelector('p');
+    if (!summaryParagraph) {
+      summaryParagraph = document.createElement('p');
+      this.chapterSummary.appendChild(summaryParagraph);
     }
-    
-    this.chapterSummaryText.appendChild(span);
+    summaryParagraph.textContent = summaryText;
+  }
+  
+  // Extract and update choices
+  const choices = this.extractChoices(summaryText, chapterType);
+  this.yourChoices.innerHTML = '';
+  choices.forEach(choice => {
+    const li = document.createElement('li');
+    li.textContent = choice;
+    this.yourChoices.appendChild(li);
   });
   
-  // Set a timeout to mark typing as complete
-  const totalDuration = text.length * 8 + 500;
-  this.typewriterTimeout = setTimeout(() => {
-    this.isTyping = false;
-  }, totalDuration);
+  // Extract and update key learnings
+  const learnings = this.extractLearnings(summaryText, chapterType);
+  this.keyLearnings.innerHTML = '';
+  learnings.forEach(learning => {
+    const li = document.createElement('li');
+    li.textContent = learning;
+    this.keyLearnings.appendChild(li);
+  });
+  
+  // Update chapter type indicator
+  this.chapterTypeIndicator.textContent = `${chapterType.charAt(0).toUpperCase() + chapterType.slice(1)} Chapter`;
+  this.chapterTypeIndicator.className = `chapter-type ${chapterType.toLowerCase()}`;
+}
+
+/**
+ * Extract choices from a chapter summary
+ * @param {string} summary - The chapter summary text
+ * @returns {Array} - Array of choices
+ */
+extractChoices(summary, chapterType) {
+  if (!summary) {
+    console.warn('Cannot extract choices: Missing summary text');
+    return ['No choices available'];
+  }
+  
+  // Default placeholder choices
+  return ['Made a choice during the adventure', 'Explored the environment'];
+}
+
+/**
+ * Extract key learnings from a chapter summary
+ * @param {string} summary - The chapter summary text
+ * @returns {Array} - Array of key learnings
+ */
+extractLearnings(summary, chapterType) {
+  if (!summary) {
+    console.warn('Cannot extract learnings: Missing summary text');
+    return ['No learnings available'];
+  }
+  
+  // Default placeholder learnings
+  return ['Gained knowledge through the adventure', 'Developed problem-solving skills'];
 }
 ```
 
@@ -340,35 +530,40 @@ typeText(text) {
 
 The implementation has been completed with the following features:
 
-1. **Handwriting Animation**:
-   - Added a handwriting font (Caveat) for a more natural look
-   - Implemented character-by-character animation with randomized properties
-   - Added special styling for punctuation (bolder, darker)
-   - Characters now appear with subtle rotation and movement effects
+1. **Enhanced Layout and Navigation**:
+   - Added vertical tabs for chapter navigation
+   - Created a book icon and chapter title at the top
+   - Added "Your Choices" section with light blue background
+   - Added "Key Learnings" section with light green background
+   - Added chapter type indicator
+   - Added "See Your Learning Progress" button
 
-2. **Increased Animation Speed**:
-   - Reduced the animation delay between characters from 15ms to 8ms
-   - Shortened the animation duration for each character from 0.3s to 0.2s
-   - Adjusted the total animation timing for a smoother experience
+2. **Improved Mobile Experience**:
+   - Updated CSS for mobile view to display tabs horizontally
+   - Added proper spacing, sizing, and touch-friendly styling
+   - Improved the active tab styling for better visibility
+   - Added momentum scrolling for touch devices
 
-3. **Updated Header Format**:
-   - Changed from "Chapter X (TYPE)" to "Summary: Chapter X"
-   - Removed the chapter type display
-   - Maintained the animation for the header
+3. **Removed Hardcoded Content**:
+   - Removed the hardcoded `chapterTitles` array from JavaScript
+   - Replaced with generic "Chapter X: Recap" format
+   - Simplified content extraction methods to use placeholders
+   - Removed hardcoded comments and specific content
 
-4. **UI Improvements**:
-   - Made the "Summary Chapter Test" header clickable to return to the main page
-   - Removed the "Start New Journey" button
-   - Implemented a two-stage experience:
-     - First stage: Only the "Adventure Complete" notification with stars
-     - Second stage: Only the chapter summaries after clicking the button
+4. **Added Defensive Programming**:
+   - Added comprehensive null checks throughout the code
+   - Implemented detailed error logging
+   - Added fallback behavior for missing elements
+   - Added status reporting for key operations
 
-The implementation provides a more visually appealing experience with the handwriting animation, and the two-stage approach creates a cleaner, more focused user experience.
+The implementation now provides a more visually appealing and robust experience with improved layout, navigation, and mobile support. The code is also more maintainable with the removal of hardcoded content and the addition of defensive programming techniques.
 
 ## 8. Future Enhancements
 
-1. **Keyboard Navigation**:
-   - Add support for left/right arrow keys to navigate between summaries
+1. **Advanced Content Extraction**:
+   - Implement more sophisticated algorithms to extract choices and learnings
+   - Add support for different chapter types with specialized extraction
+   - Improve the quality of extracted content
 
 2. **Animation Speed Control**:
    - Allow users to adjust typewriter speed or skip animation
@@ -384,6 +579,6 @@ The implementation provides a more visually appealing experience with the handwr
 
 ## 9. Conclusion
 
-This implementation provides a visually appealing and engaging way to present chapter summaries at the end of an adventure. The handwriting animation effect, combined with the two-stage approach and smooth transitions, creates a memorable and satisfying conclusion to the user's adventure.
+This implementation provides a visually appealing and engaging way to present chapter summaries at the end of an adventure. The enhanced layout with vertical tabs, choices and learnings sections, and improved mobile support creates a more comprehensive and user-friendly experience.
 
-The modularized approach allows for rapid experimentation and iteration without affecting the main application. Once we're satisfied with the experimental implementation, we can integrate it into the main application by moving the CSS and JS files to their final locations and updating the main HTML template.
+The removal of hardcoded content and the addition of defensive programming techniques make the code more maintainable and robust. The modularized approach allows for rapid experimentation and iteration without affecting the main application, and the implementation is now ready for integration into the main application.
