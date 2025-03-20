@@ -14,7 +14,14 @@ graph TD
     CM <--> SL[Story Loader]
     SL <--> SF[(Story Files)]
     LLM <--> PF[Paragraph Formatter]
-
+    
+    %% New React Summary Components
+    Client <--> SR[Summary Router]
+    SR <--> RSUM[React Summary App]
+    SR <--> SAPI[Summary API]
+    SAPI <--> SGEN[Summary Generator]
+    SGEN <--> AS
+    
     subgraph Client Side
         LP[localStorage] <--> CSM[Client State Manager]
         CSM <--> Client
@@ -38,6 +45,12 @@ graph TD
         LLM --> CM
         IMG --> WSS
         SF --> SL
+    end
+    
+    subgraph React Summary
+        RSUM
+        SAPI
+        SGEN
     end
 ```
 
@@ -147,7 +160,35 @@ graph TD
 
 ## Key Patterns
 
-### 1. Frontend Component Architecture
+### 1. React-based Summary Architecture
+- **TypeScript Interfaces** (`app/static/experimental/celebration-journey-moments-main/src/lib/types.ts`)
+  * Defines structured data interfaces for the summary components
+  * `ChapterSummary`: Chapter number, title, summary, and chapter type
+  * `EducationalQuestion`: Question, user answer, correctness, and explanation
+  * `AdventureStatistics`: Metrics about the adventure
+  * `AdventureSummaryData`: Container for all summary data
+
+- **React Components** (`app/static/experimental/celebration-journey-moments-main/src/pages/AdventureSummary.tsx`)
+  * Fetches data from API endpoint
+  * Displays chapter summaries in a timeline format
+  * Shows educational questions with correct/incorrect indicators
+  * Presents statistics about the adventure
+  * Includes animations and visual enhancements
+
+- **FastAPI Integration** (`app/routers/summary_router.py`)
+  * `/adventure/summary`: Serves the React app
+  * `/adventure/api/adventure-summary`: Provides the summary data
+  * Error handling and logging for API endpoints
+  * Integration with main FastAPI application
+
+- **Data Generation** (`tests/simulations/generate_chapter_summaries_react.py`)
+  * Extracts chapter summaries from simulation state files
+  * Generates chapter titles from content
+  * Extracts educational questions and answers
+  * Calculates adventure statistics
+  * Formats data for React components
+
+### 2. Frontend Component Architecture
 - **CSS Organization** (`app/static/css/`)
   * Organized by purpose and responsibility:
     - `layout.css`: Structural elements, containers, screen transitions
