@@ -4,8 +4,10 @@ from fastapi.responses import FileResponse
 from app.routers import web, websocket_router, summary_router
 from app.utils.logging_config import setup_logging
 from app.middleware import get_middleware_stack
+from app.services.state_storage_service import StateStorageService
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
+import asyncio
 
 # Load environment variables
 load_dotenv()
@@ -13,14 +15,42 @@ load_dotenv()
 # Setup structured logging
 logger = setup_logging()
 
+# Initialize state storage service
+state_storage_service = StateStorageService()
+
+
+async def periodic_cleanup():
+    """Run cleanup of expired states periodically."""
+    while True:
+        try:
+            await state_storage_service.cleanup_expired()
+        except Exception as e:
+            logger.error(f"Error in periodic cleanup: {e}")
+
+        # Run every 30 minutes
+        await asyncio.sleep(30 * 60)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Application starting up")
+
+    # Start background task for cleaning up expired states
+    cleanup_task = asyncio.create_task(periodic_cleanup())
+    logger.info("Started background task for cleaning up expired states")
+
     yield
+
     # Shutdown
     logger.info("Application shutting down")
+
+    # Cancel the cleanup task
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        logger.info("Cleanup task cancelled")
 
 
 # Initialize FastAPI with middleware stack
