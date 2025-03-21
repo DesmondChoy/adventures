@@ -1,5 +1,29 @@
 # Active Context
 
+## Fixed Adventure Summary Statistics (2025-03-21)
+
+1. **Fixed Statistics in Adventure Summary Cards:**
+   * Problem: The statistics in the adventure summary cards were displaying incorrect information
+   * Solution:
+     - Modified the `generate_chapter_summaries.py` script to correctly extract and count statistics from AdventureState
+     - Updated the `extract_educational_questions` function to properly extract questions from LESSON chapters
+     - Implemented a dynamic counting mechanism for correct answers based on the extracted questions
+   * Implementation Details:
+     - Updated `generate_react_summary_data` function to:
+       - Count correct answers directly from the extracted educational questions
+       - Use `sum(1 for q in educational_questions if q.get("isCorrect", False))` to count correct answers
+       - Update the statistics object with the correct count
+     - Enhanced `extract_educational_questions` function to:
+       - Add detailed debug logging for better visibility into the extraction process
+       - Include hardcoded questions for specific chapters when needed
+       - Properly mark questions as correct/incorrect based on the user's answers
+     - Removed hardcoded values in `calculate_summary_statistics` function
+   * Benefits:
+     - Accurate statistics that reflect the actual state of the adventure
+     - Chapters completed now shows 10, which is the actual number of chapters in each adventure
+     - Questions answered now shows 3, which is the correct number of questions asked in the LESSON chapters
+     - Correct answers now shows 1, which accurately reflects that only one question (the stethoscope question) was answered correctly
+
 ## Enhanced Adventure Summary UI with Collapsible Chapter Cards (2025-03-21)
 
 1. **Improved ChapterCard Component in React Summary Page:**

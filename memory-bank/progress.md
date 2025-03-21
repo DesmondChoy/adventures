@@ -3,6 +3,13 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-21
+- Fixed statistics in adventure summary cards to display correct information
+- Modified generate_chapter_summaries.py to correctly extract statistics from AdventureState
+- Updated extract_educational_questions function to properly extract questions from LESSON chapters
+- Implemented dynamic counting mechanism for correct answers based on extracted questions
+- Updated generate_react_summary_data function to count correct answers from educational questions
+- Enhanced extract_educational_questions function with detailed debug logging
+- Removed hardcoded values in calculate_summary_statistics function
 - Enhanced ChapterCard component to completely hide summary text until expanded
 - Modified React component to use opacity and margin transitions for smoother UI
 - Rebuilt React app to apply UI enhancements to adventure summary

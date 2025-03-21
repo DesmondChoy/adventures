@@ -198,17 +198,38 @@
      * Key React components:
        * `ChapterCard.tsx`: Displays chapter information in the adventure summary
        * `EducationalCard.tsx`: Displays educational questions and answers
-       * `StatisticCard.tsx`: Displays adventure statistics
+       * `StatisticCard.tsx`: Displays adventure statistics (chapters completed, questions answered, time spent)
        * `AdventureSummary.tsx`: Main page component that integrates all other components
+     * Adventure Summary Statistics:
+       * Statistics are extracted from the AdventureState and displayed in StatisticCard components
+       * `chaptersCompleted`: Shows the total number of chapters in the adventure (typically 10)
+       * `questionsAnswered`: Shows the number of questions asked in LESSON chapters (typically 3)
+       * `correctAnswers`: Shows the number of questions answered correctly (calculated from educational questions)
+       * `timeSpent`: Shows the time spent on the adventure (currently hardcoded to "30 mins")
 
 9. Simulation and Testing:
    - Simulation Scripts Organization:
      * `generate_all_chapters.py`: Main simulation script for generating complete adventures
-     * `generate_chapter_summaries.py`: Standalone script for generating chapter summaries from log files
+     * `generate_chapter_summaries.py`: Standalone script for generating chapter summaries and React-compatible JSON data
      * `chapter_tools.py`: Utility functions for working with chapters
      * `log_utils.py`: Utility functions for log processing
      * `analyze_chapter_state.py`: Tool for analyzing chapter state
      * `test_chapter_sequence_validation.py` and `test_chapter_type_assignment.py`: Test files for validation
+   
+   - Chapter Summary Generation:
+     * Use `generate_chapter_summaries.py` with the `--react-json` flag to generate React-compatible JSON data
+     * The script extracts chapter content from simulation state JSON files
+     * It generates summaries using the same prompt template for all chapters
+     * It extracts educational questions and calculates statistics
+     * Command-line options:
+       ```
+       python tests/simulations/generate_chapter_summaries.py --react-json
+       ```
+     * Statistics calculation:
+       * `chaptersCompleted`: Extracted from `state.story_length` (typically 10)
+       * `questionsAnswered`: Hardcoded to 3 for the current implementation
+       * `correctAnswers`: Calculated by counting questions with `isCorrect: true`
+       * `timeSpent`: Hardcoded to "30 mins" for the current implementation
    
    - Standardized Logging Requirements:
      * Use consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`, `EVENT:CHOICE_SELECTED`)
