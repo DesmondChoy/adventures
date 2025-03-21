@@ -11,6 +11,12 @@
     <link rel="stylesheet" href="/static/css/layout.css">
     <link rel="stylesheet" href="/static/css/components.css">
     <link rel="stylesheet" href="/static/css/carousel-component.css">
+    <style>
+        .btn-hover:hover {
+            transform: translateY(-2px);
+            transition: all 0.2s;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
@@ -990,7 +996,7 @@ function startAdventure() {
                         <p>Success Rate: ${state.stats.completion_percentage}%</p>
                     </div>
                     <button onclick="resetApplicationState()" 
-                            class="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                            class="mt-4 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition btn-hover">
                         Start New Journey
                     </button>
                 </div>`;
@@ -1008,12 +1014,12 @@ function startAdventure() {
                     </div>
                     <div class="flex flex-col gap-3 mt-4">
                         <a href="/adventure/summary" 
-                           class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-[1.02] duration-300 text-center">
+                           class="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition btn-hover inline-block text-center">
                             <span class="text-lg">🔮 Take a Trip Down Memory Lane 🔮</span>
                             <p class="text-sm opacity-80 mt-1">Relive your adventure and learning highlights</p>
                         </a>
                         <button onclick="resetApplicationState()" 
-                                class="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                                class="mt-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition btn-hover">
                             Start New Journey
                         </button>
                     </div>
@@ -1033,12 +1039,12 @@ function startAdventure() {
                 <div class="text-center p-4">
                     <div class="flex flex-col gap-3 mt-4">
                         <a href="/adventure/summary" 
-                           class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-[1.02] duration-300 text-center">
+                           class="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition btn-hover inline-block text-center">
                             <span class="text-lg">🔮 Take a Trip Down Memory Lane 🔮</span>
                             <p class="text-sm opacity-80 mt-1">Relive your adventure and learning highlights</p>
                         </a>
                         <button onclick="resetApplicationState()" 
-                                class="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                                class="mt-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition btn-hover">
                             Start New Journey
                         </button>
                     </div>
