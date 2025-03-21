@@ -35,9 +35,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # Mount React app assets
 app.mount(
     "/adventure/assets",
-    StaticFiles(
-        directory="app/static/experimental/celebration-journey-moments-main/dist/assets"
-    ),
+    StaticFiles(directory="app/static/summary-chapter/assets"),
     name="react_assets",
 )
 

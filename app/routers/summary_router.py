@@ -13,8 +13,6 @@ logger = logging.getLogger("summary_router")
 # Directory for storing summary data
 SUMMARY_DATA_DIR = "app/static"
 SUMMARY_JSON_FILE = "adventure_summary_react.json"
-REACT_APP_DIR = "app/static/experimental/celebration-journey-moments-main"
-REACT_APP_DIST_DIR = os.path.join(REACT_APP_DIR, "dist")
 SUMMARY_CHAPTER_DIR = "app/static/summary-chapter"
 
 
@@ -29,19 +27,11 @@ async def test_plain():
 async def summary_page(request: Request):
     """Serve the adventure summary page."""
     try:
-        # First check if the app is available in the new location
+        # Check if the app is available in the new location
         new_index_path = os.path.join(SUMMARY_CHAPTER_DIR, "index.html")
         if os.path.exists(new_index_path):
-            logger.info(f"Serving React app from new location: {new_index_path}")
+            logger.info(f"Serving React app from: {new_index_path}")
             return FileResponse(new_index_path)
-
-        # Fall back to the experimental directory if not found in the new location
-        react_index_path = os.path.join(REACT_APP_DIST_DIR, "index.html")
-        if os.path.exists(react_index_path):
-            logger.info(
-                f"Serving React app from experimental directory: {react_index_path}"
-            )
-            return FileResponse(react_index_path)
 
         # Fall back to test HTML if React app is not built
         test_html_path = os.path.join(SUMMARY_DATA_DIR, "test_summary.html")
@@ -50,7 +40,7 @@ async def summary_page(request: Request):
             return FileResponse(test_html_path)
 
         # If no options are available, return an error
-        logger.warning("No summary page found in any location")
+        logger.warning("Summary page not found")
         return {
             "error": "Summary page not available. Please build the React app first."
         }
