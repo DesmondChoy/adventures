@@ -3,6 +3,9 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-21
+- Enhanced ChapterCard component to completely hide summary text until expanded
+- Modified React component to use opacity and margin transitions for smoother UI
+- Rebuilt React app to apply UI enhancements to adventure summary
 - Fixed chapter summary title and summary extraction with format examples
 - Added incorrect and correct format examples to SUMMARY_CHAPTER_PROMPT
 - Enhanced parse_title_and_summary function to extract both title and summary

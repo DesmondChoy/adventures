@@ -184,6 +184,22 @@
      * Core functionality must work without JavaScript
      * Add enhanced features when JavaScript is available
      * Provide fallbacks for older browsers
+   - React App Development and Build Process:
+     * React app source code is located in `app/static/experimental/celebration-journey-moments-main/`
+     * After making changes to React components, you MUST rebuild the app:
+       ```
+       cd app/static/experimental/celebration-journey-moments-main
+       npm run build
+       ```
+     * The build process creates optimized files in the `dist` folder
+     * These files are served by FastAPI through the `/adventure/summary` endpoint
+     * Changes to React source files won't be reflected until you rebuild
+     * For development, you can use `npm run dev` for hot reloading
+     * Key React components:
+       * `ChapterCard.tsx`: Displays chapter information in the adventure summary
+       * `EducationalCard.tsx`: Displays educational questions and answers
+       * `StatisticCard.tsx`: Displays adventure statistics
+       * `AdventureSummary.tsx`: Main page component that integrates all other components
 
 9. Simulation and Testing:
    - Simulation Scripts Organization:

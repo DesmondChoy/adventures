@@ -1,5 +1,25 @@
 # Active Context
 
+## Enhanced Adventure Summary UI with Collapsible Chapter Cards (2025-03-21)
+
+1. **Improved ChapterCard Component in React Summary Page:**
+   * Problem: The chapter summary text was partially visible by default, showing a preview of the content even when not expanded
+   * Solution:
+     - Modified the ChapterCard component to completely hide the summary text until the dropdown button is clicked
+     - Enhanced the transition animation for a smoother user experience
+   * Implementation Details:
+     - Updated `ChapterCard.tsx` in the React app to:
+       - Change `max-h-24` to `max-h-0` to completely collapse the height when not expanded
+       - Add `opacity-0` to make the text invisible when collapsed
+       - Add `mt-0` to remove any margin space when collapsed
+       - Use `max-h-96 opacity-100 mt-4` when expanded for proper spacing and visibility
+     - Rebuilt the React app with `npm run build` to apply the changes
+   * Benefits:
+     - Cleaner UI with only chapter numbers and titles visible initially
+     - More organized view of multiple chapters in the adventure summary
+     - Better control over content visibility for users
+     - Improved focus on chapter titles for easier navigation
+
 ## Improved Chapter Summary Generation and Integration (2025-03-21)
 
 1. **Fixed Chapter Summary Title and Summary Extraction:**

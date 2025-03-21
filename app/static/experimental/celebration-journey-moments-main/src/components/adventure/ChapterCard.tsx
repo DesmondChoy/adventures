@@ -73,15 +73,11 @@ const ChapterCard: React.FC<ChapterCardProps> = ({
         </button>
       </div>
       
-      <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expanded ? 'max-h-96' : 'max-h-24'}`}>
+      <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expanded ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'}`}>
         <ScrollArea className="h-full pr-4">
           <p className="text-gray-600 leading-relaxed">{summary}</p>
         </ScrollArea>
       </div>
-      
-      {!expanded && (
-        <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-white to-transparent pointer-events-none" />
-      )}
     </div>
   );
 };
