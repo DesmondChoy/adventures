@@ -1,5 +1,29 @@
 # Active Context
 
+## Fixed Scrolling in ChapterCard Component on Mobile Devices (2025-03-21)
+
+1. **Fixed Scrolling Issue in Mobile Chapter Summary Cards:**
+   * Problem: On mobile devices, in the "Your Adventure Journey" section, the chapter summary cards were cutting off content and users couldn't scroll to see the full text
+   * Solution:
+     - Modified the ChapterCard component to use a fixed height with proper scrolling functionality
+     - Enhanced the ScrollArea component with mobile-specific optimizations
+     - Added custom CSS for better touch scrolling experience
+   * Implementation Details:
+     - Updated `ChapterCard.tsx` in the React app to:
+       - Change from dynamic height to fixed height with scrolling
+       - Add an explicit height container with proper overflow handling
+       - Change from `transition-all` to `transition-opacity` to prevent transition effects from interfering with scrolling
+       - Add the `type="always"` prop to the ScrollArea to ensure scrollbars are always visible
+     - Enhanced mobile-specific CSS in `index.css`:
+       - Added `overflow-auto`, `overscroll-contain`, and `touch-auto` properties to improve mobile touch scrolling
+       - Made scrollbars wider and more visible for better touch interaction
+       - Repositioned the fade effect to ensure it doesn't interfere with touch events
+   * Benefits:
+     - Users can now scroll through all content in chapter summary cards on mobile devices
+     - Consistent card heights maintain visual harmony in the layout
+     - Improved touch scrolling experience with visible scrollbars
+     - Better visual indication of scrollable content with the fade effect
+
 ## Fixed Educational Card Button Positioning in Knowledge Gained Section (2025-03-21)
 
 1. **Fixed "Hide Explanation" Button Positioning Issue:**

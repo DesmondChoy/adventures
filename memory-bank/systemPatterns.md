@@ -253,7 +253,27 @@ graph TD
   * Explicitly instructing the LLM to use exact section headers
   * Example implementation in `SUMMARY_CHAPTER_PROMPT` for title and summary extraction
 
-### 6. Simulation and Testing Pattern
+### 6. Mobile-Optimized Scrolling Pattern
+- **Fixed Height with Dynamic Content**:
+  * Using fixed container heights with scrollable content areas
+  * Explicit height containers with proper overflow handling
+  * Conditional rendering based on device type using the `useIsMobile` hook
+  * Different scroll behavior for mobile vs. desktop
+
+- **Touch-Optimized Scroll Areas**:
+  * Enhanced ScrollArea component with mobile-specific properties
+  * Custom CSS classes for touch device optimization
+  * Properties like `touch-auto`, `overflow-auto`, and `overscroll-contain`
+  * Wider scrollbars for better touch interaction
+  * Visual indicators (fade effects) to show scrollable content
+
+- **Transition Management**:
+  * Careful management of CSS transitions to avoid interference with scrolling
+  * Using `transition-opacity` instead of `transition-all` for scrollable content
+  * Maintaining smooth animations while ensuring scrollability
+  * Example implementation in `ChapterCard.tsx` for summary cards
+
+### 7. Simulation and Testing Pattern
 - **Standardized Logging**:
   * Consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`, `EVENT:CHOICE_SELECTED`)
   * Source tracking for debugging (e.g., `source="chapter_update"`, `source="verification"`)

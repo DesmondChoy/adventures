@@ -155,4 +155,26 @@
   .educational-card.incorrect::before {
     @apply content-[''] absolute top-0 right-0 w-20 h-20 bg-red-400/10 rounded-full -mr-10 -mt-10;
   }
+  
+  /* Mobile-specific scroll area styling */
+  .mobile-scroll-area {
+    @apply touch-auto overflow-auto;
+  }
+  
+  .mobile-scroll-area [data-radix-scroll-area-viewport] {
+    @apply overflow-auto overscroll-contain touch-auto;
+  }
+  
+  .mobile-scroll-area [data-radix-scroll-area-scrollbar] {
+    @apply w-2 bg-gray-100 rounded-full;
+  }
+  
+  .mobile-scroll-area [data-radix-scroll-area-thumb] {
+    @apply bg-gray-400 rounded-full w-2;
+  }
+  
+  /* Fade effect at the bottom to indicate more content */
+  .mobile-scroll-area::before {
+    @apply content-[''] absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white to-transparent pointer-events-none z-10;
+  }
 }

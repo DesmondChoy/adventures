@@ -3,6 +3,12 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-21
+- Fixed scrolling issue in ChapterCard component on mobile devices
+- Modified ChapterCard to use fixed height with proper scrolling functionality
+- Enhanced ScrollArea component with mobile-specific optimizations
+- Added custom CSS for better touch scrolling experience
+- Implemented explicit height container with proper overflow handling
+- Added visible scrollbars and fade effect to indicate scrollable content
 - Fixed statistics in adventure summary cards to display correct information
 - Modified generate_chapter_summaries.py to correctly extract statistics from AdventureState
 - Updated extract_educational_questions function to properly extract questions from LESSON chapters

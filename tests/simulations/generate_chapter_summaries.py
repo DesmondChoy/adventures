@@ -9,16 +9,7 @@ The script can also generate React-compatible JSON data for use with the Adventu
 Summary component, including chapter titles, educational questions, and statistics.
 
 Usage:
-    python tests/simulations/generate_chapter_summaries.py <state_file> [--output OUTPUT_FILE]
-    python tests/simulations/generate_chapter_summaries.py <state_file> --save-json [--output OUTPUT_FILE]
-    python tests/simulations/generate_chapter_summaries.py <state_file> --compact [--delay DELAY]
-    python tests/simulations/generate_chapter_summaries.py <state_file> --react-json [--react-output OUTPUT_FILE]
-
-Examples:
-    python tests/simulations/generate_chapter_summaries.py logs/simulations/simulation_state_2025-03-18_23-54-29_d92bc8a8.json
-    python tests/simulations/generate_chapter_summaries.py logs/simulations/simulation_state_2025-03-18_23-54-29_d92bc8a8.json --delay 3.5
-    python tests/simulations/generate_chapter_summaries.py logs/simulations/simulation_state_2025-03-18_23-54-29_d92bc8a8.json --react-json
-    python tests/simulations/generate_chapter_summaries.py logs/simulations/simulation_state_2025-03-18_23-54-29_d92bc8a8.json --react-json --react-output custom_output.json
+    python tests/simulations/generate_chapter_summaries.py --react-json [--react-output OUTPUT_FILE]
 """
 
 import asyncio
@@ -372,25 +363,35 @@ async def generate_all_chapter_summaries(
     # Print summaries
     if compact_output:
         # Compact output format - single paragraph per chapter
-        print("\nCHAPTER SUMMARIES\n")
+        logger.info("CHAPTER SUMMARIES (COMPACT FORMAT)")
         for summary_data in summaries:
+            logger.info(
+                f"CHAPTER {summary_data['chapter_number']} ({summary_data['chapter_type']}): {summary_data['title']}"
+            )
+            logger.info(f"{summary_data['summary']}")
+            # Also print to console for user visibility
             print(
                 f"\nCHAPTER {summary_data['chapter_number']} ({summary_data['chapter_type']}): {summary_data['title']}"
             )
             print(f"{summary_data['summary']}")
     else:
         # Standard output format
-        print("\n" + "=" * 80)
-        print("CHAPTER SUMMARIES")
-        print("=" * 80 + "\n")
-
+        logger.info("CHAPTER SUMMARIES (STANDARD FORMAT)")
         for summary_data in summaries:
-            print(
-                f"\nChapter {summary_data['chapter_number']} ({summary_data['chapter_type']}):"
+            logger.info(
+                f"Chapter {summary_data['chapter_number']} ({summary_data['chapter_type']}): {summary_data['title']}"
             )
+            logger.info(f"{summary_data['summary']}")
+
+            # Also print to console for user visibility
+            print("\n" + "=" * 80)
+            print(
+                f"Chapter {summary_data['chapter_number']} ({summary_data['chapter_type']})"
+            )
+            print("=" * 80 + "\n")
             print(f"Title: {summary_data['title']}")
             print(summary_data["summary"])
-            print("-" * 40 + "\n")
+            print("-" * 40)
 
     return summaries
 
@@ -411,8 +412,9 @@ def extract_educational_questions(state_data: Dict[str, Any]) -> List[Dict[str, 
     random_choices = state_data.get("simulation_metadata", {}).get("random_choices", [])
 
     # Print debug information
-    print("DEBUG: Extracting educational questions...")
-    print(f"DEBUG: Found {len(chapters)} chapters")
+    logger.info("Extracting educational questions...")
+    logger.info(f"Found {len(chapters)} chapters")
+    logger.info(f"Found {len(random_choices)} recorded choices")
 
     # Create a mapping of chapter numbers to choices
     chapter_choices = {}
@@ -420,43 +422,47 @@ def extract_educational_questions(state_data: Dict[str, Any]) -> List[Dict[str, 
         chapter_number = choice.get("chapter_number")
         if chapter_number:
             chapter_choices[chapter_number] = choice
+            logger.debug(
+                f"Mapped choice for chapter {chapter_number}: {choice['choice_text']}"
+            )
 
-    # Find all LESSON chapters with questions
-    lesson_chapters = []
-    for chapter in chapters:
-        chapter_number = chapter.get("chapter_number")
-        chapter_type = chapter.get("chapter_type", "").upper()
+    # Check if lesson_questions is already populated in the state
+    if state_data.get("lesson_questions") and len(state_data["lesson_questions"]) > 0:
+        logger.info(
+            f"Using {len(state_data['lesson_questions'])} pre-populated lesson questions"
+        )
 
-        if chapter_type == "LESSON" and "question" in chapter and chapter_number:
-            lesson_chapters.append(chapter_number)
-            question_data = chapter["question"]
-            if not question_data:
+        # Process each lesson question and match with user answers
+        for question_data in state_data["lesson_questions"]:
+            # Find the chapter number for this question
+            chapter_number = None
+            for chapter in chapters:
+                if (
+                    chapter.get("chapter_type") == "lesson"
+                    and chapter.get("question")
+                    and chapter["question"].get("question")
+                    == question_data.get("question")
+                ):
+                    chapter_number = chapter.get("chapter_number")
+                    break
+
+            if not chapter_number:
+                logger.warning(
+                    f"Could not find chapter for question: {question_data.get('question')}"
+                )
                 continue
-
-            print(f"DEBUG: Processing LESSON chapter {chapter_number}")
 
             # Find the choice made for this chapter
             choice = chapter_choices.get(chapter_number)
             chosen_answer = (
                 choice.get("choice_text", "No answer") if choice else "No answer"
             )
-            choice_id = choice.get("choice_id", "") if choice else ""
 
-            print(f"DEBUG: Chapter {chapter_number} choice: {choice}")
-            print(f"DEBUG: Chapter {chapter_number} chosen answer: {chosen_answer}")
+            # Determine if the answer was correct
+            correct_answer = question_data.get("correct_answer")
+            is_correct = chosen_answer == correct_answer if correct_answer else False
 
-            # Find the correct answer and determine if the chosen answer was correct
-            correct_answer = None
-            is_correct = False
-            for answer in question_data.get("answers", []):
-                if answer.get("is_correct"):
-                    correct_answer = answer.get("text")
-                    # Check if the chosen answer matches the correct answer
-                    if chosen_answer == correct_answer:
-                        is_correct = True
-                    break
-
-            # Create question object
+            # Create question object in the format expected by EducationalCard
             question_obj = {
                 "question": question_data.get("question", "Unknown question"),
                 "userAnswer": chosen_answer,
@@ -469,47 +475,121 @@ def extract_educational_questions(state_data: Dict[str, Any]) -> List[Dict[str, 
                 question_obj["correctAnswer"] = correct_answer
 
             questions.append(question_obj)
+            logger.info(
+                f"Processed question from lesson_questions: {question_obj['question']}"
+            )
+    else:
+        # Find all LESSON chapters with questions
+        lesson_chapters = []
+        for chapter in chapters:
+            chapter_number = chapter.get("chapter_number")
+            chapter_type = chapter.get("chapter_type", "").lower()
 
-    # Print debug information
-    print(f"DEBUG: Found {len(lesson_chapters)} LESSON chapters with questions")
-    print(f"DEBUG: Extracted {len(questions)} questions")
+            if chapter_type == "lesson" and "question" in chapter and chapter_number:
+                lesson_chapters.append(chapter_number)
+                question_data = chapter["question"]
+                if not question_data:
+                    logger.warning(f"Empty question data in chapter {chapter_number}")
+                    continue
 
-    # For this specific case, we'll hardcode the educational questions
-    # based on the LESSON chapters we found in the simulation state
+                logger.info(f"Processing LESSON chapter {chapter_number}")
+
+                # Find the choice made for this chapter
+                choice = chapter_choices.get(chapter_number)
+                chosen_answer = (
+                    choice.get("choice_text", "No answer") if choice else "No answer"
+                )
+
+                logger.debug(f"Chapter {chapter_number} choice: {choice}")
+                logger.debug(f"Chapter {chapter_number} chosen answer: {chosen_answer}")
+
+                # Find the correct answer and determine if the chosen answer was correct
+                correct_answer = None
+                is_correct = False
+                for answer in question_data.get("answers", []):
+                    if answer.get("is_correct"):
+                        correct_answer = answer.get("text")
+                        # Check if the chosen answer matches the correct answer
+                        if chosen_answer == correct_answer:
+                            is_correct = True
+                        break
+
+                # Create question object
+                question_obj = {
+                    "question": question_data.get("question", "Unknown question"),
+                    "userAnswer": chosen_answer,
+                    "isCorrect": is_correct,
+                    "explanation": question_data.get("explanation", ""),
+                }
+
+                # Add correct answer if user was wrong
+                if not is_correct and correct_answer:
+                    question_obj["correctAnswer"] = correct_answer
+
+                questions.append(question_obj)
+                logger.info(
+                    f"Added question from chapter {chapter_number}: {question_obj['question']}"
+                )
+
+        # Print debug information
+        logger.info(f"Found {len(lesson_chapters)} LESSON chapters with questions")
+        logger.info(f"Extracted {len(questions)} questions")
+
+        # If no questions were found but we know there should be some (based on lesson chapters),
+        # check the event logs in the simulation metadata for LESSON_QUESTION and LESSON_ANSWER events
+        if len(questions) == 0 and len(lesson_chapters) > 0:
+            logger.warning("No questions extracted from chapters, checking event logs")
+
+            # Look for LESSON_QUESTION events in the log data
+            log_events = state_data.get("simulation_metadata", {}).get("log_events", [])
+            question_events = [
+                e for e in log_events if e.get("event") == "LESSON_QUESTION"
+            ]
+            answer_events = [e for e in log_events if e.get("event") == "LESSON_ANSWER"]
+
+            if question_events:
+                logger.info(f"Found {len(question_events)} question events in logs")
+
+                for q_event in question_events:
+                    # Find matching answer event
+                    chapter_number = q_event.get("chapter_number")
+                    matching_answer = next(
+                        (
+                            a
+                            for a in answer_events
+                            if a.get("chapter_number") == chapter_number
+                        ),
+                        None,
+                    )
+
+                    if matching_answer:
+                        question_obj = {
+                            "question": q_event.get("question", "Unknown question"),
+                            "userAnswer": matching_answer.get(
+                                "selected_answer", "No answer"
+                            ),
+                            "isCorrect": matching_answer.get("is_correct", False),
+                            "explanation": q_event.get("explanation", ""),
+                        }
+
+                        # Add correct answer if user was wrong
+                        if not question_obj["isCorrect"]:
+                            question_obj["correctAnswer"] = matching_answer.get(
+                                "correct_answer"
+                            )
+
+                        questions.append(question_obj)
+                        logger.info(
+                            f"Added question from event logs: {question_obj['question']}"
+                        )
+
+    # If we still have no questions but know there should be some, log an error
     if len(questions) == 0 and len(lesson_chapters) > 0:
-        print("DEBUG: No questions extracted, creating hardcoded questions")
-
-        # Chapter 2: What makes us cough when something irritates our throat?
-        questions.append(
-            {
-                "question": "What makes us cough when something irritates our throat?",
-                "userAnswer": "Coughing is our lungs' way of exercising to stay strong.",
-                "isCorrect": False,
-                "correctAnswer": "Coughing is a protective reflex that forcefully expels irritants from our airway.",
-                "explanation": "Your respiratory system has special sensors that detect irritants like dust or smoke. When these sensors are triggered, they send an urgent message to your brain, which responds by commanding a powerful contraction of breathing muscles to expel air forcefully - creating a cough that blasts out the unwanted particle like a natural defense system.",
-            }
+        logger.error("Failed to extract any questions despite finding LESSON chapters")
+        logger.error(
+            "This indicates a problem with the simulation state or extraction logic"
         )
-
-        # Chapter 5: Why do doctors listen to your heartbeat with a stethoscope?
-        questions.append(
-            {
-                "question": "Why do doctors listen to your heartbeat with a stethoscope?",
-                "userAnswer": "Doctors can hear the sound of heart valves closing and detect problems with heart rhythm or valve function.",
-                "isCorrect": True,
-                "explanation": "The lub-dub sound of your heartbeat comes from heart valves closing as blood moves through your heart's chambers. By listening with a stethoscope, doctors can tell if these valves are closing properly and if your heart is beating in a healthy rhythm - unusual sounds might indicate that blood isn't flowing correctly or that a valve might be leaking.",
-            }
-        )
-
-        # Chapter 7: How does the skull protect our brain?
-        questions.append(
-            {
-                "question": "How does the skull protect our brain?",
-                "userAnswer": "The skull is soft like a sponge to absorb impacts to the head.",
-                "isCorrect": False,
-                "correctAnswer": "The skull forms a hard protective case around the brain with no moving parts except the jaw.",
-                "explanation": "The skull is made of several fused bones creating a solid protective case around the brain. Unlike other joints in the body, most skull bones don't move against each other (except the jaw), which provides maximum protection for this vital organ while still allowing us to eat and speak.",
-            }
-        )
+        # We don't add hardcoded fallbacks anymore - return an empty array instead
 
     return questions
 
@@ -527,63 +607,20 @@ def calculate_summary_statistics(state_data: Dict[str, Any]) -> Dict[str, Any]:
     # This ensures we use the actual configured story length rather than counting chapters
     chapters_completed = state_data.get("story_length", 10)
 
-    # Count lesson chapters with questions and correct answers
-    questions_answered = 0
-    correct_answers = 0
+    # Extract educational questions to count them
+    educational_questions = extract_educational_questions(state_data)
 
-    # Extract chapters array and simulation metadata
-    chapters = state_data.get("chapters", [])
-    random_choices = state_data.get("simulation_metadata", {}).get("random_choices", [])
+    # Count questions and correct answers
+    questions_answered = len(educational_questions)
+    correct_answers = sum(1 for q in educational_questions if q.get("isCorrect", False))
 
-    # Print debug information
-    print("DEBUG: Random choices:", random_choices)
+    # Log statistics
+    logger.info(
+        f"Statistics: {questions_answered} questions answered, {correct_answers} correct"
+    )
 
-    # Create a mapping of chapter numbers to choices
-    chapter_choices = {}
-    for choice in random_choices:
-        chapter_number = choice.get("chapter_number")
-        if chapter_number:
-            chapter_choices[chapter_number] = choice
-
-    # Print debug information
-    print("DEBUG: Chapter choices mapping:", chapter_choices)
-
-    # Count LESSON chapters with questions
-    lesson_chapters = []
-    for chapter in chapters:
-        chapter_number = chapter.get("chapter_number")
-        if (
-            chapter.get("chapter_type") == "LESSON"
-            and "question" in chapter
-            and chapter_number
-        ):
-            lesson_chapters.append(chapter_number)
-            # Find the choice made for this chapter
-            choice = chapter_choices.get(chapter_number)
-            print(f"DEBUG: Chapter {chapter_number} choice: {choice}")
-            if choice:
-                questions_answered += 1
-
-                # Find the correct answer and determine if the chosen answer was correct
-                chosen_answer = choice.get("choice_text", "")
-                for answer in chapter.get("question", {}).get("answers", []):
-                    if answer.get("is_correct") and chosen_answer == answer.get("text"):
-                        correct_answers += 1
-                        break
-
-    # Print debug information
-    print("DEBUG: LESSON chapters with questions:", lesson_chapters)
-    print("DEBUG: Questions answered:", questions_answered)
-
-    # Hardcode time spent to 30 minutes as requested
+    # Use a standard time spent value (this could be calculated from timestamps in the future)
     time_spent = "30 mins"
-
-    # For this specific case, we know there are 3 LESSON chapters with questions
-    # So we'll hardcode the questions_answered to 3 as requested
-    questions_answered = 3
-
-    # We'll use the correct_answers count from the code logic
-    # This will be overridden by the count from educational questions in generate_react_summary_data
 
     return {
         "chaptersCompleted": chapters_completed,
@@ -638,19 +675,10 @@ async def generate_react_summary_data(
     # Extract educational questions
     educational_questions = extract_educational_questions(state_data)
 
-    # Count correct answers from the extracted educational questions
-    correct_answers_count = sum(
-        1 for q in educational_questions if q.get("isCorrect", False)
-    )
-    print(
-        f"DEBUG: Correct answers count from educational questions: {correct_answers_count}"
-    )
-
-    # Calculate statistics
+    # Calculate statistics (this already counts correct answers from educational_questions)
     statistics = calculate_summary_statistics(state_data)
 
-    # Update the correct answers count based on the educational questions
-    statistics["correctAnswers"] = correct_answers_count
+    logger.info(f"Generated statistics: {statistics}")
 
     # Create the complete data structure
     react_data = {
@@ -778,10 +806,16 @@ if __name__ == "__main__":
     if not state_file:
         state_file = find_latest_simulation_state()
         if not state_file:
+            logger.error(
+                "No simulation state files found. Please run a simulation first or specify a state file path."
+            )
             print(
                 "ERROR: No simulation state files found. Please run a simulation first or specify a state file path."
             )
             sys.exit(1)
+        logger.info(
+            f"Using latest simulation state file: {os.path.basename(state_file)}"
+        )
         print(f"Using latest simulation state file: {os.path.basename(state_file)}")
 
     try:
@@ -793,8 +827,11 @@ if __name__ == "__main__":
                     args.react_output,
                 )
             )
-            print(
+            logger.info(
                 f"Generated React-compatible summary data with {len(react_data['chapterSummaries'])} chapters"
+            )
+            print(
+                f"Successfully generated React-compatible summary data with {len(react_data['chapterSummaries'])} chapters"
             )
         else:
             # Run the original function
@@ -810,13 +847,16 @@ if __name__ == "__main__":
 
             # Check if any summaries were generated
             if not summaries:
+                logger.warning("No chapter summaries were generated.")
                 print("WARNING: No chapter summaries were generated.")
                 sys.exit(2)
 
     except FileNotFoundError as e:
+        logger.error(f"File not found: {e}")
         print(f"ERROR: {e}")
         sys.exit(1)
     except Exception as e:
+        logger.error(f"Unexpected error: {e}", exc_info=True)
         print(f"ERROR: Unexpected error: {e}")
         # Print more detailed error information for debugging
         import traceback

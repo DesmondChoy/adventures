@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ChapterCardProps {
   number: number;
@@ -19,6 +20,7 @@ const ChapterCard: React.FC<ChapterCardProps> = ({
   const [expanded, setExpanded] = useState(false);
   const [visible, setVisible] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -73,10 +75,22 @@ const ChapterCard: React.FC<ChapterCardProps> = ({
         </button>
       </div>
       
-      <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expanded ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'}`}>
-        <ScrollArea className="h-full pr-4">
-          <p className="text-gray-600 leading-relaxed">{summary}</p>
-        </ScrollArea>
+      <div className={`transition-opacity duration-300 ease-in-out overflow-hidden ${expanded ? 'opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'}`}>
+        {isMobile ? (
+          // Mobile view - fixed height with optimized scrolling
+          <div className="h-80 overflow-hidden">
+            <ScrollArea className="h-full pr-4 mobile-scroll-area" type="always">
+              <div className="pb-4">
+                <p className="text-gray-600 leading-relaxed">{summary}</p>
+              </div>
+            </ScrollArea>
+          </div>
+        ) : (
+          // Desktop view - scrollable with max height (unchanged)
+          <ScrollArea className="h-full pr-4 max-h-96">
+            <p className="text-gray-600 leading-relaxed">{summary}</p>
+          </ScrollArea>
+        )}
       </div>
     </div>
   );
