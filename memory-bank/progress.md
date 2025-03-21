@@ -3,6 +3,11 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-21
+- Removed static JSON fallbacks from summary chapter
+- Updated summary_router.py to remove fallbacks to static JSON file
+- Updated React component to not use default data
+- Created test script to debug the summary chapter without generating all 10 chapters
+- Rebuilt React app to reflect changes
 - Fixed scrolling issue in ChapterCard component on mobile devices
 - Modified ChapterCard to use fixed height with proper scrolling functionality
 - Enhanced ScrollArea component with mobile-specific optimizations
@@ -184,6 +189,7 @@
 - Chapter 10 content is visible in the terminal but not being captured in the simulation log file
 
 ## Next Steps
+- Complete the summary chapter migration by removing the experimental directory
 - Fix Chapter 10 content capture in generate_all_chapters.py script
 - Investigate why the WebSocket connection is being closed or timing out before Chapter 10 content can be fully processed
 - Fix Chapter 10 summary generation and capture

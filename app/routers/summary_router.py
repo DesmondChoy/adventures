@@ -68,23 +68,12 @@ async def get_adventure_summary(adventure_id: Optional[str] = None):
 
         if not state:
             logger.warning("No active adventure state found")
-
-            # Fall back to static file if available
-            summary_file_path = os.path.join(SUMMARY_DATA_DIR, SUMMARY_JSON_FILE)
-            if os.path.exists(summary_file_path):
-                logger.info(
-                    f"Falling back to static summary data file: {summary_file_path}"
-                )
-                with open(summary_file_path, "r") as f:
-                    summary_data = json.load(f)
-                return summary_data
-            else:
-                return JSONResponse(
-                    status_code=404,
-                    content={
-                        "error": "No active adventure state found and no fallback data available."
-                    },
-                )
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "error": "No active adventure state found. Please complete an adventure to view the summary."
+                },
+            )
 
         # Check if the adventure is complete (has a CONCLUSION chapter)
         if not any(ch.chapter_type == ChapterType.CONCLUSION for ch in state.chapters):

@@ -632,13 +632,13 @@ def calculate_summary_statistics(state_data: Dict[str, Any]) -> Dict[str, Any]:
 
 async def generate_react_summary_data(
     state_file: str,
-    output_file: str = "adventure_summary_react.json",
+    output_file: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Generate summary data formatted for the React AdventureSummary component.
 
     Args:
         state_file: Path to the simulation state JSON file
-        output_file: Path to save the generated JSON data
+        output_file: Optional path to save the generated JSON data. If None, data is not saved to a file.
 
     Returns:
         The formatted summary data
@@ -687,11 +687,13 @@ async def generate_react_summary_data(
         "statistics": statistics,
     }
 
-    # Save to file
-    with open(output_file, "w") as f:
-        json.dump(react_data, f, indent=2)
-
-    logger.info(f"Saved React-compatible summary data to {output_file}")
+    # Save to file if output_file is provided
+    if output_file:
+        with open(output_file, "w") as f:
+            json.dump(react_data, f, indent=2)
+        logger.info(f"Saved React-compatible summary data to {output_file}")
+    else:
+        logger.info("React-compatible summary data generated but not saved to file")
 
     return react_data
 
@@ -795,8 +797,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--react-output",
-        default="app/static/adventure_summary_react.json",
-        help="Output file path for React JSON (default: app/static/adventure_summary_react.json)",
+        help="Output file path for React JSON (only used with --react-json)",
     )
     args = parser.parse_args()
 
@@ -819,8 +820,8 @@ if __name__ == "__main__":
         print(f"Using latest simulation state file: {os.path.basename(state_file)}")
 
     try:
-        if args.react_json:
-            # Generate React-compatible JSON
+        if args.react_json and args.react_output:
+            # Generate React-compatible JSON only if both flags are provided
             react_data = asyncio.run(
                 generate_react_summary_data(
                     state_file,
@@ -832,6 +833,20 @@ if __name__ == "__main__":
             )
             print(
                 f"Successfully generated React-compatible summary data with {len(react_data['chapterSummaries'])} chapters"
+            )
+        elif args.react_json:
+            # Generate React-compatible JSON but don't save to file
+            react_data = asyncio.run(
+                generate_react_summary_data(
+                    state_file,
+                    None,  # Don't save to file
+                )
+            )
+            logger.info(
+                f"Generated React-compatible summary data with {len(react_data['chapterSummaries'])} chapters (not saved to file)"
+            )
+            print(
+                f"Successfully generated React-compatible summary data with {len(react_data['chapterSummaries'])} chapters (not saved to file)"
             )
         else:
             # Run the original function

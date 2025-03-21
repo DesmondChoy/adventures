@@ -24,50 +24,7 @@ import StatisticCard from '@/components/adventure/StatisticCard';
 import { QuestionData } from '@/components/adventure/EducationalCard';
 import { AdventureSummaryData } from '@/lib/types';
 
-// Default data to use if fetch fails
-const defaultData: AdventureSummaryData = {
-  chapterSummaries: [
-    {
-      number: 1,
-      title: "Chapter 1: The Mysterious Carnival",
-      summary: "Drawn by whispers of the Twisting Tumble Tents carnival, Leo, a curious child known for their bright red sneakers, discovered the carnival was indeed real. The air vibrated with tantalizing scents and calliope music, beckoning Leo closer. Overcome with excitement, Leo stepped through a gap in the fence, where shifting tents and glowing performers created a surreal atmosphere. Before plunging deeper into the carnival alone, Leo noticed a small animal hiding behind juggling pins. Leo decided to enlist a wise old owl as their companion, hoping its ancient riddles might unlock hidden paths and reveal the carnival's deepest mysteries.",
-      chapterType: "STORY"
-    },
-    {
-      number: 2,
-      title: "Chapter 2: Whispers in the Wind",
-      summary: "Leo and the wise owl ventured deeper into the mysterious carnival, where colorful tents swayed in an impossible breeze. The owl shared ancient knowledge about the carnival's history as they encountered strange performers who seemed to float inches above the ground. Leo decided to follow the sound of ethereal music, leading them to a hidden courtyard with a magnificent carousel.",
-      chapterType: "STORY"
-    },
-    {
-      number: 3,
-      title: "Chapter 3: The Carousel of Dreams",
-      summary: "The carousel glowed with an otherworldly light, each carved animal seeming to watch Leo with curious eyes. When offered a choice of mounts, Leo selected a magnificent phoenix with feathers that shifted through every color of flame. As the carousel began to turn, Leo and the owl were transported to a realm of living stories, where Leo's imagination influenced the very landscape around them.",
-      chapterType: "STORY"
-    }
-  ],
-  educationalQuestions: [
-    {
-      question: "Why did Stamford Raffles choose Singapore as a trading port in 1819?",
-      userAnswer: "Singapore had a strategic location between the Indian Ocean and South China Sea.",
-      isCorrect: true,
-      explanation: "Singapore's location at the southern tip of the Malay Peninsula made it perfect for controlling trade routes between China, India, and Europe. There wasn't a large settlement when Raffles arrived - just a small fishing village - and Singapore didn't have valuable gold mines."
-    },
-    {
-      question: "How did the opening of the Suez Canal in 1869 affect Singapore?",
-      userAnswer: "It made Singapore less important as ships could bypass it completely.",
-      isCorrect: false,
-      correctAnswer: "It made Singapore more important as ships could travel between Asia and Europe faster.",
-      explanation: "The Suez Canal shortened the journey between Europe and Asia by thousands of miles, bringing more ships through the Strait of Malacca where Singapore is located. This increased trade and Singapore's importance as a port, rather than making it less important or having no effect."
-    }
-  ],
-  statistics: {
-    chaptersCompleted: 10,
-    questionsAnswered: 5,
-    timeSpent: "45 mins",
-    correctAnswers: 4
-  }
-};
+// No default data - we'll only use real data from the API
 
 const AdventureSummary: React.FC = () => {
   const [showConfetti, setShowConfetti] = useState(false);
@@ -97,9 +54,9 @@ const AdventureSummary: React.FC = () => {
         setSummaryData(data);
       } catch (err) {
         console.error('Error fetching summary data:', err);
-        setError('Failed to load adventure summary data. Using default data instead.');
-        // Use default data if fetch fails
-        setSummaryData(defaultData);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        setError(errorMessage);
+        // No fallback to default data - we'll show an error message instead
       } finally {
         setLoading(false);
       }
@@ -122,23 +79,26 @@ const AdventureSummary: React.FC = () => {
     );
   }
 
-  // If there's an error and no data, show an error message
-  if (error && !summaryData) {
+  // If there's an error, show an appropriate message
+  if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-purple-50 flex items-center justify-center">
         <div className="text-center max-w-md p-6 bg-white rounded-xl shadow-md">
-          <div className="text-red-500 mb-4">
+          <div className="text-amber-500 mb-4">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold mb-2">Error Loading Data</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <Button 
-            variant="outline" 
-            onClick={() => window.location.reload()}
-          >
-            Try Again
+          <h2 className="text-xl font-bold mb-2">No Adventure Found</h2>
+          <p className="text-gray-600 mb-4">
+            {error.includes("404") 
+              ? "You need to complete an adventure before viewing the summary." 
+              : error.includes("400")
+                ? "Your adventure is not complete. Please finish all chapters to view the summary."
+                : `Error loading data: ${error}`}
+          </p>
+          <Button variant="outline">
+            <Link to="/">Start an Adventure</Link>
           </Button>
         </div>
       </div>
@@ -146,7 +106,7 @@ const AdventureSummary: React.FC = () => {
   }
 
   // If we have data, render the summary
-  const data = summaryData || defaultData;
+  const data = summaryData!; // Use non-null assertion since we've already checked for errors
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-purple-50 overflow-hidden">
