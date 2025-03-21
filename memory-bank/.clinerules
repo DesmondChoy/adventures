@@ -68,6 +68,13 @@
    - When parsing responses, implement flexible parsing that can handle variations
    - Add validation to ensure critical information is extracted correctly
    - Consider using regex patterns that can handle different response structures
+   - For critical format requirements, use the Format Example Pattern:
+     * Provide both incorrect and correct examples in prompts
+     * Show the incorrect example first to highlight what to avoid
+     * Follow with the correct example to demonstrate desired format
+     * Use clear section headers like "INCORRECT FORMAT (DO NOT USE)" and "CORRECT FORMAT (USE THIS)"
+     * Explicitly instruct the LLM to use exact section headers
+     * Example implementation in `SUMMARY_CHAPTER_PROMPT` for title and summary extraction
 
 ### Critical Implementation Rules
 1. State Management:

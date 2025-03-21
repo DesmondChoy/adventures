@@ -1,5 +1,60 @@
 # Active Context
 
+## Improved Chapter Summary Generation with Format Examples (2025-03-21)
+
+1. **Fixed Chapter Summary Title and Summary Extraction:**
+   * Problem: The LLM wasn't including the expected section headers in its response, causing the parsing function to fail to extract the title and summary
+   * Solution:
+     - Added clear examples to the prompt showing both incorrect and correct formats
+     - Explicitly instructed the LLM to use the exact section headers
+     - Made the format requirements more prominent in the prompt
+   * Implementation Details:
+     - Updated `SUMMARY_CHAPTER_PROMPT` in `prompt_templates.py` to include:
+       - An "INCORRECT FORMAT (DO NOT USE)" example showing what not to do
+       - A "CORRECT FORMAT (USE THIS)" example showing the proper structure with section headers
+       - Clear instructions to use the exact section headers
+     - Enhanced the `parse_title_and_summary` function to extract both title and summary from the response
+   * Benefits:
+     - Reliable extraction of both chapter titles and summaries
+     - Consistent formatting across all chapters
+     - Better user experience with properly formatted chapter summaries
+     - Improved error handling with fallback to defaults when extraction fails
+
+2. **Consolidated Chapter Summary Generation Scripts:**
+   * Problem: Separate scripts for standard and React-compatible summary generation led to code duplication and maintenance issues
+   * Solution:
+     - Integrated React-specific functionality into the main `generate_chapter_summaries.py` script
+     - Added command-line flags to control output format and destination
+     - Implemented shared core functionality for both standard and React modes
+   * Implementation Details:
+     - Added `--react-json` flag to generate React-compatible JSON
+     - Added `--react-output` flag to specify the output file for React data
+     - Implemented `generate_react_summary_data` function to format data for React
+     - Reused core summary generation logic for both standard and React modes
+   * Benefits:
+     - Simplified codebase with a single script for all summary generation needs
+     - Consistent summary generation across all output formats
+     - Easier maintenance with shared core functionality
+     - Flexible command-line options for different use cases
+
+## Fixed React-based SUMMARY Chapter Integration (2025-03-21)
+
+1. **Fixed React Summary App Integration with FastAPI Server:**
+   * Problem: The React summary app was not being served properly, resulting in 404 errors
+   * Solution:
+     - Updated summary_router.py to serve the React app's index.html instead of the test HTML file
+     - Configured React Router with proper basename to account for the /adventure prefix
+     - Ensured correct path resolution between FastAPI and React app
+   * Implementation Details:
+     - Modified `summary_router.py` to add `REACT_APP_DIST_DIR` constant and logic to serve the React app index.html
+     - Updated the React Router configuration in App.tsx to use the base URL from Vite's configuration
+     - Added `basename={import.meta.env.BASE_URL || "/"}` to BrowserRouter component
+     - Fixed the route path from '/adventure-summary' to '/summary' to match the expected structure
+   * Benefits:
+     - React summary app now properly renders at /adventure/summary endpoint
+     - Maintained consistent user experience with Learning Reports showing both chosen and correct answers
+     - Improved error handling with fallback to test HTML if React app isn't built
+
 ## React-based SUMMARY Chapter Implementation (2025-03-20)
 
 1. **Created Modern React-based SUMMARY Chapter:**

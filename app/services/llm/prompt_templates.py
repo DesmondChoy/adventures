@@ -200,20 +200,47 @@ CONCLUSION_CHAPTER_PROMPT = """# Current Context
 SUMMARY_CHAPTER_PROMPT = """
 CHAPTER CONTENT contains one chapter from a Choose Your Own Adventure story.
 At the end of each chapter, the user is presented with choices.
-Combine CHAPTER CONTENT and CHOICE MADE to create a natural, organic, and concise CHAPTER SUMMARY (70-100 words) that captures the key narrative events and character development.
 
-When creating the CHAPTER SUMMARY, follow these guidelines:
+Your task is to generate TWO things:
+1. A concise CHAPTER TITLE (5-10 words) that captures the essence of this chapter
+2. A natural, organic CHAPTER SUMMARY (70-100 words) that captures the key narrative events and character development
+
+When creating CHAPTER TITLE:
+- Make it engaging and descriptive of key events/themes in CHAPTER CONTENT
+- Do not include "Chapter X:" in your title (this will be added automatically)
+- Ensure it's appropriate for children aged 6-12
+
+When creating CHAPTER SUMMARY:
 - Write the summary from the perspective of a curious narrator who is experiencing the story alongside the reader, using 'we' to include both the narrator and the reader in the adventure.
 - Use past tense and maintain the adventure's narrative tone.
-- If there are educational questions in the chapter, quote the entire question without paraphrasing it, and integrate it into the shared experience of the narrator and the reader.
+- If there are educational questions in CHAPTER CONTENT, quote the entire question without paraphrasing it, and integrate it into the shared experience of the narrator and the reader.
 
-This summary will be used together with future chapter summaries as a recap of the whole adventure spanning multiple chapters.
+CHAPTER TITLE and CHAPTER SUMMARY will be used together with future chapters as a recap of the whole adventure spanning multiple chapters.
+
+IMPORTANT: You must format your response with the exact section headers shown in the examples below.
+
+# Example 
+## INCORRECT FORMAT (DO NOT USE)
+```
+Title: A Choice in the Enchanted Woods
+Summary: We followed Alex into the enchanted forest, where towering trees whispered ancient secrets. As darkness fell, strange glowing mushrooms lit our path. When we encountered a fork in the trail, Alex hesitated. The left path glimmered with fireflies, while howls echoed from the right. After careful consideration, Alex chose the firefly path, leading us deeper into the unknown wonders of the forest.
+```
+## CORRECT FORMAT (USE THIS)
+```
+# CHAPTER TITLE
+A Choice in the Enchanted Woods
+
+# CHAPTER SUMMARY
+We followed Alex into the enchanted forest, where towering trees whispered ancient secrets. As darkness fell, strange glowing mushrooms lit our path. When we encountered a fork in the trail, Alex hesitated. The left path glimmered with fireflies, while howls echoed from the right. After careful consideration, Alex chose the firefly path, leading us deeper into the unknown wonders of the forest.
+```
 
 # CHAPTER CONTENT
 {chapter_content}
 
 # CHOICE MADE
 "{chosen_choice}" - {choice_context}
+
+# CHAPTER TITLE
 
 # CHAPTER SUMMARY
 """

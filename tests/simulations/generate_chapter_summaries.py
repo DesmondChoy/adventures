@@ -5,14 +5,20 @@ This script extracts chapter content from simulation state JSON files and genera
 consistent summaries for all chapters using the same prompt template and approach.
 By default, it only prints the summaries to the console and does not save JSON files.
 
+The script can also generate React-compatible JSON data for use with the Adventure
+Summary component, including chapter titles, educational questions, and statistics.
+
 Usage:
     python tests/simulations/generate_chapter_summaries.py <state_file> [--output OUTPUT_FILE]
     python tests/simulations/generate_chapter_summaries.py <state_file> --save-json [--output OUTPUT_FILE]
     python tests/simulations/generate_chapter_summaries.py <state_file> --compact [--delay DELAY]
+    python tests/simulations/generate_chapter_summaries.py <state_file> --react-json [--react-output OUTPUT_FILE]
 
 Examples:
     python tests/simulations/generate_chapter_summaries.py logs/simulations/simulation_state_2025-03-18_23-54-29_d92bc8a8.json
     python tests/simulations/generate_chapter_summaries.py logs/simulations/simulation_state_2025-03-18_23-54-29_d92bc8a8.json --delay 3.5
+    python tests/simulations/generate_chapter_summaries.py logs/simulations/simulation_state_2025-03-18_23-54-29_d92bc8a8.json --react-json
+    python tests/simulations/generate_chapter_summaries.py logs/simulations/simulation_state_2025-03-18_23-54-29_d92bc8a8.json --react-json --react-output custom_output.json
 """
 
 import asyncio
@@ -20,7 +26,9 @@ import os
 import sys
 import json
 import logging
-from typing import List, Dict, Any, Optional
+import re
+from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime, timedelta
 
 # Add project root to path for imports
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -47,13 +55,49 @@ class ChapterContentError(Exception):
     pass
 
 
+def parse_title_and_summary(response_text: str) -> Tuple[str, str]:
+    """Parse the response text to extract the title and summary.
+
+    Args:
+        response_text: The response text from the LLM
+
+    Returns:
+        A tuple containing the title and summary
+    """
+    title = ""
+    summary = ""
+
+    # Split by section headers
+    sections = response_text.split("# ")
+
+    # Extract title and summary
+    for section in sections:
+        if section.startswith("CHAPTER TITLE"):
+            title = section.replace("CHAPTER TITLE", "").strip()
+        elif section.startswith("CHAPTER SUMMARY"):
+            summary = section.replace("CHAPTER SUMMARY", "").strip()
+
+    # If we couldn't extract a title, use a default
+    if not title:
+        title = "Adventure Chapter"
+        logger.warning("Could not extract title from response, using default")
+
+    # If we couldn't extract a summary, use the whole response
+    if not summary:
+        summary = response_text
+        logger.warning("Could not extract summary from response, using full response")
+
+    return title, summary
+
+
 async def generate_chapter_summary(
     chapter_content: str, chosen_choice: str, choice_context: str, max_retries: int = 3
-) -> str:
-    """Generate a concise summary of the chapter content using the LLM service.
+) -> Dict[str, str]:
+    """Generate a title and concise summary of the chapter content using the LLM service.
 
     This function is used consistently for ALL chapters, regardless of type.
     It first tries a direct API call, then falls back to streaming if that fails.
+    The response is parsed to extract both the title and summary.
 
     Args:
         chapter_content: The full text of the chapter
@@ -62,7 +106,7 @@ async def generate_chapter_summary(
         max_retries: Maximum number of retry attempts for each approach
 
     Returns:
-        A concise summary of the chapter
+        A dictionary containing the title and summary of the chapter
 
     Raises:
         Exception: If summary generation fails for any reason
@@ -102,10 +146,10 @@ async def generate_chapter_summary(
             response = model.generate_content(custom_prompt)
 
             # Extract the text directly
-            summary = response.text.strip()
+            response_text = response.text.strip()
 
             # Strict error handling - no fallbacks
-            if not summary:
+            if not response_text:
                 logger.warning(
                     f"Empty response from direct API call (attempt {retry + 1}/{max_retries})"
                 )
@@ -118,10 +162,13 @@ async def generate_chapter_summary(
                     )
                     break  # Try streaming approach
 
+            # Parse the response to extract title and summary
+            title, summary = parse_title_and_summary(response_text)
+
             logger.info(
-                f"Generated summary using direct API call ({len(summary)} chars)"
+                f"Generated title and summary using direct API call (title: {len(title)} chars, summary: {len(summary)} chars)"
             )
-            return summary
+            return {"title": title, "summary": summary}
 
         except Exception as e:
             logger.warning(
@@ -149,10 +196,10 @@ async def generate_chapter_summary(
             ):
                 chunks.append(chunk)
 
-            summary = "".join(chunks).strip()
+            response_text = "".join(chunks).strip()
 
             # Strict error handling - no fallbacks
-            if not summary:
+            if not response_text:
                 logger.warning(
                     f"Empty response from streaming approach (attempt {retry + 1}/{max_retries})"
                 )
@@ -164,10 +211,13 @@ async def generate_chapter_summary(
                         "Summary generation failed: Empty response from all LLM approaches"
                     )
 
+            # Parse the response to extract title and summary
+            title, summary = parse_title_and_summary(response_text)
+
             logger.info(
-                f"Generated summary using streaming approach ({len(summary)} chars)"
+                f"Generated title and summary using streaming approach (title: {len(title)} chars, summary: {len(summary)} chars)"
             )
-            return summary
+            return {"title": title, "summary": summary}
 
         except Exception as e:
             logger.warning(
@@ -286,7 +336,7 @@ async def generate_all_chapter_summaries(
             choice_context = ""
 
             # Generate summary using the SAME function for ALL chapters
-            summary = await generate_chapter_summary(
+            result = await generate_chapter_summary(
                 chapter_data["content"], chapter_data["choice"], choice_context
             )
 
@@ -295,7 +345,8 @@ async def generate_all_chapter_summaries(
                 {
                     "chapter_number": chapter_number,
                     "chapter_type": chapter_data["chapter_type"],
-                    "summary": summary,
+                    "title": result["title"],
+                    "summary": result["summary"],
                 }
             )
 
@@ -324,8 +375,9 @@ async def generate_all_chapter_summaries(
         print("\nCHAPTER SUMMARIES\n")
         for summary_data in summaries:
             print(
-                f"\nCHAPTER {summary_data['chapter_number']} ({summary_data['chapter_type']}): {summary_data['summary']}"
+                f"\nCHAPTER {summary_data['chapter_number']} ({summary_data['chapter_type']}): {summary_data['title']}"
             )
+            print(f"{summary_data['summary']}")
     else:
         # Standard output format
         print("\n" + "=" * 80)
@@ -336,10 +388,167 @@ async def generate_all_chapter_summaries(
             print(
                 f"\nChapter {summary_data['chapter_number']} ({summary_data['chapter_type']}):"
             )
+            print(f"Title: {summary_data['title']}")
             print(summary_data["summary"])
             print("-" * 40 + "\n")
 
     return summaries
+
+
+def extract_educational_questions(state_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Extract educational questions and answers from the state data.
+
+    Args:
+        state_data: The complete state data from the simulation
+
+    Returns:
+        A list of educational questions with user answers
+    """
+    questions = []
+
+    # Extract chapters array
+    chapters = state_data.get("chapters", [])
+
+    # Find all LESSON chapters with questions and responses
+    for chapter in chapters:
+        if (
+            chapter.get("chapter_type") == "LESSON"
+            and "response" in chapter
+            and "question" in chapter
+        ):
+            question_data = chapter["question"]
+            response_data = chapter["response"]
+
+            if not question_data or not response_data:
+                continue
+
+            # Find the correct answer
+            correct_answer = None
+            for answer in question_data.get("answers", []):
+                if answer.get("is_correct"):
+                    correct_answer = answer.get("text")
+                    break
+
+            # Create question object
+            question_obj = {
+                "question": question_data.get("question", "Unknown question"),
+                "userAnswer": response_data.get("chosen_answer", "No answer"),
+                "isCorrect": response_data.get("is_correct", False),
+                "explanation": question_data.get("explanation", ""),
+            }
+
+            # Add correct answer if user was wrong
+            if not question_obj["isCorrect"] and correct_answer:
+                question_obj["correctAnswer"] = correct_answer
+
+            questions.append(question_obj)
+
+    return questions
+
+
+def calculate_statistics(state_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Calculate statistics from the state data.
+
+    Args:
+        state_data: The complete state data from the simulation
+
+    Returns:
+        Statistics about the adventure
+    """
+    # Extract chapters array
+    chapters = state_data.get("chapters", [])
+
+    # Count chapters completed
+    chapters_completed = len(chapters)
+
+    # Count lesson questions and correct answers
+    questions_answered = 0
+    correct_answers = 0
+
+    for chapter in chapters:
+        if chapter.get("chapter_type") == "LESSON" and "response" in chapter:
+            questions_answered += 1
+            if chapter["response"].get("is_correct", False):
+                correct_answers += 1
+
+    # Estimate time spent (45 minutes for a complete adventure)
+    # This is just a placeholder - in a real implementation, you'd use actual timing data
+    if chapters_completed > 0:
+        minutes_spent = int(45 * (chapters_completed / 10))
+        time_spent = f"{minutes_spent} mins"
+    else:
+        time_spent = "0 mins"
+
+    return {
+        "chaptersCompleted": chapters_completed,
+        "questionsAnswered": questions_answered,
+        "timeSpent": time_spent,
+        "correctAnswers": correct_answers,
+    }
+
+
+async def generate_react_summary_data(
+    state_file: str,
+    output_file: str = "adventure_summary_react.json",
+) -> Dict[str, Any]:
+    """Generate summary data formatted for the React AdventureSummary component.
+
+    Args:
+        state_file: Path to the simulation state JSON file
+        output_file: Path to save the generated JSON data
+
+    Returns:
+        The formatted summary data
+    """
+    # First, generate the chapter summaries using the original function
+    summaries = await generate_all_chapter_summaries(
+        state_file,
+        skip_json=True,  # Don't save the original format JSON
+        compact_output=False,
+    )
+
+    # Load the complete state data to extract additional information
+    with open(state_file, "r") as f:
+        state_data = json.load(f)
+
+    # Format chapter summaries for React
+    chapter_summaries = []
+    for summary_data in summaries:
+        chapter_number = summary_data["chapter_number"]
+        chapter_type = summary_data["chapter_type"]
+        title = summary_data["title"]
+        summary_text = summary_data["summary"]
+
+        # Add to formatted summaries
+        chapter_summaries.append(
+            {
+                "number": chapter_number,
+                "title": title,
+                "summary": summary_text,
+                "chapterType": chapter_type.lower(),
+            }
+        )
+
+    # Extract educational questions
+    educational_questions = extract_educational_questions(state_data)
+
+    # Calculate statistics
+    statistics = calculate_statistics(state_data)
+
+    # Create the complete data structure
+    react_data = {
+        "chapterSummaries": chapter_summaries,
+        "educationalQuestions": educational_questions,
+        "statistics": statistics,
+    }
+
+    # Save to file
+    with open(output_file, "w") as f:
+        json.dump(react_data, f, indent=2)
+
+    logger.info(f"Saved React-compatible summary data to {output_file}")
+
+    return react_data
 
 
 def find_latest_simulation_state():
@@ -434,6 +643,16 @@ if __name__ == "__main__":
         default=2.0,
         help="Delay in seconds between processing chapters (default: 2.0)",
     )
+    parser.add_argument(
+        "--react-json",
+        action="store_true",
+        help="Generate JSON formatted for React components",
+    )
+    parser.add_argument(
+        "--react-output",
+        default="app/static/adventure_summary_react.json",
+        help="Output file path for React JSON (default: app/static/adventure_summary_react.json)",
+    )
     args = parser.parse_args()
 
     state_file = args.state_file
@@ -449,21 +668,33 @@ if __name__ == "__main__":
         print(f"Using latest simulation state file: {os.path.basename(state_file)}")
 
     try:
-        # Run the async function
-        summaries = asyncio.run(
-            generate_all_chapter_summaries(
-                state_file,
-                args.output,
-                skip_json=not args.save_json,
-                compact_output=args.compact,
-                delay_between_chapters=args.delay,  # Pass the delay parameter
+        if args.react_json:
+            # Generate React-compatible JSON
+            react_data = asyncio.run(
+                generate_react_summary_data(
+                    state_file,
+                    args.react_output,
+                )
             )
-        )
+            print(
+                f"Generated React-compatible summary data with {len(react_data['chapterSummaries'])} chapters"
+            )
+        else:
+            # Run the original function
+            summaries = asyncio.run(
+                generate_all_chapter_summaries(
+                    state_file,
+                    args.output,
+                    skip_json=not args.save_json,
+                    compact_output=args.compact,
+                    delay_between_chapters=args.delay,  # Pass the delay parameter
+                )
+            )
 
-        # Check if any summaries were generated
-        if not summaries:
-            print("WARNING: No chapter summaries were generated.")
-            sys.exit(2)
+            # Check if any summaries were generated
+            if not summaries:
+                print("WARNING: No chapter summaries were generated.")
+                sys.exit(2)
 
     except FileNotFoundError as e:
         print(f"ERROR: {e}")

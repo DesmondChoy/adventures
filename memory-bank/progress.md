@@ -2,6 +2,20 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-03-21
+- Fixed chapter summary title and summary extraction with format examples
+- Added incorrect and correct format examples to SUMMARY_CHAPTER_PROMPT
+- Enhanced parse_title_and_summary function to extract both title and summary
+- Consolidated chapter summary generation scripts into a single unified script
+- Added --react-json flag to generate React-compatible JSON data
+- Added --react-output flag to specify output file for React data
+- Implemented generate_react_summary_data function for React format
+- Fixed React summary app integration with FastAPI server
+- Updated summary_router.py to serve React app instead of test HTML
+- Configured React Router with proper basename for /adventure prefix
+- Ensured correct path resolution between FastAPI and React app
+- Maintained Learning Report format showing both chosen and correct answers
+
 ### 2025-03-20
 - Implemented React-based SUMMARY Chapter with Modern UI
 - Created TypeScript Interfaces for Adventure Summary Data

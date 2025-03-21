@@ -245,6 +245,14 @@ graph TD
   * Clear delineation between system and user prompts
   * Hierarchical organization for improved readability
 
+- **Format Example Pattern**:
+  * Providing both incorrect and correct examples in prompts
+  * Showing the incorrect example first to highlight what to avoid
+  * Following with the correct example to demonstrate desired format
+  * Using clear section headers like "INCORRECT FORMAT (DO NOT USE)" and "CORRECT FORMAT (USE THIS)"
+  * Explicitly instructing the LLM to use exact section headers
+  * Example implementation in `SUMMARY_CHAPTER_PROMPT` for title and summary extraction
+
 ### 6. Simulation and Testing Pattern
 - **Standardized Logging**:
   * Consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`, `EVENT:CHOICE_SELECTED`)
