@@ -1012,6 +1012,11 @@ function startAdventure() {
                             <span class="text-lg">✨ Reveal Your Adventure Summary ✨</span>
                             <p class="text-sm opacity-80 mt-1">See your journey and learning highlights</p>
                         </button>
+                        <a href="/adventure/summary" 
+                           class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-[1.02] duration-300 text-center">
+                            <span class="text-lg">🌟 View Detailed Summary 🌟</span>
+                            <p class="text-sm opacity-80 mt-1">Explore your journey with interactive visuals</p>
+                        </a>
                         <button onclick="resetApplicationState()" 
                                 class="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
                             Start New Journey
@@ -1066,15 +1071,22 @@ function requestSummary() {
             // Update chapter number to show we're in the summary
             updateProgress(state.current_chapter.chapter_number, state.stats.total_lessons);
             
-            // Add a return button at the bottom
-            const returnButton = `
+            // Add buttons at the bottom
+            const buttonsHtml = `
                 <div class="text-center p-4">
-                    <button onclick="resetApplicationState()" 
-                            class="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
-                        Start New Journey
-                    </button>
+                    <div class="flex flex-col gap-3 mt-4">
+                        <a href="/adventure/summary" 
+                           class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-[1.02] duration-300 text-center">
+                            <span class="text-lg">🌟 View Detailed Summary 🌟</span>
+                            <p class="text-sm opacity-80 mt-1">Explore your journey with interactive visuals</p>
+                        </a>
+                        <button onclick="resetApplicationState()" 
+                                class="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                            Start New Journey
+                        </button>
+                    </div>
                 </div>`;
-            document.getElementById('choicesContainer').innerHTML = returnButton;
+            document.getElementById('choicesContainer').innerHTML = buttonsHtml;
         }
     </script>
     

@@ -34,6 +34,18 @@
 - Configured React Router with proper basename for /adventure prefix
 - Ensured correct path resolution between FastAPI and React app
 - Maintained Learning Report format showing both chosen and correct answers
+- Fixed Node.js and npm detection issues in build_summary_app.py script
+- Enhanced Node.js and npm detection with robust path checking and fallback mechanisms
+- Added command-line options to manually specify Node.js and npm paths
+- Implemented retry mechanism with exponential backoff for file operations
+- Added detailed error handling and diagnostics for troubleshooting
+- Updated build script to check multiple possible installation locations for Node.js and npm
+- Added specific paths for NVM for Windows installations
+- Modified functions to use detected Node.js and npm paths
+- Enhanced file copying logic with retry mechanism and fallback strategies
+- Added file-by-file copying when directory operations fail
+- Enhanced error messages with specific suggestions
+- Updated migration plan documentation and moved it to the summary-chapter folder
 
 ### 2025-03-20
 - Implemented React-based SUMMARY Chapter with Modern UI
@@ -143,6 +155,11 @@
 - Responsive design for both desktop and mobile
 
 ### Recent Enhancements
+- Fixed Node.js and npm detection issues in build_summary_app.py script
+- Enhanced Node.js and npm detection with robust path checking and fallback mechanisms
+- Added command-line options to manually specify Node.js and npm paths
+- Implemented retry mechanism with exponential backoff for file operations
+- Added detailed error handling and diagnostics for troubleshooting
 - Updated generate_chapter_summaries.py to work with simulation state JSON files instead of log files
 - Added delay mechanism to prevent API timeouts in chapter summary generation
 - Added command-line argument to customize delay between API calls

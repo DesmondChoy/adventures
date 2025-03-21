@@ -141,6 +141,38 @@
      - Reduced the chance of errors from using outdated data
      - Better user experience with more intuitive defaults
 
+## Enhanced Build Script for React Summary App (2025-03-21)
+
+1. **Fixed Node.js and npm Detection Issues in Build Script:**
+   * Problem: The build script was failing with "Node.js or npm not found" error despite Node.js and npm being correctly installed
+   * Solution:
+     - Enhanced Node.js and npm detection with robust path checking and fallback mechanisms
+     - Added command-line options to manually specify Node.js and npm paths
+     - Implemented retry mechanism with exponential backoff for file operations
+     - Added detailed error handling and diagnostics for troubleshooting
+   * Implementation Details:
+     - Updated `check_node_npm()` function in `tools/build_summary_app.py` to:
+       - Check multiple possible installation locations for Node.js and npm
+       - Add specific paths for NVM for Windows installations
+       - Implement better error handling with detailed diagnostics
+       - Return the detected paths for use in other functions
+     - Modified other functions to use the detected paths:
+       - Updated `install_dependencies()`, `build_app()`, and `start_dev_server()` to accept path parameters
+       - Updated `main()` to pass the detected paths to these functions
+     - Added command-line options:
+       - Added `--node-path` and `--npm-path` options to manually specify paths
+       - Updated documentation to include the new options
+     - Enhanced file copying logic:
+       - Added retry mechanism with exponential backoff for file operations
+       - Implemented fallback strategies for permission issues
+       - Added file-by-file copying when directory operations fail
+       - Enhanced error messages with specific suggestions
+   * Benefits:
+     - More reliable Node.js and npm detection across different installation methods
+     - Better error handling with detailed diagnostics for troubleshooting
+     - More robust file operations with retry mechanism and fallback strategies
+     - Improved user experience with command-line options for manual path specification
+
 ## Fixed React-based SUMMARY Chapter Integration (2025-03-21)
 
 1. **Fixed React Summary App Integration with FastAPI Server:**
