@@ -1,5 +1,26 @@
 # Active Context
 
+## Fixed Educational Card Button Positioning in Knowledge Gained Section (2025-03-21)
+
+1. **Fixed "Hide Explanation" Button Positioning Issue:**
+   * Problem: The "Hide Explanation" button in the Knowledge Gained section was overlapping with content on mobile devices, and the button position was inconsistent between show/hide states
+   * Solution:
+     - Implemented a more robust solution for the explanation container and button positioning
+     - Made the button position consistent between "Show explanation" and "Hide explanation" states
+   * Implementation Details:
+     - Updated `EducationalCard.tsx` in the React app to:
+       - Add a ScrollArea component to make the explanation content scrollable
+       - Increase the maximum height for mobile devices from 'max-h-48' to 'max-h-72'
+       - Add a gradient fade effect at the bottom of the explanation for visual separation
+       - Position the "Hide explanation" button at the bottom left (same position as "Show explanation")
+       - Add proper z-index and background styling to ensure button visibility
+     - Rebuilt the React app with `npm run build` to apply the changes
+   * Benefits:
+     - No more overlapping text with the "Hide Explanation" button on mobile devices
+     - Consistent button positioning between show/hide states for better user experience
+     - Improved readability with scrollable content and gradient fade effect
+     - Better mobile experience with appropriate sizing and positioning
+
 ## Fixed Adventure Summary Statistics (2025-03-21)
 
 1. **Fixed Statistics in Adventure Summary Cards:**

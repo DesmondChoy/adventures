@@ -1,6 +1,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { CheckCircle, XCircle, Info } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export interface QuestionData {
   question: string;
@@ -24,6 +26,7 @@ const EducationalCard: React.FC<EducationalCardProps> = ({
   const [expanded, setExpanded] = useState(false);
   const [visible, setVisible] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -85,23 +88,30 @@ const EducationalCard: React.FC<EducationalCardProps> = ({
             )}
           </div>
           
-          <div 
-            className={`transition-all duration-300 ${expanded ? 'max-h-48' : 'max-h-0 overflow-hidden'}`}
-          >
-            <div className="p-3 bg-white/50 rounded-lg border border-gray-100 mt-2">
-              <div className="flex items-start gap-2">
-                <Info className="h-4 w-4 text-odyssey-blue mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-gray-600">{data.explanation}</p>
+          <div className="relative">
+            <div 
+              className={`transition-all duration-300 ${expanded ? (isMobile ? 'max-h-72' : 'max-h-60') : 'max-h-0 overflow-hidden'}`}
+            >
+              <div className="p-3 pb-12 bg-white/50 rounded-lg border border-gray-100 mt-2 relative">
+                <ScrollArea className="h-full pr-4 max-h-60">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 text-odyssey-blue mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-gray-600">{data.explanation}</p>
+                  </div>
+                </ScrollArea>
+                {expanded && (
+                  <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-white/90 to-transparent pointer-events-none"></div>
+                )}
               </div>
             </div>
+            
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className={`text-sm text-odyssey-blue hover:text-odyssey-purple transition-colors ${expanded ? 'absolute bottom-2 left-3 z-20 bg-white/80 px-3 py-1 rounded-full shadow-sm' : 'mt-2'}`}
+            >
+              {expanded ? 'Hide explanation' : 'Show explanation'}
+            </button>
           </div>
-          
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="text-sm text-odyssey-blue hover:text-odyssey-purple transition-colors mt-2"
-          >
-            {expanded ? 'Hide explanation' : 'Show explanation'}
-          </button>
         </div>
       </div>
     </div>
