@@ -70,12 +70,12 @@ If you prefer to run the steps manually:
 
 1. Generate the summary data:
    ```bash
-   python tests/simulations/generate_chapter_summaries_react.py --react-json
+   python tests/simulations/generate_chapter_summaries.py --react-json
    ```
 
 2. Build the React app:
    ```bash
-   python tools/build_summary_app.py
+   python tools/build_summary_app.py --mode production
    ```
 
 3. Start the FastAPI server:
@@ -83,15 +83,68 @@ If you prefer to run the steps manually:
    python app/main.py
    ```
 
+### Build Script Options
+
+The build script (`tools/build_summary_app.py`) supports the following options:
+
+```bash
+python tools/build_summary_app.py [--mode MODE] [--output-dir DIR] [--skip-install] [--verbose]
+
+Options:
+  --mode MODE           Build mode: 'development' or 'production' (default: production)
+  --output-dir DIR      Directory where the built app should be placed (default: app/static/summary-chapter)
+  --skip-install        Skip npm dependency installation
+  --verbose             Enable verbose output
+```
+
+Examples:
+
+```bash
+# Production build (default)
+python tools/build_summary_app.py
+
+# Development build
+python tools/build_summary_app.py --mode development
+
+# Production build with custom output directory
+python tools/build_summary_app.py --output-dir app/static/custom-location
+
+# Skip dependency installation (useful for repeated builds)
+python tools/build_summary_app.py --skip-install
+```
+
 ## Integration with Main Application
 
 The summary feature is designed to be integrated into the main Learning Odyssey application. The integration points are:
 
-1. **WebSocket Service**: The `websocket_service.py` file already includes functionality to generate chapter summaries during an adventure.
+1. **WebSocket Service**: The `websocket_service.py` file includes functionality to generate chapter summaries during an adventure.
 
 2. **Summary Router**: The `summary_router.py` file provides routes for serving the React app and the summary data.
 
 3. **Main Application**: The `main.py` file includes the summary router with the prefix `/adventure`.
+
+### Data Integration
+
+The summary feature uses real data from completed adventures. The data integration works as follows:
+
+1. **Chapter Titles and Summaries**: 
+   - The `AdventureState` model includes a `summary_chapter_titles` field to store chapter titles separately from summaries
+   - The `generate_chapter_summary` method in `chapter_manager.py` extracts both title and summary from LLM responses
+   - The `process_choice` method in `websocket_service.py` stores both titles and summaries
+   - The `format_adventure_summary_data` method in `adventure_state_manager.py` uses stored titles
+   - The `generate_summary_content` function in `websocket_service.py` uses the stored titles
+
+2. **Educational Questions**:
+   - Questions and answers from lesson chapters are stored in the `AdventureState` model
+   - The summary feature displays these questions along with the user's answers
+
+3. **Statistics**:
+   - Adventure statistics (chapters completed, questions answered, etc.) are calculated from the `AdventureState` model
+   - The summary feature displays these statistics in an engaging format
+
+4. **Backward Compatibility**:
+   - The implementation maintains backward compatibility with existing adventures that don't have the new fields
+   - Fallback mechanisms are in place to extract titles from summaries if needed
 
 ## Customization
 

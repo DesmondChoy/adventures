@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from typing import Optional
 import os
 import logging
 import json
+from app.models.story import ChapterType
 
 router = APIRouter()
 logger = logging.getLogger("summary_router")
@@ -13,6 +15,7 @@ SUMMARY_DATA_DIR = "app/static"
 SUMMARY_JSON_FILE = "adventure_summary_react.json"
 REACT_APP_DIR = "app/static/experimental/celebration-journey-moments-main"
 REACT_APP_DIST_DIR = os.path.join(REACT_APP_DIR, "dist")
+SUMMARY_CHAPTER_DIR = "app/static/summary-chapter"
 
 
 @router.get("/test-plain")
@@ -26,41 +29,85 @@ async def test_plain():
 async def summary_page(request: Request):
     """Serve the adventure summary page."""
     try:
-        # Serve the React app index.html instead of the test HTML
-        react_index_path = os.path.join(REACT_APP_DIST_DIR, "index.html")
-        if not os.path.exists(react_index_path):
-            logger.warning(f"React app index.html not found: {react_index_path}")
-            # Fall back to test HTML if React app is not built
-            test_html_path = os.path.join(SUMMARY_DATA_DIR, "test_summary.html")
-            if os.path.exists(test_html_path):
-                logger.info(f"Falling back to test HTML file: {test_html_path}")
-                return FileResponse(test_html_path)
-            return {"error": "Summary page not available. Please build the React app first."}
+        # First check if the app is available in the new location
+        new_index_path = os.path.join(SUMMARY_CHAPTER_DIR, "index.html")
+        if os.path.exists(new_index_path):
+            logger.info(f"Serving React app from new location: {new_index_path}")
+            return FileResponse(new_index_path)
 
-        # Serve the React app
-        logger.info(f"Serving React app: {react_index_path}")
-        return FileResponse(react_index_path)
+        # Fall back to the experimental directory if not found in the new location
+        react_index_path = os.path.join(REACT_APP_DIST_DIR, "index.html")
+        if os.path.exists(react_index_path):
+            logger.info(
+                f"Serving React app from experimental directory: {react_index_path}"
+            )
+            return FileResponse(react_index_path)
+
+        # Fall back to test HTML if React app is not built
+        test_html_path = os.path.join(SUMMARY_DATA_DIR, "test_summary.html")
+        if os.path.exists(test_html_path):
+            logger.info(f"Falling back to test HTML file: {test_html_path}")
+            return FileResponse(test_html_path)
+
+        # If no options are available, return an error
+        logger.warning("No summary page found in any location")
+        return {
+            "error": "Summary page not available. Please build the React app first."
+        }
     except Exception as e:
         logger.error(f"Error serving summary page: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/api/adventure-summary")
-async def get_adventure_summary():
-    """API endpoint to get the adventure summary data."""
+async def get_adventure_summary(adventure_id: Optional[str] = None):
+    """API endpoint to get the adventure summary data.
+
+    Args:
+        adventure_id: Optional ID of the adventure to get summary for.
+                     If not provided, returns the current adventure state.
+    """
     try:
-        # Check if the summary data file exists
-        summary_file_path = os.path.join(SUMMARY_DATA_DIR, SUMMARY_JSON_FILE)
-        if not os.path.exists(summary_file_path):
-            logger.warning(f"Summary data file not found: {summary_file_path}")
+        # Get the adventure state manager
+        from app.services.adventure_state_manager import AdventureStateManager
+
+        state_manager = AdventureStateManager()
+
+        # Get the current adventure state
+        state = state_manager.get_current_state()
+
+        if not state:
+            logger.warning("No active adventure state found")
+
+            # Fall back to static file if available
+            summary_file_path = os.path.join(SUMMARY_DATA_DIR, SUMMARY_JSON_FILE)
+            if os.path.exists(summary_file_path):
+                logger.info(
+                    f"Falling back to static summary data file: {summary_file_path}"
+                )
+                with open(summary_file_path, "r") as f:
+                    summary_data = json.load(f)
+                return summary_data
+            else:
+                return JSONResponse(
+                    status_code=404,
+                    content={
+                        "error": "No active adventure state found and no fallback data available."
+                    },
+                )
+
+        # Check if the adventure is complete (has a CONCLUSION chapter)
+        if not any(ch.chapter_type == ChapterType.CONCLUSION for ch in state.chapters):
+            logger.warning("Adventure is not complete (no CONCLUSION chapter)")
             return JSONResponse(
-                status_code=404,
-                content={"error": "Summary data not found. Generate it first."},
+                status_code=400,
+                content={
+                    "error": "Adventure is not complete. Complete the adventure to view the summary."
+                },
             )
 
-        # Read and return the summary data
-        with open(summary_file_path, "r") as f:
-            summary_data = json.load(f)
+        # Format the adventure state data for the React summary component
+        summary_data = state_manager.format_adventure_summary_data(state)
 
         return summary_data
     except Exception as e:

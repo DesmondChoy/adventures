@@ -758,7 +758,7 @@ class ChapterManager:
     @staticmethod
     async def generate_chapter_summary(
         chapter_content: str, chosen_choice: str = None, choice_context: str = ""
-    ) -> str:
+    ) -> Dict[str, str]:
         """Generate a concise summary of the chapter content.
 
         Args:
@@ -767,8 +767,7 @@ class ChapterManager:
             choice_context: Additional context about the choice (e.g., whether it was correct/incorrect)
 
         Returns:
-            A concise summary (30-40 words) highlighting the key narrative events
-            and character development
+            A dictionary containing the title and summary of the chapter
         """
         try:
             # Use the LLM service to generate a summary
@@ -853,25 +852,55 @@ class ChapterManager:
 
             # logger.info(f"Generated chapter summary: '{summary}'")
 
+            # Parse the response to extract title and summary
+            title = ""
+            summary_text = ""
+
+            # Split by section headers
+            sections = summary.split("# ")
+
+            # Extract title and summary
+            for section in sections:
+                if section.startswith("CHAPTER TITLE"):
+                    title = section.replace("CHAPTER TITLE", "").strip()
+                elif section.startswith("CHAPTER SUMMARY"):
+                    summary_text = section.replace("CHAPTER SUMMARY", "").strip()
+
+            # If we couldn't extract a title, use a default
+            if not title:
+                title = f"Chapter Summary"
+                logger.warning("Could not extract title from response, using default")
+
+            # If we couldn't extract a summary, use the whole response
+            if not summary_text:
+                summary_text = summary
+                logger.warning(
+                    "Could not extract summary from response, using full response"
+                )
+
             # Ensure the summary is not empty - use a more robust check
             if (
-                not summary or len(summary) < 5
+                not summary_text or len(summary_text) < 5
             ):  # Consider very short summaries as empty too
                 logger.warning(
-                    f"Generated summary is empty or too short: '{summary}', using fallback"
+                    f"Generated summary is empty or too short: '{summary_text}', using fallback"
                 )
                 # Use a simple fallback summary based on the first paragraph
                 paragraphs = [p for p in chapter_content.split("\n\n") if p.strip()]
                 if paragraphs:
                     first_para = paragraphs[0]
                     words = first_para.split()[:30]
-                    summary = " ".join(words) + "..."
-                    logger.info(f"Using fallback summary: {summary}")
+                    summary_text = " ".join(words) + "..."
+                    logger.info(f"Using fallback summary: {summary_text}")
                 else:
-                    summary = "A scene from the story"
+                    summary_text = "A scene from the story"
                     logger.info("Using generic fallback summary")
 
-            return summary
+                # Also generate a default title if we're using a fallback summary
+                if title == "Chapter Summary":
+                    title = "Adventure Chapter"
+
+            return {"title": title, "summary": summary_text}
         except Exception as e:
             logger.error(f"Error generating chapter summary: {str(e)}")
             # Return a simplified summary based on the first paragraph

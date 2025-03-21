@@ -92,14 +92,18 @@ async def process_choice(
             # Generate summary for the CONCLUSION chapter
             try:
                 logger.info(f"Generating summary for CONCLUSION chapter")
-                chapter_summary = await chapter_manager.generate_chapter_summary(
+                summary_result = await chapter_manager.generate_chapter_summary(
                     conclusion_chapter.content,
                     "End of story",  # Placeholder for chosen_choice
                     "",  # Empty choice_context
                 )
 
+                # Extract title and summary from the result
+                title = summary_result.get("title", "Chapter Summary")
+                summary_text = summary_result.get("summary", "Summary not available")
+
                 logger.info(
-                    f"Generated CONCLUSION chapter summary: {chapter_summary[:100]}..."
+                    f"Generated CONCLUSION chapter summary: {summary_text[:100]}..."
                 )
 
                 # Store the summary
@@ -112,18 +116,45 @@ async def process_choice(
                         < conclusion_chapter.chapter_number - 1
                     ):
                         state.chapter_summaries.append("Chapter summary not available")
-                    state.chapter_summaries.append(chapter_summary)
+                        # Also add placeholder titles
+                        if hasattr(state, "summary_chapter_titles"):
+                            state.summary_chapter_titles.append(
+                                f"Chapter {len(state.summary_chapter_titles) + 1}"
+                            )
+
+                    # Add the new summary and title
+                    state.chapter_summaries.append(summary_text)
+                    # Add the title if the field exists
+                    if hasattr(state, "summary_chapter_titles"):
+                        state.summary_chapter_titles.append(title)
                 else:
                     logger.info(
                         f"Updating existing summary at index {conclusion_chapter.chapter_number - 1}"
                     )
                     state.chapter_summaries[conclusion_chapter.chapter_number - 1] = (
-                        chapter_summary
+                        summary_text
                     )
+                    # Update the title if the field exists
+                    if hasattr(state, "summary_chapter_titles"):
+                        # Ensure the list is long enough
+                        while (
+                            len(state.summary_chapter_titles)
+                            < conclusion_chapter.chapter_number
+                        ):
+                            state.summary_chapter_titles.append(
+                                f"Chapter {len(state.summary_chapter_titles) + 1}"
+                            )
+                        state.summary_chapter_titles[
+                            conclusion_chapter.chapter_number - 1
+                        ] = title
 
                 logger.info(
-                    f"Stored summary for chapter {conclusion_chapter.chapter_number}: {chapter_summary}"
+                    f"Stored summary for chapter {conclusion_chapter.chapter_number}: {summary_text}"
                 )
+                if hasattr(state, "summary_chapter_titles"):
+                    logger.info(
+                        f"Stored title for chapter {conclusion_chapter.chapter_number}: {title}"
+                    )
             except Exception as e:
                 logger.error(
                     f"Error generating chapter summary: {str(e)}", exc_info=True
@@ -307,27 +338,58 @@ async def process_choice(
                     else " (Incorrect answer)"
                 )
 
-            chapter_summary = await chapter_manager.generate_chapter_summary(
+            summary_result = await chapter_manager.generate_chapter_summary(
                 previous_chapter.content, choice_text, choice_context
             )
 
-            # Store the chapter summary in the state
+            # Extract title and summary from the result
+            title = summary_result.get("title", "Chapter Summary")
+            summary_text = summary_result.get("summary", "Summary not available")
+
+            # Store the chapter summary and title in the state
             if len(state.chapter_summaries) < previous_chapter.chapter_number:
                 # If this is the first summary, we might need to add placeholders for previous chapters
                 while (
                     len(state.chapter_summaries) < previous_chapter.chapter_number - 1
                 ):
                     state.chapter_summaries.append("Chapter summary not available")
-                state.chapter_summaries.append(chapter_summary)
+                    # Also add placeholder titles
+                    if hasattr(state, "summary_chapter_titles"):
+                        state.summary_chapter_titles.append(
+                            f"Chapter {len(state.summary_chapter_titles) + 1}"
+                        )
+
+                # Add the new summary and title
+                state.chapter_summaries.append(summary_text)
+                # Add the title if the field exists
+                if hasattr(state, "summary_chapter_titles"):
+                    state.summary_chapter_titles.append(title)
             else:
                 # Replace the summary at the correct index
                 state.chapter_summaries[previous_chapter.chapter_number - 1] = (
-                    chapter_summary
+                    summary_text
                 )
+                # Replace the title if the field exists
+                if hasattr(state, "summary_chapter_titles"):
+                    # Ensure the list is long enough
+                    while (
+                        len(state.summary_chapter_titles)
+                        < previous_chapter.chapter_number
+                    ):
+                        state.summary_chapter_titles.append(
+                            f"Chapter {len(state.summary_chapter_titles) + 1}"
+                        )
+                    state.summary_chapter_titles[
+                        previous_chapter.chapter_number - 1
+                    ] = title
 
             logger.info(
-                f"Stored summary for chapter {previous_chapter.chapter_number}: {chapter_summary}"
+                f"Stored summary for chapter {previous_chapter.chapter_number}: {summary_text}"
             )
+            if hasattr(state, "summary_chapter_titles"):
+                logger.info(
+                    f"Stored title for chapter {previous_chapter.chapter_number}: {title}"
+                )
         except Exception as e:
             logger.error(f"Error generating chapter summary: {str(e)}")
             # Don't fail the whole process if summary generation fails
@@ -837,7 +899,14 @@ async def generate_summary_content(state: AdventureState) -> str:
                 if i <= len(state.chapters):
                     chapter_type = state.chapters[i - 1].chapter_type.value.capitalize()
 
-                summary_content += f"### Chapter {i} ({chapter_type})\n"
+                # Get title from summary_chapter_titles if available
+                title = f"Chapter {i}"
+                if hasattr(state, "summary_chapter_titles") and i <= len(
+                    state.summary_chapter_titles
+                ):
+                    title = state.summary_chapter_titles[i - 1]
+
+                summary_content += f"### {title} ({chapter_type})\n"
                 summary_content += f"{summary}\n\n"
 
             # Add learning report section

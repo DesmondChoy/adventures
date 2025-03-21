@@ -439,3 +439,150 @@ class AdventureStateManager:
 
         # Append the chapter to the state
         self.state.chapters.append(chapter_data)
+
+    def format_adventure_summary_data(self, state: AdventureState) -> Dict[str, Any]:
+        """Format adventure state data for the React summary component.
+
+        Args:
+            state: The completed adventure state
+
+        Returns:
+            Formatted data for the React summary component
+        """
+        # Extract chapter summaries with titles
+        chapter_summaries = []
+
+        # Verify we have chapter summaries in the state
+        if not state.chapter_summaries or len(state.chapter_summaries) == 0:
+            logger.warning("No chapter summaries found in AdventureState")
+            # We'll continue with an empty list
+
+        # Process each chapter and its summary
+        for i, chapter in enumerate(state.chapters, 1):
+            # Get the summary for this chapter if available
+            summary = ""
+            if i <= len(state.chapter_summaries):
+                summary = state.chapter_summaries[i - 1]
+            else:
+                logger.warning(f"No summary found for chapter {i}")
+                summary = "Summary not available"
+
+            # Get title from summary_chapter_titles if available, otherwise extract from summary
+            title = f"Chapter {i}"
+            summary_text = summary
+
+            # Use stored title if available
+            if hasattr(state, "summary_chapter_titles") and i <= len(
+                state.summary_chapter_titles
+            ):
+                title = state.summary_chapter_titles[i - 1]
+            # Fall back to extraction if needed
+            elif ":" in summary and len(summary.split(":", 1)[0]) < 50:
+                title = summary.split(":", 1)[0].strip()
+                summary_text = summary.split(":", 1)[1].strip()
+
+            chapter_summaries.append(
+                {
+                    "number": i,
+                    "title": title,
+                    "summary": summary_text,
+                    "chapterType": chapter.chapter_type.value,
+                }
+            )
+
+        # Extract educational questions
+        educational_questions = []
+
+        # First check if we have lesson_questions in the state
+        if state.lesson_questions and len(state.lesson_questions) > 0:
+            logger.info(
+                f"Using {len(state.lesson_questions)} questions from state.lesson_questions"
+            )
+
+            for question_data in state.lesson_questions:
+                # Find the chapter that contains this question
+                chapter = next(
+                    (
+                        ch
+                        for ch in state.chapters
+                        if ch.chapter_type == ChapterType.LESSON
+                        and ch.question
+                        and ch.question.get("question") == question_data.get("question")
+                    ),
+                    None,
+                )
+
+                if chapter and chapter.response:
+                    response = chapter.response
+                    is_correct = response.is_correct
+                    chosen_answer = response.chosen_answer
+                else:
+                    logger.warning(
+                        f"Could not find chapter for question: {question_data.get('question')}"
+                    )
+                    is_correct = False
+                    chosen_answer = "No answer"
+
+                question_obj = {
+                    "question": question_data.get("question", "Unknown question"),
+                    "userAnswer": chosen_answer,
+                    "isCorrect": is_correct,
+                    "explanation": question_data.get("explanation", ""),
+                }
+
+                # Add correct answer if user was wrong
+                if not is_correct:
+                    correct_answer = question_data.get("correct_answer")
+                    if correct_answer:
+                        question_obj["correctAnswer"] = correct_answer
+
+                educational_questions.append(question_obj)
+        else:
+            # Extract questions directly from LESSON chapters
+            logger.info("Extracting questions from LESSON chapters")
+            for chapter in state.chapters:
+                if (
+                    chapter.chapter_type == ChapterType.LESSON
+                    and chapter.question
+                    and chapter.response
+                ):
+                    question_data = chapter.question
+                    response = chapter.response
+
+                    question_obj = {
+                        "question": question_data["question"],
+                        "userAnswer": response.chosen_answer,
+                        "isCorrect": response.is_correct,
+                        "explanation": question_data.get("explanation", ""),
+                    }
+
+                    # Add correct answer if user was wrong
+                    if not response.is_correct:
+                        correct_answer = next(
+                            (
+                                answer["text"]
+                                for answer in question_data["answers"]
+                                if answer["is_correct"]
+                            ),
+                            None,
+                        )
+                        if correct_answer:
+                            question_obj["correctAnswer"] = correct_answer
+
+                    educational_questions.append(question_obj)
+
+        # Calculate statistics
+        statistics = {
+            "chaptersCompleted": len(state.chapters),
+            "questionsAnswered": len(educational_questions),
+            "timeSpent": "30 mins",  # This could be calculated from timestamps in the future
+            "correctAnswers": sum(
+                1 for q in educational_questions if q.get("isCorrect", False)
+            ),
+        }
+
+        return {
+            "chapterSummaries": chapter_summaries,
+            "educationalQuestions": educational_questions,
+            "statistics": statistics,
+        }
