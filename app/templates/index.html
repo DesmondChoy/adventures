@@ -86,7 +86,13 @@
                         </div>
                         <div class="card-face card-back">
                             <div class="carousel-title">{{ topic }}</div>
-                            <div class="carousel-description">Learn about {{ topic }}!</div>
+                            <div class="carousel-description">
+                                {% if topic in topic_subtopics and topic_subtopics[topic] %}
+                                    Topics include {{ topic_subtopics[topic]|join(', ') }}!
+                                {% else %}
+                                    Learn about {{ topic }}!
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                     {% endfor %}

@@ -89,12 +89,24 @@ async def adventure(request: Request):
             },
         )
 
+        # Create a dictionary mapping topics to their subtopics
+        topic_subtopics = {}
+        for topic in lesson_data["topic"].unique():
+            # Get all subtopics for this topic
+            topic_df = lesson_data[lesson_data["topic"] == topic]
+            if "subtopic" in topic_df.columns:
+                subtopics = topic_df["subtopic"].unique().tolist()
+                topic_subtopics[topic] = subtopics
+            else:
+                topic_subtopics[topic] = []
+
         return templates.TemplateResponse(
             "index.html",
             {
                 "request": request,
                 "story_categories": story_categories,  # This now contains the complete category data
                 "lesson_topics": lesson_data["topic"].unique(),
+                "topic_subtopics": topic_subtopics,  # Add the topic to subtopics mapping
                 **context,
             },
         )
