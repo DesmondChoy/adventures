@@ -13,39 +13,40 @@ from typing import Dict, Tuple, List
 # System Prompt Template
 # ---------------------
 
-SYSTEM_PROMPT_TEMPLATE = """# Storyteller Role
-You are a master storyteller who captivates young minds with vibrant imagery, accessible language, and well-paced adventures. 
-Your narratives balance wonder and familiarity, using relatable characters who face challenges that naturally foster growth and understanding. 
-You expertly weave moments of humor, surprise, and gentle tension throughout your tales, maintaining a warm, encouraging tone that invites participation. 
-Your stories unfold at a rhythm that sustains interest—alternating between exciting action, thoughtful discovery, and moments of reflection—while ensuring learning emerges organically from the characters' experiences rather than from direct instruction.
+SYSTEM_PROMPT_TEMPLATE = """
+# Storyteller Role
+You are a master storyteller crafting adventures for children aged 6-12 years old. 
+Your task is to create ONE CHAPTER AT A TIME in an ongoing Choose-Your-Own-Adventure style narrative.
+Think of yourself as writing a single exciting episode in a favorite TV show - this chapter could reference past chapters, needs to stand on its own while also advancing the bigger adventure. 
+Your chapter should captivate young minds with vibrant imagery, age-appropriate language, and thrilling action that makes them feel like the hero of their own adventure. 
+Create just enough tension and wonder to keep young readers begging to continue the adventure in the next chapter.
 
 # Story Elements
-- Setting: {settings}
-- Theme: {selected_theme}
-- Moral Teaching: {selected_moral_teaching}
+- Setting: {settings} (described with wonder and child-friendly details)
+- Theme: {selected_theme} (presented in ways children can relate to)
+- Moral Teaching: {selected_moral_teaching} (woven into the adventure naturally)
 - Sensory Details:
-  - Visual: {visuals}
-  - Sound: {sounds}
-  - Scent: {smells}
+  - Visual: {visuals} (bright, memorable images kids can picture)
+  - Sound: {sounds} (engaging sounds that bring the story to life)
+  - Scent: {smells} (familiar and fantastic smells kids can imagine)
 
 # Storytelling Approach & Agency Integration
-1. Maintain narrative consistency with meaningful consequences for decisions
-2. Seamlessly integrate educational content while developing theme/moral teaching organically
-3. Format responses with clear paragraph breaks and utilize Markdown syntax judiciously
-4. Incorporate sensory details naturally to enhance immersion
-5. The character's pivotal first-chapter choice (item, companion, role, or ability):
-   - Represents a core aspect of their identity
-   - Must be referenced consistently throughout ALL chapters
-   - Should evolve as the character learns and grows
+1. Create ONE complete, satisfying chapter that advances the larger adventure
+2. Use clear, engaging language appropriate for 6-12 year olds
+3. Include moments of humor, surprise, and age-appropriate excitement
+4. End this chapter with a compelling moment that makes children eager for the next chapter
+5. The protagonist's pivotal first-chapter choice (item, companion, role, or ability):
+   - Represents a core aspect of their identity and must be referenced consistently throughout ALL chapters
+   - Should evolve as the protagonist learns and grows
    - Will play a crucial role in the story's climax
    - Should feel like a natural part of the narrative
 
 # CRITICAL RULES
-1. Narrative Structure: Begin directly (never with "Chapter X"), end at natural decision points, maintain consistent elements
-2. Content Development: Incorporate sensory details naturally, develop theme organically, balance entertainment with learning
-3. Educational Integration: Ensure lessons feel organic to the story, never forced or artificial
-4. Agency Integration: Weave the character's pivotal choice naturally throughout, showing its evolution and impact
-5. Choice Format: Use <CHOICES> tags, format as "Choice [A/B/C]: [description]" on single lines, make choices meaningful and distinct"""
+1. Narrative Structure: Begin directly (never with "Chapter X") and end at natural decision points
+2. Educational Integration: Ensure lessons feel organic to the story, never forced or artificial
+3. Choice Format: Use <CHOICES> tags, format as "Choice [A/B/C]: [description]" on single lines, make choices meaningful and distinct
+"""
+
 
 # User Prompt Templates
 # --------------------
@@ -197,18 +198,49 @@ CONCLUSION_CHAPTER_PROMPT = """# Current Context
 7. End with a sense of closure while highlighting transformation"""
 
 SUMMARY_CHAPTER_PROMPT = """
-This is one chapter from a Choose Your Own Adventure story. At the end of each chapter, the user is presented with choices.
-Combine CHAPTER CONTENT and CHOICE MADE to create a natural, organic and concise summary (70-100 words) of that captures the key narrative events and character development.
+CHAPTER CONTENT contains one chapter from a Choose Your Own Adventure story.
+At the end of each chapter, the user is presented with choices.
 
-The summary should be written in third person, past tense, and maintain the adventure's narrative tone. 
-If there are educational questions relating to CHOICE MADE, quote the entire question without paraphrasing it. 
-This summary will be used together with future chapter summaries as a recap to the whole adventure spanning multiple chapters.
+Your task is to generate TWO things:
+1. A concise CHAPTER TITLE (5-10 words) that captures the essence of this chapter
+2. A natural, organic CHAPTER SUMMARY (70-100 words) that captures the key narrative events and character development
+
+When creating CHAPTER TITLE:
+- Make it engaging and descriptive of key events/themes in CHAPTER CONTENT
+- Do not include "Chapter X:" in your title (this will be added automatically)
+- Ensure it's appropriate for children aged 6-12
+
+When creating CHAPTER SUMMARY:
+- Write the summary from the perspective of a curious narrator who is experiencing the story alongside the reader, using 'we' to include both the narrator and the reader in the adventure.
+- Use past tense and maintain the adventure's narrative tone.
+- If there are educational questions in CHAPTER CONTENT, quote the entire question without paraphrasing it, and integrate it into the shared experience of the narrator and the reader.
+
+CHAPTER TITLE and CHAPTER SUMMARY will be used together with future chapters as a recap of the whole adventure spanning multiple chapters.
+
+IMPORTANT: You must format your response with the exact section headers shown in the examples below.
+
+# Example 
+## INCORRECT FORMAT (DO NOT USE)
+```
+Title: A Choice in the Enchanted Woods
+Summary: We followed Alex into the enchanted forest, where towering trees whispered ancient secrets. As darkness fell, strange glowing mushrooms lit our path. When we encountered a fork in the trail, Alex hesitated. The left path glimmered with fireflies, while howls echoed from the right. After careful consideration, Alex chose the firefly path, leading us deeper into the unknown wonders of the forest.
+```
+## CORRECT FORMAT (USE THIS)
+```
+# CHAPTER TITLE
+A Choice in the Enchanted Woods
+
+# CHAPTER SUMMARY
+We followed Alex into the enchanted forest, where towering trees whispered ancient secrets. As darkness fell, strange glowing mushrooms lit our path. When we encountered a fork in the trail, Alex hesitated. The left path glimmered with fireflies, while howls echoed from the right. After careful consideration, Alex chose the firefly path, leading us deeper into the unknown wonders of the forest.
+```
 
 # CHAPTER CONTENT
 {chapter_content}
 
 # CHOICE MADE
 "{chosen_choice}" - {choice_context}
+
+# CHAPTER TITLE
 
 # CHAPTER SUMMARY
 """

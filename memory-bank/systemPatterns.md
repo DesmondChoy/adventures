@@ -14,7 +14,14 @@ graph TD
     CM <--> SL[Story Loader]
     SL <--> SF[(Story Files)]
     LLM <--> PF[Paragraph Formatter]
-
+    
+    %% New React Summary Components
+    Client <--> SR[Summary Router]
+    SR <--> RSUM[React Summary App]
+    SR <--> SAPI[Summary API]
+    SAPI <--> SGEN[Summary Generator]
+    SGEN <--> AS
+    
     subgraph Client Side
         LP[localStorage] <--> CSM[Client State Manager]
         CSM <--> Client
@@ -38,6 +45,12 @@ graph TD
         LLM --> CM
         IMG --> WSS
         SF --> SL
+    end
+    
+    subgraph React Summary
+        RSUM
+        SAPI
+        SGEN
     end
 ```
 
@@ -147,7 +160,35 @@ graph TD
 
 ## Key Patterns
 
-### 1. Frontend Component Architecture
+### 1. React-based Summary Architecture
+- **TypeScript Interfaces** (`app/static/experimental/celebration-journey-moments-main/src/lib/types.ts`)
+  * Defines structured data interfaces for the summary components
+  * `ChapterSummary`: Chapter number, title, summary, and chapter type
+  * `EducationalQuestion`: Question, user answer, correctness, and explanation
+  * `AdventureStatistics`: Metrics about the adventure
+  * `AdventureSummaryData`: Container for all summary data
+
+- **React Components** (`app/static/experimental/celebration-journey-moments-main/src/pages/AdventureSummary.tsx`)
+  * Fetches data from API endpoint
+  * Displays chapter summaries in a timeline format
+  * Shows educational questions with correct/incorrect indicators
+  * Presents statistics about the adventure
+  * Includes animations and visual enhancements
+
+- **FastAPI Integration** (`app/routers/summary_router.py`)
+  * `/adventure/summary`: Serves the React app
+  * `/adventure/api/adventure-summary`: Provides the summary data
+  * Error handling and logging for API endpoints
+  * Integration with main FastAPI application
+
+- **Data Generation** (`tests/simulations/generate_chapter_summaries_react.py`)
+  * Extracts chapter summaries from simulation state files
+  * Generates chapter titles from content
+  * Extracts educational questions and answers
+  * Calculates adventure statistics
+  * Formats data for React components
+
+### 2. Frontend Component Architecture
 - **CSS Organization** (`app/static/css/`)
   * Organized by purpose and responsibility:
     - `layout.css`: Structural elements, containers, screen transitions
@@ -203,3 +244,50 @@ graph TD
   * Consistent section ordering across templates
   * Clear delineation between system and user prompts
   * Hierarchical organization for improved readability
+
+- **Format Example Pattern**:
+  * Providing both incorrect and correct examples in prompts
+  * Showing the incorrect example first to highlight what to avoid
+  * Following with the correct example to demonstrate desired format
+  * Using clear section headers like "INCORRECT FORMAT (DO NOT USE)" and "CORRECT FORMAT (USE THIS)"
+  * Explicitly instructing the LLM to use exact section headers
+  * Example implementation in `SUMMARY_CHAPTER_PROMPT` for title and summary extraction
+
+### 6. Mobile-Optimized Scrolling Pattern
+- **Fixed Height with Dynamic Content**:
+  * Using fixed container heights with scrollable content areas
+  * Explicit height containers with proper overflow handling
+  * Conditional rendering based on device type using the `useIsMobile` hook
+  * Different scroll behavior for mobile vs. desktop
+
+- **Touch-Optimized Scroll Areas**:
+  * Enhanced ScrollArea component with mobile-specific properties
+  * Custom CSS classes for touch device optimization
+  * Properties like `touch-auto`, `overflow-auto`, and `overscroll-contain`
+  * Wider scrollbars for better touch interaction
+  * Visual indicators (fade effects) to show scrollable content
+
+- **Transition Management**:
+  * Careful management of CSS transitions to avoid interference with scrolling
+  * Using `transition-opacity` instead of `transition-all` for scrollable content
+  * Maintaining smooth animations while ensuring scrollability
+  * Example implementation in `ChapterCard.tsx` for summary cards
+
+### 7. Simulation and Testing Pattern
+- **Standardized Logging**:
+  * Consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`, `EVENT:CHOICE_SELECTED`)
+  * Source tracking for debugging (e.g., `source="chapter_update"`, `source="verification"`)
+  * Structured data in log entries with standardized fields
+  * Multiple verification points to ensure complete data capture
+
+- **Error Handling and Recovery**:
+  * Specific error types for different failure scenarios
+  * Exponential backoff for retries with configurable parameters
+  * Graceful degradation when services are unavailable
+  * Comprehensive logging of error states and recovery attempts
+
+- **Helper Functions for Common Operations**:
+  * `log_chapter_summary()`: Standardized chapter summary logging
+  * `verify_chapter_summaries()`: Verification of complete chapter summaries
+  * `establish_websocket_connection()`: Connection with retry logic
+  * `send_message()`: Standardized message sending

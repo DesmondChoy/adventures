@@ -325,12 +325,10 @@ class GeminiService(BaseLLMService):
             context=context,
         )
 
-        print("\n=== DEBUG: LLM Prompt Request ===")
-        print("System Prompt:")
-        print(system_prompt)
-        print("\nUser Prompt:")
-        print(user_prompt)
-        print("========================\n")
+        logger.debug("\n=== DEBUG: LLM Prompt Request ===")
+        logger.debug(f"System Prompt:\n{system_prompt}")
+        logger.debug(f"User Prompt:\n{user_prompt}")
+        logger.debug("========================\n")
 
         try:
             # Initialize the model with system prompt
@@ -375,23 +373,23 @@ class GeminiService(BaseLLMService):
 
             # Phase 2: If formatting is needed, reformat and yield the complete text
             if needs_formatting:
-                print(
+                logger.info(
                     "Detected text without proper paragraph formatting, reformatting..."
                 )
                 reformatted_text = await reformat_text_with_paragraphs(
                     self, full_response
                 )
                 yield reformatted_text
-                print("Sent reformatted text with proper paragraphing")
+                logger.info("Sent reformatted text with proper paragraphing")
 
             # Log the complete response
-            print("\n=== DEBUG: LLM Response ===")
-            print(reformatted_text if needs_formatting else full_response)
-            print("========================\n")
+            logger.debug("\n=== DEBUG: LLM Response ===")
+            logger.debug(reformatted_text if needs_formatting else full_response)
+            logger.debug("========================\n")
 
         except Exception as e:
-            print("\n=== ERROR: LLM Request Failed ===")
-            print(f"Error type: {type(e).__name__}")
-            print(f"Error message: {str(e)}")
-            print("===============================\n")
+            logger.error("\n=== ERROR: LLM Request Failed ===")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Error message: {str(e)}")
+            logger.error("===============================\n")
             raise  # Re-raise the exception after logging

@@ -39,7 +39,8 @@
      * `carousel-manager.js`: Reusable carousel component
      * `font-size-manager.js`: Text size adjustment for mobile
 4. Tests: `tests/` directory
-   - Story simulations: `tests/simulations/story_simulation.py`
+   - Simulation scripts: `tests/simulations/generate_all_chapters.py` (main simulation script)
+   - Chapter summary generation: `tests/simulations/generate_chapter_summaries.py`
    - Data tests: `tests/data/` (story loader, elements, chapter manager)
 
 ### LLM Service Provider Differences
@@ -67,6 +68,13 @@
    - When parsing responses, implement flexible parsing that can handle variations
    - Add validation to ensure critical information is extracted correctly
    - Consider using regex patterns that can handle different response structures
+   - For critical format requirements, use the Format Example Pattern:
+     * Provide both incorrect and correct examples in prompts
+     * Show the incorrect example first to highlight what to avoid
+     * Follow with the correct example to demonstrate desired format
+     * Use clear section headers like "INCORRECT FORMAT (DO NOT USE)" and "CORRECT FORMAT (USE THIS)"
+     * Explicitly instruct the LLM to use exact section headers
+     * Example implementation in `SUMMARY_CHAPTER_PROMPT` for title and summary extraction
 
 ### Critical Implementation Rules
 1. State Management:
@@ -79,6 +87,12 @@
    - Type hints required for all state properties
    - State changes must be logged
    - Agency choice MUST be stored in `state.metadata["agency"]`
+   - When extending Pydantic models like AdventureState:
+     * New fields MUST be properly defined using Pydantic's Field
+     * Example: `new_field: Dict[str, Any] = Field(default_factory=dict, description="...")`
+     * Initialize fields in __init__ method by adding to kwargs before calling super().__init__
+     * Add null checking for all field operations to handle edge cases
+     * Use proper type hints for all fields
 
 2. Chapter Requirements:
    - First chapter MUST be STORY type with agency choice
@@ -170,6 +184,94 @@
      * Core functionality must work without JavaScript
      * Add enhanced features when JavaScript is available
      * Provide fallbacks for older browsers
+   - React App Development and Build Process:
+     * React app source code is located in `app/static/experimental/celebration-journey-moments-main/`
+     * After making changes to React components, you MUST rebuild the app:
+       ```
+       cd app/static/experimental/celebration-journey-moments-main
+       npm run build
+       ```
+     * The build process creates optimized files in the `dist` folder
+     * These files are served by FastAPI through the `/adventure/summary` endpoint
+     * Changes to React source files won't be reflected until you rebuild
+     * For development, you can use `npm run dev` for hot reloading
+     * Key React components:
+       * `ChapterCard.tsx`: Displays chapter information in the adventure summary
+       * `EducationalCard.tsx`: Displays educational questions and answers
+       * `StatisticCard.tsx`: Displays adventure statistics (chapters completed, questions answered, time spent)
+       * `AdventureSummary.tsx`: Main page component that integrates all other components
+     * Adventure Summary Statistics:
+       * Statistics are extracted from the AdventureState and displayed in StatisticCard components
+       * `chaptersCompleted`: Shows the total number of chapters in the adventure (typically 10)
+       * `questionsAnswered`: Shows the number of questions asked in LESSON chapters (typically 3)
+       * `correctAnswers`: Shows the number of questions answered correctly (calculated from educational questions)
+       * `timeSpent`: Shows the time spent on the adventure (currently hardcoded to "30 mins")
+
+9. Simulation and Testing:
+   - Simulation Scripts Organization:
+     * `generate_all_chapters.py`: Main simulation script for generating complete adventures
+     * `generate_chapter_summaries.py`: Standalone script for generating chapter summaries and React-compatible JSON data
+     * `chapter_tools.py`: Utility functions for working with chapters
+     * `log_utils.py`: Utility functions for log processing
+     * `analyze_chapter_state.py`: Tool for analyzing chapter state
+     * `test_chapter_sequence_validation.py` and `test_chapter_type_assignment.py`: Test files for validation
+   
+   - Chapter Summary Generation:
+     * Use `generate_chapter_summaries.py` with the `--react-json` flag to generate React-compatible JSON data
+     * The script extracts chapter content from simulation state JSON files
+     * It generates summaries using the same prompt template for all chapters
+     * It extracts educational questions and calculates statistics
+     * Command-line options:
+       ```
+       python tests/simulations/generate_chapter_summaries.py --react-json
+       ```
+     * Statistics calculation:
+       * `chaptersCompleted`: Extracted from `state.story_length` (typically 10)
+       * `questionsAnswered`: Hardcoded to 3 for the current implementation
+       * `correctAnswers`: Calculated by counting questions with `isCorrect: true`
+       * `timeSpent`: Hardcoded to "30 mins" for the current implementation
+   
+   - Standardized Logging Requirements:
+     * Use consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`, `EVENT:CHOICE_SELECTED`)
+     * Include source tracking for debugging (e.g., `source="chapter_update"`, `source="verification"`)
+     * Use structured data in log entries with standardized fields
+     * Implement multiple verification points to ensure complete data capture
+     * Use the `log_chapter_summary()` function for all chapter summary logging
+     * Use the `verify_chapter_summaries()` function to check for missed summaries
+   
+   - Error Handling Requirements:
+     * Use specific error types for different failure scenarios
+     * Implement exponential backoff for retries with configurable parameters
+     * Provide graceful degradation when services are unavailable
+     * Include comprehensive logging of error states and recovery attempts
+     * Use the `establish_websocket_connection()` function with proper retry logic
+     * Use the `send_message()` function for consistent WebSocket message sending
+   
+   - WebSocket Implementation Requirements:
+     * Use `import websockets.client` instead of `import websockets`
+     * Use `websockets.client.WebSocketClientProtocol` in type hints:
+       ```python
+       async def function_name(
+           websocket: websockets.client.WebSocketClientProtocol,
+           param: Type
+       ) -> ReturnType:
+       ```
+     * Implement proper timeout handling for different operation types:
+       ```python
+       STANDARD_TIMEOUT = 30  # seconds for general operations
+       CONCLUSION_TIMEOUT = 60  # seconds for conclusion chapter
+       SUMMARY_TIMEOUT = 60  # seconds for summary operations
+       ```
+     * Use `asyncio.wait_for()` with appropriate timeout values
+     * Handle connection closed events and timeouts gracefully
+     * Implement retry logic with exponential backoff for connection attempts
+   
+   - Simulation Structure:
+     * A complete simulation must include all 10 chapters plus the SUMMARY chapter
+     * The simulation must send the "reveal_summary" choice after the CONCLUSION chapter
+     * All chapter summaries must be captured and logged with standardized format
+     * The simulation must verify that all chapter summaries are properly logged
+     * The simulation must include comprehensive logging of all events and state transitions
 
 ## Documentation
 

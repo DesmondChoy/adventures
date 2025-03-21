@@ -145,6 +145,12 @@ class AdventureState(BaseModel):
         description="Summaries of each chapter for display in the SUMMARY chapter",
     )
 
+    # Chapter titles for the SUMMARY chapter
+    summary_chapter_titles: List[str] = Field(
+        default_factory=list,
+        description="Titles of each chapter for display in the SUMMARY chapter",
+    )
+
     # Lesson questions for the SUMMARY chapter
     lesson_questions: List[Dict[str, Any]] = Field(
         default_factory=list,

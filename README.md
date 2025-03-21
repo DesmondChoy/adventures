@@ -14,6 +14,7 @@ This app aims to promote learning and curiosity by weaving together educational 
    - Make a pivotal agency choice in the first chapter that evolves throughout your journey
    - Story Object Method seamlessly integrates educational content into the narrative flow
    - Visual representations of agency choices through AI-generated images
+   - Complete your journey with a personalized adventure summary and learning report
    - WIP: Users can upload their own settings and/or lesson topics.
 
 2. **Technical Innovation**
@@ -22,6 +23,8 @@ This app aims to promote learning and curiosity by weaving together educational 
    - Provider-agnostic AI integration supporting GPT-4o/Gemini 2.0 Flash for text and Imagen3 for image generation
    - Advanced narrative techniques (Story Object Method, phase-specific guidance, plot twist development)
    - Comprehensive state tracking with client-side persistence and metadata management
+   - Dual-purpose content generation for narrative summaries and visual scenes
+   - Progressive chapter summaries for complete adventure recaps
 
 ## Architecture Overview
 
@@ -37,6 +40,7 @@ graph TD
     WSS <--> IMG[Image Generation Service]
     CM <--> SL[Story Loader]
     SL <--> SF[(Story Files)]
+    LLM <--> PF[Paragraph Formatter]
 
     subgraph Client Side
         LP[localStorage] <--> CSM[Client State Manager]
@@ -53,7 +57,7 @@ graph TD
         CM
         LLM
         IMG
-        SL
+        PF
     end
 
     subgraph Routing
@@ -74,6 +78,7 @@ graph TD
 - **AI Integration**: Provider-agnostic implementation supporting GPT-4o/Gemini 2.0 Flash for text and Imagen3 for image generation
 - **Architecture**: Real-time WebSocket updates, SQLite database, comprehensive error handling, and asynchronous processing
 - **Frontend**: Modular CSS organization, 3D carousel with animations, responsive design, content streaming with Markdown support, and progressive enhancement for images
+- **Text Processing**: Intelligent paragraph formatting for improved readability, word-by-word streaming with natural delays
 
 ## Setup
 
@@ -117,6 +122,12 @@ app/
 │   ├── image_generation_service.py # AI image generation for agency choices
 │   ├── websocket_service.py       # WebSocket business logic
 │   └── llm/                       # LLM integration with prompt engineering
+│       ├── __init__.py            # Package initialization
+│       ├── base.py                # Abstract base classes for LLM providers
+│       ├── paragraph_formatter.py # Intelligent text formatting
+│       ├── prompt_engineering.py  # Prompt construction system
+│       ├── prompt_templates.py    # Templates for different chapter types
+│       └── providers.py           # Provider abstraction layer
 ├── data/              
 │   ├── lessons/                   # Individual lesson topic CSV files
 │   ├── lesson_loader.py           # Lesson data loading and filtering
@@ -136,6 +147,17 @@ app/
 │   │   └── font-size-manager.js   # Mobile font size controls
 │   └── images/                    # Static assets
 └── utils/                         # Utility functions
+tests/
+├── __init__.py                    # Package initialization
+├── data/                          # Data-related tests
+└── simulations/                   # Simulation framework
+    ├── generate_all_chapters.py   # Main simulation script
+    ├── generate_chapter_summaries.py # Chapter summary generator
+    ├── log_utils.py               # Utility functions for log processing
+    ├── test_chapter_sequence_validation.py # Validation tests
+    └── test_chapter_type_assignment.py # Chapter type tests
+tools/
+└── code_complexity_analyzer.py    # Code complexity analysis tool
 ```
 
 The project structure reflects our focus on:
@@ -144,19 +166,71 @@ The project structure reflects our focus on:
 - Maintainable codebase
 - Scalable architecture
 
+## Key Features
+
+### Chapter Types and Flow
+- **STORY Chapters**: Fully LLM-generated narrative with choices, first chapter includes agency choice
+- **LESSON Chapters**: Educational content from CSV files with LLM narrative wrapper
+- **REFLECT Chapters**: Follow-up to LESSON chapters with narrative-driven approach to test deeper understanding
+- **CONCLUSION Chapter**: Final chapter with no choices, providing story resolution
+- **SUMMARY Chapter**: Recap of the adventure with chapter summaries and learning report
+
+### Agency System
+- First chapter choice from four categories (items, companions, roles, abilities)
+- Agency evolves throughout the adventure based on educational responses
+- Agency plays pivotal role in climax phase
+- Agency has meaningful resolution in conclusion
+
+### Dual-Purpose Content Generation
+- **Chapter Summaries**: 70-100 words focusing on narrative events and character development
+- **Image Scenes**: 20-30 words describing the most visually striking moment from a chapter
+- Separate generation processes optimized for different purposes
+
+### Paragraph Formatting
+- Intelligent detection of text that needs paragraph formatting
+- Multiple retry attempts with progressively stronger formatting instructions
+- Buffer-based approach for streaming optimization
+- Improved readability for all LLM responses
+
+## Recent Enhancements
+
+- Updated chapter summary generation to work with simulation state JSON files
+- Added delay mechanism to prevent API timeouts in chapter summary generation
+- Consolidated simulation scripts for better maintainability
+- Standardized chapter summary logging and extraction
+- Enhanced chapter summaries with educational context
+- Separated image scene generation from narrative summaries
+- Improved paragraph formatting for better readability
+- Implemented modern UI enhancements across all devices
+
 ## Testing
 
 The project includes a comprehensive testing framework focused on end-to-end validation:
 
-- **Simulation Framework**: Automated adventure progression with random choices, comprehensive logging, and standardized prefixes for parsing (`CHAPTER_TYPE`, `CHOICE`, `LESSON`, `STATS`)
-- **Test Coverage**: Functionality testing (chapter sequences, lesson ratios, state transitions) and error handling (detection, recovery, logging)
-- **Running Tests**: Simple command-line interface with options for full workflow, specific story/topic testing, or analysis of existing logs
+- **Simulation Framework**: 
+  - Main simulation script (`generate_all_chapters.py`) for generating complete adventures
+  - Standalone chapter summary generator (`generate_chapter_summaries.py`)
+  - Standardized logging with consistent event prefixes for parsing
+  - Comprehensive error handling with specific error types
+  - Multiple verification points to ensure complete data capture
 
-```bash
-# Run the complete workflow (server, simulation, tests)
-python tests/simulations/run_simulation_tests.py
-```
+- **Test Coverage**: 
+  - Functionality testing (chapter sequences, lesson ratios, state transitions)
+  - Error handling (detection, recovery, logging)
+  - Chapter summary generation and validation
+  - WebSocket connection management
 
+- **Running Tests**: 
+  ```bash
+  # Run the complete simulation to generate all chapters
+  python tests/simulations/generate_all_chapters.py
+  
+  # Generate chapter summaries from a simulation state file
+  python tests/simulations/generate_chapter_summaries.py
+  
+  # Run chapter sequence validation tests
+  python tests/simulations/test_chapter_sequence_validation.py
+  ```
 
 ## Technical Constraints
 

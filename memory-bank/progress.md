@@ -2,7 +2,103 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-03-21
+- Completed Summary Chapter Migration by removing experimental directory
+- Updated build_summary_app.py to use permanent location instead of experimental directory
+- Deleted experimental directory after confirming all functionality was migrated
+- Updated documentation to reflect the new architecture
+- Verified functionality with test script to ensure everything still works
+- Removed static JSON fallbacks from summary chapter
+- Updated summary_router.py to remove fallbacks to static JSON file
+- Updated React component to not use default data
+- Created test script to debug the summary chapter without generating all 10 chapters
+- Rebuilt React app to reflect changes
+- Fixed scrolling issue in ChapterCard component on mobile devices
+- Modified ChapterCard to use fixed height with proper scrolling functionality
+- Enhanced ScrollArea component with mobile-specific optimizations
+- Added custom CSS for better touch scrolling experience
+- Implemented explicit height container with proper overflow handling
+- Added visible scrollbars and fade effect to indicate scrollable content
+- Fixed statistics in adventure summary cards to display correct information
+- Modified generate_chapter_summaries.py to correctly extract statistics from AdventureState
+- Updated extract_educational_questions function to properly extract questions from LESSON chapters
+- Implemented dynamic counting mechanism for correct answers based on extracted questions
+- Updated generate_react_summary_data function to count correct answers from educational questions
+- Enhanced extract_educational_questions function with detailed debug logging
+- Removed hardcoded values in calculate_summary_statistics function
+- Enhanced ChapterCard component to completely hide summary text until expanded
+- Modified React component to use opacity and margin transitions for smoother UI
+- Rebuilt React app to apply UI enhancements to adventure summary
+- Fixed chapter summary title and summary extraction with format examples
+- Added incorrect and correct format examples to SUMMARY_CHAPTER_PROMPT
+- Enhanced parse_title_and_summary function to extract both title and summary
+- Consolidated chapter summary generation scripts into a single unified script
+- Added --react-json flag to generate React-compatible JSON data
+- Added --react-output flag to specify output file for React data
+- Implemented generate_react_summary_data function for React format
+- Changed default output path for React JSON to app/static directory
+- Updated script documentation to reflect output path changes
+- Added example for custom output location in script documentation
+- Fixed React summary app integration with FastAPI server
+- Updated summary_router.py to serve React app instead of test HTML
+- Configured React Router with proper basename for /adventure prefix
+- Ensured correct path resolution between FastAPI and React app
+- Maintained Learning Report format showing both chosen and correct answers
+- Fixed Node.js and npm detection issues in build_summary_app.py script
+- Enhanced Node.js and npm detection with robust path checking and fallback mechanisms
+- Added command-line options to manually specify Node.js and npm paths
+- Implemented retry mechanism with exponential backoff for file operations
+- Added detailed error handling and diagnostics for troubleshooting
+- Updated build script to check multiple possible installation locations for Node.js and npm
+- Added specific paths for NVM for Windows installations
+- Modified functions to use detected Node.js and npm paths
+- Enhanced file copying logic with retry mechanism and fallback strategies
+- Added file-by-file copying when directory operations fail
+- Enhanced error messages with specific suggestions
+- Updated migration plan documentation and moved it to the summary-chapter folder
+
+### 2025-03-20
+- Implemented React-based SUMMARY Chapter with Modern UI
+- Created TypeScript Interfaces for Adventure Summary Data
+- Developed FastAPI Endpoints for Serving React App and Data
+- Created Data Generation Script for React-compatible JSON
+- Added Chapter Title Generation from Content
+- Implemented Educational Questions Extraction
+- Created Adventure Statistics Calculation
+- Added Comprehensive Documentation for Summary Feature
+- Created Build and Run Scripts for React App Integration
+- Added Test Script for Summary Data Generation
+
+### 2025-03-19
+- Updated generate_chapter_summaries.py to Work with Simulation State JSON Files
+- Added Delay Mechanism to Prevent API Timeouts in Chapter Summary Generation
+- Consolidated Simulation Scripts by Removing Redundant Files
+- Renamed chapter_generator.py to generate_all_chapters.py for Consistency
+- Renamed CHAPTER_GENERATOR_README.md to GENERATE_ALL_CHAPTERS.md
+- Updated Documentation to Reflect Consolidated Approach
+- Improved Maintainability with Fewer Redundant Files
+- Standardized Naming Convention for Simulation Scripts
+
+### 2025-03-18
+- Fixed SimulationState Class in chapter_generator.py to Properly Define simulation_metadata Field
+- Fixed WebSocketClientProtocol Deprecation Warnings in chapter_generator.py
+- Created New chapter_generator.py Script for Complete Adventure Simulation
+- Implemented Proper Pydantic Integration for SimulationState Class
+- Enhanced Type Hints for Better IDE Support
+
+### 2025-03-17
+- Created Standalone Chapter Summary Generator Script with Error Handling
+- Implemented Compact Output Format for Chapter Summaries
+- Added Graceful Handling of Missing Chapters in Summary Generation
+- Partially Fixed WebSocket Connection Closure Issue (Chapter 10 summary still showing placeholder)
+- Refactored Story Simulation for Improved Maintainability
+- Standardized Chapter Summary Logging with Dedicated Functions
+- Enhanced Error Handling with Specific Error Types
+- Improved WebSocket Connection Management
+- Reduced Code Duplication in Simulation Code
+
 ### 2025-03-16
+- Standardized Chapter Summary Logging and Extraction
 - Updated Story Simulation for Complete Chapter Summaries
 - Improved CONCLUSION Chapter Summary Generation for Complete Adventure Recaps
 - Enhanced Chapter Summary Generation with Educational Context
@@ -69,6 +165,22 @@
 - Responsive design for both desktop and mobile
 
 ### Recent Enhancements
+- Fixed Node.js and npm detection issues in build_summary_app.py script
+- Enhanced Node.js and npm detection with robust path checking and fallback mechanisms
+- Added command-line options to manually specify Node.js and npm paths
+- Implemented retry mechanism with exponential backoff for file operations
+- Added detailed error handling and diagnostics for troubleshooting
+- Updated generate_chapter_summaries.py to work with simulation state JSON files instead of log files
+- Added delay mechanism to prevent API timeouts in chapter summary generation
+- Added command-line argument to customize delay between API calls
+- Consolidated simulation scripts for better maintainability and reduced redundancy
+- Standardized naming convention for simulation scripts with generate_all_chapters.py
+- Created standalone chapter summary generator script with robust error handling
+- Implemented compact output format for chapter summaries with flexible display options
+- Added graceful handling of missing chapters in summary generation
+- Partially fixed WebSocket connection closure issue (Chapter 10 summary still showing placeholder)
+- Refactored simulation code for improved maintainability and error handling
+- Standardized chapter summary logging and extraction for consistent debugging
 - Enhanced chapter summaries with educational context
 - Separated image scene generation from narrative summaries
 - Improved paragraph formatting for better readability
@@ -77,9 +189,14 @@
 - Fixed simulation log summary extraction and display
 
 ### Known Issues
-- None currently identified in the last 14 days
+- Chapter 10 summary still showing placeholder text instead of actual content
+- Need to investigate why the CONCLUSION chapter summary isn't being properly generated or captured
+- Chapter 10 content is visible in the terminal but not being captured in the simulation log file
 
 ## Next Steps
+- Fix Chapter 10 content capture in generate_all_chapters.py script
+- Investigate why the WebSocket connection is being closed or timing out before Chapter 10 content can be fully processed
+- Fix Chapter 10 summary generation and capture
 - Continue monitoring and optimizing LLM prompt usage
 - Consider implementing user difficulty selection UI
 - Explore additional educational content integration options

@@ -3,6 +3,20 @@
 ## Overview
 Learning Odyssey is an interactive educational platform that combines dynamic storytelling with structured learning through LLM-powered narrative experiences. The application creates personalized learning journeys where educational content and story-driven choices work together to create an immersive journey, culminating in satisfying narrative resolutions.
 
+## Problem Space
+Traditional educational platforms often lack:
+- Dynamic content adaptation
+- Engaging narrative integration
+- Real-time interaction
+- Personalized learning paths
+
+Learning Odyssey solves these challenges through:
+1. Pre-defined educational content (`lessons.csv`) with dynamic narrative delivery
+2. User-selected topics and adventure length
+3. LLM-generated narrative choices and resolutions
+4. Real-time state synchronization
+5. Agency system with meaningful character choices
+
 ## Key Features and Objectives
 
 1. **State Management (`app/models/story.py`):**
@@ -70,9 +84,12 @@ Learning Odyssey is an interactive educational platform that combines dynamic st
 
 2. User Experience
    * Strong narrative opening with agency choice
-   * Engaging story progression
-   * Meaningful choice impact
-   * Effective learning integration
-   * Satisfying story conclusions
-   * Reliable error recovery
-   * Visual representation of agency choices
+   * Engaging story progression with meaningful choice impact
+   * Effective learning integration through narrative wrapper
+   * Satisfying story conclusions with agency resolution
+   * Reliable error recovery and graceful degradation
+   * Visual representation of agency choices through AI-generated images
+   * Word-by-word streaming for natural reading experience
+   * Markdown formatting for enhanced text presentation
+   * Progressive enhancement (text first, images as they become available)
+   * Responsive design for both desktop and mobile
