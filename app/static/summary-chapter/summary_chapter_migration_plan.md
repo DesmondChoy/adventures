@@ -21,9 +21,9 @@ This document outlines the plan for migrating the Summary Chapter feature from t
    - [x] Test with simulation state files
 
 4. **Clean Up**
-   - [ ] Remove any remaining references to the experimental directory
-   - [ ] Delete the experimental directory once migration is complete
-   - [ ] Update documentation to reflect the new architecture
+   - [x] Remove any remaining references to the experimental directory
+   - [x] Delete the experimental directory once migration is complete
+   - [x] Update documentation to reflect the new architecture
 
 ## Implementation Details
 
@@ -42,15 +42,17 @@ This document outlines the plan for migrating the Summary Chapter feature from t
 - Verified correct number of chapters (10) and questions (3) are displayed
 - Tested with simulation state files
 
-### Remaining Tasks
-- Remove any remaining references to the experimental directory
-- Delete the experimental directory once migration is complete
-- Update documentation to reflect the new architecture
+### Clean Up
+- Updated `tools/build_summary_app.py` to remove references to the experimental directory
+- Modified the build script to use the permanent location for both source and destination
+- Added comments explaining that the experimental directory has been removed
+- Updated this document to mark all tasks as complete
 
 ## Build Process
 
-The build process uses `tools/build_summary_app.py` to:
-1. Build from the source in `app/static/experimental/celebration-journey-moments-main/`
-2. Output to the permanent location `app/static/summary-chapter/`
+The build process has been updated in `tools/build_summary_app.py` to:
+1. Use the permanent location `app/static/summary-chapter/` as both source and destination
+2. Remove all references to the experimental directory
+3. Add appropriate comments explaining the changes
 
-Once the migration is complete, the source code should be moved to a permanent location and the build script updated accordingly.
+The migration is now complete, with all references to the experimental directory removed and the build script updated to reflect the new architecture.

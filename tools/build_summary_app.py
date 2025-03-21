@@ -37,7 +37,8 @@ logging.basicConfig(
 logger = logging.getLogger("build_summary_app")
 
 # Constants
-REACT_APP_DIR = "app/static/experimental/celebration-journey-moments-main"
+# Note: The experimental directory has been removed as part of the migration.
+# The React app is now built directly from the permanent location.
 DEFAULT_OUTPUT_DIR = "app/static/summary-chapter"
 
 
@@ -350,10 +351,12 @@ def main():
         logger.setLevel(logging.DEBUG)
 
     # Get absolute paths
-    app_dir = os.path.abspath(REACT_APP_DIR)
+    # Note: Since the experimental directory has been removed, we use the same directory
+    # for both source and destination
+    app_dir = os.path.abspath(DEFAULT_OUTPUT_DIR)
     output_dir = os.path.abspath(args.output_dir)
 
-    logger.info(f"React app directory: {app_dir}")
+    logger.info(f"React app directory (same as output): {app_dir}")
     logger.info(f"Output directory: {output_dir}")
     logger.info(f"Build mode: {args.mode}")
 

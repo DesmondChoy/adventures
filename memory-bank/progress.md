@@ -3,6 +3,11 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-21
+- Completed Summary Chapter Migration by removing experimental directory
+- Updated build_summary_app.py to use permanent location instead of experimental directory
+- Deleted experimental directory after confirming all functionality was migrated
+- Updated documentation to reflect the new architecture
+- Verified functionality with test script to ensure everything still works
 - Removed static JSON fallbacks from summary chapter
 - Updated summary_router.py to remove fallbacks to static JSON file
 - Updated React component to not use default data
@@ -189,7 +194,6 @@
 - Chapter 10 content is visible in the terminal but not being captured in the simulation log file
 
 ## Next Steps
-- Complete the summary chapter migration by removing the experimental directory
 - Fix Chapter 10 content capture in generate_all_chapters.py script
 - Investigate why the WebSocket connection is being closed or timing out before Chapter 10 content can be fully processed
 - Fix Chapter 10 summary generation and capture
