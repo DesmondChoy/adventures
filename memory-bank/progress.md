@@ -10,6 +10,9 @@
 - Added --react-json flag to generate React-compatible JSON data
 - Added --react-output flag to specify output file for React data
 - Implemented generate_react_summary_data function for React format
+- Changed default output path for React JSON to app/static directory
+- Updated script documentation to reflect output path changes
+- Added example for custom output location in script documentation
 - Fixed React summary app integration with FastAPI server
 - Updated summary_router.py to serve React app instead of test HTML
 - Configured React Router with proper basename for /adventure prefix

@@ -1,6 +1,6 @@
 # Active Context
 
-## Improved Chapter Summary Generation with Format Examples (2025-03-21)
+## Improved Chapter Summary Generation and Integration (2025-03-21)
 
 1. **Fixed Chapter Summary Title and Summary Extraction:**
    * Problem: The LLM wasn't including the expected section headers in its response, causing the parsing function to fail to extract the title and summary
@@ -36,6 +36,21 @@
      - Consistent summary generation across all output formats
      - Easier maintenance with shared core functionality
      - Flexible command-line options for different use cases
+
+3. **Improved Default Output Path for React JSON:**
+   * Problem: The script was saving the React JSON file to the current working directory by default, but the web server was looking for it in the `app/static` directory
+   * Solution:
+     - Changed the default output path for the React JSON file to match the location expected by the web server
+     - Updated the script's documentation to reflect this change
+   * Implementation Details:
+     - Modified the default value for the `--react-output` parameter from `"adventure_summary_react.json"` to `"app/static/adventure_summary_react.json"`
+     - Updated the usage documentation to correctly show the `--react-output` parameter
+     - Added an example showing how to use a custom output location if needed
+   * Benefits:
+     - Simplified workflow - running the script with just `--react-json` now saves to the correct location
+     - Eliminated the need to manually copy the file or specify the output path
+     - Reduced the chance of errors from using outdated data
+     - Better user experience with more intuitive defaults
 
 ## Fixed React-based SUMMARY Chapter Integration (2025-03-21)
 
