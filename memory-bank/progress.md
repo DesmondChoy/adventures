@@ -3,6 +3,20 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-22
+- Enhanced summary chapter robustness to handle missing data gracefully
+- Improved `extract_educational_questions()` function in `generate_chapter_summaries.py` to handle case sensitivity
+- Added fallback questions when no questions are found to ensure the summary page always has content
+- Improved handling of questions without chapter matches to ensure they're still included
+- Enhanced error handling to prevent failures when question data is incomplete
+- Improved `calculate_summary_statistics()` function to use actual chapter counts instead of relying solely on story_length
+- Added robust error handling with fallback values when question extraction fails
+- Ensured statistics are always valid (no more correct answers than questions, at least one question)
+- Added better logging to track statistics calculation
+- Enhanced `format_adventure_summary_data()` method in `adventure_state_manager.py` to generate placeholder summaries
+- Improved title extraction with fallback to generic titles
+- Added better handling for missing educational questions
+- Ensured statistics are always valid, even when no questions are found
+- Added fallback question when LESSON chapters exist but no questions are extracted
 - Completely fixed "Trip down memory lane" button issue with comprehensive solution
 - Identified and fixed two main issues: case sensitivity in chapter types and duplicate state_id parameters
 - Enhanced case sensitivity handling to properly update chapter types to lowercase

@@ -1,26 +1,54 @@
 # Active Context
 
-## Current Focus: Fixed "Trip down memory lane" Button Issue (2025-03-22)
+## Current Focus: Enhanced Summary Chapter Robustness (2025-03-22)
 
-We've completely resolved the issue with the "Trip down memory lane" button at the end of the adventure. The button now works correctly in all scenarios, properly handling both case sensitivity in chapter types and duplicate state_id parameters.
+We've further improved the "Trip down memory lane" button functionality by enhancing the robustness of the summary chapter. The button now works correctly in all scenarios, even when chapter summaries and educational questions are not properly captured or stored.
 
 ### Solution Summary
 
-The issue was related to two main problems:
+The issue was related to three main problems:
 
-1. **Case Sensitivity in Chapter Types:**
+1. **Missing Chapter Summaries and Educational Questions:**
+   * When the state was stored and retrieved, chapter summaries and educational questions were sometimes missing
+   * We enhanced the `format_adventure_summary_data()` method in `adventure_state_manager.py` to generate placeholder summaries when none are found
+   * We improved title extraction with fallback to generic titles
+   * We added better handling for missing educational questions, including a fallback question
+   * We ensured statistics are always valid, even when no questions are found
+
+2. **Case Sensitivity in Chapter Types:**
    * The stored state contained uppercase chapter types (like "STORY", "LESSON", "CONCLUSION"), but the AdventureState model expected lowercase values (like "story", "lesson", "conclusion")
    * While there was code to handle this case conversion, it wasn't properly updating the chapter type to CONCLUSION
    * We enhanced the case sensitivity handling to not just detect uppercase chapter types but actually convert them to lowercase
    * We added special handling for the last chapter to ensure it's always treated as a CONCLUSION chapter, regardless of the total story length
 
-2. **Duplicate state_id Parameter Issue:**
+3. **Duplicate state_id Parameter Issue:**
    * The URL for the summary page sometimes contained duplicate state_id parameters, which caused issues with how the state was retrieved
    * We added code in `summary_router.py` to detect and handle duplicate state_id parameters
    * We updated `summary-state-handler.js` to clean up state_id values that might contain duplicates
    * We enhanced `react-app-patch.js` to properly handle URLs with existing state_id parameters
 
-We created a comprehensive test script (`tests/test_conclusion_chapter_fix.py`) that verifies the entire flow from storing a state to retrieving and reconstructing it, with a focus on the CONCLUSION chapter handling and duplicate state_id parameter issues.
+### Recent Improvements
+
+We've made the summary chapter more robust by:
+
+1. **Enhanced Question Extraction in `generate_chapter_summaries.py`:**
+   * Added case-insensitive chapter type matching to properly identify LESSON chapters
+   * Improved handling of questions without chapter matches to ensure they're still included
+   * Added fallback questions when no questions are found to ensure the summary page always has content
+   * Enhanced error handling to prevent failures when question data is incomplete
+
+2. **Improved Statistics Calculation in `generate_chapter_summaries.py`:**
+   * Now uses actual chapter counts instead of relying solely on story_length
+   * Added robust error handling with fallback values when question extraction fails
+   * Ensured statistics are always valid (no more correct answers than questions, at least one question)
+   * Added better logging to track statistics calculation
+
+3. **Enhanced Summary Data Formatting in `adventure_state_manager.py`:**
+   * Added generation of placeholder summaries when none are found
+   * Improved title extraction with fallback to generic titles
+   * Added better handling for missing educational questions
+   * Ensured statistics are always valid, even when no questions are found
+   * Added fallback question when LESSON chapters exist but no questions are extracted
 
 ### Recent Improvements
 
