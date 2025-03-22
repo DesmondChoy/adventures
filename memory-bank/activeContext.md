@@ -2,7 +2,7 @@
 
 ## Current Focus: Fixed "Trip down memory lane" Button Issue (2025-03-22)
 
-We've completely resolved the issue with the "Trip down memory lane" button at the end of Chapter 10. The button now works correctly in all scenarios, properly handling both case sensitivity in chapter types and duplicate state_id parameters.
+We've completely resolved the issue with the "Trip down memory lane" button at the end of the adventure. The button now works correctly in all scenarios, properly handling both case sensitivity in chapter types and duplicate state_id parameters.
 
 ### Solution Summary
 
@@ -12,7 +12,7 @@ The issue was related to two main problems:
    * The stored state contained uppercase chapter types (like "STORY", "LESSON", "CONCLUSION"), but the AdventureState model expected lowercase values (like "story", "lesson", "conclusion")
    * While there was code to handle this case conversion, it wasn't properly updating the chapter type to CONCLUSION
    * We enhanced the case sensitivity handling to not just detect uppercase chapter types but actually convert them to lowercase
-   * We added special handling for Chapter 10 to ensure it's always treated as a CONCLUSION chapter
+   * We added special handling for the last chapter to ensure it's always treated as a CONCLUSION chapter, regardless of the total story length
 
 2. **Duplicate state_id Parameter Issue:**
    * The URL for the summary page sometimes contained duplicate state_id parameters, which caused issues with how the state was retrieved
@@ -21,6 +21,22 @@ The issue was related to two main problems:
    * We enhanced `react-app-patch.js` to properly handle URLs with existing state_id parameters
 
 We created a comprehensive test script (`tests/test_conclusion_chapter_fix.py`) that verifies the entire flow from storing a state to retrieving and reconstructing it, with a focus on the CONCLUSION chapter handling and duplicate state_id parameter issues.
+
+### Recent Improvements
+
+We've made the code more flexible by removing hardcoded references to Chapter 10:
+
+1. **Focus on Last Chapter Instead of Chapter 10:**
+   * Previously, the code had hardcoded checks for Chapter 10 being the CONCLUSION chapter
+   * We've updated the code to focus on the last chapter (at position `story_length`) being the CONCLUSION chapter
+   * This makes the code more future-proof, as it will work even if the story length changes
+   * Changes were made in both `adventure_state_manager.py` and `summary_router.py`
+
+2. **More Robust CONCLUSION Chapter Detection:**
+   * We've improved the logic for detecting and handling the CONCLUSION chapter
+   * The code now properly identifies the last chapter as the CONCLUSION chapter
+   * It also updates the chapter type to CONCLUSION if needed
+   * This ensures the "Trip down memory lane" button works correctly regardless of the adventure's length
 
 ## Previous Focus: Case Sensitivity in Chapter Types (2025-03-22)
 

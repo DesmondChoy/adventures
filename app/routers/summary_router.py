@@ -131,7 +131,7 @@ async def get_adventure_summary(state_id: Optional[str] = None):
             # Log all chapters for debugging
             logger.info(f"Total chapters: {len(state.chapters)}")
 
-            # First check if chapter 10 exists (or the last chapter in a story of any length)
+            # Track the last chapter to ensure it's treated as a CONCLUSION chapter
             last_chapter = None
             for ch in state.chapters:
                 logger.info(
@@ -151,8 +151,6 @@ async def get_adventure_summary(state_id: Optional[str] = None):
                     ch.chapter_type == ChapterType.CONCLUSION
                     # Check string value (case-insensitive)
                     or str(ch.chapter_type).lower() == "conclusion"
-                    # Check chapter number (chapter 10 should be CONCLUSION)
-                    or (ch.chapter_number == 10 and state.story_length == 10)
                     # Check if it's the last chapter in a story of any length
                     or (
                         ch.chapter_number == state.story_length
@@ -172,12 +170,9 @@ async def get_adventure_summary(state_id: Optional[str] = None):
                         ch.chapter_type = ChapterType.CONCLUSION
                     break
 
-            # If we didn't find a CONCLUSION chapter but we have a last chapter, check if it's chapter 10
+            # If we didn't find a CONCLUSION chapter but we have a last chapter, treat it as CONCLUSION
             if not has_conclusion and last_chapter is not None:
-                if (
-                    last_chapter.chapter_number == 10
-                    or last_chapter.chapter_number == state.story_length
-                ):
+                if last_chapter.chapter_number == state.story_length:
                     logger.info(
                         f"Treating last chapter {last_chapter.chapter_number} as CONCLUSION chapter"
                     )

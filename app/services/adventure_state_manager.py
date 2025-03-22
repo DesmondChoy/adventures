@@ -578,13 +578,11 @@ class AdventureStateManager:
                                 f"Error converting chapter_type to enum: {e}"
                             )
 
-                # Special handling for chapter 10 - force it to be CONCLUSION
+                # Special handling for the last chapter - force it to be CONCLUSION
                 chapter_number = chapter.get("chapter_number")
-                if chapter_number == 10 or (
-                    chapter_number == stored_state.get("story_length", 10)
-                ):
+                if chapter_number == stored_state.get("story_length", 10):
                     logger.info(
-                        f"Setting chapter {chapter_number} type to 'conclusion' (was: {chapter.get('chapter_type', 'unknown')})"
+                        f"Setting last chapter {chapter_number} type to 'conclusion' (was: {chapter.get('chapter_type', 'unknown')})"
                     )
                     chapter["chapter_type"] = "conclusion"
 

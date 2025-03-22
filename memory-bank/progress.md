@@ -6,7 +6,9 @@
 - Completely fixed "Trip down memory lane" button issue with comprehensive solution
 - Identified and fixed two main issues: case sensitivity in chapter types and duplicate state_id parameters
 - Enhanced case sensitivity handling to properly update chapter types to lowercase
-- Added special handling for Chapter 10 to ensure it's always treated as a CONCLUSION chapter
+- Removed hardcoded references to Chapter 10 to make the code more future-proof
+- Added special handling for the last chapter to ensure it's always treated as a CONCLUSION chapter
+- Made the code more flexible to work with adventures of any length
 - Added code in summary_router.py to detect and handle duplicate state_id parameters
 - Updated summary-state-handler.js to clean up state_id values that might contain duplicates
 - Enhanced react-app-patch.js to properly handle URLs with existing state_id parameters
@@ -26,7 +28,7 @@
 - Implemented state comparison functionality to identify structural differences
 - Identified key differences between synthetic and realistic states
 - Added command-line options to test with different state sources (synthetic, file, category, topic)
-- Added special handling for chapter 10 to ensure it's always treated as a CONCLUSION chapter
+- Added special handling for the last chapter to ensure it's always treated as a CONCLUSION chapter
 - Enhanced type checking and conversion for all fields in state reconstruction
 - Added fallback mechanisms for missing or invalid data
 - Improved error handling and logging for better debugging

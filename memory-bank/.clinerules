@@ -117,12 +117,12 @@
      * Use fallback values for missing or invalid fields
      * Add detailed logging for validation failures
      * Handle case sensitivity issues with string comparisons
-     * Special handling for chapter 10 to ensure it's always treated as a CONCLUSION chapter:
+     * Special handling for the last chapter to ensure it's always treated as a CONCLUSION chapter:
        ```python
-       # Special handling for chapter 10
+       # Special handling for the last chapter
        chapter_number = chapter.get("chapter_number")
-       if chapter_number == 10 or (chapter_number == stored_state.get("story_length", 10)):
-           logger.info(f"Setting chapter {chapter_number} type to 'conclusion'")
+       if chapter_number == stored_state.get("story_length", 10):
+           logger.info(f"Setting last chapter {chapter_number} type to 'conclusion'")
            chapter["chapter_type"] = "conclusion"
        ```
      * Use flexible comparison for CONCLUSION chapter detection:
@@ -131,7 +131,6 @@
        if (
            ch.chapter_type == ChapterType.CONCLUSION
            or str(ch.chapter_type).lower() == "conclusion"
-           or (ch.chapter_number == 10 and state.story_length == 10)
            or (ch.chapter_number == state.story_length and state.story_length > 0)
        ):
            has_conclusion = True
@@ -414,7 +413,7 @@
      * Use `tests/test_state_storage_reconstruction.py` to test case sensitivity handling
      * It creates a test state with uppercase chapter types
      * It verifies that chapter types are correctly converted to lowercase during reconstruction
-     * It checks that chapter 10 is correctly treated as a CONCLUSION chapter
+     * It checks that the last chapter is correctly treated as a CONCLUSION chapter
      * Command-line options:
        ```
        python tests/test_state_storage_reconstruction.py
