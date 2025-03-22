@@ -1,0 +1,78 @@
+{
+  "chapterSummaries": [
+    {
+      "number": 1,
+      "title": "Chapter 1",
+      "summary": "The Beginning - The hero started their journey.",
+      "chapterType": "story"
+    },
+    {
+      "number": 2,
+      "title": "Chapter 2",
+      "summary": "The First Lesson - The hero learned about honesty.",
+      "chapterType": "lesson"
+    },
+    {
+      "number": 3,
+      "title": "Chapter 3",
+      "summary": "The Challenge - The hero faced their first challenge.",
+      "chapterType": "story"
+    },
+    {
+      "number": 4,
+      "title": "Chapter 4",
+      "summary": "The Second Lesson - The hero learned about courage.",
+      "chapterType": "lesson"
+    },
+    {
+      "number": 5,
+      "title": "Chapter 5",
+      "summary": "The Reflection - The hero reflected on their journey so far.",
+      "chapterType": "reflect"
+    },
+    {
+      "number": 6,
+      "title": "Chapter 6",
+      "summary": "The Twist - The hero discovered a surprising truth.",
+      "chapterType": "story"
+    },
+    {
+      "number": 7,
+      "title": "Chapter 7",
+      "summary": "The Third Lesson - The hero learned about friendship.",
+      "chapterType": "lesson"
+    },
+    {
+      "number": 8,
+      "title": "Chapter 8",
+      "summary": "The Climax - The hero faced the final challenge.",
+      "chapterType": "story"
+    },
+    {
+      "number": 9,
+      "title": "Chapter 9",
+      "summary": "The Fourth Lesson - The hero learned about perseverance.",
+      "chapterType": "lesson"
+    },
+    {
+      "number": 10,
+      "title": "Chapter 10",
+      "summary": "The Adventure Concludes - The hero returned home with newfound wisdom.",
+      "chapterType": "conclusion"
+    }
+  ],
+  "educationalQuestions": [
+    {
+      "question": "What is the moral of the story?",
+      "userAnswer": "No answer",
+      "isCorrect": false,
+      "explanation": "The story teaches us that honesty leads to trust and friendship."
+    }
+  ],
+  "statistics": {
+    "chaptersCompleted": 10,
+    "questionsAnswered": 1,
+    "timeSpent": "30 mins",
+    "correctAnswers": 0
+  }
+}

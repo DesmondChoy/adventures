@@ -18,6 +18,13 @@ logger = setup_logging()
 # Initialize state storage service
 state_storage_service = StateStorageService()
 
+# Export the state storage service instance for use in other modules
+from app.services.state_storage_service import (
+    StateStorageService as _StateStorageService,
+)
+
+_StateStorageService._instance = state_storage_service
+
 
 async def periodic_cleanup():
     """Run cleanup of expired states periodically."""
@@ -79,7 +86,7 @@ async def favicon():
 @app.get("/test-summary")
 async def test_summary():
     """Test route to diagnose routing issues."""
-    return FileResponse("app/static/test_summary.html")
+    return FileResponse("test_summary_button.html")
 
 
 # Direct test route with the same path as the summary router

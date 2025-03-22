@@ -63,21 +63,194 @@
             resultsElement.textContent = `Testing with state ID: ${stateId}...\n`;
             
             try {
-                // First, store a dummy state
+                // First, store a complete test state
                 const storeResponse = await fetch('/adventure/api/store-adventure-state', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        // Minimal state with a CONCLUSION chapter
+                        // Complete state with all required fields
+                        current_chapter_id: "chapter_10",
+                        story_length: 10,
+                        selected_narrative_elements: {
+                            settings: "Enchanted Forest",
+                            characters: "Brave Knight",
+                            objects: "Magic Sword",
+                            events: "Dragon Attack"
+                        },
+                        selected_sensory_details: {
+                            visuals: "Sparkling lights",
+                            sounds: "Rustling leaves",
+                            smells: "Fresh pine",
+                            textures: "Rough bark"
+                        },
+                        selected_theme: "Friendship",
+                        selected_moral_teaching: "Honesty is the best policy",
+                        selected_plot_twist: "The forest guardian was the old friend all along",
+                        current_storytelling_phase: "Conclusion",
+                        // Include all chapters 1-10 with lowercase chapter types
                         chapters: [
                             {
+                                chapter_number: 1,
+                                chapter_type: "story",
+                                content: "This is chapter 1.",
+                                chapter_content: {
+                                    content: "This is chapter 1.",
+                                    choices: [
+                                        {text: "Option 1", next_chapter: "chapter_1_0"},
+                                        {text: "Option 2", next_chapter: "chapter_1_1"},
+                                        {text: "Option 3", next_chapter: "chapter_1_2"}
+                                    ]
+                                }
+                            },
+                            {
+                                chapter_number: 2,
+                                chapter_type: "lesson",
+                                content: "This is chapter 2.",
+                                chapter_content: {
+                                    content: "This is chapter 2.",
+                                    choices: []
+                                },
+                                question: {
+                                    question: "What is the moral of the story?",
+                                    answers: [
+                                        {text: "Honesty is the best policy", is_correct: true},
+                                        {text: "Might makes right", is_correct: false}
+                                    ],
+                                    explanation: "The story teaches us that honesty leads to trust and friendship."
+                                }
+                            },
+                            {
+                                chapter_number: 3,
+                                chapter_type: "story",
+                                content: "This is chapter 3.",
+                                chapter_content: {
+                                    content: "This is chapter 3.",
+                                    choices: [
+                                        {text: "Option 1", next_chapter: "chapter_3_0"},
+                                        {text: "Option 2", next_chapter: "chapter_3_1"},
+                                        {text: "Option 3", next_chapter: "chapter_3_2"}
+                                    ]
+                                }
+                            },
+                            {
+                                chapter_number: 4,
+                                chapter_type: "lesson",
+                                content: "This is chapter 4.",
+                                chapter_content: {
+                                    content: "This is chapter 4.",
+                                    choices: []
+                                }
+                            },
+                            {
+                                chapter_number: 5,
+                                chapter_type: "reflect",
+                                content: "This is chapter 5.",
+                                chapter_content: {
+                                    content: "This is chapter 5.",
+                                    choices: []
+                                }
+                            },
+                            {
+                                chapter_number: 6,
+                                chapter_type: "story",
+                                content: "This is chapter 6.",
+                                chapter_content: {
+                                    content: "This is chapter 6.",
+                                    choices: [
+                                        {text: "Option 1", next_chapter: "chapter_6_0"},
+                                        {text: "Option 2", next_chapter: "chapter_6_1"},
+                                        {text: "Option 3", next_chapter: "chapter_6_2"}
+                                    ]
+                                }
+                            },
+                            {
+                                chapter_number: 7,
+                                chapter_type: "lesson",
+                                content: "This is chapter 7.",
+                                chapter_content: {
+                                    content: "This is chapter 7.",
+                                    choices: []
+                                }
+                            },
+                            {
+                                chapter_number: 8,
+                                chapter_type: "story",
+                                content: "This is chapter 8.",
+                                chapter_content: {
+                                    content: "This is chapter 8.",
+                                    choices: [
+                                        {text: "Option 1", next_chapter: "chapter_8_0"},
+                                        {text: "Option 2", next_chapter: "chapter_8_1"},
+                                        {text: "Option 3", next_chapter: "chapter_8_2"}
+                                    ]
+                                }
+                            },
+                            {
+                                chapter_number: 9,
+                                chapter_type: "lesson",
+                                content: "This is chapter 9.",
+                                chapter_content: {
+                                    content: "This is chapter 9.",
+                                    choices: []
+                                }
+                            },
+                            {
                                 chapter_number: 10,
-                                chapter_type: "CONCLUSION",
-                                content: "This is a test conclusion chapter."
+                                chapter_type: "conclusion",
+                                content: "This is a test conclusion chapter.",
+                                chapter_content: {
+                                    content: "This is a test conclusion chapter.",
+                                    choices: []
+                                }
                             }
-                        ]
+                        ],
+                        // Add chapter summaries for all chapters
+                        chapter_summaries: [
+                            "Chapter 1: The Beginning - The hero started their journey.",
+                            "Chapter 2: The First Lesson - The hero learned about honesty.",
+                            "Chapter 3: The Challenge - The hero faced their first challenge.",
+                            "Chapter 4: The Second Lesson - The hero learned about courage.",
+                            "Chapter 5: The Reflection - The hero reflected on their journey so far.",
+                            "Chapter 6: The Twist - The hero discovered a surprising truth.",
+                            "Chapter 7: The Third Lesson - The hero learned about friendship.",
+                            "Chapter 8: The Climax - The hero faced the final challenge.",
+                            "Chapter 9: The Fourth Lesson - The hero learned about perseverance.",
+                            "Chapter 10: The Adventure Concludes - The hero returned home with newfound wisdom."
+                        ],
+                        // Add lesson questions
+                        lesson_questions: [
+                            {
+                                question: "What is the moral of the story?",
+                                answers: [
+                                    { text: "Honesty is the best policy", is_correct: true },
+                                    { text: "Might makes right", is_correct: false }
+                                ],
+                                explanation: "The story teaches us that honesty leads to trust and friendship."
+                            }
+                        ],
+                        // Add planned chapter types
+                        planned_chapter_types: [
+                            "story",
+                            "lesson",
+                            "story",
+                            "lesson",
+                            "reflect",
+                            "story",
+                            "lesson",
+                            "story",
+                            "lesson",
+                            "conclusion"
+                        ],
+                        // Add metadata
+                        metadata: {
+                            agency: {
+                                name: "Magic Sword",
+                                type: "item",
+                                references: []
+                            }
+                        }
                     }),
                 });
                 
@@ -105,7 +278,7 @@
         
         // Add event listeners
         document.getElementById('testRandomButton').addEventListener('click', () => {
-            testSummaryPage(generateUUID());
+            testSummaryPage(null); // Pass null to use the stored state ID
         });
         
         document.getElementById('testSpecificButton').addEventListener('click', () => {

@@ -5,8 +5,9 @@ from typing import Optional
 import os
 import logging
 import json
-from app.models.story import ChapterType, AdventureState
+from app.models.story import ChapterType, AdventureState, ChapterContent, StoryChoice
 from app.services.state_storage_service import StateStorageService
+from app.services.adventure_state_manager import AdventureStateManager
 
 router = APIRouter()
 logger = logging.getLogger("summary_router")
@@ -62,9 +63,7 @@ async def get_adventure_summary(state_id: Optional[str] = None):
                  If not provided, uses the current adventure state.
     """
     try:
-        # Get the adventure state manager
-        from app.services.adventure_state_manager import AdventureStateManager
-
+        # Create the adventure state manager
         state_manager = AdventureStateManager()
 
         # First try to get state from the state manager
@@ -73,82 +72,40 @@ async def get_adventure_summary(state_id: Optional[str] = None):
         # If no active state and state_id is provided, try to get from storage
         if not state and state_id:
             logger.info(f"No active state, trying to get stored state: {state_id}")
+
+            # Log the memory cache contents for debugging
+            logger.info(
+                f"Memory cache keys before retrieval: {list(state_storage_service._memory_cache.keys())}"
+            )
+
+            # Get the stored state from the storage service
             stored_state = await state_storage_service.get_state(state_id)
 
             if stored_state:
                 try:
-                    # First try to parse the stored state directly
                     logger.info(f"Retrieved state with ID: {state_id}")
+                    logger.debug(f"State content keys: {list(stored_state.keys())}")
 
-                    # Create a minimal valid state with required fields
-                    minimal_state = {
-                        "current_chapter_id": stored_state.get(
-                            "current_chapter_id", ""
-                        ),
-                        "chapters": stored_state.get("chapters", []),
-                        "story_length": stored_state.get("story_length", 10),
-                        "selected_narrative_elements": {
-                            "settings": stored_state.get(
-                                "selected_narrative_elements", {}
-                            ).get("settings", "Default Setting")
-                        },
-                        "selected_sensory_details": {
-                            "visuals": stored_state.get(
-                                "selected_sensory_details", {}
-                            ).get("visuals", "Default Visual"),
-                            "sounds": stored_state.get(
-                                "selected_sensory_details", {}
-                            ).get("sounds", "Default Sound"),
-                            "smells": stored_state.get(
-                                "selected_sensory_details", {}
-                            ).get("smells", "Default Smell"),
-                        },
-                        "selected_theme": stored_state.get(
-                            "selected_theme", "Default Theme"
-                        ),
-                        "selected_moral_teaching": stored_state.get(
-                            "selected_moral_teaching", "Default Moral"
-                        ),
-                        "selected_plot_twist": stored_state.get(
-                            "selected_plot_twist", "Default Plot Twist"
-                        ),
-                    }
+                    # Use the new method to reconstruct state from stored data
+                    state = await state_manager.reconstruct_state_from_storage(
+                        stored_state
+                    )
 
-                    # Fix chapter_content for each chapter
-                    for chapter in minimal_state["chapters"]:
-                        if (
-                            "chapter_content" not in chapter
-                            or not chapter["chapter_content"]
-                        ):
-                            chapter["chapter_content"] = {
-                                "content": chapter.get("content", ""),
-                                "choices": [],
-                            }
-                        elif "choices" not in chapter["chapter_content"]:
-                            chapter["chapter_content"]["choices"] = []
-
-                        # For story chapters, ensure exactly 3 choices
-                        if (
-                            chapter.get("chapter_type") == "story"
-                            and len(chapter["chapter_content"]["choices"]) != 3
-                        ):
-                            choices = chapter["chapter_content"]["choices"][:3]
-                            while len(choices) < 3:
-                                choices.append(
-                                    {
-                                        "text": f"Option {len(choices) + 1}",
-                                        "next_chapter": f"chapter_{chapter.get('chapter_number', 0)}_{len(choices)}",
-                                    }
-                                )
-                            chapter["chapter_content"]["choices"] = choices
-
-                    # Convert the minimal state dict to an AdventureState object
-                    state = AdventureState.parse_obj(minimal_state)
-                    logger.info(f"Using stored state with ID: {state_id}")
+                    if state:
+                        logger.info(
+                            f"Successfully reconstructed state with ID: {state_id}"
+                        )
+                    else:
+                        logger.error("State reconstruction failed")
+                        raise HTTPException(
+                            status_code=500,
+                            detail="Failed to reconstruct adventure state",
+                        )
                 except Exception as e:
-                    logger.error(f"Error parsing stored state: {str(e)}")
+                    logger.error(f"Error reconstructing state: {str(e)}")
+                    logger.error(f"State content that caused error: {stored_state}")
                     raise HTTPException(
-                        status_code=500, detail=f"Error parsing stored state: {str(e)}"
+                        status_code=500, detail=f"Error reconstructing state: {str(e)}"
                     )
 
         if not state:

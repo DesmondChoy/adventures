@@ -1,8 +1,8 @@
 # Active Context
 
-## Current Focus: Fixing "Take a Trip Down Memory Lane" Button (2025-03-22)
+## Current Focus: Case Sensitivity in Chapter Types (2025-03-22)
 
-We're currently working on fixing issues with the "Take a Trip Down Memory Lane" button at the end of Chapter 10 (CONCLUSION). When users click this button, they should be taken to a summary page that displays their adventure journey, but we're encountering validation errors.
+We've successfully fixed the "Take a Trip Down Memory Lane" button issue by addressing case sensitivity in chapter types. The problem was that the stored state contained uppercase chapter types (like "STORY", "LESSON"), but the AdventureState model expected lowercase values (like "story", "lesson").
 
 ### Problem Description
 
@@ -14,10 +14,10 @@ We're currently working on fixing issues with the "Take a Trip Down Memory Lane"
 2. **Routing Issue Fix:**
    * We fixed the routing issue by moving the catch-all route in summary_router.py to the end of the file
    * This ensured that specific routes like `/summary` were processed before the catch-all route
-   * The summary page now loads, but we're encountering validation errors
+   * The summary page now loads, but we were encountering validation errors
 
-3. **Current Validation Errors:**
-   * When retrieving the stored state, we're getting validation errors from the AdventureState model:
+3. **Validation Errors:**
+   * When retrieving the stored state, we were getting validation errors from the AdventureState model:
    ```
    Error parsing stored state: 3 validation errors for AdventureState
    selected_theme
@@ -29,51 +29,155 @@ We're currently working on fixing issues with the "Take a Trip Down Memory Lane"
    ```
    * These fields are required by the AdventureState model and cannot be empty strings
 
-### Solutions Attempted
+4. **Case Sensitivity Issue:**
+   * After fixing the validation errors, we encountered a new issue with case sensitivity in chapter types
+   * The error message showed:
+   ```
+   Error serving summary data: 500: Error reconstructing state: 500: Failed to reconstruct adventure state
+   ```
+   * The stored state contained uppercase chapter types (like "STORY", "LESSON"), but the AdventureState model expected lowercase values (like "story", "lesson")
 
-1. **Fixed Routing Issue:**
-   * Moved the catch-all route `/{js_file:path}` to the end of the summary_router.py file
-   * This ensured that specific routes like `/summary` were processed first
-   * The summary page now loads, but we're encountering validation errors
+### Root Cause Analysis
 
-2. **Added Default Values for Required Fields:**
-   * Modified the summary_router.py file to create a minimal valid state when retrieving from storage
-   * Added default values for all required fields, including:
-     - selected_narrative_elements (with settings)
-     - selected_sensory_details (with visuals, sounds, smells)
-     - selected_theme
-     - selected_moral_teaching
-     - selected_plot_twist
-   * Fixed chapter_content structure to ensure story chapters have exactly 3 choices
-   * However, the default values for theme, moral teaching, and plot twist are still being treated as empty strings
+After extensive debugging, we identified two main issues:
 
-### Potential Solutions
+1. **StateStorageService Implementation Issue:**
+   * The `StateStorageService` was using a non-singleton pattern with a simple in-memory cache (`self.memory_cache = {}`)
+   * Each instance of `StateStorageService` had its own separate memory cache
+   * This meant that the state stored by one instance couldn't be found by another instance
+   * When the state was stored during the adventure (by one instance), it was saved in that instance's memory cache
+   * When the summary page tried to retrieve the state (using a different instance), it was looking in a completely different memory cache
 
-1. **Fix Default Values:**
-   * Ensure our default values are actually being used and are non-empty strings that pass validation
-   * Make sure the default values are properly applied to the state object
+2. **Case Sensitivity in Chapter Types:**
+   * The `AdventureState` model's `ChapterType` enum defines lowercase values:
+   ```python
+   class ChapterType(str, Enum):
+       LESSON = "lesson"
+       STORY = "story"
+       CONCLUSION = "conclusion"
+       REFLECT = "reflect"
+       SUMMARY = "summary"
+   ```
+   * But the stored state was using uppercase values like "STORY" and "LESSON"
+   * This caused validation errors when creating the AdventureState object
 
-2. **Modify Client-Side State Storage:**
-   * Update the viewAdventureSummary function in index.html to properly populate required fields before sending the state to the server
-   * Ensure all required fields have non-empty values
+### Solutions Implemented
 
-3. **Use AdventureStateManager:**
-   * Use the AdventureStateManager to initialize a valid state from the stored data
-   * The AdventureStateManager has methods to properly initialize a state with all required fields
+1. **Implemented Singleton Pattern for StateStorageService:**
+   * Modified `StateStorageService` to use a singleton pattern with a shared memory cache
+   * Added class variables `_instance`, `_memory_cache`, and `_initialized` to ensure all instances share the same memory cache
+   * Implemented `__new__` method to return the same instance for all calls
+   * Updated methods to use the class variable `_memory_cache` instead of instance variable
+   * Added detailed logging to track state storage and retrieval
+   * Modified `main.py` to explicitly set the singleton instance
 
-4. **Modify the AdventureState Model:**
-   * Make these fields optional or provide default values that pass validation
-   * Update the validators to be less strict for the summary page
+2. **Added Case Sensitivity Handling:**
+   * Modified the `reconstruct_state_from_storage` method in `AdventureStateManager` to convert all chapter types to lowercase
+   * Added code to convert each chapter's `chapter_type` to lowercase
+   * Updated the story chapter detection to use lowercase "story" instead of "STORY"
+   * Added logging to track chapter type conversions
+   * Used default lowercase values when creating new planned chapter types
 
-5. **Try/Except Around Validation:**
-   * Catch validation errors and continue with a basic summary even if the state doesn't fully validate
-   * This would allow users to see their adventure summary even if some fields are missing or invalid
+3. **Created Comprehensive Test Script:**
+   * Created `test_summary_button_flow.py` to verify the entire flow from storing a state to retrieving and reconstructing it
+   * Added validation to confirm the summary data is correctly formatted
+   * Ensured the test creates a state with all required fields
+   * Added detailed logging to track the process
+
+### Current Status
+
+Our changes have successfully fixed the issue:
+
+1. **State Storage Works:**
+   * The state is being stored successfully with a unique ID
+   * The memory cache contains the state ID and data
+   * Logging confirms the state is stored correctly
+
+2. **State Retrieval Works:**
+   * The summary page can now retrieve the state successfully
+   * Case sensitivity in chapter types is handled properly
+   * All chapter types are converted to lowercase before creating the AdventureState object
+   * The summary page displays correctly with chapter summaries, educational questions, and statistics
+
+3. **Test Script Passes:**
+   * The `test_summary_button_flow.py` script passes successfully
+   * All chapter types are properly converted to lowercase
+   * The state is correctly reconstructed and formatted
+   * The summary data is verified to contain all required fields
 
 ### Next Steps
 
-We need to implement one of these solutions to fix the validation errors. The most direct approach would be to ensure our default values are properly applied and are non-empty strings that pass validation. This would involve updating the summary_router.py file to fix how we handle these three fields.
+1. **Monitor Production Usage:**
+   * Keep an eye on the production logs to ensure the fix continues to work
+   * Watch for any edge cases or unexpected behavior
+   * Consider adding more robust error handling for potential future issues
+
+2. **Consider Alternative Storage Mechanisms:**
+   * While the in-memory storage is now working correctly, it's still not persistent across server restarts
+   * Consider implementing a more persistent storage solution for production
+   * Options include using a database, Redis, or file-based storage
+   * This would provide more reliable state persistence across server restarts
+
+3. **Enhance Testing:**
+   * Add more test cases to cover edge cases
+   * Test with different state IDs and content to ensure consistency
+   * Add tests for server restart scenarios
 
 ## Recent Completed Work
+
+### Implemented Singleton Pattern for StateStorageService (2025-03-22)
+
+1. **Implemented Singleton Pattern for StateStorageService:**
+   * Problem: The `StateStorageService` was using a non-singleton pattern, causing each instance to have its own separate memory cache
+   * Solution:
+     - Modified `StateStorageService` to use a singleton pattern with a shared memory cache
+     - Added class variables to ensure all instances share the same memory cache
+     - Implemented proper instance management methods
+   * Implementation Details:
+     - Added class variables `_instance`, `_memory_cache`, and `_initialized`
+     - Implemented `__new__` method to return the same instance for all calls
+     - Updated methods to use the class variable `_memory_cache` instead of instance variable
+     - Added detailed logging to track state storage and retrieval
+     - Modified `main.py` to explicitly set the singleton instance
+   * Benefits:
+     - All instances of `StateStorageService` now share the same memory cache
+     - States stored by one instance can be retrieved by another
+     - Improved logging for better debugging
+
+### Added State Reconstruction Function (2025-03-22)
+
+1. **Added State Reconstruction Function:**
+   * Problem: The state retrieved from storage wasn't being properly reconstructed into a valid `AdventureState` object
+   * Solution:
+     - Created a `reconstruct_adventure_state` function in `summary_router.py`
+     - Ensured all required fields are properly initialized with non-empty values
+     - Added robust error handling and logging
+   * Implementation Details:
+     - Function handles all required fields including narrative elements, sensory details, and other required properties
+     - Ensures chapter content is properly structured with valid choices
+     - Provides detailed error messages for debugging
+     - Adds extensive logging to track the reconstruction process
+   * Benefits:
+     - More robust state reconstruction from stored data
+     - Better error handling and logging for debugging
+     - Ensures all required fields have valid values that pass validation
+
+### Enhanced Test Button (2025-03-22)
+
+1. **Enhanced Test Button:**
+   * Problem: The test button was using a random state ID instead of the stored one, and wasn't creating a complete test state
+   * Solution:
+     - Updated the test button HTML to create a more complete test state
+     - Modified the button click handler to use the stored state ID
+   * Implementation Details:
+     - Added all required fields to the test state including narrative elements, sensory details, theme, moral teaching, and plot twist
+     - Added a CONCLUSION chapter with proper chapter content
+     - Added chapter summaries and lesson questions for display
+     - Modified the button click handler to use the stored state ID instead of a random one
+   * Benefits:
+     - More realistic test state for debugging
+     - Consistent state ID usage for better testing
+     - More comprehensive test coverage
 
 ### Completed Summary Chapter Migration (2025-03-21)
 
@@ -101,76 +205,3 @@ We need to implement one of these solutions to fix the validation errors. The mo
      - Simplified build process using only the permanent location
      - Complete migration of the Summary Chapter feature to production
      - Fully documented migration process for future reference
-
-### Fixed Scrolling in ChapterCard Component on Mobile Devices (2025-03-21)
-
-1. **Fixed Scrolling Issue in Mobile Chapter Summary Cards:**
-   * Problem: On mobile devices, in the "Your Adventure Journey" section, the chapter summary cards were cutting off content and users couldn't scroll to see the full text
-   * Solution:
-     - Modified the ChapterCard component to use a fixed height with proper scrolling functionality
-     - Enhanced the ScrollArea component with mobile-specific optimizations
-     - Added custom CSS for better touch scrolling experience
-   * Implementation Details:
-     - Updated `ChapterCard.tsx` in the React app to:
-       - Change from dynamic height to fixed height with scrolling
-       - Add an explicit height container with proper overflow handling
-       - Change from `transition-all` to `transition-opacity` to prevent transition effects from interfering with scrolling
-       - Add the `type="always"` prop to the ScrollArea to ensure scrollbars are always visible
-     - Enhanced mobile-specific CSS in `index.css`:
-       - Added `overflow-auto`, `overscroll-contain`, and `touch-auto` properties to improve mobile touch scrolling
-       - Made scrollbars wider and more visible for better touch interaction
-       - Repositioned the fade effect to ensure it doesn't interfere with touch events
-   * Benefits:
-     - Users can now scroll through all content in chapter summary cards on mobile devices
-     - Consistent card heights maintain visual harmony in the layout
-     - Improved touch scrolling experience with visible scrollbars
-     - Better visual indication of scrollable content with the fade effect
-
-### Fixed Educational Card Button Positioning in Knowledge Gained Section (2025-03-21)
-
-1. **Fixed "Hide Explanation" Button Positioning Issue:**
-   * Problem: The "Hide Explanation" button in the Knowledge Gained section was overlapping with content on mobile devices, and the button position was inconsistent between show/hide states
-   * Solution:
-     - Implemented a more robust solution for the explanation container and button positioning
-     - Made the button position consistent between "Show explanation" and "Hide explanation" states
-   * Implementation Details:
-     - Updated `EducationalCard.tsx` in the React app to:
-       - Add a ScrollArea component to make the explanation content scrollable
-       - Increase the maximum height for mobile devices from 'max-h-48' to 'max-h-72'
-       - Add a gradient fade effect at the bottom of the explanation for visual separation
-       - Position the "Hide explanation" button at the bottom left (same position as "Show explanation")
-       - Add proper z-index and background styling to ensure button visibility
-     - Rebuilt the React app with `npm run build` to apply the changes
-   * Benefits:
-     - No more overlapping text with the "Hide Explanation" button on mobile devices
-     - Consistent button positioning between show/hide states for better user experience
-     - Improved readability with scrollable content and gradient fade effect
-     - Better mobile experience with appropriate sizing and positioning
-
-### Removed Static JSON Fallbacks from Summary Chapter (2025-03-21)
-
-1. **Fixed Summary Chapter to Use AdventureState Data:**
-   * Problem: The summary chapter was still using a static JSON file (`adventure_summary_react.json`) as a fallback instead of reading from the AdventureState
-   * Solution:
-     - Removed all fallbacks to the static JSON file in the summary router
-     - Updated the React component to not use default data
-     - Created a test script to debug the summary chapter without generating all 10 chapters
-   * Implementation Details:
-     - Updated `summary_router.py` to:
-       - Remove the fallback logic that loads the static JSON file
-       - Update the error message to be more user-friendly
-     - Updated `AdventureSummary.tsx` to:
-       - Remove the default hardcoded data
-       - Update the error handling to not use default data
-       - Update the error display to show a more user-friendly message
-     - Created `tests/test_summary_chapter.py` to:
-       - Find an existing simulation state file
-       - Generate formatted summary data from that file
-       - Start a temporary FastAPI server with a test endpoint
-       - Open a browser to view the summary page with the generated data
-     - Rebuilt the React app to reflect these changes
-   * Benefits:
-     - Summary chapter now exclusively reads from the AdventureState
-     - No more fallbacks to static data
-     - Easier debugging with the test script
-     - More accurate representation of the user's adventure

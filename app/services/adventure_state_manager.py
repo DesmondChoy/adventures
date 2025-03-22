@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from app.models.story import (
     AdventureState,
     ChapterData,
@@ -439,6 +439,233 @@ class AdventureStateManager:
 
         # Append the chapter to the state
         self.state.chapters.append(chapter_data)
+
+    async def reconstruct_state_from_storage(
+        self, stored_state: Dict[str, Any]
+    ) -> Optional[AdventureState]:
+        """Reconstruct an AdventureState object from stored state data.
+
+        This method handles retrieving state from storage and properly reconstructing it,
+        ensuring all required fields have valid values that pass validation.
+
+        Args:
+            stored_state: The state data retrieved from storage
+
+        Returns:
+            A properly reconstructed AdventureState object, or None if reconstruction fails
+        """
+        if not stored_state:
+            logger.error("Cannot reconstruct state: stored_state is empty or None")
+            return None
+
+        try:
+            logger.info("Reconstructing AdventureState from stored data")
+            logger.debug(f"Stored state keys: {list(stored_state.keys())}")
+
+            # Ensure required narrative elements are present
+            narrative_elements = stored_state.get("selected_narrative_elements", {})
+            if not narrative_elements or not isinstance(narrative_elements, dict):
+                logger.warning("Missing or invalid narrative elements, using defaults")
+                narrative_elements = {
+                    "settings": "Default Setting",
+                    "characters": "Default Characters",
+                    "objects": "Default Objects",
+                    "events": "Default Events",
+                }
+            elif not all(
+                k in narrative_elements
+                for k in ["settings", "characters", "objects", "events"]
+            ):
+                # Fill in any missing keys with defaults
+                defaults = {
+                    "settings": "Default Setting",
+                    "characters": "Default Characters",
+                    "objects": "Default Objects",
+                    "events": "Default Events",
+                }
+                for key, default_value in defaults.items():
+                    if key not in narrative_elements:
+                        narrative_elements[key] = default_value
+                        logger.warning(
+                            f"Added missing narrative element '{key}' with default value"
+                        )
+
+            # Ensure required sensory details are present
+            sensory_details = stored_state.get("selected_sensory_details", {})
+            if not sensory_details or not isinstance(sensory_details, dict):
+                logger.warning("Missing or invalid sensory details, using defaults")
+                sensory_details = {
+                    "visuals": "Default Visual",
+                    "sounds": "Default Sound",
+                    "smells": "Default Smell",
+                    "textures": "Default Texture",
+                }
+            elif not all(
+                k in sensory_details
+                for k in ["visuals", "sounds", "smells", "textures"]
+            ):
+                # Fill in any missing keys with defaults
+                defaults = {
+                    "visuals": "Default Visual",
+                    "sounds": "Default Sound",
+                    "smells": "Default Smell",
+                    "textures": "Default Texture",
+                }
+                for key, default_value in defaults.items():
+                    if key not in sensory_details:
+                        sensory_details[key] = default_value
+                        logger.warning(
+                            f"Added missing sensory detail '{key}' with default value"
+                        )
+
+            # Ensure required string fields are not empty
+            required_string_fields = {
+                "selected_theme": "Adventure Theme",
+                "selected_moral_teaching": "Moral Teaching",
+                "selected_plot_twist": "Plot Twist",
+                "current_storytelling_phase": "Conclusion",
+            }
+
+            for field, default_value in required_string_fields.items():
+                if field not in stored_state or not stored_state[field]:
+                    logger.warning(
+                        f"Missing or empty required field '{field}', using default value"
+                    )
+                    stored_state[field] = default_value
+
+            # Ensure chapters array exists and is properly formatted
+            chapters = stored_state.get("chapters", [])
+            if not isinstance(chapters, list):
+                logger.warning("Invalid chapters format, using empty list")
+                chapters = []
+
+            # Process chapters to ensure they have valid chapter_content
+            for chapter in chapters:
+                # Ensure chapter_content exists and has required fields
+                if "chapter_content" not in chapter or not chapter["chapter_content"]:
+                    logger.warning(
+                        f"Missing chapter_content for chapter {chapter.get('chapter_number', 'unknown')}, creating default"
+                    )
+                    chapter["chapter_content"] = {
+                        "content": chapter.get("content", ""),
+                        "choices": [],
+                    }
+                elif "choices" not in chapter["chapter_content"]:
+                    logger.warning(
+                        f"Missing choices in chapter_content for chapter {chapter.get('chapter_number', 'unknown')}, creating empty list"
+                    )
+                    chapter["chapter_content"]["choices"] = []
+
+                # Handle chapter_type case sensitivity
+                if "chapter_type" in chapter:
+                    # Convert chapter_type to lowercase
+                    if isinstance(chapter["chapter_type"], str):
+                        chapter["chapter_type"] = chapter["chapter_type"].lower()
+                        logger.debug(
+                            f"Converted chapter_type to lowercase: {chapter['chapter_type']}"
+                        )
+
+                # For story chapters, ensure exactly 3 choices
+                if (
+                    chapter.get("chapter_type") == "story"
+                    and len(chapter["chapter_content"]["choices"]) != 3
+                ):
+                    logger.warning(
+                        f"Story chapter {chapter.get('chapter_number', 'unknown')} has {len(chapter['chapter_content']['choices'])} choices, adjusting to 3"
+                    )
+                    choices = chapter["chapter_content"]["choices"][:3]
+                    while len(choices) < 3:
+                        choices.append(
+                            {
+                                "text": f"Option {len(choices) + 1}",
+                                "next_chapter": f"chapter_{chapter.get('chapter_number', 0)}_{len(choices)}",
+                            }
+                        )
+                    chapter["chapter_content"]["choices"] = choices
+
+            # Ensure other required fields exist
+            if "story_length" not in stored_state:
+                stored_state["story_length"] = 10
+                logger.warning("Missing story_length, using default value of 10")
+
+            # Handle planned_chapter_types - ensure they exist and are lowercase
+            if (
+                "planned_chapter_types" not in stored_state
+                or not stored_state["planned_chapter_types"]
+            ):
+                # Use lowercase default values
+                stored_state["planned_chapter_types"] = [
+                    "story",
+                    "lesson",
+                    "story",
+                    "lesson",
+                    "reflect",
+                    "story",
+                    "lesson",
+                    "story",
+                    "lesson",
+                    "conclusion",
+                ]
+                logger.warning("Missing planned_chapter_types, using default sequence")
+            else:
+                # Convert existing planned_chapter_types to lowercase
+                planned_chapter_types = []
+                for chapter_type in stored_state["planned_chapter_types"]:
+                    if isinstance(chapter_type, str):
+                        # Convert to lowercase
+                        planned_chapter_types.append(chapter_type.lower())
+                    else:
+                        # Keep as is if not a string (shouldn't happen, but just in case)
+                        planned_chapter_types.append(chapter_type)
+
+                stored_state["planned_chapter_types"] = planned_chapter_types
+                logger.info(
+                    f"Converted planned_chapter_types to lowercase: {planned_chapter_types}"
+                )
+
+            if "metadata" not in stored_state:
+                stored_state["metadata"] = {}
+                logger.warning("Missing metadata, using empty dict")
+
+            # Create a valid state with all required fields
+            valid_state = {
+                "current_chapter_id": stored_state.get("current_chapter_id", ""),
+                "chapters": chapters,
+                "story_length": stored_state["story_length"],
+                "selected_narrative_elements": narrative_elements,
+                "selected_sensory_details": sensory_details,
+                "selected_theme": stored_state["selected_theme"],
+                "selected_moral_teaching": stored_state["selected_moral_teaching"],
+                "selected_plot_twist": stored_state["selected_plot_twist"],
+                "planned_chapter_types": stored_state["planned_chapter_types"],
+                "current_storytelling_phase": stored_state[
+                    "current_storytelling_phase"
+                ],
+                "chapter_summaries": stored_state.get("chapter_summaries", []),
+                "summary_chapter_titles": stored_state.get(
+                    "summary_chapter_titles", []
+                ),
+                "lesson_questions": stored_state.get("lesson_questions", []),
+                "metadata": stored_state["metadata"],
+            }
+
+            # Convert the valid state dict to an AdventureState object
+            try:
+                reconstructed_state = AdventureState.parse_obj(valid_state)
+                logger.info(
+                    "Successfully reconstructed AdventureState from stored data"
+                )
+                return reconstructed_state
+            except Exception as e:
+                logger.error(
+                    f"Error creating AdventureState from valid_state: {str(e)}"
+                )
+                logger.debug(f"Valid state that caused error: {valid_state}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Error reconstructing state from storage: {str(e)}")
+            return None
 
     def format_adventure_summary_data(self, state: AdventureState) -> Dict[str, Any]:
         """Format adventure state data for the React summary component.

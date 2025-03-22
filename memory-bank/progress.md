@@ -2,6 +2,33 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-03-22
+- Fixed "Take a Trip Down Memory Lane" button issue by addressing case sensitivity in chapter types
+- Identified that stored state contained uppercase chapter types but AdventureState model expected lowercase values
+- Modified the `reconstruct_state_from_storage` method in `AdventureStateManager` to convert all chapter types to lowercase
+- Added code to convert each chapter's `chapter_type` to lowercase
+- Updated the story chapter detection to use lowercase "story" instead of "STORY"
+- Added logging to track chapter type conversions
+- Used default lowercase values when creating new planned chapter types
+- Created comprehensive test script `test_summary_button_flow.py` to verify the entire flow
+- Added validation to confirm the summary data is correctly formatted
+- Ensured the test creates a state with all required fields
+- Added detailed logging to track the process
+- Verified that the fix works in both test and live environments
+- Implemented singleton pattern for StateStorageService to fix state sharing issues
+- Added class variables _instance, _memory_cache, and _initialized to ensure shared memory cache
+- Implemented __new__ method to return the same instance for all calls
+- Updated methods to use class variable _memory_cache instead of instance variable
+- Added detailed logging to track state storage and retrieval
+- Created reconstruct_adventure_state function in summary_router.py
+- Ensured all required fields are properly initialized with non-empty values
+- Added robust error handling and logging for state reconstruction
+- Enhanced test button HTML to create more complete test state
+- Added all required fields to test state including narrative elements, sensory details, theme, etc.
+- Modified button click handler to use stored state ID instead of random one
+- Modified main.py to explicitly set singleton instance of StateStorageService
+- Added export of state storage service instance for use in other modules
+
 ### 2025-03-21
 - Completed Summary Chapter Migration by removing experimental directory
 - Updated build_summary_app.py to use permanent location instead of experimental directory
@@ -165,6 +192,12 @@
 - Responsive design for both desktop and mobile
 
 ### Recent Enhancements
+- Attempted singleton pattern for StateStorageService to address state sharing issues
+- Created reconstruct_adventure_state function for robust state reconstruction
+- Enhanced test button with complete test state and proper state ID handling
+- Modified main.py to explicitly set singleton instance of StateStorageService
+- Added extensive logging for debugging state storage and retrieval
+- Identified potential issues with singleton implementation related to FastAPI's auto-reload feature
 - Fixed Node.js and npm detection issues in build_summary_app.py script
 - Enhanced Node.js and npm detection with robust path checking and fallback mechanisms
 - Added command-line options to manually specify Node.js and npm paths
@@ -192,8 +225,13 @@
 - Chapter 10 summary still showing placeholder text instead of actual content
 - Need to investigate why the CONCLUSION chapter summary isn't being properly generated or captured
 - Chapter 10 content is visible in the terminal but not being captured in the simulation log file
+- In-memory storage is not persistent across server restarts
 
 ## Next Steps
+- Consider implementing more persistent storage mechanisms for production
+- Options include using a database, Redis, or file-based storage
+- Add more test cases to cover edge cases and server restart scenarios
+- Monitor production logs to ensure the fix continues to work
 - Fix Chapter 10 content capture in generate_all_chapters.py script
 - Investigate why the WebSocket connection is being closed or timing out before Chapter 10 content can be fully processed
 - Fix Chapter 10 summary generation and capture

@@ -93,6 +93,21 @@
      * Initialize fields in __init__ method by adding to kwargs before calling super().__init__
      * Add null checking for all field operations to handle edge cases
      * Use proper type hints for all fields
+   - Case Sensitivity in Chapter Types:
+     * The `ChapterType` enum defines lowercase values:
+       ```python
+       class ChapterType(str, Enum):
+           LESSON = "lesson"
+           STORY = "story"
+           CONCLUSION = "conclusion"
+           REFLECT = "reflect"
+           SUMMARY = "summary"
+       ```
+     * When storing or retrieving chapter types, ALWAYS convert to lowercase
+     * When comparing chapter types, use lowercase values (e.g., `chapter.chapter_type == ChapterType.STORY`)
+     * When reconstructing state from storage, convert all chapter types to lowercase
+     * This is especially important for `planned_chapter_types` and each chapter's `chapter_type`
+     * The `reconstruct_state_from_storage` method in `AdventureStateManager` handles this conversion
 
 2. Chapter Requirements:
    - First chapter MUST be STORY type with agency choice
