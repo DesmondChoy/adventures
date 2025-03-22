@@ -270,11 +270,31 @@ async def process_choice(
                         is_correct=choice_text == correct_answer,
                     )
                     previous_chapter.response = lesson_response
+                    
+                    # Store in lesson_questions array for summary chapter
+                    if not hasattr(state, "lesson_questions"):
+                        state.lesson_questions = []
+                    
+                    # Create question object for summary display
+                    question_obj = {
+                        "question": previous_chapter.question.get("question", "Unknown question"),
+                        "answers": previous_chapter.question.get("answers", []),
+                        "chosen_answer": choice_text,
+                        "is_correct": choice_text == correct_answer,
+                        "explanation": previous_chapter.question.get("explanation", ""),
+                        "correct_answer": correct_answer
+                    }
+                    
+                    # Append to state's lesson_questions
+                    state.lesson_questions.append(question_obj)
+                    logger.info(f"Added question to lesson_questions array: {question_obj['question']}")
+                    
                     logger.debug("\n=== DEBUG: Created Lesson Response ===")
                     logger.debug(f"Question: {previous_chapter.question['question']}")
                     logger.debug(f"Chosen answer: {choice_text}")
                     logger.debug(f"Correct answer: {correct_answer}")
                     logger.debug(f"Is correct: {choice_text == correct_answer}")
+                    logger.debug(f"Questions in lesson_questions: {len(state.lesson_questions)}")
                     logger.debug("====================================\n")
                 else:
                     logger.error("Previous chapter missing question data")

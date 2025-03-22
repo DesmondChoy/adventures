@@ -768,6 +768,11 @@ class ChapterManager:
 
         Returns:
             A dictionary containing the title and summary of the chapter
+            
+        Note:
+            This method is called after each chapter is completed to generate summaries
+            that will be displayed in the final summary chapter. These summaries are 
+            stored in AdventureState.chapter_summaries and the titles in AdventureState.summary_chapter_titles.
         """
         try:
             # Use the LLM service to generate a summary
