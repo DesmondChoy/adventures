@@ -1,0 +1,321 @@
+{
+  "current_chapter_id": "chapter_10",
+  "story_length": 10,
+  "selected_narrative_elements": {
+    "settings": "Enchanted Forest",
+    "characters": "Brave Knight",
+    "objects": "Magic Sword",
+    "events": "Dragon Attack"
+  },
+  "selected_sensory_details": {
+    "visuals": "Sparkling lights",
+    "sounds": "Rustling leaves",
+    "smells": "Fresh pine",
+    "textures": "Rough bark"
+  },
+  "selected_theme": "Friendship",
+  "selected_moral_teaching": "Honesty is the best policy",
+  "selected_plot_twist": "The forest guardian was the old friend all along",
+  "current_storytelling_phase": "Conclusion",
+  "chapters": [
+    {
+      "chapter_number": 1,
+      "chapter_type": "story",
+      "content": "This is chapter 1.",
+      "chapter_content": {
+        "content": "This is chapter 1.",
+        "choices": [
+          {
+            "text": "Option 1",
+            "next_chapter": "chapter_1_0"
+          },
+          {
+            "text": "Option 2",
+            "next_chapter": "chapter_1_1"
+          },
+          {
+            "text": "Option 3",
+            "next_chapter": "chapter_1_2"
+          }
+        ]
+      },
+      "question": null
+    },
+    {
+      "chapter_number": 2,
+      "chapter_type": "lesson",
+      "content": "This is chapter 2.",
+      "chapter_content": {
+        "content": "This is chapter 2.",
+        "choices": []
+      },
+      "question": {
+        "question": "Test question for chapter 2?",
+        "answers": [
+          {
+            "text": "Correct answer",
+            "is_correct": true
+          },
+          {
+            "text": "Wrong answer",
+            "is_correct": false
+          }
+        ],
+        "explanation": "This is the explanation."
+      }
+    },
+    {
+      "chapter_number": 3,
+      "chapter_type": "story",
+      "content": "This is chapter 3.",
+      "chapter_content": {
+        "content": "This is chapter 3.",
+        "choices": [
+          {
+            "text": "Option 1",
+            "next_chapter": "chapter_3_0"
+          },
+          {
+            "text": "Option 2",
+            "next_chapter": "chapter_3_1"
+          },
+          {
+            "text": "Option 3",
+            "next_chapter": "chapter_3_2"
+          }
+        ]
+      },
+      "question": null
+    },
+    {
+      "chapter_number": 4,
+      "chapter_type": "lesson",
+      "content": "This is chapter 4.",
+      "chapter_content": {
+        "content": "This is chapter 4.",
+        "choices": []
+      },
+      "question": {
+        "question": "Test question for chapter 4?",
+        "answers": [
+          {
+            "text": "Correct answer",
+            "is_correct": true
+          },
+          {
+            "text": "Wrong answer",
+            "is_correct": false
+          }
+        ],
+        "explanation": "This is the explanation."
+      }
+    },
+    {
+      "chapter_number": 5,
+      "chapter_type": "story",
+      "content": "This is chapter 5.",
+      "chapter_content": {
+        "content": "This is chapter 5.",
+        "choices": [
+          {
+            "text": "Option 1",
+            "next_chapter": "chapter_5_0"
+          },
+          {
+            "text": "Option 2",
+            "next_chapter": "chapter_5_1"
+          },
+          {
+            "text": "Option 3",
+            "next_chapter": "chapter_5_2"
+          }
+        ]
+      },
+      "question": null
+    },
+    {
+      "chapter_number": 6,
+      "chapter_type": "lesson",
+      "content": "This is chapter 6.",
+      "chapter_content": {
+        "content": "This is chapter 6.",
+        "choices": []
+      },
+      "question": {
+        "question": "Test question for chapter 6?",
+        "answers": [
+          {
+            "text": "Correct answer",
+            "is_correct": true
+          },
+          {
+            "text": "Wrong answer",
+            "is_correct": false
+          }
+        ],
+        "explanation": "This is the explanation."
+      }
+    },
+    {
+      "chapter_number": 7,
+      "chapter_type": "story",
+      "content": "This is chapter 7.",
+      "chapter_content": {
+        "content": "This is chapter 7.",
+        "choices": [
+          {
+            "text": "Option 1",
+            "next_chapter": "chapter_7_0"
+          },
+          {
+            "text": "Option 2",
+            "next_chapter": "chapter_7_1"
+          },
+          {
+            "text": "Option 3",
+            "next_chapter": "chapter_7_2"
+          }
+        ]
+      },
+      "question": null
+    },
+    {
+      "chapter_number": 8,
+      "chapter_type": "lesson",
+      "content": "This is chapter 8.",
+      "chapter_content": {
+        "content": "This is chapter 8.",
+        "choices": []
+      },
+      "question": {
+        "question": "Test question for chapter 8?",
+        "answers": [
+          {
+            "text": "Correct answer",
+            "is_correct": true
+          },
+          {
+            "text": "Wrong answer",
+            "is_correct": false
+          }
+        ],
+        "explanation": "This is the explanation."
+      }
+    },
+    {
+      "chapter_number": 9,
+      "chapter_type": "story",
+      "content": "This is chapter 9.",
+      "chapter_content": {
+        "content": "This is chapter 9.",
+        "choices": [
+          {
+            "text": "Option 1",
+            "next_chapter": "chapter_9_0"
+          },
+          {
+            "text": "Option 2",
+            "next_chapter": "chapter_9_1"
+          },
+          {
+            "text": "Option 3",
+            "next_chapter": "chapter_9_2"
+          }
+        ]
+      },
+      "question": null
+    },
+    {
+      "chapter_number": 10,
+      "chapter_type": "conclusion",
+      "content": "This is chapter 10.",
+      "chapter_content": {
+        "content": "This is chapter 10.",
+        "choices": []
+      },
+      "question": null
+    }
+  ],
+  "chapter_summaries": [
+    "Chapter 1: Summary for chapter 1.",
+    "Chapter 2: Summary for chapter 2.",
+    "Chapter 3: Summary for chapter 3.",
+    "Chapter 4: Summary for chapter 4.",
+    "Chapter 5: Summary for chapter 5.",
+    "Chapter 6: Summary for chapter 6.",
+    "Chapter 7: Summary for chapter 7.",
+    "Chapter 8: Summary for chapter 8.",
+    "Chapter 9: Summary for chapter 9.",
+    "Chapter 10: Summary for chapter 10."
+  ],
+  "lesson_questions": [
+    {
+      "question": "Test question 1?",
+      "answers": [
+        {
+          "text": "Correct answer",
+          "is_correct": true
+        },
+        {
+          "text": "Wrong answer",
+          "is_correct": false
+        }
+      ],
+      "explanation": "This is the explanation."
+    },
+    {
+      "question": "Test question 2?",
+      "answers": [
+        {
+          "text": "Correct answer",
+          "is_correct": true
+        },
+        {
+          "text": "Wrong answer",
+          "is_correct": false
+        }
+      ],
+      "explanation": "This is the explanation."
+    },
+    {
+      "question": "Test question 3?",
+      "answers": [
+        {
+          "text": "Correct answer",
+          "is_correct": true
+        },
+        {
+          "text": "Wrong answer",
+          "is_correct": false
+        }
+      ],
+      "explanation": "This is the explanation."
+    }
+  ],
+  "planned_chapter_types": [
+    "story",
+    "lesson",
+    "story",
+    "lesson",
+    "reflect",
+    "story",
+    "lesson",
+    "story",
+    "lesson",
+    "conclusion"
+  ],
+  "metadata": {
+    "agency": {
+      "name": "Magic Sword",
+      "type": "item",
+      "references": []
+    },
+    "simulation": {
+      "run_id": "5a5adb85",
+      "timestamp": "2025-03-22T14:00:38.862667",
+      "story_category": "enchanted_forest_tales",
+      "lesson_topic": "Singapore History",
+      "is_mock": true
+    }
+  }
+}

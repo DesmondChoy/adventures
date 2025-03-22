@@ -1,5 +1,45 @@
 # Testing Guidelines for Learning Odyssey
 
+## State Testing
+
+### Summary Button Testing
+Run `test_summary_button_flow.py` to verify the "Take a Trip Down Memory Lane" button functionality:
+```bash
+# Run with default settings (uses realistic state generation)
+python tests/test_summary_button_flow.py
+
+# Run with synthetic hardcoded state
+python tests/test_summary_button_flow.py --synthetic
+
+# Load state from a file
+python tests/test_summary_button_flow.py --file path/to/state.json
+
+# Use specific story category and lesson topic
+python tests/test_summary_button_flow.py --category "enchanted_forest_tales" --topic "Singapore History"
+
+# Compare synthetic and realistic states
+python tests/test_summary_button_flow.py --compare
+```
+
+This test verifies:
+1. State storage in StateStorageService
+2. State retrieval from StateStorageService
+3. State reconstruction with case sensitivity handling
+4. Summary data formatting
+5. Chapter summaries, educational questions, and statistics
+
+### Case Sensitivity Testing
+Run `test_state_storage_reconstruction.py` to verify case sensitivity handling:
+```bash
+python tests/test_state_storage_reconstruction.py
+```
+
+This test verifies:
+1. Uppercase chapter types are correctly converted to lowercase
+2. Planned chapter types are correctly converted to lowercase
+3. Chapter 10 is correctly treated as a CONCLUSION chapter
+4. Summary data is correctly formatted with lowercase chapter types
+
 ## Testing Requirements
 
 ### Backend Testing

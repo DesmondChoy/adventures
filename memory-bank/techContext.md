@@ -63,6 +63,25 @@
 
 ## Core Data Structures
 
+### StateStorageService (`app/services/state_storage_service.py`)
+```python
+class StateStorageService:
+    # Singleton pattern implementation
+    _instance = None
+    _memory_cache = {}  # Shared memory cache across all instances
+    _initialized = False
+    
+    # Methods
+    async def store_state(self, state_data: Dict[str, Any]) -> str:
+        # Stores state with UUID and returns the ID
+        
+    async def get_state(self, state_id: str) -> Optional[Dict[str, Any]]:
+        # Retrieves state by ID
+        
+    async def cleanup_expired(self) -> int:
+        # Removes expired states
+```
+
 ### AdventureState (`app/models/story.py`)
 ```python
 class AdventureState:
@@ -87,11 +106,14 @@ class AdventureState:
 ### ChapterType Enum (`app/models/story.py`)
 ```python
 class ChapterType(str, Enum):
-    STORY = "STORY"
-    LESSON = "LESSON"
-    REFLECT = "REFLECT"
-    CONCLUSION = "CONCLUSION"
+    LESSON = "lesson"
+    STORY = "story"
+    CONCLUSION = "conclusion"
+    REFLECT = "reflect"
+    SUMMARY = "summary"
 ```
+
+**Note:** The enum values are lowercase, but stored states may contain uppercase values (like "STORY", "LESSON"). The `reconstruct_state_from_storage` method in `AdventureStateManager` handles this case sensitivity issue by converting all chapter types to lowercase during state reconstruction.
 
 ## Key Services
 
@@ -143,12 +165,21 @@ def update_agency_references(self, chapter_data: ChapterData) -> None:
 
 ## Testing Framework
 
-### Simulation (`tests/simulations/story_simulation.py`)
+### Simulation (`tests/simulations/generate_all_chapters.py`)
 - Generates structured log data with standardized prefixes
 - Automated adventure progression with random choices
 - Real-time WebSocket communication testing
+- Saves complete simulation state to JSON file
+
+### Test State Generation (`tests/utils/generate_test_state.py`)
+- Generates realistic test states using `generate_all_chapters.py`
+- Provides fallback to mock state when simulation fails
+- Adds metadata to track state source for debugging
+- Supports customization of story category and lesson topic
 
 ### Test Files
-- `test_simulation_functionality.py`: Verifies chapter sequences, ratios
-- `test_simulation_errors.py`: Tests error handling and recovery
-- `run_simulation_tests.py`: Orchestrates server, simulation, and tests
+- `test_summary_button_flow.py`: Tests "Take a Trip Down Memory Lane" button functionality
+- `test_state_storage_reconstruction.py`: Tests case sensitivity handling in state reconstruction
+- `test_summary_chapter.py`: Tests summary chapter functionality
+- `test_chapter_sequence_validation.py`: Verifies chapter sequences and ratios
+- `test_chapter_type_assignment.py`: Tests chapter type assignment logic

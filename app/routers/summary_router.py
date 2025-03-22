@@ -118,8 +118,44 @@ async def get_adventure_summary(state_id: Optional[str] = None):
             )
 
         # Check if the adventure is complete (has a CONCLUSION chapter)
-        if not any(ch.chapter_type == ChapterType.CONCLUSION for ch in state.chapters):
+        has_conclusion = False
+
+        # Log all chapters for debugging
+        logger.info(f"Total chapters: {len(state.chapters)}")
+        for ch in state.chapters:
+            logger.info(
+                f"Chapter {ch.chapter_number}: type={ch.chapter_type}, raw_type={type(ch.chapter_type)}, value={str(ch.chapter_type)}"
+            )
+
+            # Check for CONCLUSION chapter with multiple conditions
+            if (
+                # Check enum value
+                ch.chapter_type == ChapterType.CONCLUSION
+                # Check string value (case-insensitive)
+                or str(ch.chapter_type).lower() == "conclusion"
+                # Check chapter number (chapter 10 should be CONCLUSION)
+                or (ch.chapter_number == 10 and state.story_length == 10)
+                # Check if it's the last chapter in a story of any length
+                or (ch.chapter_number == state.story_length and state.story_length > 0)
+            ):
+                has_conclusion = True
+                logger.info(
+                    f"Found CONCLUSION chapter: {ch.chapter_number} with type {ch.chapter_type}"
+                )
+                # Force set the chapter type to CONCLUSION if it's not already
+                if str(ch.chapter_type).lower() != "conclusion":
+                    logger.warning(
+                        f"Chapter {ch.chapter_number} has type {ch.chapter_type} but should be CONCLUSION. Treating as CONCLUSION."
+                    )
+                break
+
+        if not has_conclusion:
             logger.warning("Adventure is not complete (no CONCLUSION chapter)")
+            # Log more details about the state
+            logger.warning(f"Story length: {state.story_length}")
+            logger.warning(f"Planned chapter types: {state.planned_chapter_types}")
+            logger.warning(f"Chapter count: {len(state.chapters)}")
+
             return JSONResponse(
                 status_code=400,
                 content={

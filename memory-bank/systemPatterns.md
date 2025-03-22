@@ -160,7 +160,43 @@ graph TD
 
 ## Key Patterns
 
-### 1. React-based Summary Architecture
+### 1. Singleton Pattern for State Storage
+- **StateStorageService** (`app/services/state_storage_service.py`)
+  * Ensures all instances share the same memory cache
+  * Implemented with class variables and `__new__` method
+  * Prevents state loss between different service instances
+  * Critical for "Take a Trip Down Memory Lane" button functionality
+  ```python
+  class StateStorageService:
+      _instance = None
+      _memory_cache = {}  # Shared memory cache across all instances
+      _initialized = False
+
+      def __new__(cls):
+          if cls._instance is None:
+              cls._instance = super(StateStorageService, cls).__new__(cls)
+          return cls._instance
+
+      def __init__(self):
+          if not StateStorageService._initialized:
+              StateStorageService._initialized = True
+              logger.info("Initializing StateStorageService singleton")
+  ```
+
+### 2. Case Sensitivity Handling Pattern
+- **AdventureStateManager** (`app/services/adventure_state_manager.py`)
+  * Converts uppercase chapter types to lowercase during state reconstruction
+  * Ensures compatibility between stored state and AdventureState model
+  * Special handling for chapter 10 to ensure it's always a CONCLUSION chapter
+  * Robust error handling and logging for debugging
+  ```python
+  # Convert chapter_type to lowercase
+  if isinstance(chapter["chapter_type"], str):
+      chapter["chapter_type"] = chapter["chapter_type"].lower()
+      logger.debug(f"Converted chapter_type to lowercase: {chapter['chapter_type']}")
+  ```
+
+### 3. React-based Summary Architecture
 - **TypeScript Interfaces** (`app/static/experimental/celebration-journey-moments-main/src/lib/types.ts`)
   * Defines structured data interfaces for the summary components
   * `ChapterSummary`: Chapter number, title, summary, and chapter type

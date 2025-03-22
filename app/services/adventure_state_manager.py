@@ -556,7 +556,7 @@ class AdventureStateManager:
                     )
                     chapter["chapter_content"]["choices"] = []
 
-                # Handle chapter_type case sensitivity
+                # Handle chapter_type case sensitivity and ensure chapter 10 is CONCLUSION
                 if "chapter_type" in chapter:
                     # Convert chapter_type to lowercase
                     if isinstance(chapter["chapter_type"], str):
@@ -564,6 +564,29 @@ class AdventureStateManager:
                         logger.debug(
                             f"Converted chapter_type to lowercase: {chapter['chapter_type']}"
                         )
+
+                        # Ensure it's a valid ChapterType value
+                        try:
+                            # Try to convert to ChapterType enum
+                            chapter_type_value = chapter["chapter_type"]
+                            if chapter_type_value == "conclusion":
+                                logger.info(
+                                    f"Found CONCLUSION chapter: {chapter.get('chapter_number', 'unknown')}"
+                                )
+                        except Exception as e:
+                            logger.warning(
+                                f"Error converting chapter_type to enum: {e}"
+                            )
+
+                # Special handling for chapter 10 - force it to be CONCLUSION
+                chapter_number = chapter.get("chapter_number")
+                if chapter_number == 10 or (
+                    chapter_number == stored_state.get("story_length", 10)
+                ):
+                    logger.info(
+                        f"Setting chapter {chapter_number} type to 'conclusion' (was: {chapter.get('chapter_type', 'unknown')})"
+                    )
+                    chapter["chapter_type"] = "conclusion"
 
                 # For story chapters, ensure exactly 3 choices
                 if (

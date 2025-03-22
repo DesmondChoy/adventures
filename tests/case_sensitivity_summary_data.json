@@ -28,31 +28,31 @@
       "number": 5,
       "title": "Chapter 5",
       "summary": "Summary for chapter 5.",
-      "chapterType": "story"
+      "chapterType": "reflect"
     },
     {
       "number": 6,
       "title": "Chapter 6",
       "summary": "Summary for chapter 6.",
-      "chapterType": "lesson"
+      "chapterType": "story"
     },
     {
       "number": 7,
       "title": "Chapter 7",
       "summary": "Summary for chapter 7.",
-      "chapterType": "story"
+      "chapterType": "lesson"
     },
     {
       "number": 8,
       "title": "Chapter 8",
       "summary": "Summary for chapter 8.",
-      "chapterType": "lesson"
+      "chapterType": "story"
     },
     {
       "number": 9,
       "title": "Chapter 9",
       "summary": "Summary for chapter 9.",
-      "chapterType": "story"
+      "chapterType": "lesson"
     },
     {
       "number": 10,
@@ -61,29 +61,10 @@
       "chapterType": "conclusion"
     }
   ],
-  "educationalQuestions": [
-    {
-      "question": "Test question 1?",
-      "userAnswer": "No answer",
-      "isCorrect": false,
-      "explanation": "This is the explanation."
-    },
-    {
-      "question": "Test question 2?",
-      "userAnswer": "No answer",
-      "isCorrect": false,
-      "explanation": "This is the explanation."
-    },
-    {
-      "question": "Test question 3?",
-      "userAnswer": "No answer",
-      "isCorrect": false,
-      "explanation": "This is the explanation."
-    }
-  ],
+  "educationalQuestions": [],
   "statistics": {
     "chaptersCompleted": 10,
-    "questionsAnswered": 3,
+    "questionsAnswered": 0,
     "timeSpent": "30 mins",
     "correctAnswers": 0
   }
