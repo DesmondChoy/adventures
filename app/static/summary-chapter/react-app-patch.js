@@ -11,12 +11,21 @@
         console.log('[DEBUG] Patching React app fetch function');
         
         // Get the state ID from localStorage (set by summary-state-handler.js)
-        const stateId = localStorage.getItem('summary_state_id');
+        let stateId = localStorage.getItem('summary_state_id');
         console.log('[DEBUG] State ID from localStorage:', stateId);
         
         if (!stateId) {
             console.log('[DEBUG] No state ID found in localStorage, not patching fetch');
             return;
+        }
+        
+        // Clean up the state ID in case it contains multiple values
+        if (stateId.includes(',')) {
+            console.log('[DEBUG] State ID contains multiple values:', stateId);
+            stateId = stateId.split(',')[0].trim();
+            console.log('[DEBUG] Using first value:', stateId);
+            // Update localStorage with the clean value
+            localStorage.setItem('summary_state_id', stateId);
         }
         
         console.log('[DEBUG] Found state ID in localStorage:', stateId);
@@ -32,9 +41,19 @@
             
             // Check if this is a request to the adventure summary API
             if (url && typeof url === 'string' && url.includes('/adventure/api/adventure-summary')) {
-                // Add the state ID to the URL
-                const separator = url.includes('?') ? '&' : '?';
-                const newUrl = `${url}${separator}state_id=${stateId}`;
+                // Check if the URL already has a state_id parameter
+                const urlObj = new URL(url, window.location.origin);
+                const urlParams = new URLSearchParams(urlObj.search);
+                
+                // Remove any existing state_id parameters
+                urlParams.delete('state_id');
+                
+                // Add our clean state_id
+                urlParams.append('state_id', stateId);
+                
+                // Construct the new URL
+                urlObj.search = urlParams.toString();
+                const newUrl = urlObj.toString();
                 console.log('[DEBUG] Patching fetch URL:', url, '->', newUrl);
                 
                 // Log the options

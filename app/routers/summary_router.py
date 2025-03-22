@@ -62,6 +62,14 @@ async def get_adventure_summary(state_id: Optional[str] = None):
         state_id: Optional ID of the stored state to use for generating the summary.
                  If not provided, uses the current adventure state.
     """
+    # Log the request parameters for debugging
+    logger.info(f"get_adventure_summary called with state_id: {state_id}")
+
+    # If state_id contains multiple values (e.g., from duplicate parameters), use the first one
+    if state_id and "," in state_id:
+        logger.warning(f"Multiple state_id values detected: {state_id}")
+        state_id = state_id.split(",")[0]
+        logger.info(f"Using first state_id value: {state_id}")
     try:
         # Create the adventure state manager
         state_manager = AdventureStateManager()
@@ -117,51 +125,86 @@ async def get_adventure_summary(state_id: Optional[str] = None):
                 },
             )
 
-        # Check if the adventure is complete (has a CONCLUSION chapter)
-        has_conclusion = False
+            # Check if the adventure is complete (has a CONCLUSION chapter)
+            has_conclusion = False
 
-        # Log all chapters for debugging
-        logger.info(f"Total chapters: {len(state.chapters)}")
-        for ch in state.chapters:
-            logger.info(
-                f"Chapter {ch.chapter_number}: type={ch.chapter_type}, raw_type={type(ch.chapter_type)}, value={str(ch.chapter_type)}"
-            )
+            # Log all chapters for debugging
+            logger.info(f"Total chapters: {len(state.chapters)}")
 
-            # Check for CONCLUSION chapter with multiple conditions
-            if (
-                # Check enum value
-                ch.chapter_type == ChapterType.CONCLUSION
-                # Check string value (case-insensitive)
-                or str(ch.chapter_type).lower() == "conclusion"
-                # Check chapter number (chapter 10 should be CONCLUSION)
-                or (ch.chapter_number == 10 and state.story_length == 10)
-                # Check if it's the last chapter in a story of any length
-                or (ch.chapter_number == state.story_length and state.story_length > 0)
-            ):
-                has_conclusion = True
+            # First check if chapter 10 exists (or the last chapter in a story of any length)
+            last_chapter = None
+            for ch in state.chapters:
                 logger.info(
-                    f"Found CONCLUSION chapter: {ch.chapter_number} with type {ch.chapter_type}"
+                    f"Chapter {ch.chapter_number}: type={ch.chapter_type}, raw_type={type(ch.chapter_type)}, value={str(ch.chapter_type)}"
                 )
-                # Force set the chapter type to CONCLUSION if it's not already
-                if str(ch.chapter_type).lower() != "conclusion":
-                    logger.warning(
-                        f"Chapter {ch.chapter_number} has type {ch.chapter_type} but should be CONCLUSION. Treating as CONCLUSION."
+
+                # Keep track of the last chapter
+                if (
+                    last_chapter is None
+                    or ch.chapter_number > last_chapter.chapter_number
+                ):
+                    last_chapter = ch
+
+                # Check for CONCLUSION chapter with multiple conditions
+                if (
+                    # Check enum value
+                    ch.chapter_type == ChapterType.CONCLUSION
+                    # Check string value (case-insensitive)
+                    or str(ch.chapter_type).lower() == "conclusion"
+                    # Check chapter number (chapter 10 should be CONCLUSION)
+                    or (ch.chapter_number == 10 and state.story_length == 10)
+                    # Check if it's the last chapter in a story of any length
+                    or (
+                        ch.chapter_number == state.story_length
+                        and state.story_length > 0
                     )
-                break
+                ):
+                    has_conclusion = True
+                    logger.info(
+                        f"Found CONCLUSION chapter: {ch.chapter_number} with type {ch.chapter_type}"
+                    )
+                    # Force set the chapter type to CONCLUSION if it's not already
+                    if str(ch.chapter_type).lower() != "conclusion":
+                        logger.warning(
+                            f"Chapter {ch.chapter_number} has type {ch.chapter_type} but should be CONCLUSION. Treating as CONCLUSION."
+                        )
+                        # Actually update the chapter type to CONCLUSION
+                        ch.chapter_type = ChapterType.CONCLUSION
+                    break
 
-        if not has_conclusion:
-            logger.warning("Adventure is not complete (no CONCLUSION chapter)")
-            # Log more details about the state
-            logger.warning(f"Story length: {state.story_length}")
-            logger.warning(f"Planned chapter types: {state.planned_chapter_types}")
-            logger.warning(f"Chapter count: {len(state.chapters)}")
+            # If we didn't find a CONCLUSION chapter but we have a last chapter, check if it's chapter 10
+            if not has_conclusion and last_chapter is not None:
+                if (
+                    last_chapter.chapter_number == 10
+                    or last_chapter.chapter_number == state.story_length
+                ):
+                    logger.info(
+                        f"Treating last chapter {last_chapter.chapter_number} as CONCLUSION chapter"
+                    )
+                    has_conclusion = True
+                    # Update the chapter type to CONCLUSION
+                    last_chapter.chapter_type = ChapterType.CONCLUSION
 
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "Adventure is not complete. Complete the adventure to view the summary."
-                },
-            )
+            if not has_conclusion:
+                logger.warning("Adventure is not complete (no CONCLUSION chapter)")
+                # Log more details about the state
+                logger.warning(f"Story length: {state.story_length}")
+                logger.warning(f"Planned chapter types: {state.planned_chapter_types}")
+                logger.warning(f"Chapter count: {len(state.chapters)}")
+
+                # Check if we have at least 9 chapters (all but the conclusion)
+                if len(state.chapters) >= 9:
+                    logger.info(
+                        "We have at least 9 chapters, treating as complete adventure"
+                    )
+                    has_conclusion = True
+                else:
+                    return JSONResponse(
+                        status_code=400,
+                        content={
+                            "error": "Adventure is not complete. Complete the adventure to view the summary."
+                        },
+                    )
 
         # Format the adventure state data for the React summary component
         summary_data = state_manager.format_adventure_summary_data(state)

@@ -1,0 +1,78 @@
+{
+  "chapterSummaries": [
+    {
+      "number": 1,
+      "title": "Chapter 1",
+      "summary": "Summary for chapter 1.",
+      "chapterType": "story"
+    },
+    {
+      "number": 2,
+      "title": "Chapter 2",
+      "summary": "Summary for chapter 2.",
+      "chapterType": "lesson"
+    },
+    {
+      "number": 3,
+      "title": "Chapter 3",
+      "summary": "Summary for chapter 3.",
+      "chapterType": "story"
+    },
+    {
+      "number": 4,
+      "title": "Chapter 4",
+      "summary": "Summary for chapter 4.",
+      "chapterType": "lesson"
+    },
+    {
+      "number": 5,
+      "title": "Chapter 5",
+      "summary": "Summary for chapter 5.",
+      "chapterType": "reflect"
+    },
+    {
+      "number": 6,
+      "title": "Chapter 6",
+      "summary": "Summary for chapter 6.",
+      "chapterType": "story"
+    },
+    {
+      "number": 7,
+      "title": "Chapter 7",
+      "summary": "Summary for chapter 7.",
+      "chapterType": "lesson"
+    },
+    {
+      "number": 8,
+      "title": "Chapter 8",
+      "summary": "Summary for chapter 8.",
+      "chapterType": "story"
+    },
+    {
+      "number": 9,
+      "title": "Chapter 9",
+      "summary": "Summary for chapter 9.",
+      "chapterType": "lesson"
+    },
+    {
+      "number": 10,
+      "title": "Chapter 10",
+      "summary": "Summary for chapter 10.",
+      "chapterType": "conclusion"
+    }
+  ],
+  "educationalQuestions": [
+    {
+      "question": "What is the moral of the story?",
+      "userAnswer": "No answer",
+      "isCorrect": false,
+      "explanation": "The story teaches us that honesty leads to trust and friendship."
+    }
+  ],
+  "statistics": {
+    "chaptersCompleted": 10,
+    "questionsAnswered": 1,
+    "timeSpent": "30 mins",
+    "correctAnswers": 0
+  }
+}

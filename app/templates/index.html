@@ -1064,8 +1064,15 @@ function startAdventure() {
                 const data = await response.json();
                 const stateId = data.state_id;
                 
+                // Log the state ID for debugging
+                console.log('Adventure summary state ID:', stateId);
+                
+                // Create a clean URL with a single state_id parameter
+                const summaryUrl = new URL('/adventure/summary', window.location.origin);
+                summaryUrl.searchParams.append('state_id', stateId);
+                
                 // Navigate to the summary page with the state ID
-                window.location.href = `/adventure/summary?state_id=${stateId}`;
+                window.location.href = summaryUrl.toString();
             } catch (error) {
                 console.error('Error viewing adventure summary:', error);
                 showError('Failed to load adventure summary. Please try again.');

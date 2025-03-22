@@ -156,6 +156,46 @@
            """FastAPI dependency"""
            return StateStorageService.get_instance()
        ```
+   
+   - URL Parameter Handling:
+     * When generating URLs with query parameters, use proper URL construction:
+       ```javascript
+       // Create a clean URL with a single state_id parameter
+       const summaryUrl = new URL('/adventure/summary', window.location.origin);
+       summaryUrl.searchParams.append('state_id', stateId);
+       
+       // Navigate to the summary page with the state ID
+       window.location.href = summaryUrl.toString();
+       ```
+     * When handling URL parameters in FastAPI, check for duplicate parameters:
+       ```python
+       # Handle potential duplicate state_id parameters
+       if "," in state_id:
+           logger.warning(f"Multiple state_id values detected: {state_id}")
+           # Use only the first value
+           state_id = state_id.split(",")[0]
+       ```
+     * In JavaScript, clean up state_id values that might contain duplicates:
+       ```javascript
+       // Clean up state_id value (handle potential duplicates)
+       if (stateId && stateId.includes(',')) {
+           console.warn('Duplicate state_id detected, using first value');
+           stateId = stateId.split(',')[0];
+       }
+       ```
+     * When handling React Router parameters, ensure proper URL construction:
+       ```javascript
+       // In react-app-patch.js
+       // Handle existing parameters in URL
+       const existingParams = new URLSearchParams(window.location.search);
+       const stateId = existingParams.get('state_id');
+       
+       if (stateId) {
+           // Clean up state_id value (handle potential duplicates)
+           const cleanStateId = stateId.includes(',') ? stateId.split(',')[0] : stateId;
+           // Use the clean state_id value
+       }
+       ```
 
 2. Chapter Requirements:
    - First chapter MUST be STORY type with agency choice
