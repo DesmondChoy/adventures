@@ -320,3 +320,153 @@ The recommended approach is to implement a centralized conversion utility that c
 5. Make it easier to add new fields in the future
 
 This approach respects the conventions of each language while providing a clean, consistent interface between them.
+
+## Required Refactoring
+
+If a centralized conversion utility is implemented, the following functions would require refactoring. These functions would not be removed entirely, but would be modified to focus on their core responsibilities while delegating the case conversion to the new utility.
+
+### 1. `extract_chapter_summaries()`
+
+**Current implementation:**
+```python
+def extract_chapter_summaries(state: AdventureState):
+    # ...
+    summary_obj = {
+        "number": chapter_number,
+        "title": title,
+        "summary": summary_text,
+        "chapterType": chapter_type_str  # camelCase
+    }
+    # ...
+```
+
+**After refactoring:**
+```python
+def extract_chapter_summaries(state: AdventureState):
+    # ...
+    summary_obj = {
+        "number": chapter_number,
+        "title": title,
+        "summary": summary_text,
+        "chapter_type": chapter_type_str  # snake_case
+    }
+    # ...
+```
+
+### 2. `extract_educational_questions()`
+
+**Current implementation:**
+```python
+def extract_educational_questions(state: AdventureState):
+    # ...
+    question_obj = {
+        "question": question_text,
+        "userAnswer": user_answer,      # camelCase and renamed
+        "isCorrect": is_correct,        # camelCase
+        "explanation": explanation
+    }
+    
+    # Add correct answer if the user was wrong
+    if not is_correct:
+        question_obj["correctAnswer"] = correct_answer  # camelCase
+    # ...
+```
+
+**After refactoring:**
+```python
+def extract_educational_questions(state: AdventureState):
+    # ...
+    question_obj = {
+        "question": question_text,
+        "user_answer": user_answer,     # snake_case and consistent naming
+        "is_correct": is_correct,       # snake_case
+        "explanation": explanation
+    }
+    
+    # Add correct answer if the user was wrong
+    if not is_correct:
+        question_obj["correct_answer"] = correct_answer  # snake_case
+    # ...
+```
+
+### 3. `calculate_adventure_statistics()`
+
+**Current implementation:**
+```python
+def calculate_adventure_statistics(state: AdventureState, questions):
+    # ...
+    statistics = {
+        "chaptersCompleted": len(state.chapters),  # camelCase
+        "questionsAnswered": total_questions,      # camelCase
+        "timeSpent": time_spent,                   # camelCase
+        "correctAnswers": correct_answers          # camelCase
+    }
+    # ...
+```
+
+**After refactoring:**
+```python
+def calculate_adventure_statistics(state: AdventureState, questions):
+    # ...
+    statistics = {
+        "chapters_completed": len(state.chapters),  # snake_case
+        "questions_answered": total_questions,      # snake_case
+        "time_spent": time_spent,                   # snake_case
+        "correct_answers": correct_answers          # snake_case
+    }
+    # ...
+```
+
+### 4. `format_adventure_summary_data()`
+
+**Current implementation:**
+```python
+def format_adventure_summary_data(state: AdventureState):
+    # ...
+    summary_data = {
+        "chapterSummaries": chapter_summaries,        # camelCase
+        "educationalQuestions": educational_questions, # camelCase
+        "statistics": statistics
+    }
+    # ...
+```
+
+**After refactoring:**
+```python
+def format_adventure_summary_data(state: AdventureState):
+    # ...
+    summary_data = {
+        "chapter_summaries": chapter_summaries,        # snake_case
+        "educational_questions": educational_questions, # snake_case
+        "statistics": statistics
+    }
+    # ...
+```
+
+### 5. API Endpoint
+
+The case conversion would happen at the API endpoint level:
+
+```python
+@router.get("/api/adventure-summary")
+async def get_adventure_summary(state_id: Optional[str] = None):
+    # ... existing code ...
+    
+    # Format the adventure state data (now using snake_case consistently)
+    summary_data = format_adventure_summary_data(adventure_state)
+    
+    # Convert all keys from snake_case to camelCase at the API boundary
+    camel_case_data = snake_to_camel_dict(summary_data)
+    
+    return camel_case_data
+```
+
+### Benefits of This Refactoring
+
+1. **Separation of Concerns**: Each function focuses on its core responsibility without worrying about case conversion
+2. **Consistency**: Backend code uses snake_case consistently, following Python conventions
+3. **Centralization**: Case conversion happens in one place, making it easier to maintain
+4. **Reduced Duplication**: No need to repeat conversion logic in multiple functions
+5. **Easier Debugging**: Clearer separation between data extraction/formatting and API response formatting
+6. **Standardized Field Names**: Consistent naming conventions throughout the backend code
+7. **Simplified Maintenance**: Adding new fields or modifying existing ones becomes more straightforward
