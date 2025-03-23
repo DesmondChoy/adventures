@@ -152,6 +152,12 @@ class ChapterType(str, Enum):
 ### Summary Router (`app/routers/summary_router.py`)
 - Serves the React-based Summary Chapter
 - Provides API endpoints for adventure summary data
+- Enhanced state storage with summary generation:
+  * Checks for missing chapter summaries before storing state
+  * Generates summaries for chapters that don't have them
+  * Special handling for the CONCLUSION chapter with placeholder choice
+  * Ensures consistent chapter summaries in the Summary Chapter
+  * Eliminates duplicate summary generation
 - Extracts chapter summaries, educational questions, and statistics
 - Handles state reconstruction with case sensitivity handling
 - Implements robust fallback mechanisms for missing data

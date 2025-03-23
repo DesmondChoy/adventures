@@ -349,6 +349,38 @@
      * The STORY_COMPLETE event is triggered when chapter count equals story length (not checking chapter type)
      * This consistent approach simplifies the code, improves maintainability, and makes it more adaptable to future changes
    
+   - Enhanced State Storage Process:
+     * The `store_adventure_state` function in `app/routers/summary_router.py` checks for missing chapter summaries:
+       ```python
+       # Ensure chapter_summaries exists
+       if not state_data.get('chapter_summaries'):
+           state_data['chapter_summaries'] = []
+           logger.info("Created empty chapter_summaries array")
+       ```
+     * It generates summaries for chapters that don't have them:
+       ```python
+       # Check if we need to generate a summary for this chapter
+       if len(state_data['chapter_summaries']) < chapter_number:
+           logger.info(f"Missing summary for chapter {chapter_number} ({chapter_type})")
+           
+           # Generate the summary
+           summary_result = await chapter_manager.generate_chapter_summary(
+               chapter.get('content', ''), choice_text, choice_context
+           )
+       ```
+     * Special handling for the CONCLUSION chapter with placeholder choice:
+       ```python
+       # For conclusion chapter, use placeholder choice
+       if chapter_type == "conclusion":
+           choice_text = "End of story"
+           choice_context = ""
+           logger.info(f"Using placeholder choice for CONCLUSION chapter")
+       ```
+     * Ensures consistent chapter summaries in the Summary Chapter
+     * Eliminates duplicate summary generation
+     * Works with existing frontend code (no client-side changes needed)
+     * Handles edge cases gracefully with fallback mechanisms
+     
    - Summary Chapter Robustness:
      * When chapter summaries are missing, generate placeholder summaries:
        ```python

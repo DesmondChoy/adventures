@@ -1193,154 +1193,196 @@ async def store_adventure_state(state_data: dict):
             f"Lesson questions count: {len(state_data.get('lesson_questions', []))}"
         )
 
-        # Log detailed information about chapters to find questions
-        logger.info("\n=== ANALYZING CHAPTERS FOR QUESTIONS ===")
-        lesson_chapters = []
-        for chapter in state_data.get("chapters", []):
-            chapter_number = chapter.get("chapter_number", 0)
-            chapter_type = chapter.get("chapter_type", "")
-
-            # Check for chapter_type in various formats
-            is_lesson = False
-            if isinstance(chapter_type, str) and chapter_type.lower() == "lesson":
-                is_lesson = True
-            elif (
-                hasattr(chapter_type, "value")
-                and chapter_type.value.lower() == "lesson"
-            ):
-                is_lesson = True
-
-            if is_lesson:
-                lesson_chapters.append(chapter_number)
-                logger.info(f"Found LESSON chapter {chapter_number}:")
-
-                # Check all possible question locations
-                if "question" in chapter:
-                    logger.info(
-                        f"  - Has 'question' field: {type(chapter['question'])}"
-                    )
-                    if isinstance(chapter["question"], dict):
-                        logger.info(
-                            f"  - Question keys: {list(chapter['question'].keys())}"
-                        )
-                        logger.info(
-                            f"  - Question text: {chapter['question'].get('question', 'None')[:50]}..."
-                        )
-                else:
-                    logger.info(f"  - No 'question' field")
-
-                # Check chapter_content for question data
-                if "chapter_content" in chapter and chapter["chapter_content"]:
-                    if "question" in chapter["chapter_content"]:
-                        logger.info(f"  - Has 'chapter_content.question' field")
-
-                # Check response field
-                if "response" in chapter and chapter["response"]:
-                    logger.info(
-                        f"  - Has 'response' field: {type(chapter['response'])}"
-                    )
-                    if hasattr(chapter["response"], "chosen_answer"):
-                        logger.info(
-                            f"  - Response chosen_answer: {chapter['response'].chosen_answer}"
-                        )
-                    if hasattr(chapter["response"], "is_correct"):
-                        logger.info(
-                            f"  - Response is_correct: {chapter['response'].is_correct}"
-                        )
-                else:
-                    logger.info(f"  - No 'response' field")
-
-        logger.info(f"Found {len(lesson_chapters)} LESSON chapters: {lesson_chapters}")
-        logger.info("=== END CHAPTER ANALYSIS ===\n")
-
-        # Add chapter summaries if they don't exist
+        # Ensure chapter_summaries exists
         if not state_data.get("chapter_summaries"):
-            logger.info("Generating proper chapter summaries using ChapterManager")
-            chapter_summaries = []
-            chapter_titles = []
+            state_data["chapter_summaries"] = []
+            logger.info("Created empty chapter_summaries array")
 
-            # Import the ChapterManager to generate proper summaries
+        # Ensure summary_chapter_titles exists
+        if not state_data.get("summary_chapter_titles"):
+            state_data["summary_chapter_titles"] = []
+            logger.info("Created empty summary_chapter_titles array")
+
+        # Process chapters to ensure all have summaries
+        if state_data.get("chapters"):
+            # Sort chapters by chapter number to ensure correct order
+            sorted_chapters = sorted(
+                state_data.get("chapters", []), key=lambda x: x.get("chapter_number", 0)
+            )
+
+            # Import ChapterManager for summary generation
             from app.services.chapter_manager import ChapterManager
 
             chapter_manager = ChapterManager()
 
-            # Generate summaries for each chapter
-            for chapter in sorted(
-                state_data.get("chapters", []), key=lambda x: x.get("chapter_number", 0)
-            ):
+            for chapter in sorted_chapters:
                 chapter_number = chapter.get("chapter_number", 0)
-                content = chapter.get("content", "")
+                chapter_type = str(chapter.get("chapter_type", "")).lower()
 
-                # For choice context, look at the next chapter's response if available
-                choice_text = None
-                choice_context = ""
+                # Check if we need to generate a summary for this chapter
+                if len(state_data["chapter_summaries"]) < chapter_number:
+                    logger.info(
+                        f"Missing summary for chapter {chapter_number} ({chapter_type})"
+                    )
 
-                # Find this chapter's choice from the next chapter's response
-                if chapter_number < len(state_data.get("chapters", [])):
-                    # Get the next chapter (if not the last chapter)
-                    next_chapters = [
-                        ch
-                        for ch in state_data.get("chapters", [])
-                        if ch.get("chapter_number", 0) == chapter_number + 1
-                    ]
-
-                    if next_chapters and next_chapters[0].get("response"):
-                        response = next_chapters[0].get("response", {})
-                        if response.get("choice_text"):
-                            choice_text = response.get("choice_text")
-                        elif response.get("chosen_answer"):
-                            choice_text = response.get("chosen_answer")
-                            choice_context = (
-                                " (Correct answer)"
-                                if response.get("is_correct")
-                                else " (Incorrect answer)"
+                    # Add placeholder summaries for any gaps
+                    while len(state_data["chapter_summaries"]) < chapter_number - 1:
+                        state_data["chapter_summaries"].append(
+                            "Chapter summary not available"
+                        )
+                        # Also add placeholder titles
+                        if len(state_data["summary_chapter_titles"]) < len(
+                            state_data["chapter_summaries"]
+                        ):
+                            state_data["summary_chapter_titles"].append(
+                                f"Chapter {len(state_data['summary_chapter_titles']) + 1}"
                             )
 
-                # Generate a proper summary using ChapterManager
-                try:
-                    logger.info(f"Generating summary for chapter {chapter_number}")
-                    summary_result = await chapter_manager.generate_chapter_summary(
-                        content, choice_text, choice_context
-                    )
+                    # Generate summary for this chapter
+                    try:
+                        # Get choice context from next chapter's response if available
+                        choice_text = None
+                        choice_context = ""
 
-                    # Extract title and summary
-                    title = summary_result.get(
-                        "title", f"Chapter {chapter_number}: Adventure"
-                    )
-                    summary = summary_result.get("summary", "")
+                        # For non-conclusion chapters, try to find choice from next chapter
+                        if chapter_type != "conclusion" and chapter_number < len(
+                            sorted_chapters
+                        ):
+                            next_chapter = sorted_chapters[chapter_number]
+                            if next_chapter and next_chapter.get("response"):
+                                response = next_chapter.get("response", {})
+                                if response.get("choice_text"):
+                                    choice_text = response.get("choice_text")
+                                elif response.get("chosen_answer"):
+                                    choice_text = response.get("chosen_answer")
+                                    choice_context = (
+                                        " (Correct answer)"
+                                        if response.get("is_correct")
+                                        else " (Incorrect answer)"
+                                    )
 
-                    logger.info(
-                        f"Generated title for chapter {chapter_number}: {title}"
-                    )
-                    logger.info(
-                        f"Generated summary for chapter {chapter_number}: {summary[:50]}..."
-                    )
+                        # For conclusion chapter, use placeholder choice
+                        if chapter_type == "conclusion":
+                            choice_text = "End of story"
+                            choice_context = ""
+                            logger.info(
+                                f"Using placeholder choice for CONCLUSION chapter"
+                            )
 
-                    chapter_titles.append(title)
-                    chapter_summaries.append(summary)
-                except Exception as e:
-                    logger.error(
-                        f"Error generating summary for chapter {chapter_number}: {e}"
-                    )
-                    # Fallback to a simple summary
-                    title = f"Chapter {chapter_number}: Adventure"
-                    if len(content) > 200:
-                        summary = f"{content[:200]}..."
-                    else:
-                        summary = content
+                        # Generate the summary
+                        logger.info(f"Generating summary for chapter {chapter_number}")
+                        summary_result = await chapter_manager.generate_chapter_summary(
+                            chapter.get("content", ""), choice_text, choice_context
+                        )
 
-                    chapter_titles.append(title)
-                    chapter_summaries.append(summary)
-                    logger.info(f"Using fallback summary for chapter {chapter_number}")
+                        # Extract title and summary
+                        title = summary_result.get(
+                            "title",
+                            f"Chapter {chapter_number}: {chapter_type.capitalize()}",
+                        )
+                        summary = summary_result.get("summary", "Summary not available")
 
-            # Add to state data
-            state_data["chapter_summaries"] = chapter_summaries
-            state_data["summary_chapter_titles"] = chapter_titles
-            logger.info(f"Added {len(chapter_summaries)} generated summaries to state")
+                        # Add to state data
+                        state_data["chapter_summaries"].append(summary)
+                        state_data["summary_chapter_titles"].append(title)
 
-        # Add lesson questions if they don't exist
+                        logger.info(
+                            f"Generated summary for chapter {chapter_number}: {summary[:50]}..."
+                        )
+                        logger.info(
+                            f"Generated title for chapter {chapter_number}: {title}"
+                        )
+                    except Exception as e:
+                        logger.error(
+                            f"Error generating summary for chapter {chapter_number}: {e}"
+                        )
+                        # Add fallback summary and title
+                        state_data["chapter_summaries"].append(
+                            f"Summary for Chapter {chapter_number}"
+                        )
+                        state_data["summary_chapter_titles"].append(
+                            f"Chapter {chapter_number}: {chapter_type.capitalize()}"
+                        )
+                        logger.info(
+                            f"Added fallback summary for chapter {chapter_number}"
+                        )
+
+            logger.info(
+                f"Processed {len(sorted_chapters)} chapters, ensuring all have summaries"
+            )
+            logger.info(
+                f"Final chapter_summaries count: {len(state_data['chapter_summaries'])}"
+            )
+            logger.info(
+                f"Final summary_chapter_titles count: {len(state_data['summary_chapter_titles'])}"
+            )
+
+        # Process lesson questions if needed (existing code)
         if not state_data.get("lesson_questions"):
             logger.info("Extracting lesson questions for state before storing")
+            # Log detailed information about chapters to find questions
+            logger.info("\n=== ANALYZING CHAPTERS FOR QUESTIONS ===")
+            lesson_chapters = []
+            for chapter in state_data.get("chapters", []):
+                chapter_number = chapter.get("chapter_number", 0)
+                chapter_type = chapter.get("chapter_type", "")
+
+                # Check for chapter_type in various formats
+                is_lesson = False
+                if isinstance(chapter_type, str) and chapter_type.lower() == "lesson":
+                    is_lesson = True
+                elif (
+                    hasattr(chapter_type, "value")
+                    and chapter_type.value.lower() == "lesson"
+                ):
+                    is_lesson = True
+
+                if is_lesson:
+                    lesson_chapters.append(chapter_number)
+                    logger.info(f"Found LESSON chapter {chapter_number}:")
+
+                    # Check all possible question locations
+                    if "question" in chapter:
+                        logger.info(
+                            f"  - Has 'question' field: {type(chapter['question'])}"
+                        )
+                        if isinstance(chapter["question"], dict):
+                            logger.info(
+                                f"  - Question keys: {list(chapter['question'].keys())}"
+                            )
+                            logger.info(
+                                f"  - Question text: {chapter['question'].get('question', 'None')[:50]}..."
+                            )
+                    else:
+                        logger.info(f"  - No 'question' field")
+
+                    # Check chapter_content for question data
+                    if "chapter_content" in chapter and chapter["chapter_content"]:
+                        if "question" in chapter["chapter_content"]:
+                            logger.info(f"  - Has 'chapter_content.question' field")
+
+                    # Check response field
+                    if "response" in chapter and chapter["response"]:
+                        logger.info(
+                            f"  - Has 'response' field: {type(chapter['response'])}"
+                        )
+                        if hasattr(chapter["response"], "chosen_answer"):
+                            logger.info(
+                                f"  - Response chosen_answer: {chapter['response'].chosen_answer}"
+                            )
+                        if hasattr(chapter["response"], "is_correct"):
+                            logger.info(
+                                f"  - Response is_correct: {chapter['response'].is_correct}"
+                            )
+                    else:
+                        logger.info(f"  - No 'response' field")
+
+            logger.info(
+                f"Found {len(lesson_chapters)} LESSON chapters: {lesson_chapters}"
+            )
+            logger.info("=== END CHAPTER ANALYSIS ===\n")
+
+            # Extract lesson questions (using existing code)
             lesson_questions = []
 
             # Look for LESSON chapters with questions in a more thorough way

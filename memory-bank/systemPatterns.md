@@ -223,11 +223,21 @@ graph TD
 - **FastAPI Integration** (`app/routers/summary_router.py`)
   * `/adventure/summary`: Serves the React app
   * `/adventure/api/adventure-summary`: Provides the summary data
+  * `/adventure/api/store-adventure-state`: Enhanced state storage with summary generation
   * Error handling and logging for API endpoints
   * Integration with main FastAPI application
   * Robust fallback mechanisms for missing data
   * Case sensitivity handling for chapter types
   * Special handling for the last chapter to ensure it's always treated as a CONCLUSION chapter
+
+- **Enhanced State Storage Process**
+  * Checks for missing chapter summaries before storing state
+  * Generates summaries for chapters that don't have them
+  * Special handling for the CONCLUSION chapter with placeholder choice
+  * Ensures consistent chapter summaries in the Summary Chapter
+  * Eliminates duplicate summary generation
+  * Works with existing frontend code (no client-side changes needed)
+  * Handles edge cases gracefully with fallback mechanisms
 
 - **Data Generation and Processing**
   * `extract_chapter_summaries()`: Extracts chapter summaries with robust fallbacks

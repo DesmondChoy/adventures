@@ -28,6 +28,18 @@ This test verifies:
 4. Summary data formatting
 5. Chapter summaries, educational questions, and statistics
 
+### Chapter Summary Fix Testing
+Run `test_chapter_summary_fix.py` to verify the chapter summary inconsistencies fix:
+```bash
+python tests/test_chapter_summary_fix.py
+```
+
+This test verifies:
+1. Missing chapter summaries are generated during state storage
+2. The CONCLUSION chapter summary is properly generated with a placeholder choice
+3. All chapter summaries are stored in the state
+4. Chapter titles are properly generated and stored
+
 ### Case Sensitivity Testing
 Run `test_state_storage_reconstruction.py` to verify case sensitivity handling:
 ```bash

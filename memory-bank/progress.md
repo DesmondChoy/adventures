@@ -3,6 +3,18 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-23
+- Fixed chapter summary inconsistencies between WebSocket flow and REST API flow
+- Enhanced `store_adventure_state` function in `app/routers/summary_router.py` to check for missing chapter summaries
+- Added logic to generate summaries for chapters that don't have them, including the CONCLUSION chapter
+- Implemented special handling for the CONCLUSION chapter with a placeholder choice ("End of story")
+- Added robust error handling and fallback mechanisms for edge cases
+- Created `tests/test_chapter_summary_fix.py` to verify the solution
+- Confirmed that summaries are generated for all chapters, including the CONCLUSION chapter
+- Ensured consistent chapter summaries in the Summary Chapter
+- Eliminated duplicate summary generation
+- Made the solution work with existing frontend code (no client-side changes needed)
+- Updated Memory Bank documentation to reflect the Chapter Summary Inconsistencies fix
+- Updated activeContext.md with details about the implementation
 - Implemented centralized solution for backend-frontend naming inconsistencies
 - Created utility functions in `app/utils/case_conversion.py` for converting between snake_case and camelCase
 - Modified backend functions to consistently use snake_case internally
