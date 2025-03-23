@@ -321,7 +321,66 @@ graph TD
   * Maintaining smooth animations while ensuring scrollability
   * Example implementation in `ChapterCard.tsx` for summary cards
 
-### 7. Simulation and Testing Pattern
+### 7. Backend-Frontend Naming Convention Pattern
+- **Centralized Case Conversion** (`app/utils/case_conversion.py`)
+  * Utility functions for converting between snake_case and camelCase
+  * Recursive handling of nested dictionaries and lists
+  * Applied at the API boundary to maintain language-specific conventions
+  * Backend uses snake_case (Python convention), frontend receives camelCase (JavaScript convention)
+  ```python
+  # Convert snake_case to camelCase
+  def to_camel_case(snake_str):
+      components = snake_str.split("_")
+      return components[0] + "".join(x.title() for x in components[1:])
+      
+  # Recursively convert dictionary keys
+  def snake_to_camel_dict(d):
+      if not isinstance(d, dict):
+          return d
+      
+      result = {}
+      for key, value in d.items():
+          if isinstance(key, str) and not key.startswith("_"):
+              camel_key = to_camel_case(key)
+              
+              if isinstance(value, dict):
+                  result[camel_key] = snake_to_camel_dict(value)
+              elif isinstance(value, list):
+                  result[camel_key] = [
+                      snake_to_camel_dict(item) if isinstance(item, dict) else item
+                      for item in value
+                  ]
+              else:
+                  result[camel_key] = value
+          else:
+              result[key] = value
+      
+      return result
+  ```
+
+- **API Boundary Conversion** (`app/routers/summary_router.py`)
+  * Consistent snake_case usage in backend code
+  * Conversion to camelCase at the API response level
+  * Standardized field names throughout the backend
+  * Semantic consistency in field naming (e.g., `user_answer` instead of `chosen_answer`)
+  ```python
+  @router.get("/api/adventure-summary")
+  async def get_adventure_summary(state_id: Optional[str] = None):
+      # ... existing code ...
+      
+      # Format the adventure state data (using snake_case consistently)
+      summary_data = format_adventure_summary_data(adventure_state)
+      
+      # Import the case conversion utility
+      from app.utils.case_conversion import snake_to_camel_dict
+      
+      # Convert all keys from snake_case to camelCase at the API boundary
+      camel_case_data = snake_to_camel_dict(summary_data)
+      
+      return camel_case_data
+  ```
+
+### 8. Simulation and Testing Pattern
 - **Standardized Logging**:
   * Consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`, `EVENT:CHOICE_SELECTED`)
   * Source tracking for debugging (e.g., `source="chapter_update"`, `source="verification"`)

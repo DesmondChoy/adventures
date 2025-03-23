@@ -253,7 +253,70 @@
    - This ensures proper handling of special characters in story content
    - Default Windows encoding (cp1252) cannot handle certain special characters
 
-7. SUMMARY Chapter Implementation:
+7. Backend-Frontend Naming Conventions:
+   - Backend code (Python) uses snake_case naming convention
+   - Frontend code (JavaScript/React) uses camelCase naming convention
+   - Centralized conversion utility in `app/utils/case_conversion.py` handles the conversion
+   - Conversion happens at the API boundary in `get_adventure_summary()` function
+   - Backend functions consistently use snake_case internally:
+     * `extract_chapter_summaries()` uses `chapter_type` instead of `chapterType`
+     * `extract_educational_questions()` uses `user_answer` instead of `userAnswer`
+     * `calculate_adventure_statistics()` uses `chapters_completed` instead of `chaptersCompleted`
+     * `format_adventure_summary_data()` uses `educational_questions` instead of `educationalQuestions`
+   - Field names are standardized for semantic consistency:
+     * `user_answer` is used instead of `chosen_answer` for better clarity
+     * `educational_questions` is used instead of `lesson_questions` for consistency
+   - The conversion utility handles nested dictionaries and lists recursively:
+     ```python
+     # Convert snake_case to camelCase
+     def to_camel_case(snake_str):
+         components = snake_str.split("_")
+         return components[0] + "".join(x.title() for x in components[1:])
+     
+     # Recursively convert dictionary keys
+     def snake_to_camel_dict(d):
+         if not isinstance(d, dict):
+             return d
+         
+         result = {}
+         for key, value in d.items():
+             if isinstance(key, str) and not key.startswith("_"):
+                 camel_key = to_camel_case(key)
+                 
+                 if isinstance(value, dict):
+                     result[camel_key] = snake_to_camel_dict(value)
+                 elif isinstance(value, list):
+                     result[camel_key] = [
+                         snake_to_camel_dict(item) if isinstance(item, dict) else item
+                         for item in value
+                     ]
+                 else:
+                     result[camel_key] = value
+             else:
+                 result[key] = value
+         
+         return result
+     ```
+   - API endpoint applies conversion at the boundary:
+     ```python
+     @router.get("/api/adventure-summary")
+     async def get_adventure_summary(state_id: Optional[str] = None):
+         # ... existing code ...
+         
+         # Format the adventure state data (using snake_case consistently)
+         summary_data = format_adventure_summary_data(adventure_state)
+         
+         # Import the case conversion utility
+         from app.utils.case_conversion import snake_to_camel_dict
+         
+         # Convert all keys from snake_case to camelCase at the API boundary
+         camel_case_data = snake_to_camel_dict(summary_data)
+         
+         return camel_case_data
+     ```
+   - This approach respects the conventions of each language while providing a clean, consistent interface between them
+
+8. SUMMARY Chapter Implementation:
    - SUMMARY chapter MUST follow the CONCLUSION chapter
    - AdventureState MUST include a `chapter_summaries` field to store summaries
    - Chapter summaries MUST be generated progressively after each user choice

@@ -1,6 +1,46 @@
 # Active Context
 
-## Current Focus: STORY_COMPLETE Event Implementation (2025-03-23)
+## Current Focus: Backend-Frontend Naming Consistency (2025-03-23)
+
+We've implemented a centralized solution for handling naming inconsistencies between the backend (Python/snake_case) and frontend (JavaScript/camelCase). This improves code maintainability and reduces potential errors.
+
+### Implementation Details
+
+1. **Centralized Conversion Utility**:
+   * Created `app/utils/case_conversion.py` with utility functions for case conversion
+   * Implemented `to_camel_case()` and `snake_to_camel_dict()` for converting snake_case to camelCase
+   * Added `to_snake_case()` and `camel_to_snake_dict()` for potential future use (converting camelCase to snake_case)
+   * The utility handles nested dictionaries and lists recursively
+
+2. **Standardized Backend Code**:
+   * Modified backend functions to consistently use snake_case
+   * Updated field names to be more semantically consistent (e.g., `user_answer` instead of `chosen_answer`)
+   * Ensured all data structures in the backend follow Python conventions
+
+3. **API Boundary Conversion**:
+   * Applied conversion at the API endpoint level in `get_adventure_summary()`
+   * Backend code uses snake_case internally
+   * Frontend receives camelCase data
+   * This approach respects the conventions of each language
+
+### Benefits
+
+1. **Improved Maintainability**:
+   * Centralized conversion logic reduces duplication
+   * Easier to add new fields or modify existing ones
+   * Clearer separation between data extraction/formatting and API response formatting
+
+2. **Reduced Potential for Errors**:
+   * Consistent naming conventions throughout the backend code
+   * Automated conversion reduces manual errors
+   * Better type safety and predictability
+
+3. **Better Developer Experience**:
+   * Backend developers can work with Python conventions
+   * Frontend developers receive data in JavaScript conventions
+   * Clearer code organization and responsibility boundaries
+
+## Previous Focus: STORY_COMPLETE Event Implementation (2025-03-23)
 
 We've implemented changes to the STORY_COMPLETE event to make it more consistent and maintainable. The STORY_COMPLETE event is a critical part of the adventure flow that marks the completion of the interactive story chapters and prepares for the CONCLUSION chapter.
 

@@ -3,6 +3,14 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-23
+- Implemented centralized solution for backend-frontend naming inconsistencies
+- Created utility functions in `app/utils/case_conversion.py` for converting between snake_case and camelCase
+- Modified backend functions to consistently use snake_case internally
+- Updated field names to be more semantically consistent (e.g., `user_answer` instead of `chosen_answer`)
+- Applied case conversion at the API boundary to ensure frontend receives camelCase data
+- Improved code maintainability by centralizing conversion logic
+- Reduced potential for errors with consistent naming conventions
+- Enhanced developer experience by respecting language conventions
 - Implemented STORY_COMPLETE event improvements for better consistency and maintainability
 - Simplified the event trigger condition to only check chapter count against story length
 - Updated "Take a Trip Down Memory Lane" button handling to create a placeholder response for the CONCLUSION chapter
