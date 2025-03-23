@@ -133,6 +133,9 @@ class ChapterType(str, Enum):
 - Manages chapter content generation
 - Handles streaming of content to client
 - Coordinates with ImageGenerationService for agency choice images
+- Handles the "reveal_summary" choice path for the "Take a Trip Down Memory Lane" button
+- Creates a placeholder response for the CONCLUSION chapter to enable summary generation
+- Triggers the STORY_COMPLETE event when chapter count equals story length
 
 ### LLM Integration (`app/services/llm/`)
 - `providers.py`: Provider abstraction layer
@@ -149,10 +152,18 @@ class ChapterType(str, Enum):
 ### Summary Router (`app/routers/summary_router.py`)
 - Serves the React-based Summary Chapter
 - Provides API endpoints for adventure summary data
+- Enhanced state storage with summary generation:
+  * Checks for missing chapter summaries before storing state
+  * Generates summaries for chapters that don't have them
+  * Special handling for the CONCLUSION chapter with placeholder choice
+  * Ensures consistent chapter summaries in the Summary Chapter
+  * Eliminates duplicate summary generation
 - Extracts chapter summaries, educational questions, and statistics
 - Handles state reconstruction with case sensitivity handling
 - Implements robust fallback mechanisms for missing data
-- Processes the "Take a Trip Down Memory Lane" button functionality
+- Works with WebSocket Service to process the "Take a Trip Down Memory Lane" button
+- Ensures consistent handling of all chapters, including the CONCLUSION chapter
+- Transforms AdventureState data into React-compatible format with `format_adventure_summary_data()`
 
 ## Agency Implementation
 

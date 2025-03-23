@@ -23,6 +23,15 @@
    - Chapter management: `services/chapter_manager.py`
    - Image generation: `services/image_generation_service.py`
    - State storage: `services/state_storage_service.py` (singleton implementation)
+   - Summary service: `services/summary/` (modular package)
+     * `__init__.py`: Package exports
+     * `service.py`: Main service class that orchestrates components
+     * `chapter_processor.py`: Chapter-related processing logic
+     * `question_processor.py`: Question extraction and processing
+     * `stats_processor.py`: Statistics calculation
+     * `dto.py`: Data transfer objects
+     * `helpers.py`: Utility functions and helper classes
+     * `exceptions.py`: Custom exception classes
 2. Content sources:
    - Lesson database: `data/lessons/*.csv` (individual files for each topic)
    - Story data: `data/stories/*.yaml` (individual files for each story category)
@@ -253,7 +262,153 @@
    - This ensures proper handling of special characters in story content
    - Default Windows encoding (cp1252) cannot handle certain special characters
 
-7. SUMMARY Chapter Implementation:
+7. Modular Summary Service Pattern:
+   - Package Structure:
+     * Create a dedicated package directory for related functionality (e.g., `app/services/summary/`)
+     * Use `__init__.py` to export only the public API components
+     * Separate code by responsibility into multiple files
+     * Implement proper dependency injection for testability
+   
+   - Component Organization:
+     * `exceptions.py`: Define custom exception classes for specific error scenarios
+     * `helpers.py`: Implement utility functions and helper classes
+     * `dto.py`: Create data transfer objects for clean data exchange
+     * `*_processor.py`: Implement specialized processors for different aspects of functionality
+     * `service.py`: Create a main service class that orchestrates the components
+   
+   - Dependency Injection:
+     * Components should receive dependencies through constructor parameters
+     * Use FastAPI's dependency injection system for API endpoints:
+       ```python
+       def get_service():
+           """Dependency injection for Service."""
+           dependency = Dependency()
+           return Service(dependency)
+           
+       @router.get("/endpoint")
+       async def endpoint(
+           param: Type,
+           service: Service = Depends(get_service)
+       ):
+           # Use injected service
+       ```
+     * This approach facilitates unit testing with mock objects
+     * It reduces coupling between components
+     * It makes the code more maintainable and extensible
+   
+   - Error Handling:
+     * Define specific exception types for different error scenarios
+     * Use a base exception class for the package (e.g., `SummaryError`)
+     * Implement specific exception subclasses (e.g., `StateNotFoundError`, `SummaryGenerationError`)
+     * Handle exceptions at the appropriate level:
+       ```python
+       try:
+           # Operation that might fail
+       except SpecificError as e:
+           # Handle specific error
+           logger.error(f"Specific error: {str(e)}")
+           # Take appropriate action
+       except BaseError as e:
+           # Handle base error
+           logger.error(f"Base error: {str(e)}")
+           # Take appropriate action
+       ```
+     * Convert internal exceptions to HTTP exceptions at the API boundary:
+       ```python
+       try:
+           # Operation that might fail
+       except SpecificError as e:
+           raise HTTPException(status_code=404, detail=str(e))
+       except BaseError as e:
+           raise HTTPException(status_code=500, detail=str(e))
+       ```
+   
+   - Logging:
+     * Use a dedicated logger for each module:
+       ```python
+       logger = logging.getLogger("summary_service.component_name")
+       ```
+     * Include detailed context in log messages:
+       ```python
+       logger.info(f"Processing chapter {chapter_number} of type {chapter_type}")
+       ```
+     * Use appropriate log levels:
+       * DEBUG: Detailed information for debugging
+       * INFO: General information about normal operation
+       * WARNING: Potential issues that don't prevent operation
+       * ERROR: Errors that prevent specific operations
+       * CRITICAL: Critical errors that prevent the application from functioning
+     * Log at the beginning and end of important operations:
+       ```python
+       logger.info(f"Starting operation: {operation_name}")
+       # Operation code
+       logger.info(f"Completed operation: {operation_name}")
+       ```
+
+8. Backend-Frontend Naming Conventions:
+   - Backend code (Python) uses snake_case naming convention
+   - Frontend code (JavaScript/React) uses camelCase naming convention
+   - Centralized conversion utility in `app/utils/case_conversion.py` handles the conversion
+   - Conversion happens at the API boundary in `get_adventure_summary()` function
+   - Backend functions consistently use snake_case internally:
+     * `extract_chapter_summaries()` uses `chapter_type` instead of `chapterType`
+     * `extract_educational_questions()` uses `user_answer` instead of `userAnswer`
+     * `calculate_adventure_statistics()` uses `chapters_completed` instead of `chaptersCompleted`
+     * `format_adventure_summary_data()` uses `educational_questions` instead of `educationalQuestions`
+   - Field names are standardized for semantic consistency:
+     * `user_answer` is used instead of `chosen_answer` for better clarity
+     * `educational_questions` is used instead of `lesson_questions` for consistency
+   - The conversion utility handles nested dictionaries and lists recursively:
+     ```python
+     # Convert snake_case to camelCase
+     def to_camel_case(snake_str):
+         components = snake_str.split("_")
+         return components[0] + "".join(x.title() for x in components[1:])
+     
+     # Recursively convert dictionary keys
+     def snake_to_camel_dict(d):
+         if not isinstance(d, dict):
+             return d
+         
+         result = {}
+         for key, value in d.items():
+             if isinstance(key, str) and not key.startswith("_"):
+                 camel_key = to_camel_case(key)
+                 
+                 if isinstance(value, dict):
+                     result[camel_key] = snake_to_camel_dict(value)
+                 elif isinstance(value, list):
+                     result[camel_key] = [
+                         snake_to_camel_dict(item) if isinstance(item, dict) else item
+                         for item in value
+                     ]
+                 else:
+                     result[camel_key] = value
+             else:
+                 result[key] = value
+         
+         return result
+     ```
+   - API endpoint applies conversion at the boundary:
+     ```python
+     @router.get("/api/adventure-summary")
+     async def get_adventure_summary(state_id: Optional[str] = None):
+         # ... existing code ...
+         
+         # Format the adventure state data (using snake_case consistently)
+         summary_data = format_adventure_summary_data(adventure_state)
+         
+         # Import the case conversion utility
+         from app.utils.case_conversion import snake_to_camel_dict
+         
+         # Convert all keys from snake_case to camelCase at the API boundary
+         camel_case_data = snake_to_camel_dict(summary_data)
+         
+         return camel_case_data
+     ```
+   - This approach respects the conventions of each language while providing a clean, consistent interface between them
+
+8. SUMMARY Chapter Implementation:
    - SUMMARY chapter MUST follow the CONCLUSION chapter
    - AdventureState MUST include a `chapter_summaries` field to store summaries
    - Chapter summaries MUST be generated progressively after each user choice
@@ -269,6 +424,55 @@
    - The LLM prompt (SUMMARY_CHAPTER_PROMPT) already guides the model to generate concise summaries (70-100 words)
    - The LLM prompt (IMAGE_SCENE_PROMPT) guides the model to generate vivid visual descriptions (20-30 words)
    
+   - Consistent Summary Generation for CONCLUSION Chapter:
+     * For regular chapters, summaries are generated when a user makes a choice, which creates a chapter response
+     * The CONCLUSION chapter doesn't have choices, but we treat the "Take a Trip Down Memory Lane" button as a choice
+     * When the button is clicked, it sends a "reveal_summary" chosen_path to the WebSocket Service
+     * The WebSocket Service creates a placeholder response for the CONCLUSION chapter:
+       ```python
+       # Process it like a regular choice with placeholder values
+       story_response = StoryResponse(
+           chosen_path="end_of_story", 
+           choice_text="End of story"
+       )
+       conclusion_chapter.response = story_response
+       ```
+     * This allows the CONCLUSION chapter to go through the same summary generation process as other chapters
+     * The STORY_COMPLETE event is triggered when chapter count equals story length (not checking chapter type)
+     * This consistent approach simplifies the code, improves maintainability, and makes it more adaptable to future changes
+   
+   - Enhanced State Storage Process:
+     * The `store_adventure_state` function in `app/routers/summary_router.py` checks for missing chapter summaries:
+       ```python
+       # Ensure chapter_summaries exists
+       if not state_data.get('chapter_summaries'):
+           state_data['chapter_summaries'] = []
+           logger.info("Created empty chapter_summaries array")
+       ```
+     * It generates summaries for chapters that don't have them:
+       ```python
+       # Check if we need to generate a summary for this chapter
+       if len(state_data['chapter_summaries']) < chapter_number:
+           logger.info(f"Missing summary for chapter {chapter_number} ({chapter_type})")
+           
+           # Generate the summary
+           summary_result = await chapter_manager.generate_chapter_summary(
+               chapter.get('content', ''), choice_text, choice_context
+           )
+       ```
+     * Special handling for the CONCLUSION chapter with placeholder choice:
+       ```python
+       # For conclusion chapter, use placeholder choice
+       if chapter_type == "conclusion":
+           choice_text = "End of story"
+           choice_context = ""
+           logger.info(f"Using placeholder choice for CONCLUSION chapter")
+       ```
+     * Ensures consistent chapter summaries in the Summary Chapter
+     * Eliminates duplicate summary generation
+     * Works with existing frontend code (no client-side changes needed)
+     * Handles edge cases gracefully with fallback mechanisms
+     
    - Summary Chapter Robustness:
      * When chapter summaries are missing, generate placeholder summaries:
        ```python

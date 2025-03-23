@@ -3,6 +3,83 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-23
+- Verified that the Summary Chapter race condition fix is working correctly
+- Confirmed that the Summary Chapter is now displaying all data (questions, answers, chapter summaries, and titles)
+- Identified a non-critical WebSocket disconnection error in the logs that doesn't affect functionality
+- Documented the WebSocket cleanup issue for future enhancement:
+  - Error occurs when the client navigates to the summary page and closes the WebSocket connection
+  - Server continues trying to stream summary content over the now-closed WebSocket
+  - This is a cleanup issue rather than a functional problem
+  - Potential future enhancement would be to modify the `process_choice` function in `app/services/websocket_service.py`
+  - Would need to add better error handling around WebSocket send operations
+  - Should detect when the client has disconnected and stop further send attempts
+  - Could add a check before sending summary content to see if the client is still connected
+- Fixed Summary Chapter race condition by modifying the "Take a Trip Down Memory Lane" button functionality
+- Updated `viewAdventureSummary()` function in `app/templates/index.html` to use WebSocket flow exclusively
+- Fixed an issue where the WebSocket message was missing the state data, causing "Missing state in message" errors
+- Modified the WebSocket message to include both state and choice data
+- Implemented fallback to REST API for robustness with 5-second timeout
+- Added flag to track redirects and prevent duplicate redirects
+- Added detailed logging for debugging
+- Created test HTML file (`test_summary_button.html`) to verify the solution
+- Simulated various timing scenarios to ensure the race condition is eliminated
+- Ensured the state stored always includes the CONCLUSION chapter summary
+- Improved user experience by ensuring complete data is displayed in the Summary Chapter
+- Fixed missing state storage issue in Summary Chapter
+- Added explicit state storage in WebSocket flow after generating CONCLUSION chapter summary
+- Modified WebSocket service to send state_id to client in "summary_ready" message
+- Updated client-side code to handle "summary_ready" message and navigate to summary page
+- Fixed duplicate summary generation by checking if summaries already exist
+- Added detailed logging to track state storage and retrieval
+- Improved error handling for edge cases
+- Completed major refactoring of summary_router.py into a modular package structure
+- Created app/services/summary/ directory with specialized component files
+- Separated code by responsibility into multiple files:
+  - exceptions.py: Custom exception classes
+  - helpers.py: Utility functions and helper classes
+  - dto.py: Data transfer objects
+  - chapter_processor.py: Chapter-related processing logic
+  - question_processor.py: Question extraction and processing
+  - stats_processor.py: Statistics calculation
+  - service.py: Main service class that orchestrates the components
+- Reduced method sizes by splitting large methods into focused, smaller methods
+- Simplified main service by delegating to specialized component classes
+- Improved code maintainability with clear separation of concerns
+- Enhanced testability with proper dependency injection
+- Added comprehensive unit tests in tests/test_summary_service.py
+- Updated imports in the router to use the new modular structure
+- Improved error handling with specific exception types
+- Added comprehensive logging throughout the codebase
+- Fixed chapter summary inconsistencies between WebSocket flow and REST API flow
+- Enhanced `store_adventure_state` function in `app/routers/summary_router.py` to check for missing chapter summaries
+- Added logic to generate summaries for chapters that don't have them, including the CONCLUSION chapter
+- Implemented special handling for the CONCLUSION chapter with a placeholder choice ("End of story")
+- Added robust error handling and fallback mechanisms for edge cases
+- Created `tests/test_chapter_summary_fix.py` to verify the solution
+- Confirmed that summaries are generated for all chapters, including the CONCLUSION chapter
+- Ensured consistent chapter summaries in the Summary Chapter
+- Eliminated duplicate summary generation
+- Made the solution work with existing frontend code (no client-side changes needed)
+- Updated Memory Bank documentation to reflect the Chapter Summary Inconsistencies fix
+- Updated activeContext.md with details about the implementation
+- Implemented centralized solution for backend-frontend naming inconsistencies
+- Created utility functions in `app/utils/case_conversion.py` for converting between snake_case and camelCase
+- Modified backend functions to consistently use snake_case internally
+- Updated field names to be more semantically consistent (e.g., `user_answer` instead of `chosen_answer`)
+- Applied case conversion at the API boundary to ensure frontend receives camelCase data
+- Improved code maintainability by centralizing conversion logic
+- Reduced potential for errors with consistent naming conventions
+- Enhanced developer experience by respecting language conventions
+- Implemented STORY_COMPLETE event improvements for better consistency and maintainability
+- Simplified the event trigger condition to only check chapter count against story length
+- Updated "Take a Trip Down Memory Lane" button handling to create a placeholder response for the CONCLUSION chapter
+- Ensured all chapters, including the CONCLUSION chapter, go through the same summary generation process
+- Made the code more flexible for future changes to story length
+- Reduced special case handling for improved maintainability
+- Updated Memory Bank documentation to reflect the STORY_COMPLETE event changes
+- Updated systemPatterns.md with the new Story Simulation Structure
+- Updated activeContext.md with details about the STORY_COMPLETE event implementation
+- Updated progress.md with the completed work
 - Updated Memory Bank documentation to reflect the Summary Chapter functionality
 - Clarified that the Summary Chapter follows the Conclusion Chapter
 - Documented that the Summary Chapter shows statistics and chapter-by-chapter summaries
@@ -246,6 +323,10 @@
 - Responsive design for both desktop and mobile
 
 ### Recent Enhancements
+- Fixed missing state storage issue in Summary Chapter
+- Added explicit state storage in WebSocket flow
+- Fixed duplicate summary generation
+- Improved logging and error handling
 - Made realistic state generation the default behavior in test scripts
 - Modified test scripts to use realistic states that better reflect production data
 - Enhanced test state generation with better error handling and fallback mechanisms
@@ -280,17 +361,17 @@
 - Fixed simulation log summary extraction and display
 
 ### Known Issues
-- Chapter 10 summary still showing placeholder text instead of actual content in simulation logs
-- Chapter 10 content is visible in the terminal but not being captured in the simulation log file
+- CONCLUSION chapter summary still showing placeholder text instead of actual content in simulation logs
+- CONCLUSION chapter content is visible in the terminal but not being captured in the simulation log file
 - In-memory storage is not persistent across server restarts
 
 ## Next Steps
 - Consider implementing more persistent storage mechanisms for production
 - Options include using a database, Redis, or file-based storage
 - Add more test cases to cover edge cases and server restart scenarios
-- Fix Chapter 10 content capture in generate_all_chapters.py script
-- Investigate why the WebSocket connection is being closed or timing out before Chapter 10 content can be fully processed
-- Fix Chapter 10 summary generation and capture in simulation logs
+- Fix CONCLUSION chapter content capture in generate_all_chapters.py script
+- Investigate why the WebSocket connection is being closed or timing out before CONCLUSION chapter content can be fully processed
+- Fix CONCLUSION chapter summary generation and capture in simulation logs
 - Continue monitoring and optimizing LLM prompt usage
 - Consider implementing user difficulty selection UI
 - Explore additional educational content integration options

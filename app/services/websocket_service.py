@@ -89,13 +89,22 @@ async def process_choice(
                 f"CONCLUSION chapter content length: {len(conclusion_chapter.content)}"
             )
 
+            # Process it like a regular choice with placeholder values
+            story_response = StoryResponse(
+                chosen_path="reveal_summary", choice_text=" "
+            )
+            conclusion_chapter.response = story_response
+            logger.info(
+                "Created placeholder response for CONCLUSION chapter with whitespace"
+            )
+
             # Generate summary for the CONCLUSION chapter
             try:
                 logger.info(f"Generating summary for CONCLUSION chapter")
                 summary_result = await chapter_manager.generate_chapter_summary(
                     conclusion_chapter.content,
-                    "End of story",  # Placeholder for chosen_choice
-                    "",  # Empty choice_context
+                    " ",  # Whitespace for chosen_choice
+                    " ",  # Whitespace for choice_context
                 )
 
                 # Extract title and summary from the result
@@ -155,6 +164,20 @@ async def process_choice(
                     logger.info(
                         f"Stored title for chapter {conclusion_chapter.chapter_number}: {title}"
                     )
+
+                # Store the updated state in StateStorageService
+                from app.services.state_storage_service import StateStorageService
+
+                state_storage_service = StateStorageService()
+                state_id = await state_storage_service.store_state(state.dict())
+                logger.info(
+                    f"Stored state with ID: {state_id} after generating CONCLUSION chapter summary"
+                )
+
+                # Include the state_id in the response to the client
+                await websocket.send_json(
+                    {"type": "summary_ready", "state_id": state_id}
+                )
             except Exception as e:
                 logger.error(
                     f"Error generating chapter summary: {str(e)}", exc_info=True
@@ -270,31 +293,37 @@ async def process_choice(
                         is_correct=choice_text == correct_answer,
                     )
                     previous_chapter.response = lesson_response
-                    
+
                     # Store in lesson_questions array for summary chapter
                     if not hasattr(state, "lesson_questions"):
                         state.lesson_questions = []
-                    
+
                     # Create question object for summary display
                     question_obj = {
-                        "question": previous_chapter.question.get("question", "Unknown question"),
+                        "question": previous_chapter.question.get(
+                            "question", "Unknown question"
+                        ),
                         "answers": previous_chapter.question.get("answers", []),
                         "chosen_answer": choice_text,
                         "is_correct": choice_text == correct_answer,
                         "explanation": previous_chapter.question.get("explanation", ""),
-                        "correct_answer": correct_answer
+                        "correct_answer": correct_answer,
                     }
-                    
+
                     # Append to state's lesson_questions
                     state.lesson_questions.append(question_obj)
-                    logger.info(f"Added question to lesson_questions array: {question_obj['question']}")
-                    
+                    logger.info(
+                        f"Added question to lesson_questions array: {question_obj['question']}"
+                    )
+
                     logger.debug("\n=== DEBUG: Created Lesson Response ===")
                     logger.debug(f"Question: {previous_chapter.question['question']}")
                     logger.debug(f"Chosen answer: {choice_text}")
                     logger.debug(f"Correct answer: {correct_answer}")
                     logger.debug(f"Is correct: {choice_text == correct_answer}")
-                    logger.debug(f"Questions in lesson_questions: {len(state.lesson_questions)}")
+                    logger.debug(
+                        f"Questions in lesson_questions: {len(state.lesson_questions)}"
+                    )
                     logger.debug("====================================\n")
                 else:
                     logger.error("Previous chapter missing question data")
@@ -475,11 +504,8 @@ async def process_choice(
         )
         return None, None, False
 
-    # Check if story is complete - only when we've reached the final CONCLUSION chapter
-    is_story_complete = (
-        len(state.chapters) == state.story_length
-        and state.chapters[-1].chapter_type == ChapterType.CONCLUSION
-    )
+    # Check if story is complete - when we've reached the story length
+    is_story_complete = len(state.chapters) == state.story_length
 
     return chapter_content, sampled_question, is_story_complete
 

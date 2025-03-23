@@ -82,11 +82,15 @@ graph TD
 
 - **Story Simulation Structure**
   * A complete story consists of 9 interactive chapters plus 1 conclusion chapter
-  * The STORY_COMPLETE event is triggered after chapter 9 (the last interactive chapter)
-  * The STORY_COMPLETE event contains summaries for chapters 1-9
-  * Chapter 10 (conclusion) content is generated after the STORY_COMPLETE event
-  * Chapter 10 has no user choices (it's a CONCLUSION type chapter)
-  * After the CONCLUSION chapter, users can access the SUMMARY chapter
+  * The STORY_COMPLETE event is triggered when the chapter count equals the story length
+  * The STORY_COMPLETE event contains summaries for all chapters including the CONCLUSION chapter
+  * The CONCLUSION chapter is already generated when the STORY_COMPLETE event is triggered
+  * The CONCLUSION chapter has no user choices
+  * After the CONCLUSION chapter, users can access the SUMMARY chapter via the "Take a Trip Down Memory Lane" button
+  * When the "Take a Trip Down Memory Lane" button is clicked, it's treated as a choice selection (with "reveal_summary" as the chosen_path)
+  * For regular chapters, summaries are generated when a choice is made, creating a chapter response
+  * For the CONCLUSION chapter, the button click creates a placeholder response (chosen_path="end_of_story", choice_text="End of story")
+  * This allows the CONCLUSION chapter to go through the same summary generation process as other chapters
   * The SUMMARY chapter displays statistics and chapter-by-chapter summaries
 
 - **Content Sources**
@@ -191,7 +195,7 @@ graph TD
 - **AdventureStateManager** (`app/services/adventure_state_manager.py`)
   * Converts uppercase chapter types to lowercase during state reconstruction
   * Ensures compatibility between stored state and AdventureState model
-  * Special handling for chapter 10 to ensure it's always a CONCLUSION chapter
+  * Special handling for the last chapter to ensure it's always a CONCLUSION chapter
   * Robust error handling and logging for debugging
   ```python
   # Convert chapter_type to lowercase
@@ -200,7 +204,67 @@ graph TD
       logger.debug(f"Converted chapter_type to lowercase: {chapter['chapter_type']}")
   ```
 
-### 3. React-based Summary Architecture
+### 3. Modular Summary Service Pattern
+- **Package Structure** (`app/services/summary/`)
+  * Organized by responsibility with clear component separation
+  * Proper package exports through `__init__.py`
+  * Comprehensive unit tests in `tests/test_summary_service.py`
+  * Dependency injection for improved testability
+
+- **Component Separation**
+  * `exceptions.py`: Custom exception classes for specific error scenarios
+    - `SummaryError`: Base class for all summary-related errors
+    - `StateNotFoundError`: Raised when state cannot be found
+    - `SummaryGenerationError`: Raised when summary generation fails
+  
+  * `helpers.py`: Utility functions and helper classes
+    - `ChapterTypeHelper`: Consistent chapter type handling across different formats
+    - Methods for checking chapter types and converting between representations
+  
+  * `dto.py`: Data transfer objects for clean data exchange
+    - `AdventureSummaryDTO`: Container for all summary data
+    - Methods for converting to dictionary and camelCase formats
+  
+  * `chapter_processor.py`: Chapter-related processing logic
+    - `ChapterProcessor`: Extracts and generates chapter summaries
+    - Ensures proper chapter type identification
+    - Handles title extraction and generation
+  
+  * `question_processor.py`: Question extraction and processing
+    - `QuestionProcessor`: Extracts educational questions from various sources
+    - Multiple extraction strategies with fallbacks
+    - Normalization of question formats
+  
+  * `stats_processor.py`: Statistics calculation
+    - `StatsProcessor`: Calculates adventure statistics
+    - Ensures valid statistics even with incomplete data
+    - Counts chapters by type and calculates educational metrics
+  
+  * `service.py`: Main service class that orchestrates the components
+    - `SummaryService`: Coordinates all summary-related operations
+    - Delegates to specialized component classes
+    - Handles state retrieval, processing, and storage
+
+- **Dependency Injection Pattern**
+  * Components receive dependencies through constructor parameters
+  * Facilitates unit testing with mock objects
+  * Reduces coupling between components
+  * Example in `summary_router.py`:
+  ```python
+  def get_summary_service():
+      """Dependency injection for SummaryService."""
+      state_storage_service = StateStorageService()
+      return SummaryService(state_storage_service)
+      
+  @router.get("/api/adventure-summary")
+  async def get_adventure_summary(
+      state_id: Optional[str] = None,
+      summary_service: SummaryService = Depends(get_summary_service)
+  ):
+      # Use injected summary_service
+  ```
+
+### 4. React-based Summary Architecture
 - **TypeScript Interfaces** (`app/static/summary-chapter/src/lib/types.ts`)
   * Defines structured data interfaces for the summary components
   * `ChapterSummary`: Chapter number, title, summary, and chapter type
@@ -218,18 +282,27 @@ graph TD
 
 - **FastAPI Integration** (`app/routers/summary_router.py`)
   * `/adventure/summary`: Serves the React app
-  * `/adventure/api/adventure-summary`: Provides the summary data
-  * Error handling and logging for API endpoints
+  * `/adventure/api/adventure-summary`: Provides the summary data via SummaryService
+  * `/adventure/api/store-adventure-state`: Enhanced state storage with summary generation
+  * Error handling with specific exception types
   * Integration with main FastAPI application
-  * Robust fallback mechanisms for missing data
-  * Case sensitivity handling for chapter types
-  * Special handling for the last chapter to ensure it's always treated as a CONCLUSION chapter
+  * Dependency injection for SummaryService
+
+- **Enhanced State Storage Process**
+  * Delegated to SummaryService and specialized processors
+  * ChapterProcessor checks for missing chapter summaries
+  * QuestionProcessor handles educational questions
+  * Special handling for the CONCLUSION chapter with placeholder choice
+  * Ensures consistent chapter summaries in the Summary Chapter
+  * Eliminates duplicate summary generation
+  * Works with existing frontend code (no client-side changes needed)
+  * Handles edge cases gracefully with fallback mechanisms
 
 - **Data Generation and Processing**
-  * `extract_chapter_summaries()`: Extracts chapter summaries with robust fallbacks
-  * `extract_educational_questions()`: Extracts questions from LESSON chapters
-  * `calculate_adventure_statistics()`: Calculates statistics with safety checks
-  * `format_adventure_summary_data()`: Transforms AdventureState into React-compatible data
+  * `ChapterProcessor.extract_chapter_summaries()`: Extracts chapter summaries with robust fallbacks
+  * `QuestionProcessor.extract_educational_questions()`: Extracts questions from LESSON chapters
+  * `StatsProcessor.calculate_adventure_statistics()`: Calculates statistics with safety checks
+  * `SummaryService.format_adventure_summary_data()`: Transforms AdventureState into React-compatible data
   * Fallback mechanisms for missing chapter summaries and educational questions
 
 ### 2. Frontend Component Architecture
@@ -317,7 +390,66 @@ graph TD
   * Maintaining smooth animations while ensuring scrollability
   * Example implementation in `ChapterCard.tsx` for summary cards
 
-### 7. Simulation and Testing Pattern
+### 7. Backend-Frontend Naming Convention Pattern
+- **Centralized Case Conversion** (`app/utils/case_conversion.py`)
+  * Utility functions for converting between snake_case and camelCase
+  * Recursive handling of nested dictionaries and lists
+  * Applied at the API boundary to maintain language-specific conventions
+  * Backend uses snake_case (Python convention), frontend receives camelCase (JavaScript convention)
+  ```python
+  # Convert snake_case to camelCase
+  def to_camel_case(snake_str):
+      components = snake_str.split("_")
+      return components[0] + "".join(x.title() for x in components[1:])
+      
+  # Recursively convert dictionary keys
+  def snake_to_camel_dict(d):
+      if not isinstance(d, dict):
+          return d
+      
+      result = {}
+      for key, value in d.items():
+          if isinstance(key, str) and not key.startswith("_"):
+              camel_key = to_camel_case(key)
+              
+              if isinstance(value, dict):
+                  result[camel_key] = snake_to_camel_dict(value)
+              elif isinstance(value, list):
+                  result[camel_key] = [
+                      snake_to_camel_dict(item) if isinstance(item, dict) else item
+                      for item in value
+                  ]
+              else:
+                  result[camel_key] = value
+          else:
+              result[key] = value
+      
+      return result
+  ```
+
+- **API Boundary Conversion** (`app/routers/summary_router.py`)
+  * Consistent snake_case usage in backend code
+  * Conversion to camelCase at the API response level
+  * Standardized field names throughout the backend
+  * Semantic consistency in field naming (e.g., `user_answer` instead of `chosen_answer`)
+  ```python
+  @router.get("/api/adventure-summary")
+  async def get_adventure_summary(state_id: Optional[str] = None):
+      # ... existing code ...
+      
+      # Format the adventure state data (using snake_case consistently)
+      summary_data = format_adventure_summary_data(adventure_state)
+      
+      # Import the case conversion utility
+      from app.utils.case_conversion import snake_to_camel_dict
+      
+      # Convert all keys from snake_case to camelCase at the API boundary
+      camel_case_data = snake_to_camel_dict(summary_data)
+      
+      return camel_case_data
+  ```
+
+### 8. Simulation and Testing Pattern
 - **Standardized Logging**:
   * Consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`, `EVENT:CHOICE_SELECTED`)
   * Source tracking for debugging (e.g., `source="chapter_update"`, `source="verification"`)
