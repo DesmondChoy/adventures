@@ -98,6 +98,11 @@ class AdventureState:
     selected_moral_teaching: str
     selected_plot_twist: str
     
+    # Summary chapter data
+    chapter_summaries: List[str]  # Summaries of each chapter for the SUMMARY chapter
+    summary_chapter_titles: List[str]  # Titles of each chapter for the SUMMARY chapter
+    lesson_questions: List[Dict[str, Any]]  # Educational questions for the SUMMARY chapter
+    
     # Tracking
     metadata: Dict[str, Any]  # Stores agency, challenge history, etc.
     chapters: List[ChapterData]
@@ -120,7 +125,7 @@ class ChapterType(str, Enum):
 ### Chapter Manager (`app/services/chapter_manager.py`)
 - Determines chapter sequence based on adventure length
 - Enforces chapter type rules (no consecutive LESSON chapters, etc.)
-- Samples questions from `lessons.csv` for LESSON chapters
+- Samples questions from `app/data/lessons/*.csv` files for LESSON chapters
 - Validates question availability
 
 ### WebSocket Service (`app/services/websocket_service.py`)
@@ -140,6 +145,14 @@ class ChapterType(str, Enum):
 - 5 retries with exponential backoff
 - Robust null checking and error handling
 - Base64 encoding for WebSocket transmission
+
+### Summary Router (`app/routers/summary_router.py`)
+- Serves the React-based Summary Chapter
+- Provides API endpoints for adventure summary data
+- Extracts chapter summaries, educational questions, and statistics
+- Handles state reconstruction with case sensitivity handling
+- Implements robust fallback mechanisms for missing data
+- Processes the "Take a Trip Down Memory Lane" button functionality
 
 ## Agency Implementation
 

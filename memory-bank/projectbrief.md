@@ -11,7 +11,7 @@ Traditional educational platforms often lack:
 - Personalized learning paths
 
 Learning Odyssey solves these challenges through:
-1. Pre-defined educational content (`lessons.csv`) with dynamic narrative delivery
+1. Pre-defined educational content (`app/data/lessons/*.csv` files) with dynamic narrative delivery
 2. User-selected topics and adventure length
 3. LLM-generated narrative choices and resolutions
 4. Real-time state synchronization
@@ -23,7 +23,7 @@ Learning Odyssey solves these challenges through:
    * `AdventureState` as the single source of truth
    * WebSocket state synchronization
    * Dynamic adventure length via `state.story_length`
-   * `ChapterType` enum (LESSON/STORY/REFLECT/CONCLUSION)
+   * `ChapterType` enum (LESSON/STORY/REFLECT/CONCLUSION/SUMMARY)
    * Complete state serialization
    * Error recovery mechanisms
    * Metadata tracking for agency and story elements
@@ -40,14 +40,16 @@ Learning Odyssey solves these challenges through:
    * First chapter: STORY type with agency choice
    * Second-to-last chapter: STORY type
    * Last chapter: CONCLUSION type
+   * After CONCLUSION: SUMMARY type (statistics and chapter-by-chapter recap)
    * 50% of remaining chapters, rounded down: LESSON type
    * 50% of LESSON chapters, rounded down: REFLECT chapters
    * REFLECT chapters only occur immediately after a LESSON chapter
    * STORY chapters must follow REFLECT chapters
-   * LESSON chapters: `lessons.csv` + LLM with Story Object Method
+   * LESSON chapters: `app/data/lessons/*.csv` files + LLM with Story Object Method
    * STORY chapters: Full LLM generation with three choices
    * REFLECT chapters: Narrative-driven reflection on previous LESSON
    * CONCLUSION chapters: Full LLM generation without choices
+   * SUMMARY chapters: Statistics display and chapter-by-chapter summaries without narrative content
 
 4. **Agency System:**
    * First chapter choice from four categories (items, companions, roles, abilities)
@@ -64,6 +66,7 @@ Learning Odyssey solves these challenges through:
    * Question availability validation
    * Asynchronous image generation
    * Progressive enhancement (text first, images as available)
+   * React-based Summary Chapter with educational recap
 
 6. **Project Goals:**
    * Personalized learning journeys
@@ -87,6 +90,7 @@ Learning Odyssey solves these challenges through:
    * Engaging story progression with meaningful choice impact
    * Effective learning integration through narrative wrapper
    * Satisfying story conclusions with agency resolution
+   * Comprehensive summary chapter with statistics and chapter recaps
    * Reliable error recovery and graceful degradation
    * Visual representation of agency choices through AI-generated images
    * Word-by-word streaming for natural reading experience

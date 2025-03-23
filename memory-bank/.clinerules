@@ -8,7 +8,7 @@
    - STORY: Fully LLM-generated narrative content with choices, first chapter includes agency choice
    - REFLECT: Follow-up to LESSON chapters with narrative-driven approach to test deeper understanding
    - CONCLUSION: Final chapter with no choices, providing story resolution
-   - SUMMARY: Special chapter that follows CONCLUSION, providing a recap of the adventure and learning journey
+   - SUMMARY: Special chapter that follows CONCLUSION, providing statistics and a chapter-by-chapter summary of the adventure without narrative content
 2. State: Complete application state in `AdventureState` class
 3. Adventure: Overall user journey tracked in `AdventureState`
 4. Agency: User's first chapter choice that evolves throughout the adventure
@@ -356,10 +356,10 @@
      * Add enhanced features when JavaScript is available
      * Provide fallbacks for older browsers
    - React App Development and Build Process:
-     * React app source code is located in `app/static/experimental/celebration-journey-moments-main/`
+     * React app source code is located in `app/static/summary-chapter/`
      * After making changes to React components, you MUST rebuild the app:
        ```
-       cd app/static/experimental/celebration-journey-moments-main
+       cd app/static/summary-chapter
        npm run build
        ```
      * The build process creates optimized files in the `dist` folder

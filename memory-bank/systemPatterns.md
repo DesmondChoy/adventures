@@ -41,7 +41,7 @@ graph TD
     end
 
     subgraph Content Sources
-        CSV[lessons.csv] --> CM
+        CSV[lessons/*.csv] --> CM
         LLM --> CM
         IMG --> WSS
         SF --> SL
@@ -74,6 +74,7 @@ graph TD
   * First chapter: STORY
   * Second-to-last chapter: STORY
   * Last chapter: CONCLUSION
+  * After CONCLUSION: SUMMARY (statistics and chapter-by-chapter recap)
   * 50% of remaining chapters: LESSON (subject to available questions)
   * 50% of LESSON chapters: REFLECT (follow LESSON)
   * No consecutive LESSON chapters
@@ -85,12 +86,15 @@ graph TD
   * The STORY_COMPLETE event contains summaries for chapters 1-9
   * Chapter 10 (conclusion) content is generated after the STORY_COMPLETE event
   * Chapter 10 has no user choices (it's a CONCLUSION type chapter)
+  * After the CONCLUSION chapter, users can access the SUMMARY chapter
+  * The SUMMARY chapter displays statistics and chapter-by-chapter summaries
 
 - **Content Sources**
-  * LESSON: `lessons.csv` + LLM wrapper
+  * LESSON: `app/data/lessons/*.csv` files + LLM wrapper
   * STORY: Full LLM generation with choices
   * REFLECT: Narrative-driven follow-up to LESSON
   * CONCLUSION: Resolution without choices
+  * SUMMARY: Statistics and chapter summaries from stored state data
 
 ### 3. Story Data Management
 - **Story Loader** (`app/data/story_loader.py`)
@@ -197,32 +201,36 @@ graph TD
   ```
 
 ### 3. React-based Summary Architecture
-- **TypeScript Interfaces** (`app/static/experimental/celebration-journey-moments-main/src/lib/types.ts`)
+- **TypeScript Interfaces** (`app/static/summary-chapter/src/lib/types.ts`)
   * Defines structured data interfaces for the summary components
   * `ChapterSummary`: Chapter number, title, summary, and chapter type
   * `EducationalQuestion`: Question, user answer, correctness, and explanation
-  * `AdventureStatistics`: Metrics about the adventure
+  * `AdventureStatistics`: Metrics about the adventure (chapters completed, questions answered, correct answers, time spent)
   * `AdventureSummaryData`: Container for all summary data
 
-- **React Components** (`app/static/experimental/celebration-journey-moments-main/src/pages/AdventureSummary.tsx`)
+- **React Components** (`app/static/summary-chapter/src/pages/AdventureSummary.tsx`)
   * Fetches data from API endpoint
   * Displays chapter summaries in a timeline format
   * Shows educational questions with correct/incorrect indicators
   * Presents statistics about the adventure
   * Includes animations and visual enhancements
+  * Mobile-optimized scrolling for chapter cards
 
 - **FastAPI Integration** (`app/routers/summary_router.py`)
   * `/adventure/summary`: Serves the React app
   * `/adventure/api/adventure-summary`: Provides the summary data
   * Error handling and logging for API endpoints
   * Integration with main FastAPI application
+  * Robust fallback mechanisms for missing data
+  * Case sensitivity handling for chapter types
+  * Special handling for the last chapter to ensure it's always treated as a CONCLUSION chapter
 
-- **Data Generation** (`tests/simulations/generate_chapter_summaries_react.py`)
-  * Extracts chapter summaries from simulation state files
-  * Generates chapter titles from content
-  * Extracts educational questions and answers
-  * Calculates adventure statistics
-  * Formats data for React components
+- **Data Generation and Processing**
+  * `extract_chapter_summaries()`: Extracts chapter summaries with robust fallbacks
+  * `extract_educational_questions()`: Extracts questions from LESSON chapters
+  * `calculate_adventure_statistics()`: Calculates statistics with safety checks
+  * `format_adventure_summary_data()`: Transforms AdventureState into React-compatible data
+  * Fallback mechanisms for missing chapter summaries and educational questions
 
 ### 2. Frontend Component Architecture
 - **CSS Organization** (`app/static/css/`)

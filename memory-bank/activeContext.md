@@ -1,6 +1,8 @@
 # Active Context
 
-## Current Focus: Enhanced Summary Chapter Robustness (2025-03-22)
+## Current Focus: Enhanced Summary Chapter Robustness (2025-03-23)
+
+We've updated our documentation to reflect that the application now includes a Summary Chapter that follows the Conclusion Chapter. The Summary Chapter doesn't contain any narrative content but instead shows statistics and a chapter-by-chapter summary of earlier chapters.
 
 We've further improved the "Trip down memory lane" button functionality by enhancing the robustness of the summary chapter. The button now works correctly in all scenarios, even when chapter summaries and educational questions are not properly captured or stored.
 
