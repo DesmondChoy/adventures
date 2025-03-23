@@ -36,13 +36,13 @@ A potential future enhancement would be to modify the `process_choice` function 
 
 ## Problem Statement
 
-The Summary Chapter feature is experiencing two critical issues:
+The Summary Chapter feature was experiencing two critical issues:
 
-1. **Duplicate Summary Generation**: When the "Take a Trip Down Memory Lane" button is clicked, summaries are still being generated for the first 9 chapters even though these summaries should have already been created during the adventure.
+1. **Duplicate Summary Generation**: When the "Take a Trip Down Memory Lane" button was clicked, summaries were still being generated for the first 9 chapters even though these summaries should have already been created during the adventure.
 
-2. **Incomplete Display**: Only 9 chapter summaries are being displayed, despite 10 chapter summaries and lesson questions being passed to the React page.
+2. **Incomplete Display**: Only 9 chapter summaries were being displayed, despite 10 chapter summaries and lesson questions being passed to the React page.
 
-These issues impact the user experience by:
+These issues impacted the user experience by:
 - Causing unnecessary processing and potential inconsistencies
 - Displaying incomplete content
 - Creating a disconnect between the adventure experience and the summary
@@ -51,7 +51,7 @@ These issues impact the user experience by:
 
 ### Client-Side Race Condition
 
-The root cause of these issues is a race condition in the client-side code. There are currently two separate paths for storing the state and getting a state_id:
+The root cause of these issues was a race condition in the client-side code. There were two separate paths for storing the state and getting a state_id:
 
 1. **REST API Path** (in `viewAdventureSummary()` function):
    ```javascript
@@ -83,14 +83,14 @@ The root cause of these issues is a race condition in the client-side code. Ther
    }
    ```
 
-This creates a race condition where:
-1. When the "Take a Trip Down Memory Lane" button is clicked, it immediately stores the current state via REST API
-2. The WebSocket flow continues and also stores the state after processing the "reveal_summary" choice
+This created a race condition where:
+1. When the "Take a Trip Down Memory Lane" button was clicked, it immediately stored the current state via REST API
+2. The WebSocket flow continued and also stored the state after processing the "reveal_summary" choice
 3. Depending on timing, the user might end up with the state from step 1 (which doesn't have the CONCLUSION chapter summary) or step 2 (which does)
 
 ### Previous Implementations
 
-Previous implementations have addressed parts of this issue:
+Previous implementations had addressed parts of this issue:
 
 1. **Explicit State Storage in WebSocket Flow** (in `websocket_service.py`):
    ```python
@@ -119,35 +119,13 @@ Previous implementations have addressed parts of this issue:
        logger.info("All chapter summaries already exist, skipping generation")
    ```
 
-However, the client-side race condition still exists because both paths are active simultaneously.
+However, the client-side race condition still existed because both paths were active simultaneously.
 
-### Code Insights
-
-1. **State Storage Timing**:
-   - The REST API call in `viewAdventureSummary()` happens immediately when the button is clicked
-   - The WebSocket flow processes the "reveal_summary" choice asynchronously
-   - This timing difference can lead to using an incomplete state
-
-2. **Duplicate Processing**:
-   - Both paths store the state in the same `StateStorageService`
-   - This can lead to the same state being stored twice with different IDs
-   - The second storage operation might overwrite or conflict with the first
-
-3. **React App State ID Handling**:
-   - The React app uses `react-app-patch.js` and `summary-state-handler.js` to extract the state ID from the URL
-   - If there are duplicate state IDs in the URL, it uses the first one
-   - This can lead to using an incomplete state if the REST API path completes first
-
-4. **AdventureStateManager Behavior**:
-   - The `reconstruct_state_from_storage` method in `AdventureStateManager` has robust fallback mechanisms
-   - It generates placeholder summaries if none are found
-   - This explains why some content is displayed even with an incomplete state
-
-## Proposed Solution
+## Implemented Solution
 
 ### Overview: Use WebSocket Flow Exclusively
 
-To fix the client-side race condition, we propose modifying the "Take a Trip Down Memory Lane" button to use the WebSocket flow exclusively, with a fallback to the REST API for robustness.
+To fix the client-side race condition, we modified the "Take a Trip Down Memory Lane" button to use the WebSocket flow exclusively, with a fallback to the REST API for robustness.
 
 ### Implementation Details
 
@@ -184,6 +162,9 @@ async function viewAdventureSummary() {
                 if (!hasRedirected) {
                     hasRedirected = true;
                     
+                    // Log the state ID for debugging
+                    console.log('Adventure summary state ID (WebSocket):', stateId);
+                    
                     // Navigate to the summary page with this state_id
                     window.location.href = `/adventure/summary?state_id=${stateId}`;
                 }
@@ -203,6 +184,7 @@ async function viewAdventureSummary() {
     
     // Send reveal_summary message via WebSocket
     if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
+        console.log('Sending reveal_summary message via WebSocket');
         // Send the reveal_summary message
         storyWebSocket.send(JSON.stringify({
             choice: "reveal_summary"
@@ -217,8 +199,22 @@ async function viewAdventureSummary() {
     // Fallback function to use REST API
     async function fallbackToRestApi() {
         try {
+            console.log('Using REST API fallback for adventure summary');
+            
             // Prevent duplicate redirects
-            if (hasRedirected) return;
+            if (hasRedirected) {
+                console.log('Already redirected, skipping REST API fallback');
+                return;
+            }
+            
+            // Get the current state from localStorage
+            const currentState = stateManager.loadState();
+            
+            if (!currentState) {
+                showError('No adventure state found. Please complete an adventure first.');
+                hideLoader();
+                return;
+            }
             
             // First store the state via REST API
             const response = await fetch('/adventure/api/store-adventure-state', {
@@ -234,13 +230,21 @@ async function viewAdventureSummary() {
             const data = await response.json();
             const stateId = data.state_id;
             
+            // Log the state ID for debugging
+            console.log('Adventure summary state ID (REST API):', stateId);
+            
             // Prevent duplicate redirects
-            if (hasRedirected) return;
+            if (hasRedirected) {
+                console.log('Already redirected, skipping navigation');
+                return;
+            }
             hasRedirected = true;
             
-            // Navigate to the summary page with the state ID
+            // Create a clean URL with a single state_id parameter
             const summaryUrl = new URL('/adventure/summary', window.location.origin);
             summaryUrl.searchParams.append('state_id', stateId);
+            
+            // Navigate to the summary page with the state ID
             window.location.href = summaryUrl.toString();
         } catch (error) {
             console.error('Error in fallback:', error);
@@ -250,6 +254,14 @@ async function viewAdventureSummary() {
     }
 }
 ```
+
+### Testing
+
+A test HTML file (`test_summary_button.html`) was created to verify the solution. The test simulates both the WebSocket and REST API paths with various timing scenarios to ensure the race condition is eliminated:
+
+1. **WebSocket Success**: WebSocket responds quickly with state_id
+2. **WebSocket Timeout**: WebSocket doesn't respond within timeout period, fallback to REST API
+3. **WebSocket Not Available**: WebSocket is not available, immediate fallback to REST API
 
 ### Benefits of This Solution
 
@@ -265,27 +277,11 @@ async function viewAdventureSummary() {
 
 6. **Improved User Experience**: Ensures users always see complete data in the summary.
 
-7. **Minimal Changes Required**: Only requires modifying one function in the client-side code.
-
-### Implementation Plan
-
-1. **Modify `viewAdventureSummary()` Function**:
-   - Update the function in `app/templates/index.html` to use the WebSocket flow with fallback
-   - Add timeout and error handling for robustness
-
-2. **Testing**:
-   - Test the complete flow from clicking the "Take a Trip Down Memory Lane" button to viewing the summary
-   - Verify that all 10 chapter summaries are displayed
-   - Test with different timing scenarios to ensure the race condition is eliminated
-   - Test the fallback mechanism by simulating WebSocket failures
-
-3. **Monitoring**:
-   - Add logging to track which path is being used (WebSocket or fallback)
-   - Monitor for any errors or unexpected behavior
+7. **Minimal Changes Required**: Only required modifying one function in the client-side code.
 
 ## Additional Recommendations
 
-While the proposed solution addresses the immediate issue, there are additional improvements that could be made:
+While the implemented solution addresses the immediate issue, there are additional improvements that could be made in the future:
 
 1. **Enhanced Logging**:
    - Add more detailed logging to track the state storage and retrieval process

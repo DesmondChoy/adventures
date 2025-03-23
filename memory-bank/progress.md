@@ -3,6 +3,28 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-23
+- Verified that the Summary Chapter race condition fix is working correctly
+- Confirmed that the Summary Chapter is now displaying all data (questions, answers, chapter summaries, and titles)
+- Identified a non-critical WebSocket disconnection error in the logs that doesn't affect functionality
+- Documented the WebSocket cleanup issue for future enhancement:
+  - Error occurs when the client navigates to the summary page and closes the WebSocket connection
+  - Server continues trying to stream summary content over the now-closed WebSocket
+  - This is a cleanup issue rather than a functional problem
+  - Potential future enhancement would be to modify the `process_choice` function in `app/services/websocket_service.py`
+  - Would need to add better error handling around WebSocket send operations
+  - Should detect when the client has disconnected and stop further send attempts
+  - Could add a check before sending summary content to see if the client is still connected
+- Fixed Summary Chapter race condition by modifying the "Take a Trip Down Memory Lane" button functionality
+- Updated `viewAdventureSummary()` function in `app/templates/index.html` to use WebSocket flow exclusively
+- Fixed an issue where the WebSocket message was missing the state data, causing "Missing state in message" errors
+- Modified the WebSocket message to include both state and choice data
+- Implemented fallback to REST API for robustness with 5-second timeout
+- Added flag to track redirects and prevent duplicate redirects
+- Added detailed logging for debugging
+- Created test HTML file (`test_summary_button.html`) to verify the solution
+- Simulated various timing scenarios to ensure the race condition is eliminated
+- Ensured the state stored always includes the CONCLUSION chapter summary
+- Improved user experience by ensuring complete data is displayed in the Summary Chapter
 - Fixed missing state storage issue in Summary Chapter
 - Added explicit state storage in WebSocket flow after generating CONCLUSION chapter summary
 - Modified WebSocket service to send state_id to client in "summary_ready" message

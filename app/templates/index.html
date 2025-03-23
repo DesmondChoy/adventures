@@ -1041,11 +1041,61 @@ function startAdventure() {
         
         // Function to handle viewing the adventure summary
         async function viewAdventureSummary() {
-            try {
-                // Show loader while processing
-                showLoader();
-                
-                // Get the current state from localStorage
+            // Show loading indicator
+            showLoader();
+            
+            // Set a timeout for WebSocket response
+            let timeoutId = setTimeout(() => {
+                console.log('WebSocket response timeout, falling back to REST API');
+                fallbackToRestApi();
+            }, 5000); // 5 seconds timeout
+            
+            // Flag to track if we've already redirected
+            let hasRedirected = false;
+            
+            // Store the original onmessage handler
+            const originalOnMessage = storyWebSocket.onmessage;
+            
+            // Override the onmessage handler to catch the summary_ready message
+            storyWebSocket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.type === 'summary_ready') {
+                        // Clear the timeout
+                        clearTimeout(timeoutId);
+                        
+                        // Use the state_id from the WebSocket response
+                        const stateId = data.state_id;
+                        
+                        // Prevent duplicate redirects
+                        if (!hasRedirected) {
+                            hasRedirected = true;
+                            
+                            // Log the state ID for debugging
+                            console.log('Adventure summary state ID (WebSocket):', stateId);
+                            
+                            // Navigate to the summary page with this state_id
+                            window.location.href = `/adventure/summary?state_id=${stateId}`;
+                        }
+                    } else {
+                        // Pass other messages to the original handler
+                        if (originalOnMessage) {
+                            originalOnMessage(event);
+                        }
+                    }
+                } catch (e) {
+                    // If JSON parsing fails, pass to original handler
+                    if (originalOnMessage) {
+                        originalOnMessage(event);
+                    }
+                }
+            };
+            
+            // Send reveal_summary message via WebSocket
+            if (storyWebSocket && storyWebSocket.readyState === WebSocket.OPEN) {
+                console.log('Sending reveal_summary message via WebSocket');
+                // Get the current state
                 const currentState = stateManager.loadState();
                 
                 if (!currentState) {
@@ -1054,35 +1104,67 @@ function startAdventure() {
                     return;
                 }
                 
-                // Store the state on the server
-                const response = await fetch('/adventure/api/store-adventure-state', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(currentState),
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to store adventure state');
+                // Send both state and choice
+                storyWebSocket.send(JSON.stringify({
+                    state: currentState,
+                    choice: "reveal_summary"
+                }));
+            } else {
+                // Fallback if WebSocket is not available
+                console.log('WebSocket not available, falling back to REST API');
+                clearTimeout(timeoutId);
+                fallbackToRestApi();
+            }
+            
+            // Fallback function to use REST API
+            async function fallbackToRestApi() {
+                try {
+                    console.log('Using REST API fallback for adventure summary');
+                    
+                    // Prevent duplicate redirects
+                    if (hasRedirected) return;
+                    
+                    // Get the current state from localStorage
+                    const currentState = stateManager.loadState();
+                    
+                    if (!currentState) {
+                        showError('No adventure state found. Please complete an adventure first.');
+                        hideLoader();
+                        return;
+                    }
+                    
+                    // First store the state via REST API
+                    const response = await fetch('/adventure/api/store-adventure-state', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(currentState),
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to store adventure state');
+                    }
+                    
+                    const data = await response.json();
+                    const stateId = data.state_id;
+                    
+                    // Log the state ID for debugging
+                    console.log('Adventure summary state ID (REST API):', stateId);
+                    
+                    // Prevent duplicate redirects
+                    if (hasRedirected) return;
+                    hasRedirected = true;
+                    
+                    // Create a clean URL with a single state_id parameter
+                    const summaryUrl = new URL('/adventure/summary', window.location.origin);
+                    summaryUrl.searchParams.append('state_id', stateId);
+                    
+                    // Navigate to the summary page with the state ID
+                    window.location.href = summaryUrl.toString();
+                } catch (error) {
+                    console.error('Error in fallback:', error);
+                    showError('Failed to load adventure summary. Please try again.');
+                    hideLoader();
                 }
-                
-                const data = await response.json();
-                const stateId = data.state_id;
-                
-                // Log the state ID for debugging
-                console.log('Adventure summary state ID:', stateId);
-                
-                // Create a clean URL with a single state_id parameter
-                const summaryUrl = new URL('/adventure/summary', window.location.origin);
-                summaryUrl.searchParams.append('state_id', stateId);
-                
-                // Navigate to the summary page with the state ID
-                window.location.href = summaryUrl.toString();
-            } catch (error) {
-                console.error('Error viewing adventure summary:', error);
-                showError('Failed to load adventure summary. Please try again.');
-                hideLoader();
             }
         }
         

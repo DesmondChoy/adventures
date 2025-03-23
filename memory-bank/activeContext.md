@@ -1,6 +1,66 @@
 # Active Context
 
-## Current Focus: Missing State Storage Fix (2025-03-23)
+## Current Focus: Summary Chapter Race Condition Fix (2025-03-23)
+
+We've successfully implemented and verified a solution to fix the race condition in the Summary Chapter feature and addressed a related issue where the WebSocket message was missing the state data. The Summary Chapter is now correctly displaying all data (questions, answers, chapter summaries, and titles).
+
+### Race Condition Solution
+
+The race condition was occurring because there were two separate paths for storing the state and getting a state_id:
+
+1. **REST API Path** (in `viewAdventureSummary()` function):
+   * Immediately stores the current state via REST API when the button is clicked
+   * Redirects to the summary page with the state_id from the REST API
+
+2. **WebSocket Path** (in WebSocket message handler):
+   * Processes the "reveal_summary" choice asynchronously
+   * Stores the state after generating the CONCLUSION chapter summary
+   * Sends a "summary_ready" message with the state_id to the client
+
+This created a race condition where:
+* The REST API path might complete before the WebSocket path has finished generating the CONCLUSION chapter summary
+* This can lead to incomplete data being displayed in the Summary Chapter
+* Only 9 chapter summaries might be displayed instead of all 10
+
+### Implementation Details
+
+We've modified the `viewAdventureSummary()` function in `app/templates/index.html` to use the WebSocket flow exclusively, with a fallback to the REST API for robustness:
+
+1. **Primary WebSocket Flow**:
+   * Sends the "reveal_summary" message via WebSocket
+   * Sets a 5-second timeout for the WebSocket response
+   * Overrides the onmessage handler to catch the "summary_ready" message
+   * Uses the state_id from the WebSocket response to navigate to the summary page
+
+2. **Fallback REST API Flow**:
+   * Activates if WebSocket is not available or times out
+   * Uses the existing REST API approach as a fallback
+   * Ensures we don't have duplicate redirects
+
+3. **Additional Improvements**:
+   * Added a flag to track if we've already redirected
+   * Added detailed logging for debugging
+   * Improved error handling
+
+### Testing
+
+We've also created a test HTML file (`test_summary_button.html`) that simulates both the WebSocket and REST API paths with various timing scenarios to ensure the race condition is eliminated:
+
+1. **WebSocket Success**: WebSocket responds quickly with state_id
+2. **WebSocket Timeout**: WebSocket doesn't respond within timeout period, fallback to REST API
+3. **WebSocket Not Available**: WebSocket is not available, immediate fallback to REST API
+
+### Benefits
+
+This solution:
+* Eliminates the race condition by primarily using the WebSocket flow
+* Ensures the state stored always includes the CONCLUSION chapter summary
+* Reduces duplicate processing
+* Creates a clearer, more linear flow from button click to summary display
+* Maintains compatibility with the REST API flow as a fallback
+* Improves user experience by ensuring complete data is displayed in the Summary Chapter
+
+## Previous Focus: Missing State Storage Fix (2025-03-23)
 
 We've implemented a solution to fix the Summary Chapter issues described in `docs/missing_state_storage.md`. The issues were related to duplicate summary generation and placeholder content display when using the "Take a Trip Down Memory Lane" button.
 
