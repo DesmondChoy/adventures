@@ -204,7 +204,67 @@ graph TD
       logger.debug(f"Converted chapter_type to lowercase: {chapter['chapter_type']}")
   ```
 
-### 3. React-based Summary Architecture
+### 3. Modular Summary Service Pattern
+- **Package Structure** (`app/services/summary/`)
+  * Organized by responsibility with clear component separation
+  * Proper package exports through `__init__.py`
+  * Comprehensive unit tests in `tests/test_summary_service.py`
+  * Dependency injection for improved testability
+
+- **Component Separation**
+  * `exceptions.py`: Custom exception classes for specific error scenarios
+    - `SummaryError`: Base class for all summary-related errors
+    - `StateNotFoundError`: Raised when state cannot be found
+    - `SummaryGenerationError`: Raised when summary generation fails
+  
+  * `helpers.py`: Utility functions and helper classes
+    - `ChapterTypeHelper`: Consistent chapter type handling across different formats
+    - Methods for checking chapter types and converting between representations
+  
+  * `dto.py`: Data transfer objects for clean data exchange
+    - `AdventureSummaryDTO`: Container for all summary data
+    - Methods for converting to dictionary and camelCase formats
+  
+  * `chapter_processor.py`: Chapter-related processing logic
+    - `ChapterProcessor`: Extracts and generates chapter summaries
+    - Ensures proper chapter type identification
+    - Handles title extraction and generation
+  
+  * `question_processor.py`: Question extraction and processing
+    - `QuestionProcessor`: Extracts educational questions from various sources
+    - Multiple extraction strategies with fallbacks
+    - Normalization of question formats
+  
+  * `stats_processor.py`: Statistics calculation
+    - `StatsProcessor`: Calculates adventure statistics
+    - Ensures valid statistics even with incomplete data
+    - Counts chapters by type and calculates educational metrics
+  
+  * `service.py`: Main service class that orchestrates the components
+    - `SummaryService`: Coordinates all summary-related operations
+    - Delegates to specialized component classes
+    - Handles state retrieval, processing, and storage
+
+- **Dependency Injection Pattern**
+  * Components receive dependencies through constructor parameters
+  * Facilitates unit testing with mock objects
+  * Reduces coupling between components
+  * Example in `summary_router.py`:
+  ```python
+  def get_summary_service():
+      """Dependency injection for SummaryService."""
+      state_storage_service = StateStorageService()
+      return SummaryService(state_storage_service)
+      
+  @router.get("/api/adventure-summary")
+  async def get_adventure_summary(
+      state_id: Optional[str] = None,
+      summary_service: SummaryService = Depends(get_summary_service)
+  ):
+      # Use injected summary_service
+  ```
+
+### 4. React-based Summary Architecture
 - **TypeScript Interfaces** (`app/static/summary-chapter/src/lib/types.ts`)
   * Defines structured data interfaces for the summary components
   * `ChapterSummary`: Chapter number, title, summary, and chapter type
@@ -222,17 +282,16 @@ graph TD
 
 - **FastAPI Integration** (`app/routers/summary_router.py`)
   * `/adventure/summary`: Serves the React app
-  * `/adventure/api/adventure-summary`: Provides the summary data
+  * `/adventure/api/adventure-summary`: Provides the summary data via SummaryService
   * `/adventure/api/store-adventure-state`: Enhanced state storage with summary generation
-  * Error handling and logging for API endpoints
+  * Error handling with specific exception types
   * Integration with main FastAPI application
-  * Robust fallback mechanisms for missing data
-  * Case sensitivity handling for chapter types
-  * Special handling for the last chapter to ensure it's always treated as a CONCLUSION chapter
+  * Dependency injection for SummaryService
 
 - **Enhanced State Storage Process**
-  * Checks for missing chapter summaries before storing state
-  * Generates summaries for chapters that don't have them
+  * Delegated to SummaryService and specialized processors
+  * ChapterProcessor checks for missing chapter summaries
+  * QuestionProcessor handles educational questions
   * Special handling for the CONCLUSION chapter with placeholder choice
   * Ensures consistent chapter summaries in the Summary Chapter
   * Eliminates duplicate summary generation
@@ -240,10 +299,10 @@ graph TD
   * Handles edge cases gracefully with fallback mechanisms
 
 - **Data Generation and Processing**
-  * `extract_chapter_summaries()`: Extracts chapter summaries with robust fallbacks
-  * `extract_educational_questions()`: Extracts questions from LESSON chapters
-  * `calculate_adventure_statistics()`: Calculates statistics with safety checks
-  * `format_adventure_summary_data()`: Transforms AdventureState into React-compatible data
+  * `ChapterProcessor.extract_chapter_summaries()`: Extracts chapter summaries with robust fallbacks
+  * `QuestionProcessor.extract_educational_questions()`: Extracts questions from LESSON chapters
+  * `StatsProcessor.calculate_adventure_statistics()`: Calculates statistics with safety checks
+  * `SummaryService.format_adventure_summary_data()`: Transforms AdventureState into React-compatible data
   * Fallback mechanisms for missing chapter summaries and educational questions
 
 ### 2. Frontend Component Architecture

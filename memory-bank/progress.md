@@ -3,6 +3,24 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-23
+- Completed major refactoring of summary_router.py into a modular package structure
+- Created app/services/summary/ directory with specialized component files
+- Separated code by responsibility into multiple files:
+  - exceptions.py: Custom exception classes
+  - helpers.py: Utility functions and helper classes
+  - dto.py: Data transfer objects
+  - chapter_processor.py: Chapter-related processing logic
+  - question_processor.py: Question extraction and processing
+  - stats_processor.py: Statistics calculation
+  - service.py: Main service class that orchestrates the components
+- Reduced method sizes by splitting large methods into focused, smaller methods
+- Simplified main service by delegating to specialized component classes
+- Improved code maintainability with clear separation of concerns
+- Enhanced testability with proper dependency injection
+- Added comprehensive unit tests in tests/test_summary_service.py
+- Updated imports in the router to use the new modular structure
+- Improved error handling with specific exception types
+- Added comprehensive logging throughout the codebase
 - Fixed chapter summary inconsistencies between WebSocket flow and REST API flow
 - Enhanced `store_adventure_state` function in `app/routers/summary_router.py` to check for missing chapter summaries
 - Added logic to generate summaries for chapters that don't have them, including the CONCLUSION chapter
