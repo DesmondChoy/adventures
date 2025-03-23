@@ -269,6 +269,23 @@
    - The LLM prompt (SUMMARY_CHAPTER_PROMPT) already guides the model to generate concise summaries (70-100 words)
    - The LLM prompt (IMAGE_SCENE_PROMPT) guides the model to generate vivid visual descriptions (20-30 words)
    
+   - Consistent Summary Generation for CONCLUSION Chapter:
+     * For regular chapters, summaries are generated when a user makes a choice, which creates a chapter response
+     * The CONCLUSION chapter doesn't have choices, but we treat the "Take a Trip Down Memory Lane" button as a choice
+     * When the button is clicked, it sends a "reveal_summary" chosen_path to the WebSocket Service
+     * The WebSocket Service creates a placeholder response for the CONCLUSION chapter:
+       ```python
+       # Process it like a regular choice with placeholder values
+       story_response = StoryResponse(
+           chosen_path="end_of_story", 
+           choice_text="End of story"
+       )
+       conclusion_chapter.response = story_response
+       ```
+     * This allows the CONCLUSION chapter to go through the same summary generation process as other chapters
+     * The STORY_COMPLETE event is triggered when chapter count equals story length (not checking chapter type)
+     * This consistent approach simplifies the code, improves maintainability, and makes it more adaptable to future changes
+   
    - Summary Chapter Robustness:
      * When chapter summaries are missing, generate placeholder summaries:
        ```python

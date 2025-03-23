@@ -1,6 +1,44 @@
 # Active Context
 
-## Current Focus: Enhanced Summary Chapter Robustness (2025-03-23)
+## Current Focus: STORY_COMPLETE Event Implementation (2025-03-23)
+
+We've implemented changes to the STORY_COMPLETE event to make it more consistent and maintainable. The STORY_COMPLETE event is a critical part of the adventure flow that marks the completion of the interactive story chapters and prepares for the CONCLUSION chapter.
+
+### Implementation Changes
+
+We made two key changes to the STORY_COMPLETE event implementation:
+
+1. **Simplified Event Trigger Condition**:
+   * Changed the event trigger to only check if the chapter count equals the story length
+   * Removed the additional check for the last chapter being a CONCLUSION type
+   * This makes the code more flexible for future changes to story length
+
+2. **Consistent Summary Generation**:
+   * Updated the "Take a Trip Down Memory Lane" button handling to create a placeholder response for the CONCLUSION chapter
+   * For regular chapters, summaries are generated when a user makes a choice, which creates a chapter response
+   * The CONCLUSION chapter doesn't have choices, but we now treat the "Take a Trip Down Memory Lane" button as a choice (with "reveal_summary" as the chosen_path)
+   * When the button is clicked, we create a placeholder response for the CONCLUSION chapter (chosen_path="end_of_story", choice_text="End of story")
+   * This allows the CONCLUSION chapter to go through the same summary generation process as other chapters
+   * The consistent approach simplifies the code and makes it more maintainable
+
+### Benefits of the Changes
+
+1. **Consistency in Code Logic**:
+   * All chapters, including the CONCLUSION chapter, now go through the same summary generation process
+   * The code is more consistent and easier to understand
+   * Future changes to the summary generation process only need to be made in one place
+
+2. **Flexibility for Future Changes**:
+   * The code will work correctly if story length changes in the future
+   * We rely on the existing validation in `determine_chapter_types()` to ensure the last chapter is a CONCLUSION type
+   * The implementation is more adaptable to future requirements
+
+3. **Improved Maintainability**:
+   * Reduced special case handling makes the code more maintainable
+   * Reusing existing code paths rather than duplicating logic
+   * Making the behavior more predictable and easier to reason about
+
+## Previous Focus: Enhanced Summary Chapter Robustness (2025-03-23)
 
 We've updated our documentation to reflect that the application now includes a Summary Chapter that follows the Conclusion Chapter. The Summary Chapter doesn't contain any narrative content but instead shows statistics and a chapter-by-chapter summary of earlier chapters.
 

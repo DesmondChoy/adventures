@@ -82,11 +82,15 @@ graph TD
 
 - **Story Simulation Structure**
   * A complete story consists of 9 interactive chapters plus 1 conclusion chapter
-  * The STORY_COMPLETE event is triggered after chapter 9 (the last interactive chapter)
-  * The STORY_COMPLETE event contains summaries for chapters 1-9
-  * Chapter 10 (conclusion) content is generated after the STORY_COMPLETE event
-  * Chapter 10 has no user choices (it's a CONCLUSION type chapter)
-  * After the CONCLUSION chapter, users can access the SUMMARY chapter
+  * The STORY_COMPLETE event is triggered when the chapter count equals the story length
+  * The STORY_COMPLETE event contains summaries for all chapters including the CONCLUSION chapter
+  * The CONCLUSION chapter is already generated when the STORY_COMPLETE event is triggered
+  * The CONCLUSION chapter has no user choices
+  * After the CONCLUSION chapter, users can access the SUMMARY chapter via the "Take a Trip Down Memory Lane" button
+  * When the "Take a Trip Down Memory Lane" button is clicked, it's treated as a choice selection (with "reveal_summary" as the chosen_path)
+  * For regular chapters, summaries are generated when a choice is made, creating a chapter response
+  * For the CONCLUSION chapter, the button click creates a placeholder response (chosen_path="end_of_story", choice_text="End of story")
+  * This allows the CONCLUSION chapter to go through the same summary generation process as other chapters
   * The SUMMARY chapter displays statistics and chapter-by-chapter summaries
 
 - **Content Sources**
@@ -191,7 +195,7 @@ graph TD
 - **AdventureStateManager** (`app/services/adventure_state_manager.py`)
   * Converts uppercase chapter types to lowercase during state reconstruction
   * Ensures compatibility between stored state and AdventureState model
-  * Special handling for chapter 10 to ensure it's always a CONCLUSION chapter
+  * Special handling for the last chapter to ensure it's always a CONCLUSION chapter
   * Robust error handling and logging for debugging
   ```python
   # Convert chapter_type to lowercase
