@@ -91,18 +91,20 @@ async def process_choice(
 
             # Process it like a regular choice with placeholder values
             story_response = StoryResponse(
-                chosen_path="end_of_story", choice_text="End of story"
+                chosen_path="reveal_summary", choice_text=" "
             )
             conclusion_chapter.response = story_response
-            logger.info("Created placeholder response for CONCLUSION chapter")
+            logger.info(
+                "Created placeholder response for CONCLUSION chapter with whitespace"
+            )
 
             # Generate summary for the CONCLUSION chapter
             try:
                 logger.info(f"Generating summary for CONCLUSION chapter")
                 summary_result = await chapter_manager.generate_chapter_summary(
                     conclusion_chapter.content,
-                    "End of story",  # Placeholder for chosen_choice
-                    "",  # Empty choice_context
+                    " ",  # Whitespace for chosen_choice
+                    " ",  # Whitespace for choice_context
                 )
 
                 # Extract title and summary from the result
