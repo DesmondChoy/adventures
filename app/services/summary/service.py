@@ -19,10 +19,10 @@ logger = logging.getLogger("summary_service")
 
 class SummaryService:
     """Service for generating and retrieving adventure summaries."""
-    
+
     def __init__(self, state_storage_service: StateStorageService):
         """Initialize the summary service.
-        
+
         Args:
             state_storage_service: Service for storing and retrieving state
         """
@@ -30,8 +30,10 @@ class SummaryService:
         self.chapter_processor = ChapterProcessor()
         self.question_processor = QuestionProcessor()
         self.stats_processor = StatsProcessor()
-    
-    async def get_adventure_state_from_id(self, state_id: Optional[str] = None) -> AdventureState:
+
+    async def get_adventure_state_from_id(
+        self, state_id: Optional[str] = None
+    ) -> AdventureState:
         """Retrieves and reconstructs AdventureState from storage or active state.
 
         Args:
@@ -63,7 +65,9 @@ class SummaryService:
 
             if not stored_state:
                 logger.warning(f"No stored state found with ID: {state_id}")
-                raise StateNotFoundError("No adventure state found. Please complete an adventure to view the summary.")
+                raise StateNotFoundError(
+                    "No adventure state found. Please complete an adventure to view the summary."
+                )
 
             try:
                 logger.info(f"Retrieved state with ID: {state_id}")
@@ -84,14 +88,16 @@ class SummaryService:
         # If we still don't have a state, return 404
         if not state:
             logger.warning("No active adventure state found")
-            raise StateNotFoundError("No adventure state found. Please complete an adventure to view the summary.")
+            raise StateNotFoundError(
+                "No adventure state found. Please complete an adventure to view the summary."
+            )
 
         return state
-    
+
     def ensure_conclusion_chapter(self, state: AdventureState) -> AdventureState:
         """Ensures the last chapter is properly identified as a CONCLUSION chapter."""
         return self.chapter_processor.ensure_conclusion_chapter(state)
-    
+
     def format_adventure_summary_data(self, state: AdventureState) -> Dict[str, Any]:
         """Transform AdventureState into formatted summary data.
 
@@ -111,17 +117,21 @@ class SummaryService:
             chapter_summaries = self.chapter_processor.extract_chapter_summaries(state)
             logger.info(f"Extracted {len(chapter_summaries)} chapter summaries")
 
-            educational_questions = self.question_processor.extract_educational_questions(state)
+            educational_questions = (
+                self.question_processor.extract_educational_questions(state)
+            )
             logger.info(f"Extracted {len(educational_questions)} educational questions")
 
-            statistics = self.stats_processor.calculate_adventure_statistics(state, educational_questions)
+            statistics = self.stats_processor.calculate_adventure_statistics(
+                state, educational_questions
+            )
             logger.info(f"Calculated statistics: {statistics}")
 
             # Create the DTO
             summary_dto = AdventureSummaryDTO(
                 chapter_summaries=chapter_summaries,
                 educational_questions=educational_questions,
-                statistics=statistics
+                statistics=statistics,
             )
 
             # Return the data in snake_case format
@@ -147,16 +157,16 @@ class SummaryService:
                     "correct_answers": 1,
                 },
             }
-    
+
     async def store_adventure_state(self, state_data: Dict[str, Any]) -> str:
         """Store adventure state with enhanced processing.
-        
+
         Args:
             state_data: The adventure state data to store
-            
+
         Returns:
             The ID of the stored state
-        
+
         Raises:
             SummaryGenerationError: If there was an error processing or storing the state
         """
@@ -164,9 +174,15 @@ class SummaryService:
             # Log critical fields to help with debugging
             logger.info("Storing adventure state with the following fields:")
             logger.info(f"Chapters count: {len(state_data.get('chapters', []))}")
-            logger.info(f"Chapter summaries count: {len(state_data.get('chapter_summaries', []))}")
-            logger.info(f"Summary chapter titles count: {len(state_data.get('summary_chapter_titles', []))}")
-            logger.info(f"Lesson questions count: {len(state_data.get('lesson_questions', []))}")
+            logger.info(
+                f"Chapter summaries count: {len(state_data.get('chapter_summaries', []))}"
+            )
+            logger.info(
+                f"Summary chapter titles count: {len(state_data.get('summary_chapter_titles', []))}"
+            )
+            logger.info(
+                f"Lesson questions count: {len(state_data.get('lesson_questions', []))}"
+            )
 
             # Ensure chapter_summaries exists
             if not state_data.get("chapter_summaries"):
@@ -178,13 +194,24 @@ class SummaryService:
                 state_data["summary_chapter_titles"] = []
                 logger.info("Created empty summary_chapter_titles array")
 
-            # Process chapters to ensure all have summaries
-            if state_data.get("chapters"):
-                await self.chapter_processor.process_stored_chapter_summaries(state_data)
+            # Only generate summaries if they're actually missing
+            if state_data.get("chapters") and (
+                not state_data.get("chapter_summaries")
+                or len(state_data.get("chapter_summaries", []))
+                < len(state_data.get("chapters", []))
+            ):
+                logger.info("Missing chapter summaries detected, generating them now")
+                await self.chapter_processor.process_stored_chapter_summaries(
+                    state_data
+                )
+            else:
+                logger.info("All chapter summaries already exist, skipping generation")
 
             # Process lesson questions if needed
             if not state_data.get("lesson_questions"):
-                await self.question_processor.process_stored_lesson_questions(state_data)
+                await self.question_processor.process_stored_lesson_questions(
+                    state_data
+                )
 
             # Store the enhanced state
             state_id = await self.state_storage_service.store_state(state_data)

@@ -41,6 +41,12 @@ class StateStorageService:
         logger.info(
             f"Memory cache keys: {list(StateStorageService._memory_cache.keys())}"
         )
+
+        # Add more detailed logging about the state content
+        logger.info(
+            f"Storing state with {len(state_data.get('chapters', []))} chapters and {len(state_data.get('chapter_summaries', []))} summaries"
+        )
+
         return state_id
 
     async def get_state(self, state_id: str) -> Optional[Dict[str, Any]]:
@@ -64,7 +70,14 @@ class StateStorageService:
             return None
 
         logger.info(f"Successfully retrieved state with ID: {state_id}")
-        return state_data["state"]
+
+        # Add more detailed logging about the retrieved state content
+        retrieved_state = state_data["state"]
+        logger.info(
+            f"Retrieved state with {len(retrieved_state.get('chapters', []))} chapters and {len(retrieved_state.get('chapter_summaries', []))} summaries"
+        )
+
+        return retrieved_state
 
     async def cleanup_expired(self) -> int:
         """Remove expired states and return count of removed items."""

@@ -3,6 +3,13 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-23
+- Fixed missing state storage issue in Summary Chapter
+- Added explicit state storage in WebSocket flow after generating CONCLUSION chapter summary
+- Modified WebSocket service to send state_id to client in "summary_ready" message
+- Updated client-side code to handle "summary_ready" message and navigate to summary page
+- Fixed duplicate summary generation by checking if summaries already exist
+- Added detailed logging to track state storage and retrieval
+- Improved error handling for edge cases
 - Completed major refactoring of summary_router.py into a modular package structure
 - Created app/services/summary/ directory with specialized component files
 - Separated code by responsibility into multiple files:
@@ -294,6 +301,10 @@
 - Responsive design for both desktop and mobile
 
 ### Recent Enhancements
+- Fixed missing state storage issue in Summary Chapter
+- Added explicit state storage in WebSocket flow
+- Fixed duplicate summary generation
+- Improved logging and error handling
 - Made realistic state generation the default behavior in test scripts
 - Modified test scripts to use realistic states that better reflect production data
 - Enhanced test state generation with better error handling and fallback mechanisms

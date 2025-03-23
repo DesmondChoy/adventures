@@ -1,6 +1,106 @@
 # Active Context
 
-## Current Focus: Summary Router Refactoring (2025-03-23)
+## Current Focus: Missing State Storage Fix (2025-03-23)
+
+We've implemented a solution to fix the Summary Chapter issues described in `docs/missing_state_storage.md`. The issues were related to duplicate summary generation and placeholder content display when using the "Take a Trip Down Memory Lane" button.
+
+### Problem Analysis
+
+The root cause of these issues was a missing integration step between the WebSocket flow (during the adventure) and the REST API flow (when viewing the summary):
+
+1. **Missing State Storage**: After generating the CONCLUSION chapter summary in the WebSocket flow, there was no explicit call to store the updated state in the `StateStorageService`.
+
+2. **Duplicate Summary Generation**: When the React app loaded the summary page, it retrieved an incomplete state and regenerated summaries unnecessarily.
+
+### Implementation Details
+
+1. **Added Explicit State Storage in WebSocket Flow**:
+   * Modified `app/services/websocket_service.py` to store the updated state in `StateStorageService` after generating the CONCLUSION chapter summary
+   * Added code to send the state_id to the client in a new "summary_ready" message type
+   ```python
+   # Store the updated state in StateStorageService
+   from app.services.state_storage_service import StateStorageService
+   state_storage_service = StateStorageService()
+   state_id = await state_storage_service.store_state(state.dict())
+   
+   # Include the state_id in the response to the client
+   await websocket.send_json({
+       "type": "summary_ready",
+       "state_id": state_id
+   })
+   ```
+
+2. **Updated Client-Side Code**:
+   * Modified `app/templates/index.html` to handle the new "summary_ready" message type
+   * Added code to navigate directly to the summary page with the state_id from the WebSocket response
+   ```javascript
+   else if (data.type === 'summary_ready') {
+       // Use the state_id from the WebSocket response
+       const stateId = data.state_id;
+       
+       // Navigate to the summary page with this state_id
+       window.location.href = `/adventure/summary?state_id=${stateId}`;
+   }
+   ```
+
+3. **Fixed Duplicate Summary Generation**:
+   * Updated `app/services/summary/service.py` to only generate summaries if they're actually missing
+   * Added condition to check if existing summaries are complete before regenerating them
+   ```python
+   # Only generate summaries if they're actually missing
+   if state_data.get("chapters") and (
+       not state_data.get("chapter_summaries") or 
+       len(state_data.get("chapter_summaries", [])) < len(state_data.get("chapters", []))
+   ):
+       logger.info("Missing chapter summaries detected, generating them now")
+       await self.chapter_processor.process_stored_chapter_summaries(state_data)
+   else:
+       logger.info("All chapter summaries already exist, skipping generation")
+   ```
+
+4. **Improved Logging and Error Handling**:
+   * Added detailed logging in `app/services/state_storage_service.py` to track state storage and retrieval
+   * Added logging about chapter counts and summary counts to help with debugging
+   ```python
+   # Add more detailed logging about the state content
+   logger.info(
+       f"Storing state with {len(state_data.get('chapters', []))} chapters and {len(state_data.get('chapter_summaries', []))} summaries"
+   )
+   
+   # Add more detailed logging about the retrieved state content
+   retrieved_state = state_data["state"]
+   logger.info(
+       f"Retrieved state with {len(retrieved_state.get('chapters', []))} chapters and {len(retrieved_state.get('chapter_summaries', []))} summaries"
+   )
+   ```
+
+### Benefits
+
+1. **Eliminated Duplicate Summary Generation**:
+   * The system now checks if summaries already exist before regenerating them
+   * This avoids unnecessary processing and potential inconsistencies
+
+2. **Fixed Placeholder Content Display**:
+   * The Summary Chapter now shows the actual content generated during the adventure
+   * The state with complete summaries is properly stored and retrieved
+
+3. **Improved Debugging Capabilities**:
+   * Enhanced logging makes it easier to track state storage and retrieval
+   * Detailed information about chapter counts and summary counts helps with troubleshooting
+
+4. **Streamlined User Experience**:
+   * The user is now automatically redirected to the summary page with the correct state_id
+   * No more need to manually store the state and generate a new state_id
+
+### Testing
+
+The solution has been tested with the following scenarios:
+* Clicking the "Take a Trip Down Memory Lane" button after completing an adventure
+* Verifying that summaries are not regenerated when viewing the summary page
+* Confirming that actual content is displayed instead of placeholders
+* Testing edge cases like missing summaries or invalid state_id
+
+## Previous Focus: Summary Router Refactoring (2025-03-23)
 
 We've completed a major refactoring of the summary_router.py file, converting it from a single monolithic file into a properly organized modular package. This improves code maintainability, testability, and extensibility while preserving all existing functionality.
 
@@ -326,187 +426,3 @@ Our changes have successfully fixed the issue:
    * All chapter types are properly converted to lowercase
    * The state is correctly reconstructed and formatted
    * The summary data is verified to contain all required fields
-
-## Current Focus: Improved Testing with Realistic State Generation (2025-03-22)
-
-We've enhanced our testing approach to ensure the "Take a Trip Down Memory Lane" button works reliably in all scenarios. We've made realistic state generation the default behavior in our test scripts, which better reflects the actual production environment.
-
-### Improvements to Testing Approach
-
-1. **Made Realistic State Generation the Default**
-   * Modified `test_summary_button_flow.py` to use realistic states by default
-   * Changed command-line options to reflect the new default behavior:
-     - `--synthetic`: Use a synthetic hardcoded state (instead of the previous `--realistic` flag)
-     - `--file`: Load a state from a file
-     - `--category`: Specify a story category
-     - `--topic`: Specify a lesson topic
-     - `--compare`: Compare synthetic and realistic states
-   * Added better documentation to explain the testing approach
-   * Enhanced logging to track the source of test states
-
-2. **Enhanced generate_test_state.py Utility**
-   * Updated `tests/utils/generate_test_state.py` to use actual simulation by default
-   * Added clear warnings when using mock states
-   * Improved error handling and fallback mechanisms
-   * Added metadata to track state source for debugging
-   * Enhanced documentation to explain the utility's purpose and usage
-
-3. **Identified Key Differences Between Synthetic and Realistic States**
-   * Used the `--compare` flag to analyze differences between synthetic and realistic states
-   * Found differences in chapter types and structure:
-     - Synthetic state has a fixed pattern of chapter types
-     - Realistic state has chapter types determined by the simulation
-   * Discovered differences in question fields:
-     - Synthetic state only has question fields for some chapters
-     - Realistic state has question fields for all chapters (null for story chapters)
-   * Noted differences in chapter summaries and metadata
-   * These insights help us ensure our state reconstruction logic handles all possible state structures
-
-4. **Making State Validation More Robust**
-   * Enhanced type checking and conversion for all fields
-   * Added fallback mechanisms for missing or invalid data
-   * Improved error handling and logging for better debugging
-   * Added special handling for chapter 10 to ensure it's always treated as a CONCLUSION chapter
-
-5. **Ensuring Singleton Pattern Works Correctly**
-   * Strengthened the singleton implementation in StateStorageService
-   * Added safeguards against accidental creation of multiple instances
-   * Updated FastAPI dependency injection to ensure consistent access to the same instance
-
-### Next Steps
-
-1. **Monitor Production Usage:**
-   * Keep an eye on the production logs to ensure the fix continues to work
-   * Watch for any edge cases or unexpected behavior
-   * Consider adding more robust error handling for potential future issues
-
-2. **Consider Alternative Storage Mechanisms:**
-   * While the in-memory storage is now working correctly, it's still not persistent across server restarts
-   * Consider implementing a more persistent storage solution for production
-   * Options include using a database, Redis, or file-based storage
-   * This would provide more reliable state persistence across server restarts
-
-3. **Further Enhance Testing:**
-   * Continue to improve test coverage using realistic states
-   * Test with different story categories and lesson topics
-   * Add tests for server restart scenarios
-   * Implement automated tests that run the full flow from adventure to summary
-
-## Recent Completed Work
-
-### Made Realistic State Generation the Default (2025-03-22)
-
-1. **Updated Test Scripts to Use Realistic States by Default:**
-   * Problem: Our test scripts were using synthetic hardcoded states by default, which didn't accurately reflect production data
-   * Solution:
-     - Modified `test_summary_button_flow.py` to use realistic states by default
-     - Changed command-line options to reflect the new default behavior
-     - Enhanced logging to track state sources
-   * Implementation Details:
-     - Renamed parameter from `use_realistic_state` to `use_synthetic_state` and inverted its meaning
-     - Changed command-line flag from `--realistic` to `--synthetic` with inverted meaning
-     - Added detailed docstrings explaining the testing approach
-     - Added state source tracking for better debugging
-   * Benefits:
-     - Tests now better reflect the production environment
-     - More accurate testing of state reconstruction logic
-     - Better documentation of testing approach
-     - Improved debugging capabilities
-
-2. **Enhanced generate_test_state.py Utility:**
-   * Problem: The utility was using mock states by default, which didn't accurately reflect production data
-   * Solution:
-     - Updated the utility to use actual simulation by default
-     - Added clear warnings when using mock states
-     - Improved error handling and fallback mechanisms
-   * Implementation Details:
-     - Added better documentation explaining the utility's purpose and usage
-     - Enhanced error handling with detailed logging
-     - Added metadata to track state source for debugging
-     - Improved fallback mechanisms when simulation fails
-   * Benefits:
-     - More reliable test state generation
-     - Better error handling and debugging
-     - Clearer documentation of utility usage
-     - More accurate testing of state reconstruction logic
-
-### Implemented Singleton Pattern for StateStorageService (2025-03-22)
-
-1. **Implemented Singleton Pattern for StateStorageService:**
-   * Problem: The `StateStorageService` was using a non-singleton pattern, causing each instance to have its own separate memory cache
-   * Solution:
-     - Modified `StateStorageService` to use a singleton pattern with a shared memory cache
-     - Added class variables to ensure all instances share the same memory cache
-     - Implemented proper instance management methods
-   * Implementation Details:
-     - Added class variables `_instance`, `_memory_cache`, and `_initialized`
-     - Implemented `__new__` method to return the same instance for all calls
-     - Updated methods to use the class variable `_memory_cache` instead of instance variable
-     - Added detailed logging to track state storage and retrieval
-     - Modified `main.py` to explicitly set the singleton instance
-   * Benefits:
-     - All instances of `StateStorageService` now share the same memory cache
-     - States stored by one instance can be retrieved by another
-     - Improved logging for better debugging
-
-### Added State Reconstruction Function (2025-03-22)
-
-1. **Added State Reconstruction Function:**
-   * Problem: The state retrieved from storage wasn't being properly reconstructed into a valid `AdventureState` object
-   * Solution:
-     - Created a `reconstruct_adventure_state` function in `summary_router.py`
-     - Ensured all required fields are properly initialized with non-empty values
-     - Added robust error handling and logging
-   * Implementation Details:
-     - Function handles all required fields including narrative elements, sensory details, and other required properties
-     - Ensures chapter content is properly structured with valid choices
-     - Provides detailed error messages for debugging
-     - Adds extensive logging to track the reconstruction process
-   * Benefits:
-     - More robust state reconstruction from stored data
-     - Better error handling and logging for debugging
-     - Ensures all required fields have valid values that pass validation
-
-### Enhanced Test Button (2025-03-22)
-
-1. **Enhanced Test Button:**
-   * Problem: The test button was using a random state ID instead of the stored one, and wasn't creating a complete test state
-   * Solution:
-     - Updated the test button HTML to create a more complete test state
-     - Modified the button click handler to use the stored state ID
-   * Implementation Details:
-     - Added all required fields to the test state including narrative elements, sensory details, theme, moral teaching, and plot twist
-     - Added a CONCLUSION chapter with proper chapter content
-     - Added chapter summaries and lesson questions for display
-     - Modified the button click handler to use the stored state ID instead of a random one
-   * Benefits:
-     - More realistic test state for debugging
-     - Consistent state ID usage for better testing
-     - More comprehensive test coverage
-
-### Completed Summary Chapter Migration (2025-03-21)
-
-1. **Completed Summary Chapter Migration:**
-   * Problem: The Summary Chapter feature was still using the experimental directory, which needed to be removed as part of the migration to production
-   * Solution:
-     - Updated the build script to remove references to the experimental directory
-     - Deleted the experimental directory after confirming all functionality was migrated
-     - Updated documentation to reflect the new architecture
-   * Implementation Details:
-     - Updated `tools/build_summary_app.py` to:
-       - Remove references to the experimental directory
-       - Use the permanent location (`app/static/summary-chapter/`) as both source and destination
-       - Add comments explaining that the experimental directory has been removed
-     - Deleted the experimental directories:
-       - Removed `app/static/experimental/celebration-journey-moments-main/`
-       - Removed the parent `app/static/experimental/` directory
-     - Updated `app/static/summary-chapter/summary_chapter_migration_plan.md` to:
-       - Mark all tasks as complete
-       - Add details about the completed migration
-       - Update the build process section to reflect the new architecture
-     - Verified functionality by running `tests/test_summary_chapter.py`
-   * Benefits:
-     - Cleaner codebase with experimental code removed
-     - Simplified build process using only the permanent location
-     - Complete migration of the Summary Chapter feature to production
-     - Fully documented migration process for future reference

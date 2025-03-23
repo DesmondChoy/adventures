@@ -164,6 +164,20 @@ async def process_choice(
                     logger.info(
                         f"Stored title for chapter {conclusion_chapter.chapter_number}: {title}"
                     )
+
+                # Store the updated state in StateStorageService
+                from app.services.state_storage_service import StateStorageService
+
+                state_storage_service = StateStorageService()
+                state_id = await state_storage_service.store_state(state.dict())
+                logger.info(
+                    f"Stored state with ID: {state_id} after generating CONCLUSION chapter summary"
+                )
+
+                # Include the state_id in the response to the client
+                await websocket.send_json(
+                    {"type": "summary_ready", "state_id": state_id}
+                )
             except Exception as e:
                 logger.error(
                     f"Error generating chapter summary: {str(e)}", exc_info=True

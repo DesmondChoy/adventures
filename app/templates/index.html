@@ -481,6 +481,12 @@ function startAdventure() {
                     document.getElementById('storyContent').innerHTML = '';
                     document.getElementById('choicesContainer').innerHTML = '';
                     showLoader();
+                } else if (data.type === 'summary_ready') {
+                    // Use the state_id from the WebSocket response
+                    const stateId = data.state_id;
+                    
+                    // Navigate to the summary page with this state_id
+                    window.location.href = `/adventure/summary?state_id=${stateId}`;
                 } else if (data.type === 'summary_complete') {
                     // Display the complete summary
                     displaySummaryComplete(data.state);
