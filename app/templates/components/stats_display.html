@@ -1,0 +1,36 @@
+{% macro render_stats(state) %}
+<div class="text-center p-4">
+    <h3 class="text-lg font-semibold text-green-800 mb-2">Journey Complete!</h3>
+    <div class="text-sm text-green-700">
+        <p>Total Lessons: {{ state.stats.total_lessons }}</p>
+        <p>Correct Answers: {{ state.stats.correct_lesson_answers }}</p>
+        <p>Success Rate: {{ state.stats.completion_percentage }}%</p>
+    </div>
+    <button onclick="resetApplicationState()" 
+            class="mt-4 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition btn-hover">
+        Start New Journey
+    </button>
+</div>
+{% endmacro %}
+
+{% macro render_stats_with_summary(state) %}
+<div class="text-center p-4">
+    <h3 class="text-lg font-semibold text-green-800 mb-2">Journey Complete!</h3>
+    <div class="text-sm text-green-700">
+        <p>Total Lessons: {{ state.stats.total_lessons }}</p>
+        <p>Correct Answers: {{ state.stats.correct_lesson_answers }}</p>
+        <p>Success Rate: {{ state.stats.completion_percentage }}%</p>
+    </div>
+    <div class="flex flex-col gap-3 mt-4">
+        <button onclick="viewAdventureSummary()" 
+               class="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition btn-hover inline-block text-center">
+            <span class="text-lg text-center">🔮 Take a Trip Down 🔮<br>Memory Lane</span>
+            <p class="text-sm opacity-80 mt-1">Relive your adventure and learning highlights</p>
+        </button>
+        <button onclick="resetApplicationState()" 
+                class="mt-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition btn-hover text-center">
+            🚀 Start New Journey
+        </button>
+    </div>
+</div>
+{% endmacro %}

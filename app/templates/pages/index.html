@@ -1,0 +1,23 @@
+{% extends "layouts/main_layout.html" %}
+
+{% block title %}Interactive Story Adventure{% endblock %}
+
+{% block styles %}
+<style>
+    .btn-hover:hover {
+        transform: translateY(-2px);
+        transition: all 0.2s;
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+    <!-- Screen 1: Story Category Selection -->
+    {% include "components/category_carousel.html" %}
+
+    <!-- Screen 2: Lesson Topic Selection -->
+    {% include "components/lesson_carousel.html" %}
+    
+    <!-- Story Container (Initially Hidden) -->
+    {% include "components/story_container.html" %}
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-4xl font-bold text-center mb-4">
+        <a href="/" class="gradient-title hover:text-indigo-600 transition-colors duration-200">Learning Odyssey</a>
+    </h1>
+    
+    <div id="introText" class="text-center space-y-2 mb-8">
+        <p class="text-xl gradient-text font-medium">Where no two stories are ever the same.</p>
+        <p class="text-gray-600 max-w-2xl mx-auto">Choose your path and learn through engaging, personalized adventures.</p>
+        <!-- Debug info - hidden but accessible via console for developers -->
+        <div id="debugInfo" class="debug-info" style="display: none;">
+            <p><strong>Debug Info:</strong></p>
+            <p>Total Categories: <span id="debugCategoryCount">{{ story_categories|length }}</span></p>
+            <p>Category IDs: <span id="debugCategoryIds">{{ story_categories.keys()|list }}</span></p>
+            <p>First Category: <span id="debugFirstCategory">{{ story_categories.values()|list|first if story_categories else 'None' }}</span></p>
+        </div>
+    </div>
+    
+    {% block page_content %}{% endblock %}
+    
+    <!-- Loader Overlay -->
+    {% include "components/loader.html" %}
+</div>
+
+{% include "components/scripts.html" %}
+{% endblock %}
