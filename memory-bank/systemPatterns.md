@@ -4,18 +4,27 @@
 ```mermaid
 graph TD
     Client[Web Client] <--> WSR[WebSocket Router]
-    WSR <--> WSS[WebSocket Service]
-    WSS <--> ASM[Adventure State Manager]
+    WSR <--> WSC[WebSocket Core]
+    
+    %% WebSocket Service Components
+    WSC <--> CP[Choice Processor]
+    WSC <--> CG[Content Generator]
+    WSC <--> SH[Stream Handler]
+    WSC <--> IG[Image Generator]
+    WSC <--> SG[Summary Generator]
+    
+    CP <--> ASM[Adventure State Manager]
+    CG <--> ASM
     ASM <--> AS[AdventureState]
     ASM <--> CM[Chapter Manager]
     CM <--> LLM[LLM Service]
     CM <--> DB[(Database)]
-    WSS <--> IMG[Image Generation Service]
+    IG <--> IMG[Image Generation Service]
     CM <--> SL[Story Loader]
     SL <--> SF[(Story Files)]
     LLM <--> PF[Paragraph Formatter]
     
-    %% New React Summary Components
+    %% React Summary Components
     Client <--> SR[Summary Router]
     SR <--> RSUM[React Summary App]
     SR <--> SAPI[Summary API]
@@ -31,8 +40,16 @@ graph TD
         AS
     end
 
-    subgraph Services
-        WSS
+    subgraph WebSocket Services
+        WSC
+        CP
+        CG
+        SH
+        IG
+        SG
+    end
+
+    subgraph Core Services
         ASM
         CM
         LLM
@@ -43,7 +60,7 @@ graph TD
     subgraph Content Sources
         CSV[lessons/*.csv] --> CM
         LLM --> CM
-        IMG --> WSS
+        IMG --> IG
         SF --> SL
     end
     
@@ -51,6 +68,15 @@ graph TD
         RSUM
         SAPI
         SGEN
+    end
+    
+    subgraph Templates
+        BL[Base Layout]
+        PC[Page Components]
+        UI[UI Components]
+        Client --> BL
+        BL --> PC
+        PC --> UI
     end
 ```
 
@@ -118,11 +144,43 @@ graph TD
   * Validates client messages
   * Works with AdventureStateManager for state handling
 
-- **Service** (`app/services/websocket_service.py`)
-  * Processes user choices
-  * Manages chapter content generation
-  * Handles streaming of content
-  * Coordinates with ImageGenerationService
+- **Modular WebSocket Services** (`app/services/websocket/`)
+  * `core.py`: Central coordination of WebSocket operations
+    - Processes incoming messages
+    - Delegates to specialized components
+    - Manages WebSocket lifecycle
+    - Coordinates response flow
+  
+  * `choice_processor.py`: Handles user choice processing
+    - Processes start and non-start choices
+    - Manages chapter transitions
+    - Handles lesson and story responses
+    - Generates chapter summaries
+    - Processes the "reveal_summary" special choice
+  
+  * `content_generator.py`: Generates chapter content
+    - Creates content for different chapter types
+    - Coordinates with Chapter Manager
+    - Handles content validation and cleaning
+    - Manages content structure
+  
+  * `stream_handler.py`: Manages content streaming
+    - Streams chapter content to clients
+    - Handles word-by-word streaming
+    - Manages streaming delays for natural reading
+    - Streams conclusion and summary content
+  
+  * `image_generator.py`: Handles image generation
+    - Generates images for agency choices
+    - Creates chapter-specific images
+    - Coordinates with Image Generation Service
+    - Handles image encoding and transmission
+  
+  * `summary_generator.py`: Manages summary generation
+    - Generates summary content
+    - Streams summary to clients
+    - Coordinates with Chapter Manager
+    - Handles summary formatting
 
 ### 5. LLM Integration
 - **Prompt Engineering** (`app/services/llm/prompt_engineering.py`)
@@ -449,7 +507,40 @@ graph TD
       return camel_case_data
   ```
 
-### 8. Simulation and Testing Pattern
+### 8. Modular Template Structure Pattern
+- **Template Hierarchy** (`app/templates/`)
+  * `layouts/main_layout.html`: Base layout template that extends `base.html`
+    - Defines the overall page structure
+    - Includes common elements like header and footer
+    - Provides content blocks for page-specific content
+    - Includes common scripts and styles
+  
+  * `pages/index.html`: Page-specific template that extends the layout
+    - Extends `layouts/main_layout.html`
+    - Includes components specific to the page
+    - Minimal content focused on page structure
+    - Uses component includes for most UI elements
+  
+  * `components/`: Reusable UI components
+    - `category_carousel.html`: Story category selection carousel
+    - `lesson_carousel.html`: Lesson topic selection carousel
+    - `loader.html`: Loading indicator component
+    - `scripts.html`: JavaScript includes and initialization
+    - `stats_display.html`: Adventure statistics display
+    - `story_container.html`: Main story content container
+  
+  * `macros/`: Reusable template functions
+    - `form_macros.html`: Form-related macros for input elements
+
+- **Benefits**:
+  * Improved maintainability through separation of concerns
+  * Enhanced reusability of UI components
+  * Clearer code organization with focused template files
+  * Easier navigation and understanding of the template structure
+  * Simplified testing and debugging of individual components
+  * Reduced duplication through component reuse
+
+### 9. Simulation and Testing Pattern
 - **Standardized Logging**:
   * Consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`, `EVENT:CHOICE_SELECTED`)
   * Source tracking for debugging (e.g., `source="chapter_update"`, `source="verification"`)

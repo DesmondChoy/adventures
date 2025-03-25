@@ -44,6 +44,24 @@
   }
   ```
 
+- **Template Structure**
+  * Modular template organization (`app/templates/`)
+    - `layouts/main_layout.html`: Base layout template that extends `base.html`
+    - `pages/index.html`: Page-specific template that extends the layout
+    - `components/`: Reusable UI components
+      - `category_carousel.html`: Story category selection carousel
+      - `lesson_carousel.html`: Lesson topic selection carousel
+      - `loader.html`: Loading indicator component
+      - `scripts.html`: JavaScript includes and initialization
+      - `stats_display.html`: Adventure statistics display
+      - `story_container.html`: Main story content container
+    - `macros/form_macros.html`: Reusable template functions
+  * Inheritance-based template system
+    - Base templates define overall structure
+    - Page templates extend layouts
+    - Components are included where needed
+    - Clear separation of concerns
+
 - **UI Components**
   * Modular CSS organization (`app/static/css/`)
     - `layout.css`: Structural elements, containers, and screen transitions
@@ -128,14 +146,44 @@ class ChapterType(str, Enum):
 - Samples questions from `app/data/lessons/*.csv` files for LESSON chapters
 - Validates question availability
 
-### WebSocket Service (`app/services/websocket_service.py`)
-- Processes user choices and generates responses
-- Manages chapter content generation
-- Handles streaming of content to client
-- Coordinates with ImageGenerationService for agency choice images
-- Handles the "reveal_summary" choice path for the "Take a Trip Down Memory Lane" button
-- Creates a placeholder response for the CONCLUSION chapter to enable summary generation
-- Triggers the STORY_COMPLETE event when chapter count equals story length
+### Modular WebSocket Services (`app/services/websocket/`)
+- **Core Module** (`core.py`)
+  * Central coordination of WebSocket operations
+  * Processes incoming messages and delegates to specialized components
+  * Manages WebSocket lifecycle and response flow
+  * Triggers the STORY_COMPLETE event when chapter count equals story length
+
+- **Choice Processor** (`choice_processor.py`)
+  * Processes start and non-start choices
+  * Manages chapter transitions and state updates
+  * Handles lesson and story responses
+  * Generates chapter summaries
+  * Processes the "reveal_summary" special choice
+  * Creates placeholder response for CONCLUSION chapter to enable summary generation
+
+- **Content Generator** (`content_generator.py`)
+  * Creates content for different chapter types
+  * Coordinates with Chapter Manager for content generation
+  * Handles content validation and cleaning
+  * Manages content structure and formatting
+
+- **Stream Handler** (`stream_handler.py`)
+  * Streams chapter content to clients
+  * Handles word-by-word streaming with natural delays
+  * Manages streaming of conclusion and summary content
+  * Coordinates WebSocket message formatting
+
+- **Image Generator** (`image_generator.py`)
+  * Generates images for agency choices
+  * Creates chapter-specific images
+  * Coordinates with Image Generation Service
+  * Handles image encoding and transmission
+
+- **Summary Generator** (`summary_generator.py`)
+  * Generates summary content for the SUMMARY chapter
+  * Streams summary to clients
+  * Coordinates with Chapter Manager for summary generation
+  * Handles summary formatting and structure
 
 ### LLM Integration (`app/services/llm/`)
 - `providers.py`: Provider abstraction layer

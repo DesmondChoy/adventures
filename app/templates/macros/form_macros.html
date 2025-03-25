@@ -1,0 +1,27 @@
+{% macro carousel_navigation(direction) %}
+<button type="button" onclick="window.{{ carousel_id }}.rotate('{{ direction }}')" aria-label="{{ 'Previous' if direction == 'prev' else 'Next' }}">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        {% if direction == 'prev' %}
+        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+        {% else %}
+        <path d="M8.59 7.41L10 6l6 6-6 6-1.41-1.41L13.17 12z"/>
+        {% endif %}
+    </svg>
+</button>
+{% endmacro %}
+
+{% macro choice_button(choice, index) %}
+<button 
+    data-choice-id="{{ choice.id }}"
+    data-choice-text="{{ choice.text }}"
+    onclick="makeChoice('{{ choice.id }}', '{{ choice.text }}')"
+    class="w-full p-6 mb-4 text-left rounded-xl transition-all duration-300 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 
+    {{ ['shadow-lg', 'shadow-xl', 'shadow-2xl'][index if index < 3 else 2] }} hover:shadow-2xl backdrop-blur-sm choice-card group">
+    <div class="choice-content">
+        <div class="choice-text">
+            <p class="narrative-font group-hover:text-gray-900 transition-colors duration-300">{{ choice.text }}</p>
+        </div>
+        <div class="choice-image-container" style="display: none;"></div>
+    </div>
+</button>
+{% endmacro %}

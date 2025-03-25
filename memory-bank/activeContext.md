@@ -1,6 +1,53 @@
 # Active Context
 
-## Current Focus: Summary Chapter Race Condition Fix (2025-03-23)
+## Current Focus: WebSocket and Template Structure Refactoring (2025-03-25)
+
+We've completed two major refactorings to improve code organization, maintainability, and modularity:
+
+### 1. WebSocket Service Refactoring
+
+We've restructured the WebSocket services by breaking down the monolithic `websocket_service.py` into specialized components:
+
+- **Core Components**:
+  * `core.py`: Central coordination of WebSocket operations and message handling
+  * `choice_processor.py`: Processing user choices and chapter transitions
+  * `content_generator.py`: Generating chapter content based on state
+  * `image_generator.py`: Managing image generation for agency choices and chapters
+  * `stream_handler.py`: Handling content streaming to clients
+  * `summary_generator.py`: Managing summary generation and display
+
+- **Key Improvements**:
+  * Enhanced code organization with clear separation of concerns
+  * Improved modularity for easier maintenance and future extensions
+  * Implemented robust error handling throughout the WebSocket flow
+  * Added asynchronous handling of user choices and chapter streaming
+  * Enhanced image generation to support agency choices and chapter-specific images
+  * Improved logging for easier debugging and monitoring
+
+### 2. Template Structure Refactoring
+
+We've implemented a modular template system to improve frontend organization and maintainability:
+
+- **Template Components**:
+  * Created a base layout (`layouts/main_layout.html`)
+  * Extracted reusable components:
+    - `components/category_carousel.html`
+    - `components/lesson_carousel.html`
+    - `components/loader.html`
+    - `components/scripts.html`
+    - `components/stats_display.html`
+    - `components/story_container.html`
+  * Updated the main index page to use this component structure
+
+- **Key Improvements**:
+  * Better organization with clear separation of UI components
+  * Enhanced code reusability through component extraction
+  * Improved maintainability with smaller, focused template files
+  * Clearer structure for future UI enhancements
+
+These refactorings have significantly improved the codebase structure while maintaining all existing functionality.
+
+## Previous Focus: Summary Chapter Race Condition Fix (2025-03-23)
 
 We've successfully implemented and verified a solution to fix the race condition in the Summary Chapter feature and addressed a related issue where the WebSocket message was missing the state data. The Summary Chapter is now correctly displaying all data (questions, answers, chapter summaries, and titles).
 

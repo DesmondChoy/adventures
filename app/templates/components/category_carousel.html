@@ -1,0 +1,35 @@
+<div id="storyCategoryScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6 screen-transition">
+    <input type="hidden" id="storyCategory" name="storyCategory" required>
+    <div class="swipe-tip">Swipe to explore <span class="hand">➜</span></div>
+    <div class="carousel-container">
+        <div class="carousel" id="categoryCarousel">
+            {% for category_id, category_data in story_categories.items() %}
+            <div class="carousel-card" data-category="{{ category_id }}" onclick="window.categoryCarousel.select('{{ category_id }}')">
+                <div class="card-face card-front">
+                    <img src="/static/images/stories/{{ category_id }}.jpg" alt="{{ category_data.name }}" class="card-image">
+                </div>
+                <div class="card-face card-back">
+                    <div class="carousel-title">{{ category_data.name }}</div>
+                    <div class="carousel-description">{{ category_data.description }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="carousel-nav">
+            <button type="button" onclick="window.categoryCarousel.rotate('prev')" aria-label="Previous">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                </svg>
+            </button>
+            <button type="button" onclick="window.categoryCarousel.rotate('next')" aria-label="Next">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M8.59 7.41L10 6l6 6-6 6-1.41-1.41L13.17 12z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    <button onclick="goToLessonTopicScreen()"
+            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        Confirm Your Adventure
+    </button>
+</div>

@@ -2,6 +2,38 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-03-25
+- Completed major refactoring of WebSocket services for improved modularity and functionality
+- Restructured WebSocket services by breaking down the monolithic `websocket_service.py` into specialized components:
+  - `core.py`: Central coordination of WebSocket operations and message handling
+  - `choice_processor.py`: Processing user choices and chapter transitions
+  - `content_generator.py`: Generating chapter content based on state
+  - `image_generator.py`: Managing image generation for agency choices and chapters
+  - `stream_handler.py`: Handling content streaming to clients
+  - `summary_generator.py`: Managing summary generation and display
+- Implemented asynchronous handling of user choices and chapter streaming
+- Enhanced image generation to support agency choices and chapter-specific images
+- Integrated robust error handling and logging throughout the WebSocket flow
+- Improved code organization with clear separation of concerns
+- Enhanced modularity for easier maintenance and future extensions
+- Implemented a modular template system for improved frontend organization
+- Created a base layout (`layouts/main_layout.html`) that extends `base.html`
+- Extracted reusable UI components into separate files:
+  - `components/category_carousel.html`: Story category selection carousel
+  - `components/lesson_carousel.html`: Lesson topic selection carousel
+  - `components/loader.html`: Loading indicator component
+  - `components/scripts.html`: JavaScript includes and initialization
+  - `components/stats_display.html`: Adventure statistics display
+  - `components/story_container.html`: Main story content container
+- Updated the main index page to use this component structure
+- Improved maintainability through separation of concerns
+- Enhanced code reusability through component extraction
+- Simplified testing and debugging of individual components
+- Updated Memory Bank documentation to reflect the new architecture
+- Updated architecture diagram in systemPatterns.md
+- Added new sections for WebSocket Components and Template Structure Pattern
+- Updated techContext.md with the new WebSocket service structure and template organization
+
 ### 2025-03-23
 - Verified that the Summary Chapter race condition fix is working correctly
 - Confirmed that the Summary Chapter is now displaying all data (questions, answers, chapter summaries, and titles)

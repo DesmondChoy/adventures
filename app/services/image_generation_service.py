@@ -19,9 +19,27 @@ class ImageGenerationService:
     def __init__(self):
         """Initialize Gemini service with the specified model."""
         self.model_name = "imagen-3.0-generate-002"
+        
+        # First try to load from environment variables
         api_key = os.getenv("GOOGLE_API_KEY")
+        
+        # If not found in environment, try loading from .env file
         if not api_key:
-            logger.warning("GOOGLE_API_KEY is not set in environment variables!")
+            try:
+                # Try to manually read from .env file
+                with open('.env', 'r') as env_file:
+                    for line in env_file:
+                        if line.startswith('GOOGLE_API_KEY='):
+                            api_key = line.strip().split('=', 1)[1]
+                            # Remove quotes if present
+                            api_key = api_key.strip('\'"')
+                            logger.info("Successfully loaded GOOGLE_API_KEY from .env file")
+                            break
+            except Exception as e:
+                logger.error(f"Error loading API key from .env file: {str(e)}")
+        
+        if not api_key:
+            logger.warning("GOOGLE_API_KEY is not set in environment variables or .env file!")
 
         # Create a client with the API key
         self.client = genai.Client(api_key=api_key)
@@ -56,13 +74,21 @@ class ImageGenerationService:
         Returns:
             Base64 encoded string of the generated image, or None if generation fails
         """
+        # Validate API key is present
+        if not hasattr(self, 'client') or not self.client:
+            logger.error("Image generation failed: No valid client available")
+            return None
+            
         attempt = 0
+        last_error = None
+        
         while attempt <= retries:
             try:
                 logger.info(f"Generating image for prompt: {prompt}")
                 logger.debug("\n=== DEBUG: Image Generation Request ===")
                 logger.debug(f"Prompt: {prompt}")
                 logger.debug(f"Model: {self.model_name}")
+                logger.debug(f"Attempt: {attempt + 1}/{retries + 1}")
                 logger.debug("========================\n")
 
                 # Generate image using the client's models interface
@@ -75,7 +101,7 @@ class ImageGenerationService:
                 # Log response structure for debugging
                 logger.debug("\n=== DEBUG: Image Generation Response ===")
                 logger.debug(f"Response type: {type(response)}")
-                # logger.debug(f"Response attributes: {dir(response)}")
+                
                 if (
                     hasattr(response, "generated_images")
                     and response.generated_images is not None
@@ -87,37 +113,74 @@ class ImageGenerationService:
                         logger.debug(
                             f"First image type: {type(response.generated_images[0])}"
                         )
-                        # logger.debug(
-                        #     f"First image attributes: {dir(response.generated_images[0])}"
-                        # )
                 else:
                     logger.debug("No generated_images attribute or it is None")
+                    logger.debug(f"Response details: {response}")
                 logger.debug("========================\n")
 
                 # Extract image data from response
                 if response.generated_images:
-                    # Convert to base64
-                    image_bytes = response.generated_images[0].image.image_bytes
-                    logger.debug(
-                        f"Found image data with size: {len(image_bytes)} bytes"
-                    )
-                    image = Image.open(BytesIO(image_bytes))
-                    buffered = BytesIO()
-                    image.save(buffered, format="JPEG")
-                    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-                    logger.info(f"Successfully generated image for prompt: {prompt}")
-                    return img_str
+                    try:
+                        # Convert to base64
+                        image_bytes = response.generated_images[0].image.image_bytes
+                        logger.debug(
+                            f"Found image data with size: {len(image_bytes)} bytes"
+                        )
+                        image = Image.open(BytesIO(image_bytes))
+                        buffered = BytesIO()
+                        image.save(buffered, format="JPEG")
+                        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+                        logger.info(f"Successfully generated image for prompt: {prompt}")
+                        return img_str
+                    except Exception as img_error:
+                        logger.error(f"Error processing image data: {str(img_error)}")
+                        # Try a different approach if the standard method fails
+                        try:
+                            # Direct base64 encoding
+                            img_str = base64.b64encode(image_bytes).decode("utf-8")
+                            logger.info(f"Successfully generated image using alternative method")
+                            return img_str
+                        except Exception as alt_error:
+                            logger.error(f"Alternative image processing also failed: {str(alt_error)}")
+                            raise
+                
                 logger.warning(f"No images generated for prompt: {prompt}")
-                return None
+                # If we got a response but no images, increment attempt and try again
+                attempt += 1
+                last_error = ValueError("API returned response but no images were generated")
+                
+                if attempt <= retries:
+                    backoff_time = 2**attempt
+                    logger.info(f"Retrying in {backoff_time} seconds...")
+                    time.sleep(backoff_time)
+                continue
+                
             except Exception as e:
                 logger.error(f"Image generation attempt {attempt + 1} failed: {str(e)}")
+                logger.error(f"Error type: {type(e).__name__}")
+                last_error = e
                 attempt += 1
+                
                 if attempt <= retries:
                     # Wait before retry with exponential backoff
                     backoff_time = 2**attempt
                     logger.info(f"Retrying in {backoff_time} seconds...")
                     time.sleep(backoff_time)
 
+        # If we reach here, all attempts failed
+        logger.error(f"All {retries+1} image generation attempts failed for prompt: {prompt}")
+        if last_error:
+            logger.error(f"Last error: {type(last_error).__name__}: {str(last_error)}")
+        
+        # Return a fallback image for testing if needed
+        # Uncomment the following code to provide a fallback test image
+        # try:
+        #     logger.warning("Using fallback test image")
+        #     with open('app/static/images/fallback_image.jpg', 'rb') as img_file:
+        #         return base64.b64encode(img_file.read()).decode('utf-8')
+        # except Exception as fallback_error:
+        #     logger.error(f"Fallback image also failed: {str(fallback_error)}")
+        
         return None
 
     def enhance_prompt(
