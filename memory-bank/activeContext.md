@@ -1,8 +1,8 @@
 # Active Context
 
-## Current Focus: WebSocket and Template Structure Refactoring (2025-03-25)
+## Current Focus: WebSocket, Template Structure, and Paragraph Formatter Improvements (2025-03-25)
 
-We've completed two major refactorings to improve code organization, maintainability, and modularity:
+We've completed two major refactorings and an important paragraph formatter enhancement to improve code organization, maintainability, modularity, and text formatting quality:
 
 ### 1. WebSocket Service Refactoring
 
@@ -45,7 +45,29 @@ We've implemented a modular template system to improve frontend organization and
   * Improved maintainability with smaller, focused template files
   * Clearer structure for future UI enhancements
 
-These refactorings have significantly improved the codebase structure while maintaining all existing functionality.
+### 3. Paragraph Formatter Enhancement
+
+We've improved the paragraph formatting implementation in `app/services/llm/paragraph_formatter.py` and `app/services/llm/providers.py` to better handle text that lacks proper paragraph formatting:
+
+- **New Regeneration-First Approach**:
+  * When improperly formatted text is detected, the system now first tries regenerating with the original prompt
+  * Makes up to 3 regeneration attempts before falling back to specialized reformatting
+  * Preserves full story context in regeneration attempts, ensuring narrative continuity
+  * Maintains proper chapter references and story elements
+
+- **Implementation Details**:
+  * Modified both OpenAI and Gemini implementations to use the same regeneration approach
+  * Enhanced logging to track regeneration attempts and success/failure
+  * Added robust error handling to ensure the story continues even if regeneration fails
+  * Preserved the original fallback mechanism as a last resort
+
+- **Key Benefits**:
+  * More natural-sounding text with better formatting
+  * Reduced risk of content distortion since we're using the original story prompt
+  * Improved content consistency with full context preservation
+  * Better debugging capabilities with enhanced logging
+
+These improvements have significantly enhanced both the code structure and content quality while maintaining all existing functionality.
 
 ## Previous Focus: Summary Chapter Race Condition Fix (2025-03-23)
 

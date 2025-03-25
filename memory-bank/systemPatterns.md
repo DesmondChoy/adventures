@@ -196,10 +196,16 @@ graph TD
   * Paragraph formatting integration
 
 - **Paragraph Formatting** (`app/services/llm/paragraph_formatter.py`)
-  * Detects text that needs paragraph formatting
-  * Reformats text with proper paragraph breaks
-  * Multiple retry attempts with progressive prompting
-  * Buffer-based approach for streaming optimization
+  * Detects text that needs paragraph formatting based on length, existing breaks, and sentence count
+  * Uses a regeneration-first approach when improperly formatted text is detected:
+    - Makes up to 3 new requests with the original prompt to get properly formatted text
+    - Only falls back to specialized reformatting if regeneration attempts fail
+    - Maintains full story context in regeneration attempts to ensure narrative continuity
+  * Buffer-based approach for streaming optimization that:
+    - Collects initial text buffer (1000 characters) before checking formatting
+    - Only starts special handling if text lacks proper paragraph breaks
+    - Streams text normally if properly formatted
+  * Implements provider-specific optimizations for both OpenAI and Gemini
 
 ### 6. Image Generation
 - **Service** (`app/services/image_generation_service.py`)
