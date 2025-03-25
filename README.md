@@ -31,16 +31,32 @@ This app aims to promote learning and curiosity by weaving together educational 
 ```mermaid
 graph TD
     Client[Web Client] <--> WSR[WebSocket Router]
-    WSR <--> WSS[WebSocket Service]
-    WSS <--> ASM[Adventure State Manager]
+    WSR <--> WSC[WebSocket Core]
+    
+    %% WebSocket Service Components
+    WSC <--> CP[Choice Processor]
+    WSC <--> CG[Content Generator]
+    WSC <--> SH[Stream Handler]
+    WSC <--> IG[Image Generator]
+    WSC <--> SG[Summary Generator]
+    
+    CP <--> ASM[Adventure State Manager]
+    CG <--> ASM
     ASM <--> AS[AdventureState]
     ASM <--> CM[Chapter Manager]
     CM <--> LLM[LLM Service]
     CM <--> DB[(Database)]
-    WSS <--> IMG[Image Generation Service]
+    IG <--> IMG[Image Generation Service]
     CM <--> SL[Story Loader]
     SL <--> SF[(Story Files)]
     LLM <--> PF[Paragraph Formatter]
+    
+    %% React Summary Components
+    Client <--> SR[Summary Router]
+    SR <--> RSUM[React Summary App]
+    SR <--> SAPI[Summary API]
+    SAPI <--> SGEN[Summary Generator]
+    SGEN <--> AS
 
     subgraph Client Side
         LP[localStorage] <--> CSM[Client State Manager]
@@ -51,8 +67,16 @@ graph TD
         AS
     end
 
-    subgraph Services
-        WSS
+    subgraph WebSocket Services
+        WSC
+        CP
+        CG
+        SH
+        IG
+        SG
+    end
+
+    subgraph Core Services
         ASM
         CM
         LLM
@@ -60,15 +84,26 @@ graph TD
         PF
     end
 
-    subgraph Routing
-        WSR
-    end
-
     subgraph Content Sources
         CSV[lessons/*.csv] --> CM
         LLM --> CM
-        IMG --> WSS
+        IMG --> IG
         SF --> SL
+    end
+    
+    subgraph React Summary
+        RSUM
+        SAPI
+        SGEN
+    end
+    
+    subgraph Templates
+        BL[Base Layout]
+        PC[Page Components]
+        UI[UI Components]
+        Client --> BL
+        BL --> PC
+        PC --> UI
     end
 ```
 
@@ -77,7 +112,12 @@ graph TD
 - **Backend**: FastAPI, Python 3.x with WebSocket communication, structured logging, and middleware for request tracking
 - **AI Integration**: Provider-agnostic implementation supporting GPT-4o/Gemini 2.0 Flash for text and Imagen3 for image generation
 - **Architecture**: Real-time WebSocket updates, SQLite database, comprehensive error handling, and asynchronous processing
-- **Frontend**: Modular CSS organization, 3D carousel with animations, responsive design, content streaming with Markdown support, and progressive enhancement for images
+- **Frontend**: 
+  - **HTML Templates**: Modular template system with component-based architecture
+  - **JavaScript**: Client-side state management, WebSocket handling, and UI interactions
+  - **CSS**: Modular organization, 3D carousel with animations, responsive design
+  - **React**: Summary Chapter implementation with interactive educational recap
+  - **Progressive Enhancement**: Content streaming with Markdown support, images loaded asynchronously
 - **Text Processing**: Intelligent paragraph formatting for improved readability, word-by-word streaming with natural delays
 
 ## Setup
@@ -108,63 +148,40 @@ graph TD
 
 ## Project Structure
 
-```
-app/
-├── main.py                        # Application entry point
-├── models/            
-│   └── story.py                   # State management and data models
-├── routers/           
-│   ├── web.py                     # Web routes
-│   └── websocket_router.py        # WebSocket routing and connection management
-├── services/          
-│   ├── adventure_state_manager.py # State management and validation
-│   ├── chapter_manager.py         # Content flow control
-│   ├── image_generation_service.py # AI image generation for agency choices
-│   ├── websocket_service.py       # WebSocket business logic
-│   └── llm/                       # LLM integration with prompt engineering
-│       ├── __init__.py            # Package initialization
-│       ├── base.py                # Abstract base classes for LLM providers
-│       ├── paragraph_formatter.py # Intelligent text formatting
-│       ├── prompt_engineering.py  # Prompt construction system
-│       ├── prompt_templates.py    # Templates for different chapter types
-│       └── providers.py           # Provider abstraction layer
-├── data/              
-│   ├── lessons/                   # Individual lesson topic CSV files
-│   ├── lesson_loader.py           # Lesson data loading and filtering
-│   ├── story_loader.py            # Story data loading and caching
-│   └── stories/                   # Individual story category files
-├── middleware/                    # Custom middleware components
-├── templates/                     # HTML templates
-├── static/
-│   ├── css/
-│   │   ├── typography.css         # Typography system
-│   │   ├── theme.css              # Color variables and theme
-│   │   ├── layout.css             # Structural elements and screen transitions
-│   │   ├── components.css         # Reusable UI components
-│   │   └── carousel-component.css # 3D carousel component
-│   ├── js/
-│   │   ├── carousel-manager.js    # Carousel functionality
-│   │   └── font-size-manager.js   # Mobile font size controls
-│   └── images/                    # Static assets
-└── utils/                         # Utility functions
-tests/
-├── __init__.py                    # Package initialization
-├── data/                          # Data-related tests
-└── simulations/                   # Simulation framework
-    ├── generate_all_chapters.py   # Main simulation script
-    ├── generate_chapter_summaries.py # Chapter summary generator
-    ├── log_utils.py               # Utility functions for log processing
-    ├── test_chapter_sequence_validation.py # Validation tests
-    └── test_chapter_type_assignment.py # Chapter type tests
-tools/
-└── code_complexity_analyzer.py    # Code complexity analysis tool
-```
+The project is organized into several key components:
+
+### Backend Components
+- **Core Application**: Entry point, database configuration, and initialization
+- **Models**: State management and data models for adventure state tracking
+- **Routers**: Web and WebSocket routing for HTTP and real-time communication
+- **Services**: 
+  - **WebSocket Services**: Modular components for real-time interaction
+  - **LLM Integration**: Provider-agnostic AI integration
+  - **State Management**: Adventure state tracking and validation
+  - **Content Generation**: Chapter management and image generation
+  - **Summary Services**: Adventure recap and educational reporting
+
+### Frontend Components
+- **Templates**: Modular HTML structure with layouts, pages, and components
+- **Static Assets**: CSS, JavaScript, and images for the user interface
+- **React Summary App**: Interactive summary experience with educational recap
+
+### Content Sources
+- **Lesson Data**: CSV files containing educational content
+- **Story Data**: YAML files defining story categories and narrative elements
+
+### Testing Framework
+- **Simulation Tools**: End-to-end testing of adventure generation
+- **Unit Tests**: Component-level testing for key services
+- **Utility Scripts**: Support tools for testing and development
 
 The project structure reflects our focus on:
 - Clear separation of concerns
 - Modular component design
 - Maintainable codebase
 - Scalable architecture
+- Reusable UI components
+- Testable service architecture
 
 ## Key Features
 
@@ -194,6 +211,10 @@ The project structure reflects our focus on:
 
 ## Recent Enhancements
 
+- Refactored WebSocket services into modular components for improved maintainability and functionality
+- Implemented a modular template system with reusable UI components and clear separation of concerns
+- Enhanced image generation to support agency choices and chapter-specific images
+- Improved error handling and logging throughout the WebSocket flow
 - Updated chapter summary generation to work with simulation state JSON files
 - Added delay mechanism to prevent API timeouts in chapter summary generation
 - Consolidated simulation scripts for better maintainability
