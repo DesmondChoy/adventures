@@ -76,25 +76,61 @@ class OpenAIService(BaseLLMService):
                     elif buffer_complete and not needs_formatting:
                         yield content
 
-            # Phase 2: If formatting is needed, reformat and yield the complete text
+            # Phase 2: If formatting is needed, regenerate with the original prompt
             if needs_formatting:
                 logger.info(
-                    "Detected text without proper paragraph formatting, reformatting..."
+                    "Detected text without proper paragraph formatting, regenerating response..."
                 )
-                reformatted_text = await reformat_text_with_paragraphs(
-                    self, full_response
-                )
-                yield reformatted_text
-                logger.info("Sent reformatted text with proper paragraphing")
+                
+                # Instead of reformatting, make a new call with the original prompt
+                max_attempts = 3
+                attempt = 0
+                regenerated_text = None
+                
+                while attempt < max_attempts:
+                    attempt += 1
+                    logger.info(f"Regeneration attempt {attempt}/{max_attempts}")
+                    
+                    try:
+                        # Create a new non-streaming request with the same prompts
+                        retry_response = await self.client.chat.completions.create(
+                            model=self.model,
+                            messages=[
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": user_prompt},
+                            ],
+                            temperature=0.7,  # Slightly lower temperature for more factual content
+                            stream=False,  # Non-streaming for regeneration
+                        )
+                        
+                        regenerated_text = retry_response.choices[0].message.content
+                        
+                        # Check if it has proper paragraph formatting
+                        if "\n\n" in regenerated_text:
+                            logger.info(f"Successfully generated text with proper paragraphs (attempt {attempt})")
+                            break
+                        else:
+                            logger.warning(f"Regeneration attempt {attempt} still lacks paragraph breaks")
+                    except Exception as e:
+                        logger.error(f"Error in regeneration attempt {attempt}: {str(e)}")
+                
+                # Use the regenerated text if successful, otherwise fall back to the original
+                if regenerated_text and "\n\n" in regenerated_text:
+                    yield regenerated_text
+                    logger.info("Sent regenerated text with proper paragraphing")
+                    full_response = regenerated_text  # Update full response for logging
+                else:
+                    # If all regeneration attempts failed, fall back to reformatting
+                    logger.warning(f"All {max_attempts} regeneration attempts failed, falling back to reformatting")
+                    reformatted_text = await reformat_text_with_paragraphs(self, full_response)
+                    yield reformatted_text
+                    logger.info("Sent reformatted text with paragraph formatting")
+                    full_response = reformatted_text  # Update full response for logging
 
             # Log the complete response
             logger.info(
                 "LLM Response",
-                extra={
-                    "llm_response": reformatted_text
-                    if needs_formatting
-                    else full_response
-                },
+                extra={"llm_response": full_response},
             )
 
         except Exception as e:
@@ -171,25 +207,61 @@ class OpenAIService(BaseLLMService):
                     elif buffer_complete and not needs_formatting:
                         yield content
 
-            # Phase 2: If formatting is needed, reformat and yield the complete text
+            # Phase 2: If formatting is needed, regenerate with the original prompt
             if needs_formatting:
                 logger.info(
-                    "Detected text without proper paragraph formatting, reformatting..."
+                    "Detected text without proper paragraph formatting, regenerating response..."
                 )
-                reformatted_text = await reformat_text_with_paragraphs(
-                    self, full_response
-                )
-                yield reformatted_text
-                logger.info("Sent reformatted text with proper paragraphing")
+                
+                # Instead of reformatting, make a new call with the original prompt
+                max_attempts = 3
+                attempt = 0
+                regenerated_text = None
+                
+                while attempt < max_attempts:
+                    attempt += 1
+                    logger.info(f"Regeneration attempt {attempt}/{max_attempts}")
+                    
+                    try:
+                        # Create a new non-streaming request with the same prompts
+                        retry_response = await self.client.chat.completions.create(
+                            model=self.model,
+                            messages=[
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": user_prompt},
+                            ],
+                            temperature=0.7,  # Slightly lower temperature for more factual content
+                            stream=False,  # Non-streaming for regeneration
+                        )
+                        
+                        regenerated_text = retry_response.choices[0].message.content
+                        
+                        # Check if it has proper paragraph formatting
+                        if "\n\n" in regenerated_text:
+                            logger.info(f"Successfully generated text with proper paragraphs (attempt {attempt})")
+                            break
+                        else:
+                            logger.warning(f"Regeneration attempt {attempt} still lacks paragraph breaks")
+                    except Exception as e:
+                        logger.error(f"Error in regeneration attempt {attempt}: {str(e)}")
+                
+                # Use the regenerated text if successful, otherwise fall back to the original
+                if regenerated_text and "\n\n" in regenerated_text:
+                    yield regenerated_text
+                    logger.info("Sent regenerated text with proper paragraphing")
+                    full_response = regenerated_text  # Update full response for logging
+                else:
+                    # If all regeneration attempts failed, fall back to reformatting
+                    logger.warning(f"All {max_attempts} regeneration attempts failed, falling back to reformatting")
+                    reformatted_text = await reformat_text_with_paragraphs(self, full_response)
+                    yield reformatted_text
+                    logger.info("Sent reformatted text with paragraph formatting")
+                    full_response = reformatted_text  # Update full response for logging
 
             # Log the complete response
             logger.info(
                 "LLM Response",
-                extra={
-                    "llm_response": reformatted_text
-                    if needs_formatting
-                    else full_response
-                },
+                extra={"llm_response": full_response},
             )
 
         except Exception as e:
@@ -276,25 +348,58 @@ class GeminiService(BaseLLMService):
                     elif buffer_complete and not needs_formatting:
                         yield content
 
-            # Phase 2: If formatting is needed, reformat and yield the complete text
+            # Phase 2: If formatting is needed, regenerate with the original prompt
             if needs_formatting:
                 logger.info(
-                    "Detected text without proper paragraph formatting, reformatting..."
+                    "Detected text without proper paragraph formatting, regenerating response..."
                 )
-                reformatted_text = await reformat_text_with_paragraphs(
-                    self, full_response
-                )
-                yield reformatted_text
-                logger.info("Sent reformatted text with proper paragraphing")
+                
+                # Instead of reformatting, make a new call with the original prompt
+                max_attempts = 3
+                attempt = 0
+                regenerated_text = None
+                
+                while attempt < max_attempts:
+                    attempt += 1
+                    logger.info(f"Regeneration attempt {attempt}/{max_attempts}")
+                    
+                    try:
+                        # Re-initialize model to use the same system instruction
+                        retry_model = genai.GenerativeModel(
+                            model_name=self.model,
+                            system_instruction=system_prompt,
+                        )
+                        
+                        # Generate new response
+                        retry_response = retry_model.generate_content(user_prompt)
+                        regenerated_text = retry_response.text
+                        
+                        # Check if it has proper paragraph formatting
+                        if "\n\n" in regenerated_text:
+                            logger.info(f"Successfully generated text with proper paragraphs (attempt {attempt})")
+                            break
+                        else:
+                            logger.warning(f"Regeneration attempt {attempt} still lacks paragraph breaks")
+                    except Exception as e:
+                        logger.error(f"Error in regeneration attempt {attempt}: {str(e)}")
+                
+                # Use the regenerated text if successful, otherwise fall back to the original
+                if regenerated_text and "\n\n" in regenerated_text:
+                    yield regenerated_text
+                    logger.info("Sent regenerated text with proper paragraphing")
+                    full_response = regenerated_text  # Update full response for logging
+                else:
+                    # If all regeneration attempts failed, fall back to reformatting
+                    logger.warning(f"All {max_attempts} regeneration attempts failed, falling back to reformatting")
+                    reformatted_text = await reformat_text_with_paragraphs(self, full_response)
+                    yield reformatted_text
+                    logger.info("Sent reformatted text with paragraph formatting")
+                    full_response = reformatted_text  # Update full response for logging
 
             # Log the complete response
             logger.info(
                 "LLM Response (Gemini)",
-                extra={
-                    "llm_response": reformatted_text
-                    if needs_formatting
-                    else full_response
-                },
+                extra={"llm_response": full_response},
             )
 
         except Exception as e:
