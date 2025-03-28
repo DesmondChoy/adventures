@@ -215,6 +215,14 @@ graph TD
   * Progressive enhancement (text first, images as available)
   * Enhanced prompt construction with `enhance_prompt()`
 
+- **Agency Visual Details Enhancement**
+  * Stores complete agency information during Chapter 1 choice selection
+  * Extracts visual details from square brackets in `prompt_templates.py`
+  * Uses category-specific prefixes in prompts (e.g., "He/she is accompanied by" for companions)
+  * Includes visual details in parentheses after agency name
+  * Ensures consistent visual representation across all chapters
+  * Implementation in `choice_processor.py` and `image_generation_service.py`
+
 - **Dual-Purpose Content Generation**
   * **Chapter Summaries** (`generate_chapter_summary()`)
     - Focus on narrative events and character development

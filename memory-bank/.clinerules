@@ -237,13 +237,19 @@
    - Separate content generation for different purposes:
      * Use `generate_chapter_summary()` for narrative summaries (70-100 words)
      * Use `generate_image_scene()` for visual scene descriptions (20-30 words)
+   - Store complete agency information during Chapter 1 choice selection:
+     * Extract and store agency category and visual details in `state.metadata["agency"]`
+     * Include `visual_details` field extracted from square brackets in `prompt_templates.py`
+     * Include `category` field to identify the type of agency (companion, ability, artifact, profession)
    - Image prompt structure MUST follow this format:
      ```
-     Fantasy illustration of [Agency Name] in [Story Name], [Visual Details], with [adventure_state.selected_sensory_details["visuals"]], [Base Style]
+     Fantasy illustration of [Chapter Summary], [Agency Prefix] [Agency Name] ([Visual Details]), [Base Style]
      ```
-   - Extract agency name with visual details up to the closing bracket
-   - Include story name from `state.metadata["non_random_elements"]["name"]`
-   - Omit redundant descriptions that come after the dash
+   - Use category-specific prefixes for agency representation:
+     * For companions: "He/she is accompanied by"
+     * For professions: "He/she is a"
+     * For abilities: "He/she has the power of"
+     * For artifacts: "He/she is wielding"
    - For chapter images (after Chapter 1):
      * Use `generate_image_scene()` to extract the most visually striking moment
      * Focus on specific dramatic action or emotional peak

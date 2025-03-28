@@ -2,6 +2,15 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-03-29
+- Identified and documented issue with agency visual details in image generation
+- Created comprehensive implementation plan for enhancing agency representation in generated images
+- Documented the current limitations in how agency choices are represented in image prompts
+- Designed solution to store complete agency information (category, visual details) during Chapter 1 choice
+- Planned improvements to prompt construction with category-specific prefixes and visual details
+- Created detailed implementation plan in `wip/agency_visual_details_enhancement.md`
+- Updated Memory Bank documentation to reflect the planned enhancement
+
 ### 2025-03-25
 - Completed major refactoring of WebSocket services for improved modularity and functionality
 - Restructured WebSocket services by breaking down the monolithic `websocket_service.py` into specialized components:

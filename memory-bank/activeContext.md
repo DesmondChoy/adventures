@@ -1,6 +1,36 @@
 # Active Context
 
-## Current Focus: WebSocket, Template Structure, and Paragraph Formatter Improvements (2025-03-25)
+## Current Focus: Agency Visual Details Enhancement for Image Generation (2025-03-29)
+
+We've identified and documented a solution to improve how agency choices are represented in generated images. The current implementation has several limitations:
+
+1. **Inconsistent Representation**: The image model has no context about what agency elements (companions, abilities, artifacts, professions) should look like.
+2. **Lost Visual Details**: Rich visual descriptions defined in `prompt_templates.py` aren't utilized in image generation prompts.
+3. **Undifferentiated Agency Types**: No distinction between different types of agency in how they're described in prompts.
+4. **Disconnection from Narrative**: Agency elements often don't appear integrated into the scene in a way that reflects their role in the story.
+
+### Proposed Solution
+
+We've created a comprehensive plan to enhance agency representation in generated images:
+
+1. **Enhanced Agency Storage**:
+   * Store complete agency information (category, visual details) when the user makes their Chapter 1 choice
+   * Extract visual details from the square brackets in `prompt_templates.py` (e.g., "[a swirling figure with hands sparking flames...]")
+   * Store this information in `state.metadata["agency"]` for use throughout the adventure
+
+2. **Improved Prompt Construction**:
+   * Use category-specific prefixes (e.g., "He/she is accompanied by" for companions, "He/she has the power of" for abilities)
+   * Include the visual details in parentheses after the agency name
+   * Focus on the chapter summary and agency representation in the prompt
+
+3. **Expected Results**:
+   * More detailed and contextually appropriate image prompts
+   * Consistent visual representation of agency elements across all chapters
+   * Better integration of agency elements into the narrative scenes
+
+The implementation plan has been documented in `wip/agency_visual_details_enhancement.md` with specific code changes for `choice_processor.py` and `image_generation_service.py`.
+
+## Previous Focus: WebSocket, Template Structure, and Paragraph Formatter Improvements (2025-03-25)
 
 We've completed two major refactorings and an important paragraph formatter enhancement to improve code organization, maintainability, modularity, and text formatting quality:
 
