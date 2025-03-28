@@ -2,33 +2,50 @@
 
 ## Current Focus: Agency Visual Details Enhancement for Image Generation (2025-03-29)
 
-We've identified and documented a solution to improve how agency choices are represented in generated images. The current implementation has several limitations:
+We've implemented a comprehensive solution to improve how agency choices are represented in generated images. The previous implementation had several limitations:
 
-1. **Inconsistent Representation**: The image model has no context about what agency elements (companions, abilities, artifacts, professions) should look like.
-2. **Lost Visual Details**: Rich visual descriptions defined in `prompt_templates.py` aren't utilized in image generation prompts.
-3. **Undifferentiated Agency Types**: No distinction between different types of agency in how they're described in prompts.
-4. **Disconnection from Narrative**: Agency elements often don't appear integrated into the scene in a way that reflects their role in the story.
+1. **Inconsistent Representation**: The image model had no context about what agency elements (companions, abilities, artifacts, professions) should look like.
+2. **Lost Visual Details**: Rich visual descriptions defined in `prompt_templates.py` weren't utilized in image generation prompts.
+3. **Undifferentiated Agency Types**: No distinction between different types of agency in how they were described in prompts.
+4. **Disconnection from Narrative**: Agency elements often didn't appear integrated into the scene in a way that reflected their role in the story.
 
-### Proposed Solution
+### Implemented Solution
 
-We've created a comprehensive plan to enhance agency representation in generated images:
+We've implemented a comprehensive solution to enhance agency representation in generated images:
 
 1. **Enhanced Agency Storage**:
-   * Store complete agency information (category, visual details) when the user makes their Chapter 1 choice
-   * Extract visual details from the square brackets in `prompt_templates.py` (e.g., "[a swirling figure with hands sparking flames...]")
-   * Store this information in `state.metadata["agency"]` for use throughout the adventure
+   * Modified `process_story_response` in `choice_processor.py` to extract and store additional agency information when the first chapter choice is made
+   * Extracted visual details from the square brackets in `prompt_templates.py` (e.g., "[a swirling figure with hands sparking flames...]")
+   * Stored this information in `state.metadata["agency"]` for use throughout the adventure
 
 2. **Improved Prompt Construction**:
-   * Use category-specific prefixes (e.g., "He/she is accompanied by" for companions, "He/she has the power of" for abilities)
-   * Include the visual details in parentheses after the agency name
-   * Focus on the chapter summary and agency representation in the prompt
+   * Updated `enhance_prompt` in `image_generation_service.py` to use the stored agency details
+   * Implemented category-specific prefixes (e.g., "He/she is accompanied by" for companions, "He/she has the power of" for abilities)
+   * Included the visual details in parentheses after the agency name
+   * Replaced "Fantasy illustration of" with "Colorful storybook illustration of this scene:" for a more child-friendly style
+   * Changed the comma before agency descriptions to a period for better readability
+   * Removed the story name, visual details, and base style ("vibrant colors, detailed, whimsical, digital art") from the prompt
+   * Focused on the chapter summary and agency representation in the prompt
 
-3. **Expected Results**:
-   * More detailed and contextually appropriate image prompts
-   * Consistent visual representation of agency elements across all chapters
-   * Better integration of agency elements into the narrative scenes
+3. **Added Fallback Mechanism**:
+   * Implemented a fallback lookup mechanism for cases where visual details might not be stored correctly
+   * This ensures backward compatibility with existing adventures
 
-The implementation plan has been documented in `wip/agency_visual_details_enhancement.md` with specific code changes for `choice_processor.py` and `image_generation_service.py`.
+### Results
+
+The image generation prompts are now much more detailed and contextually appropriate. For example:
+
+**Before:**
+```
+Fantasy illustration of A giant mushroom pulses blue light in a forest clearing, illuminating the forest floor with spiderwebs. Shimmering bees swarm the mushroom as massive webs glow with intricate patterns., featuring Element Bender, in Festival of Lights & Colors, with Rainbow Cascade: A waterfall refracting sunlight into vivid arcs, shimmering more brilliantly after acts of harmony or camaraderie., vibrant colors, detailed, whimsical, digital art
+```
+
+**After:**
+```
+Colorful storybook illustration of this scene: A giant mushroom pulses blue light in a forest clearing, illuminating the forest floor with spiderwebs. Shimmering bees swarm the mushroom as massive webs glow with intricate patterns. He/she has the power of Element Bender (a swirling figure with hands sparking flames, splashing water, tossing earth, and twirling breezes in a dance)
+```
+
+This results in more consistent and accurate visual representations of agency elements in the generated images, enhancing the overall storytelling experience.
 
 ## Previous Focus: WebSocket, Template Structure, and Paragraph Formatter Improvements (2025-03-25)
 

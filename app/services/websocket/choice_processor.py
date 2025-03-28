@@ -1,6 +1,7 @@
 from typing import Dict, Any, Optional, Tuple, List
 from fastapi import WebSocket
 import logging
+import re
 
 from app.models.story import (
     ChapterType,
@@ -23,9 +24,7 @@ state_storage_service = StateStorageService()
 
 
 async def handle_reveal_summary(
-    state: AdventureState,
-    state_manager: AdventureStateManager,
-    websocket: WebSocket
+    state: AdventureState, state_manager: AdventureStateManager, websocket: WebSocket
 ) -> Tuple[None, None, bool]:
     """Handle the reveal_summary special choice."""
     logger.info("Processing reveal_summary choice")
@@ -35,17 +34,13 @@ async def handle_reveal_summary(
     # Get the CONCLUSION chapter
     if state.chapters and state.chapters[-1].chapter_type == ChapterType.CONCLUSION:
         conclusion_chapter = state.chapters[-1]
-        logger.info(
-            f"Found CONCLUSION chapter: {conclusion_chapter.chapter_number}"
-        )
+        logger.info(f"Found CONCLUSION chapter: {conclusion_chapter.chapter_number}")
         logger.info(
             f"CONCLUSION chapter content length: {len(conclusion_chapter.content)}"
         )
 
         # Process it like a regular choice with placeholder values
-        story_response = StoryResponse(
-            chosen_path="reveal_summary", choice_text=" "
-        )
+        story_response = StoryResponse(chosen_path="reveal_summary", choice_text=" ")
         conclusion_chapter.response = story_response
         logger.info(
             "Created placeholder response for CONCLUSION chapter with whitespace"
@@ -93,9 +88,7 @@ async def handle_reveal_summary(
 
 
 async def generate_conclusion_chapter_summary(
-    conclusion_chapter: ChapterData,
-    state: AdventureState,
-    websocket: WebSocket
+    conclusion_chapter: ChapterData, state: AdventureState, websocket: WebSocket
 ) -> None:
     """Generate and store summary for the conclusion chapter."""
     try:
@@ -110,19 +103,14 @@ async def generate_conclusion_chapter_summary(
         title = summary_result.get("title", "Chapter Summary")
         summary_text = summary_result.get("summary", "Summary not available")
 
-        logger.info(
-            f"Generated CONCLUSION chapter summary: {summary_text[:100]}..."
-        )
+        logger.info(f"Generated CONCLUSION chapter summary: {summary_text[:100]}...")
 
         # Store the summary
         if len(state.chapter_summaries) < conclusion_chapter.chapter_number:
             logger.info(
                 f"Adding placeholder summaries up to chapter {conclusion_chapter.chapter_number - 1}"
             )
-            while (
-                len(state.chapter_summaries)
-                < conclusion_chapter.chapter_number - 1
-            ):
+            while len(state.chapter_summaries) < conclusion_chapter.chapter_number - 1:
                 state.chapter_summaries.append("Chapter summary not available")
                 # Also add placeholder titles
                 if hasattr(state, "summary_chapter_titles"):
@@ -152,9 +140,9 @@ async def generate_conclusion_chapter_summary(
                     state.summary_chapter_titles.append(
                         f"Chapter {len(state.summary_chapter_titles) + 1}"
                     )
-                state.summary_chapter_titles[
-                    conclusion_chapter.chapter_number - 1
-                ] = title
+                state.summary_chapter_titles[conclusion_chapter.chapter_number - 1] = (
+                    title
+                )
 
         logger.info(
             f"Stored summary for chapter {conclusion_chapter.chapter_number}: {summary_text}"
@@ -171,13 +159,9 @@ async def generate_conclusion_chapter_summary(
         )
 
         # Include the state_id in the response to the client
-        await websocket.send_json(
-            {"type": "summary_ready", "state_id": state_id}
-        )
+        await websocket.send_json({"type": "summary_ready", "state_id": state_id})
     except Exception as e:
-        logger.error(
-            f"Error generating chapter summary: {str(e)}", exc_info=True
-        )
+        logger.error(f"Error generating chapter summary: {str(e)}", exc_info=True)
         if len(state.chapter_summaries) < conclusion_chapter.chapter_number:
             logger.warning(
                 f"Using fallback summary for chapter {conclusion_chapter.chapter_number}"
@@ -192,7 +176,7 @@ async def process_non_start_choice(
     state_manager: AdventureStateManager,
     story_category: str,
     lesson_topic: str,
-    websocket: WebSocket
+    websocket: WebSocket,
 ) -> Tuple[Optional[ChapterContent], Optional[dict], bool]:
     """Process a non-start choice from the user."""
     logger.debug(f"Processing non-start choice: {chosen_path}")
@@ -290,7 +274,7 @@ async def process_lesson_response(
     previous_chapter: ChapterData,
     choice_text: str,
     state: AdventureState,
-    websocket: WebSocket
+    websocket: WebSocket,
 ) -> None:
     """Process a response to a lesson chapter."""
     logger.debug("\n=== DEBUG: Processing Lesson Response ===")
@@ -363,12 +347,10 @@ async def process_story_response(
     previous_chapter: ChapterData,
     chosen_path: str,
     choice_text: str,
-    state: AdventureState
+    state: AdventureState,
 ) -> None:
     """Process a response to a story chapter."""
-    story_response = StoryResponse(
-        chosen_path=chosen_path, choice_text=choice_text
-    )
+    story_response = StoryResponse(chosen_path=chosen_path, choice_text=choice_text)
     previous_chapter.response = story_response
     logger.debug(f"Created story response: {story_response}")
 
@@ -379,28 +361,57 @@ async def process_story_response(
     ):
         logger.debug("Processing first chapter agency choice")
 
-        # Store agency choice in metadata
+        # Extract agency category and visual details
+        agency_category = ""
+        visual_details = ""
+
+        # Try to find the matching agency option
+        try:
+            from app.services.llm.prompt_templates import categories
+
+            for category_name, category_options in categories.items():
+                for option in category_options:
+                    # Extract the name part (before the bracket)
+                    option_name = option.split("[")[0].strip()
+                    # Check if this option matches the choice text
+                    if (
+                        option_name.lower() in choice_text.lower()
+                        or choice_text.lower() in option_name.lower()
+                    ):
+                        agency_category = category_name
+                        # Extract visual details from square brackets
+                        match = re.search(r"\[(.*?)\]", option)
+                        if match:
+                            visual_details = match.group(1)
+                        break
+                if visual_details:
+                    break
+        except Exception as e:
+            logger.error(f"Error extracting agency details: {e}")
+
+        # Store agency choice in metadata with visual details
         state.metadata["agency"] = {
             "type": "choice",
             "name": "from Chapter 1",
             "description": choice_text,
+            "category": agency_category,
+            "visual_details": visual_details,
             "properties": {"strength": 1},
             "growth_history": [],
             "references": [],
         }
 
         logger.debug(f"Stored agency choice from Chapter 1: {choice_text}")
+        logger.debug(f"Agency category: {agency_category}")
+        logger.debug(f"Visual details: {visual_details}")
 
 
 async def generate_chapter_summary(
-    previous_chapter: ChapterData,
-    state: AdventureState
+    previous_chapter: ChapterData, state: AdventureState
 ) -> None:
     """Generate a summary for the previous chapter."""
     try:
-        logger.info(
-            f"Generating summary for chapter {previous_chapter.chapter_number}"
-        )
+        logger.info(f"Generating summary for chapter {previous_chapter.chapter_number}")
 
         # Extract the choice text and context from the response
         choice_text = ""
@@ -434,17 +445,12 @@ async def generate_chapter_summary(
 
 
 async def store_chapter_summary(
-    chapter: ChapterData,
-    state: AdventureState,
-    title: str,
-    summary_text: str
+    chapter: ChapterData, state: AdventureState, title: str, summary_text: str
 ) -> None:
     """Store chapter summary and title in the state."""
     if len(state.chapter_summaries) < chapter.chapter_number:
         # If this is the first summary, we might need to add placeholders for previous chapters
-        while (
-            len(state.chapter_summaries) < chapter.chapter_number - 1
-        ):
+        while len(state.chapter_summaries) < chapter.chapter_number - 1:
             state.chapter_summaries.append("Chapter summary not available")
             # Also add placeholder titles
             if hasattr(state, "summary_chapter_titles"):
@@ -463,24 +469,15 @@ async def store_chapter_summary(
         # Replace the title if the field exists
         if hasattr(state, "summary_chapter_titles"):
             # Ensure the list is long enough
-            while (
-                len(state.summary_chapter_titles)
-                < chapter.chapter_number
-            ):
+            while len(state.summary_chapter_titles) < chapter.chapter_number:
                 state.summary_chapter_titles.append(
                     f"Chapter {len(state.summary_chapter_titles) + 1}"
                 )
-            state.summary_chapter_titles[
-                chapter.chapter_number - 1
-            ] = title
+            state.summary_chapter_titles[chapter.chapter_number - 1] = title
 
-    logger.info(
-        f"Stored summary for chapter {chapter.chapter_number}: {summary_text}"
-    )
+    logger.info(f"Stored summary for chapter {chapter.chapter_number}: {summary_text}")
     if hasattr(state, "summary_chapter_titles"):
-        logger.info(
-            f"Stored title for chapter {chapter.chapter_number}: {title}"
-        )
+        logger.info(f"Stored title for chapter {chapter.chapter_number}: {title}")
 
 
 async def create_and_append_chapter(
@@ -492,7 +489,7 @@ async def create_and_append_chapter(
 ) -> Optional[ChapterData]:
     """Create and append a new chapter to the state."""
     from .content_generator import clean_chapter_content
-    
+
     try:
         # Use the Pydantic validator to clean the content
         validated_content = clean_chapter_content(chapter_content.content)

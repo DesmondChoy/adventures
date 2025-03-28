@@ -19,27 +19,31 @@ class ImageGenerationService:
     def __init__(self):
         """Initialize Gemini service with the specified model."""
         self.model_name = "imagen-3.0-generate-002"
-        
+
         # First try to load from environment variables
         api_key = os.getenv("GOOGLE_API_KEY")
-        
+
         # If not found in environment, try loading from .env file
         if not api_key:
             try:
                 # Try to manually read from .env file
-                with open('.env', 'r') as env_file:
+                with open(".env", "r") as env_file:
                     for line in env_file:
-                        if line.startswith('GOOGLE_API_KEY='):
-                            api_key = line.strip().split('=', 1)[1]
+                        if line.startswith("GOOGLE_API_KEY="):
+                            api_key = line.strip().split("=", 1)[1]
                             # Remove quotes if present
-                            api_key = api_key.strip('\'"')
-                            logger.info("Successfully loaded GOOGLE_API_KEY from .env file")
+                            api_key = api_key.strip("'\"")
+                            logger.info(
+                                "Successfully loaded GOOGLE_API_KEY from .env file"
+                            )
                             break
             except Exception as e:
                 logger.error(f"Error loading API key from .env file: {str(e)}")
-        
+
         if not api_key:
-            logger.warning("GOOGLE_API_KEY is not set in environment variables or .env file!")
+            logger.warning(
+                "GOOGLE_API_KEY is not set in environment variables or .env file!"
+            )
 
         # Create a client with the API key
         self.client = genai.Client(api_key=api_key)
@@ -75,13 +79,13 @@ class ImageGenerationService:
             Base64 encoded string of the generated image, or None if generation fails
         """
         # Validate API key is present
-        if not hasattr(self, 'client') or not self.client:
+        if not hasattr(self, "client") or not self.client:
             logger.error("Image generation failed: No valid client available")
             return None
-            
+
         attempt = 0
         last_error = None
-        
+
         while attempt <= retries:
             try:
                 logger.info(f"Generating image for prompt: {prompt}")
@@ -101,7 +105,7 @@ class ImageGenerationService:
                 # Log response structure for debugging
                 logger.debug("\n=== DEBUG: Image Generation Response ===")
                 logger.debug(f"Response type: {type(response)}")
-                
+
                 if (
                     hasattr(response, "generated_images")
                     and response.generated_images is not None
@@ -130,7 +134,9 @@ class ImageGenerationService:
                         buffered = BytesIO()
                         image.save(buffered, format="JPEG")
                         img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-                        logger.info(f"Successfully generated image for prompt: {prompt}")
+                        logger.info(
+                            f"Successfully generated image for prompt: {prompt}"
+                        )
                         return img_str
                     except Exception as img_error:
                         logger.error(f"Error processing image data: {str(img_error)}")
@@ -138,29 +144,35 @@ class ImageGenerationService:
                         try:
                             # Direct base64 encoding
                             img_str = base64.b64encode(image_bytes).decode("utf-8")
-                            logger.info(f"Successfully generated image using alternative method")
+                            logger.info(
+                                f"Successfully generated image using alternative method"
+                            )
                             return img_str
                         except Exception as alt_error:
-                            logger.error(f"Alternative image processing also failed: {str(alt_error)}")
+                            logger.error(
+                                f"Alternative image processing also failed: {str(alt_error)}"
+                            )
                             raise
-                
+
                 logger.warning(f"No images generated for prompt: {prompt}")
                 # If we got a response but no images, increment attempt and try again
                 attempt += 1
-                last_error = ValueError("API returned response but no images were generated")
-                
+                last_error = ValueError(
+                    "API returned response but no images were generated"
+                )
+
                 if attempt <= retries:
                     backoff_time = 2**attempt
                     logger.info(f"Retrying in {backoff_time} seconds...")
                     time.sleep(backoff_time)
                 continue
-                
+
             except Exception as e:
                 logger.error(f"Image generation attempt {attempt + 1} failed: {str(e)}")
                 logger.error(f"Error type: {type(e).__name__}")
                 last_error = e
                 attempt += 1
-                
+
                 if attempt <= retries:
                     # Wait before retry with exponential backoff
                     backoff_time = 2**attempt
@@ -168,10 +180,12 @@ class ImageGenerationService:
                     time.sleep(backoff_time)
 
         # If we reach here, all attempts failed
-        logger.error(f"All {retries+1} image generation attempts failed for prompt: {prompt}")
+        logger.error(
+            f"All {retries + 1} image generation attempts failed for prompt: {prompt}"
+        )
         if last_error:
             logger.error(f"Last error: {type(last_error).__name__}: {str(last_error)}")
-        
+
         # Return a fallback image for testing if needed
         # Uncomment the following code to provide a fallback test image
         # try:
@@ -180,7 +194,7 @@ class ImageGenerationService:
         #         return base64.b64encode(img_file.read()).decode('utf-8')
         # except Exception as fallback_error:
         #     logger.error(f"Fallback image also failed: {str(fallback_error)}")
-        
+
         return None
 
     def enhance_prompt(
@@ -228,12 +242,16 @@ class ImageGenerationService:
             logger.debug(f"Using chapter summary in prompt: '{chapter_summary}'")
             # Ensure chapter_summary is not empty or just whitespace
             if chapter_summary and chapter_summary.strip():
-                components.append(f"Fantasy illustration of {chapter_summary}")
+                components.append(
+                    f"Colorful storybook illustration of this scene: {chapter_summary}"
+                )
                 logger.debug(f"Added chapter summary to components")
             else:
                 logger.warning("Chapter summary is empty or whitespace only")
                 # Use a fallback approach - add a generic component
-                components.append("Fantasy illustration of a scene from the story")
+                components.append(
+                    "Colorful storybook illustration of a scene from the story"
+                )
                 logger.debug("Added generic scene component as fallback")
         else:
             # Extract the combined name and visual details up to the closing bracket
@@ -272,8 +290,10 @@ class ImageGenerationService:
                     name_with_details = f"{name} [{visual_details}]"
                     logger.debug(f"Added visual details from lookup: {visual_details}")
 
-            # 1. Start with "Fantasy illustration of [Agency Name with Visual Details]"
-            components.append(f"Fantasy illustration of {name_with_details}")
+            # Start with "Colorful storybook illustration of this scene: [Agency Name with Visual Details]"
+            components.append(
+                f"Colorful storybook illustration of this scene: {name_with_details}"
+            )
 
         # Add agency information from adventure state regardless of chapter type
         if (
@@ -283,6 +303,9 @@ class ImageGenerationService:
         ):
             agency = adventure_state.metadata["agency"]
             agency_description = agency.get("description", "")
+            agency_visual_details = agency.get("visual_details", "")
+            agency_category = agency.get("category", "")
+
             if agency_description:
                 # Extract just the agency name/item without extra details
                 agency_name = (
@@ -292,33 +315,47 @@ class ImageGenerationService:
                 )
                 if ":" in agency_name:
                     agency_name = agency_name.split(":", 1)[1].strip()
-                components.append(f"featuring {agency_name}")
-                logger.debug(f"Added agency to chapter image: {agency_name}")
 
-        # 2. Add story name if available
-        story_name = ""
-        if (
-            adventure_state
-            and hasattr(adventure_state, "metadata")
-            and "non_random_elements" in adventure_state.metadata
-        ):
-            story_name = adventure_state.metadata["non_random_elements"].get("name", "")
-            if story_name:
-                components.append(f"in {story_name}")
-                logger.debug(f"Added story name: {story_name}")
+                # If we don't have visual details stored, try to look them up
+                if not agency_visual_details:
+                    agency_visual_details = self._lookup_visual_details(agency_name)
 
-        # 3. Add sensory details from adventure state if available
-        if adventure_state and hasattr(adventure_state, "selected_sensory_details"):
-            visual = adventure_state.selected_sensory_details.get("visuals", "")
-            if visual:
-                components.append(f"with {visual}")
-                logger.debug(f"Added sensory details: {visual}")
+                # Add appropriate prefix based on agency category
+                if agency_category == "Choose a Companion":
+                    prefix = "He/she is accompanied by"
+                elif agency_category == "Take on a Profession":
+                    prefix = "He/she is a"
+                elif agency_category == "Gain a Special Ability":
+                    prefix = "He/she has the power of"
+                elif agency_category == "Craft a Magical Artifact":
+                    prefix = "He/she carries a magical"
+                else:
+                    prefix = "He/she has"
 
-        # 4. Add base style
-        components.append(base_style)
+                if agency_visual_details:
+                    components.append(
+                        f"{prefix} {agency_name} ({agency_visual_details})"
+                    )
+                else:
+                    components.append(f"{prefix} {agency_name}")
 
-        # Join all components with commas
-        prompt = ", ".join(components)
+                logger.debug(
+                    f"Added agency to chapter image with prefix '{prefix}': {agency_name}"
+                )
+                if agency_visual_details:
+                    logger.debug(f"Added visual details: {agency_visual_details}")
+
+        # Join components with appropriate separators
+        if len(components) >= 2:
+            # Join the first component (illustration) with the second component (agency)
+            # using a period instead of a comma
+            prompt = f"{components[0]}. {components[1]}"
+        else:
+            # If there's only one component, just use that
+            prompt = components[0]
+
+        # No longer adding base style
+
         logger.info(f"Enhanced prompt: {prompt}")
         return prompt
 

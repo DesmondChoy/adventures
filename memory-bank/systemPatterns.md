@@ -220,6 +220,8 @@ graph TD
   * Extracts visual details from square brackets in `prompt_templates.py`
   * Uses category-specific prefixes in prompts (e.g., "He/she is accompanied by" for companions)
   * Includes visual details in parentheses after agency name
+  * Replaces "Fantasy illustration of" with "Colorful storybook illustration of this scene:"
+  * Removes base style ("vibrant colors, detailed, whimsical, digital art") for cleaner prompts
   * Ensures consistent visual representation across all chapters
   * Implementation in `choice_processor.py` and `image_generation_service.py`
 
