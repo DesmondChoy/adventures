@@ -38,6 +38,8 @@ We will implement a comprehensive solution that stores the complete agency infor
    - Modify the `enhance_prompt` method in `app/services/image_generation_service.py` to use the stored agency details.
    - Implement category-specific prefixes with clearer subject references.
    - Include the visual details in parentheses after the agency name.
+   - Replace "Fantasy illustration of" with "Colorful storybook illustration of" for a more child-friendly, concise style.
+   - Change the comma before agency descriptions to a period (e.g., before "He/she has the power").
    - Remove the story name and visual details from the prompt, focusing on the chapter summary and agency representation.
 
 3. **Add Fallback Mechanism**:
@@ -107,10 +109,10 @@ components = []
 if chapter_summary:
     # Ensure chapter_summary is not empty or just whitespace
     if chapter_summary and chapter_summary.strip():
-        components.append(f"Fantasy illustration of {chapter_summary}")
+        components.append(f"Colorful storybook illustration of {chapter_summary}")
     else:
         # Use a fallback approach - add a generic component
-        components.append("Fantasy illustration of a scene from the story")
+        components.append("Colorful storybook illustration of a scene from the story")
 else:
     # Extract the combined name and visual details up to the closing bracket
     name_with_details = ""
@@ -139,8 +141,8 @@ else:
         if visual_details:
             name_with_details = f"{name} [{visual_details}]"
 
-    # Start with "Fantasy illustration of [Agency Name with Visual Details]"
-    components.append(f"Fantasy illustration of {name_with_details}")
+    # Start with "Colorful storybook illustration of [Agency Name with Visual Details]"
+    components.append(f"Colorful storybook illustration of {name_with_details}")
 
 # Add agency information from adventure state regardless of chapter type
 if (
@@ -184,11 +186,18 @@ if (
         else:
             components.append(f"{prefix} {agency_name}")
 
-# Add base style
-components.append(base_style)
+# We no longer need to add base style as a separate component
+# The style is now incorporated in our prefix
 
-# Join all components with commas
-prompt = ", ".join(components)
+# Join components with appropriate separators
+if len(components) >= 2:
+    # Join the first component (illustration) with the second component (agency)
+    # using a period instead of a comma
+    prompt = f"{components[0]}. {components[1]}"
+else:
+    # If there's only one component, just use that
+    prompt = components[0]
+    
 return prompt
 ```
 
@@ -203,7 +212,7 @@ Fantasy illustration of A giant mushroom pulses blue light in a forest clearing,
 
 **After:**
 ```
-Fantasy illustration of A giant mushroom pulses blue light in a forest clearing, illuminating the forest floor with spiderwebs. Shimmering bees swarm the mushroom as massive webs glow with intricate patterns., He/she has the power of Element Bender (a swirling figure with hands sparking flames, splashing water, tossing earth, and twirling breezes in a dance), vibrant colors, detailed, whimsical, digital art
+Colorful storybook illustration of A giant mushroom pulses blue light in a forest clearing, illuminating the forest floor with spiderwebs. Shimmering bees swarm the mushroom as massive webs glow with intricate patterns. He/she has the power of Element Bender (a swirling figure with hands sparking flames, splashing water, tossing earth, and twirling breezes in a dance)
 ```
 
 This will result in more consistent and accurate visual representations of agency elements in the generated images, enhancing the overall storytelling experience.
