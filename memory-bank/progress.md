@@ -3,6 +3,15 @@
 ## Recently Completed (Last 14 Days)
 
 ### 2025-03-29
+- Implemented fix to ensure image generation for the CONCLUSION chapter
+- Modified `send_story_complete` function in `core.py` to include image generation
+- Added imports for image generation functions from image_generator.py
+- Added code to start image generation tasks before streaming content
+- Added code to process image tasks after sending the completion message
+- Used the same standardized approach for image generation as other chapters
+- Added appropriate error handling and logging for CONCLUSION chapter image generation
+- Created documentation in `wip/improve_image_consistency.md` explaining the issue and solution
+- Updated Memory Bank documentation to reflect the image consistency improvement
 - Implemented comprehensive solution for agency visual details enhancement in image generation
 - Modified `process_story_response` in `choice_processor.py` to extract and store agency category and visual details
 - Updated `enhance_prompt` in `image_generation_service.py` to use stored agency details with category-specific prefixes
@@ -367,6 +376,8 @@
 - Responsive design for both desktop and mobile
 
 ### Recent Enhancements
+- Fixed image generation for CONCLUSION chapter to ensure consistent visual experience
+- Enhanced agency visual details in image generation for more accurate representation
 - Fixed missing state storage issue in Summary Chapter
 - Added explicit state storage in WebSocket flow
 - Fixed duplicate summary generation

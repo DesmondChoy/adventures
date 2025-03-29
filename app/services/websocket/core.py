@@ -5,7 +5,11 @@ import logging
 from app.models.story import ChapterContent, AdventureState
 from app.services.adventure_state_manager import AdventureStateManager
 
-from .choice_processor import process_start_choice, process_non_start_choice, handle_reveal_summary
+from .choice_processor import (
+    process_start_choice,
+    process_non_start_choice,
+    handle_reveal_summary,
+)
 from .stream_handler import stream_chapter_content
 
 logger = logging.getLogger("story_app")
@@ -60,21 +64,18 @@ async def process_choice(
     # Handle non-start choices
     if chosen_path != "start":
         return await process_non_start_choice(
-            chosen_path, 
-            choice_text, 
-            state, 
-            state_manager, 
-            story_category, 
-            lesson_topic, 
-            websocket
+            chosen_path,
+            choice_text,
+            state,
+            state_manager,
+            story_category,
+            lesson_topic,
+            websocket,
         )
-    
+
     # Handle start choice (initialize new story)
     return await process_start_choice(
-        state, 
-        state_manager, 
-        story_category, 
-        lesson_topic
+        state, state_manager, story_category, lesson_topic
     )
 
 
@@ -106,9 +107,25 @@ async def send_story_complete(
         state: The current state
     """
     from .stream_handler import stream_conclusion_content
-    
+    from .image_generator import start_image_generation_tasks, process_image_tasks
+
     # Get the final chapter (which should be CONCLUSION type)
     final_chapter = state.chapters[-1]
+
+    # Start image generation for the CONCLUSION chapter
+    try:
+        image_tasks = await start_image_generation_tasks(
+            final_chapter.chapter_number,
+            final_chapter.chapter_type,
+            final_chapter.chapter_content,
+            state,
+        )
+        logger.info(
+            f"Started {len(image_tasks)} image generation tasks for CONCLUSION chapter"
+        )
+    except Exception as e:
+        logger.error(f"Error starting image generation tasks for CONCLUSION: {str(e)}")
+        image_tasks = []  # Empty list as fallback
 
     # Stream the content first
     await stream_conclusion_content(final_chapter.content, websocket)
@@ -134,3 +151,10 @@ async def send_story_complete(
             },
         }
     )
+
+    # Process image tasks after sending the completion message
+    if image_tasks:
+        await process_image_tasks(image_tasks, final_chapter.chapter_number, websocket)
+        logger.info(f"Processed image tasks for CONCLUSION chapter")
+    else:
+        logger.warning(f"No image tasks available for CONCLUSION chapter")
