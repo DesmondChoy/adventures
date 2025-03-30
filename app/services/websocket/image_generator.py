@@ -103,11 +103,11 @@ async def generate_agency_images(
                 logger.debug(f"Extracted agency name: {agency_name}")
 
                 # Construct the focused prompt
-                prompt = f"Colorful storybook illustration: {agency_name} [{visual_details}]. In the background: {story_visual_sensory_detail}."
+                prompt = f"Fantasy illustration of {agency_name} - {visual_details}. The background has subtle elements of {story_visual_sensory_detail}."
             else:
                 # If no match found, use the choice text directly
                 logger.debug(f"Using choice text directly: {choice.text}")
-                prompt = f"Colorful storybook illustration: {choice.text}. In the background: {story_visual_sensory_detail}."
+                prompt = f"Fantasy illustration of {choice.text}. The background has subtle hints of: {story_visual_sensory_detail}."
 
             logger.info("\n" + "=" * 50)
             logger.info(f"AGENCY CHOICE {i + 1} IMAGE PROMPT:")

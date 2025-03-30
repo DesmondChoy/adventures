@@ -1,6 +1,48 @@
 # Active Context
 
-## Current Focus: Image Consistency Improvement for CONCLUSION Chapter (2025-03-29)
+## Current Focus: Chapter Number Calculation Fix in stream_handler.py (2025-03-31)
+
+We've fixed an issue with incorrect chapter number calculation in the `stream_chapter_content` function in `stream_handler.py`. This issue was causing the chapter number to be incorrectly reported as one higher than it should be.
+
+### Problem Analysis
+
+The issue was in how the chapter number was calculated in the `stream_chapter_content` function:
+
+1. **Incorrect Calculation:**
+   * The chapter number was calculated as `len(state.chapters) + 1`
+   * This calculation assumed the chapter was about to be added to the state
+   * However, by the time this function is called, the chapter has already been added to the state
+
+2. **Root Cause:**
+   * The function was using a calculation that would be correct before adding a chapter
+   * But since the chapter was already added, it was effectively counting the chapter twice
+
+3. **Impact:**
+   * Incorrect chapter numbers were being logged (e.g., "Current chapter number calculated as: 4" when processing chapter 3)
+   * This could potentially affect image generation and other processes that rely on the correct chapter number
+
+### Implemented Solution
+
+We modified the chapter number calculation in `stream_handler.py`:
+
+1. **Updated Calculation:**
+   * Changed from `current_chapter_number = len(state.chapters) + 1` to `current_chapter_number = len(state.chapters)`
+   * Updated the comment to clarify that the chapter has already been added to the state at this point
+
+2. **Implementation Details:**
+   * The fix was isolated to the `stream_chapter_content` function in `stream_handler.py`
+   * Other files (`content_generator.py` and `choice_processor.py`) correctly calculate the chapter number as they are called before the chapter is added to the state
+
+3. **Benefits:**
+   * Correct chapter numbers are now reported in logs
+   * Image generation and other processes now use the correct chapter number
+   * Improved code clarity with better comments explaining the calculation
+
+### Verification
+
+We verified that the other files (`content_generator.py` and `choice_processor.py`) correctly calculate the chapter number as `len(state.chapters) + 1` because they are called before the new chapter is added to the state. Only `stream_handler.py` needed to be fixed.
+
+## Previous Focus: Image Consistency Improvement for CONCLUSION Chapter (2025-03-29)
 
 We've implemented a fix to ensure an image is generated at the end of the last chapter (CONCLUSION chapter) of the adventure. Previously, the CONCLUSION chapter was not displaying an image, creating an inconsistent experience compared to all other chapters.
 

@@ -2,6 +2,15 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-03-31
+- Fixed incorrect chapter number calculation in `stream_handler.py`
+- Identified issue where chapter number was calculated as `len(state.chapters) + 1` when it should be `len(state.chapters)`
+- Modified the calculation in `stream_chapter_content` function to use the correct formula
+- Updated comments to clarify that the chapter has already been added to the state at this point
+- Verified that other files (`content_generator.py` and `choice_processor.py`) correctly calculate the chapter number
+- Ensured image generation and other processes now use the correct chapter number
+- Updated Memory Bank documentation to reflect the chapter number calculation fix
+
 ### 2025-03-29
 - Implemented fix to ensure image generation for the CONCLUSION chapter
 - Modified `send_story_complete` function in `core.py` to include image generation
