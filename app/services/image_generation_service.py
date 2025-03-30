@@ -263,50 +263,18 @@ class ImageGenerationService:
         try:
             logger.info("Synthesizing image prompt with LLM")
 
-            # Create the meta-prompt for the LLM
-            meta_prompt = f"""
-# ROLE: Expert Prompt Engineer for Text-to-Image Models
+            # Import the template from prompt_templates
+            from app.services.llm.prompt_templates import IMAGE_SYNTHESIS_PROMPT
 
-# CONTEXT:
-# You are creating an image prompt for one chapter of an ongoing children's educational adventure story (ages 6-12).
-# The image should be a snapshot of a key moment from this specific chapter.
-# The story features a main protagonist whose base look is described below.
-# The protagonist also has a special "agency" element (an item, companion, role, or ability) chosen at the start, with its own visual details.
-
-# INPUTS:
-# 1. Scene Description: A concise summary of the key visual moment in *this specific chapter*. **This scene takes priority.**
-#    "{image_scene_description}"
-# 2. Protagonist Base Look: The core appearance of the main character throughout the adventure.
-#    "{protagonist_description}"
-# 3. Protagonist Agency Element: The special element associated with the protagonist.
-#    - Category: "{agency_details.get("category", "N/A")}"
-#    - Name: "{agency_details.get("name", "N/A")}"
-#    - Visuals: "{agency_details.get("visual_details", "N/A")}"
-# 4. Story Sensory Visual: An overall visual mood element for this story's world. **Apply this only if it fits logically with the Scene Description.**
-#    "{story_visual_sensory_detail}"
-
-# TASK:
-# Combine these inputs into a single, coherent, vivid visual scene description (target 30-50 words) suitable for Imagen.
-# Logically merge the Protagonist Base Look with the Agency Element Visuals. For example:
-#   - If Agency is "Guardian [gleaming silver armor]", describe the protagonist *wearing* the armor over their base clothes.
-#   - If Agency is "Wise Owl [snowy feathers...]", describe the protagonist *accompanied by* the owl within the scene.
-#   - If Agency is "Luminous Lantern [golden...]", describe the protagonist *holding* or *using* the lantern in the scene.
-#   - If Agency is "Element Bender [sparking flames...]", describe the protagonist *manifesting* these elements as part of the scene's action.
-# Integrate the combined character description naturally into the Scene Description.
-# The prompt MUST focus on what's happening *in the scene* while clearly including the protagonist and their agency element.
-# Prioritize the Scene Description: If the Story Sensory Visual detail contradicts the Scene Description (e.g., sensory detail mentions 'sparkling leaves at dawn' but the scene is 'inside a dark cave'), OMIT the sensory detail or adapt it subtly (e.g., 'glowing crystals line the cave walls' instead of 'sparkling leaves').
-
-# --- Examples of Prioritization ---
-# GOOD (Sensory fits Scene): Scene="Walking through a moonlit forest", Sensory="Glowing Juggling Pins", Output="...girl walks through a moonlit forest, juggling pins glow softly..."
-# GOOD (Sensory omitted): Scene="Inside a cozy tent", Sensory="Aurora Dewdrops on leaves", Output="...boy sits inside a cozy tent, reading a map..." (Dewdrops omitted as they don't fit).
-# BAD (Sensory forced): Scene="Inside a cozy tent", Sensory="Aurora Dewdrops on leaves", Output="...boy sits inside a cozy tent, strangely, there are dewdrops on leaves inside the tent..."
-# ---
-
-# The final output should be ONLY the synthesized prompt string itself, ready for an image model like Imagen.
-# Adopt a "colorful storybook illustration" style.
-
-# OUTPUT (Synthesized Prompt String Only):
-"""
+            # Format the template with the provided inputs
+            meta_prompt = IMAGE_SYNTHESIS_PROMPT.format(
+                image_scene_description=image_scene_description,
+                protagonist_description=protagonist_description,
+                agency_category=agency_details.get("category", "N/A"),
+                agency_name=agency_details.get("name", "N/A"),
+                agency_visual_details=agency_details.get("visual_details", "N/A"),
+                story_visual_sensory_detail=story_visual_sensory_detail,
+            )
 
             # Log the meta-prompt for debugging
             logger.debug(f"Meta-prompt for LLM synthesis:\n{meta_prompt}")

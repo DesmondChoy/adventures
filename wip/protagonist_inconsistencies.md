@@ -288,3 +288,63 @@ Implement a two-step process where an intermediary LLM call synthesizes the fina
 *   **Cost:** Increased LLM calls raise operational costs.
 *   **Synthesizer Reliability:** Quality depends on the LLM-Synthesizer interpreting the meta-prompt correctly. Mitigation: Robust error handling and fallback in Step 3.
 *   **Meta-Prompt Engineering:** Requires careful design and iteration.
+
+## 6. Additional Implementations Made
+
+*   [x] **Move Image Synthesis Prompt to prompt_templates.py (2025-03-30):**
+    *   **File:** `app/services/llm/prompt_templates.py`
+    *   **Action:** Extract the meta-prompt from `synthesize_image_prompt` function and move it to prompt_templates.py as a constant.
+    *   **Implementation Details:**
+        * Created a new constant named `IMAGE_SYNTHESIS_PROMPT` in prompt_templates.py
+        * Used consistent formatting with other prompts in the file
+        * Added it under a new section "# Image prompt synthesis"
+        * Updated the `synthesize_image_prompt()` function to import and use this template
+        * Modified the function to format the template with the proper parameter names
+        * Kept all existing functionality intact
+        * Implemented on 2025-03-30
+    *   **Code (in `prompt_templates.py`):**
+        ```python
+        # Image prompt synthesis
+        # --------------------
+
+        IMAGE_SYNTHESIS_PROMPT = """
+        ROLE: Expert Prompt Engineer for Text-to-Image Models
+
+        CONTEXT:
+        You are creating an image prompt for one chapter of an ongoing children's educational adventure story (ages 6-12).
+        The image should be a snapshot of a key moment from this specific chapter.
+        The story features a main protagonist whose base look is described below.
+        The protagonist also has a special "agency" element (an item, companion, role, or ability) chosen at the start, with its own visual details.
+
+        INPUTS:
+        1. Scene Description: A concise summary of the key visual moment in *this specific chapter*. **This scene takes priority.**
+           "{image_scene_description}"
+        2. Protagonist Base Look: The core appearance of the main character throughout the adventure.
+           "{protagonist_description}"
+        3. Protagonist Agency Element: The special element associated with the protagonist.
+           - Category: "{agency_category}"
+           - Name: "{agency_name}"
+           - Visuals: "{agency_visual_details}"
+        4. Story Sensory Visual: An overall visual mood element for this story's world. **Apply this only if it fits logically with the Scene Description.**
+           "{story_visual_sensory_detail}"
+
+        TASK:
+        Combine these inputs into a single, coherent, vivid visual scene description (target 30-50 words) suitable for Imagen.
+        ...
+        """
+        ```
+    *   **Code (in `image_generation_service.py`):**
+        ```python
+        # Import the template from prompt_templates
+        from app.services.llm.prompt_templates import IMAGE_SYNTHESIS_PROMPT
+
+        # Format the template with the provided inputs
+        meta_prompt = IMAGE_SYNTHESIS_PROMPT.format(
+            image_scene_description=image_scene_description,
+            protagonist_description=protagonist_description,
+            agency_category=agency_details.get("category", "N/A"),
+            agency_name=agency_details.get("name", "N/A"),
+            agency_visual_details=agency_details.get("visual_details", "N/A"),
+            story_visual_sensory_detail=story_visual_sensory_detail,
+        )
+        ```
