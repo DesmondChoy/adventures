@@ -1,5 +1,10 @@
 # WebSocket Disconnection Fix
 
+## Implementation Status
+
+**Status: NOT IMPLEMENTED **
+
+
 ## Problem
 
 Users are experiencing WebSocket disconnection errors during chapter transitions, specifically between chapters five and six. The error appears in the logs as:
