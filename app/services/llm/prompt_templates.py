@@ -317,6 +317,15 @@ Choice C: [Third story-driven choice]
 # -----------------------
 
 
+# Predefined protagonist descriptions for consistent image generation
+PREDEFINED_PROTAGONIST_DESCRIPTIONS = [
+    "A curious young boy with short brown hair, bright green eyes, wearing simple traveler's clothes (tunic and trousers).",
+    "An adventurous girl with braided blonde hair, freckles, wearing practical leather gear and carrying a small satchel.",
+    "A thoughtful child with glasses, dark curly hair, wearing a slightly oversized, patched cloak over plain clothes.",
+    "A nimble young person with vibrant red hair tied back, keen blue eyes, dressed in flexible, forest-green attire.",
+    "A gentle-looking kid with warm brown eyes, black hair, wearing a comfortable-looking blue tunic and sturdy boots.",
+]
+
 # Agency categories dictionary - exposed for direct access by image generation
 categories = {
     "Craft a Magical Artifact": [

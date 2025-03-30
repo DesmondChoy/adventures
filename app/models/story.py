@@ -138,6 +138,10 @@ class AdventureState(BaseModel):
         default="",
         description="The selected plot twist that will develop throughout the adventure",
     )
+    protagonist_description: str = Field(
+        default="",
+        description="Base visual description of the protagonist",
+    )
 
     # Chapter summaries for the SUMMARY chapter
     chapter_summaries: List[str] = Field(

@@ -7,7 +7,11 @@ from datetime import datetime
 from app.models.story import ChapterType, AdventureState, ChapterData, ChapterContent
 from app.data.story_loader import StoryLoader
 from app.services.llm import LLMService
-from app.services.llm.prompt_templates import SUMMARY_CHAPTER_PROMPT, IMAGE_SCENE_PROMPT
+from app.services.llm.prompt_templates import (
+    SUMMARY_CHAPTER_PROMPT,
+    IMAGE_SCENE_PROMPT,
+    PREDEFINED_PROTAGONIST_DESCRIPTIONS,
+)
 
 logger = logging.getLogger("story_app")
 
@@ -582,6 +586,16 @@ class ChapterManager:
                 extra={"phase": "Exposition", "guidance": plot_twist_guidance},
             )
 
+            # Randomly select a protagonist description
+            selected_protagonist_desc = random.choice(
+                PREDEFINED_PROTAGONIST_DESCRIPTIONS
+            )
+
+            logger.info(
+                "Selected protagonist description",
+                extra={"protagonist_description": selected_protagonist_desc},
+            )
+
             # Create adventure state with validated elements
             state = AdventureState(
                 current_chapter_id="start",
@@ -596,6 +610,7 @@ class ChapterManager:
                 selected_theme=selected_elements["selected_theme"],
                 selected_moral_teaching=selected_elements["selected_moral_teaching"],
                 selected_plot_twist=selected_elements["selected_plot_twist"],
+                protagonist_description=selected_protagonist_desc,
             )
 
             # Store metadata for consistency checks and plot development
@@ -768,10 +783,10 @@ class ChapterManager:
 
         Returns:
             A dictionary containing the title and summary of the chapter
-            
+
         Note:
             This method is called after each chapter is completed to generate summaries
-            that will be displayed in the final summary chapter. These summaries are 
+            that will be displayed in the final summary chapter. These summaries are
             stored in AdventureState.chapter_summaries and the titles in AdventureState.summary_chapter_titles.
         """
         try:
@@ -785,10 +800,11 @@ class ChapterManager:
                 choice_context=choice_context,
             )
 
-            # Log the full prompt for debugging
-            logger.debug(
-                f"\n=== DEBUG: Full SUMMARY_CHAPTER_PROMPT sent to LLM ===\n{custom_prompt}\n===================================\n"
-            )
+            # Log the full prompt at INFO level to show in terminal
+            logger.info("\n" + "=" * 50)
+            logger.info("COMPLETE CHAPTER SUMMARY PROMPT SENT TO LLM:")
+            logger.info(f"{custom_prompt}")
+            logger.info("=" * 50 + "\n")
 
             # We need to override the prompt engineering system
             # Create a minimal AdventureState-like object with just what we need
