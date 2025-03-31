@@ -83,7 +83,7 @@
 - Implemented fallback to REST API for robustness with 5-second timeout
 - Added flag to track redirects and prevent duplicate redirects
 - Added detailed logging for debugging
-- Created test HTML file (`test_summary_button.html`) to verify the solution
+- Created and later removed test HTML file to verify the solution after successful implementation
 - Simulated various timing scenarios to ensure the race condition is eliminated
 - Ensured the state stored always includes the CONCLUSION chapter summary
 - Improved user experience by ensuring complete data is displayed in the Summary Chapter

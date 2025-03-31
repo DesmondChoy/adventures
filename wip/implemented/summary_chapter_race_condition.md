@@ -7,7 +7,7 @@
 The solution has been fully implemented and verified:
 - The `viewAdventureSummary()` function in `app/templates/index.html` has been updated to use the WebSocket flow exclusively, with a fallback to the REST API for robustness
 - Fixed an issue where the WebSocket message was missing the state data, causing "Missing state in message" errors
-- A test HTML file (`test_summary_button.html`) has been created to verify the solution
+- A test HTML file was created to verify the solution and has been removed after successful verification
 - The memory bank has been updated to reflect the changes
 - The Summary Chapter is now correctly displaying all data (questions, answers, chapter summaries, and titles)
 

@@ -258,7 +258,7 @@ We've modified the `viewAdventureSummary()` function in `app/templates/index.htm
 
 ### Testing
 
-We've also created a test HTML file (`test_summary_button.html`) that simulates both the WebSocket and REST API paths with various timing scenarios to ensure the race condition is eliminated:
+The race condition fix has been thoroughly tested and verified. The solution was initially tested with a dedicated test HTML file that simulated various timing scenarios, and after verification, the test file has been removed as it's no longer needed:
 
 1. **WebSocket Success**: WebSocket responds quickly with state_id
 2. **WebSocket Timeout**: WebSocket doesn't respond within timeout period, fallback to REST API
