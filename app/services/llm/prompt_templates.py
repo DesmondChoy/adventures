@@ -253,7 +253,7 @@ Focus on:
 3. The moment with the most visual energy or emotional impact
 4. Elements that best represent the chapter's theme or turning point
 
-Describe ONLY this scene in 20-30 words using vivid, specific language. Focus purely on the visual elements and action, not narrative explanation. Do not include character names or story title.
+Describe ONLY this scene in **approximately 50 words** using vivid, specific language. Focus purely on the visual elements and action, not narrative explanation. Do not include character names or story title unless essential for the scene.
 
 CHAPTER CONTENT:
 {chapter_content}
@@ -555,6 +555,8 @@ INPUTS:
    - Visuals: "{agency_visual_details}"
 4. Story Sensory Visual: An overall visual mood element for this story's world. **Apply this only if it fits logically with the Scene Description.**
    "{story_visual_sensory_detail}"
+5. CHARACTER_VISUAL_CONTEXT:
+{character_visual_context}
 
 TASK:
 Combine these inputs into a single, coherent, vivid visual scene description (target 30-50 words) suitable for Imagen.
@@ -567,6 +569,9 @@ Integrate the combined character description naturally into the Scene Descriptio
 The prompt MUST focus on what's happening *in the scene* while clearly including the protagonist and their agency element.
 Prioritize the Scene Description: If the Story Sensory Visual detail contradicts the Scene Description (e.g., sensory detail mentions 'sparkling leaves at dawn' but the scene is 'inside a dark cave'), OMIT the sensory detail or adapt it subtly (e.g., 'glowing crystals line the cave walls' instead of 'sparkling leaves').
 
+For other characters mentioned in CHARACTER_VISUAL_CONTEXT, incorporate their visual descriptions if they appear in the scene description.
+Prioritize the recent visual descriptions of characters over the base protagonist description if any character has evolved visually.
+
 --- Examples of Prioritization ---
 GOOD (Sensory fits Scene): Scene="Walking through a moonlit forest", Sensory="Glowing Juggling Pins", Output="...girl walks through a moonlit forest, juggling pins glow softly..."
 GOOD (Sensory omitted): Scene="Inside a cozy tent", Sensory="Aurora Dewdrops on leaves", Output="...boy sits inside a cozy tent, reading a map..." (Dewdrops omitted as they don't fit).
@@ -577,4 +582,49 @@ The final output should be ONLY the synthesized prompt string itself, ready for 
 Adopt a "colorful storybook illustration" style.
 
 OUTPUT (Synthesized Prompt String Only):
+"""
+
+# Character visual update
+# ----------------------
+
+CHARACTER_VISUAL_UPDATE_PROMPT = """
+ROLE: Visual Character Tracker for a Children's Adventure Story
+
+TASK:
+Track and update the visual descriptions of all characters in the story. Parse the chapter content to:
+1. Identify all characters (protagonist and NPCs)
+2. Extract or update their visual descriptions
+3. Return an updated JSON dictionary with character names as keys and their current visual descriptions as values
+
+INPUTS:
+1. Chapter Content: The latest chapter content, which may introduce new characters or update existing ones
+2. Existing Visuals: A dictionary of character names and their current visual descriptions
+
+CHAPTER CONTENT:
+{chapter_content}
+
+EXISTING VISUALS:
+{existing_visuals}
+
+INSTRUCTIONS:
+- For each character mentioned in the chapter, including the protagonist and NPCs:
+  * If the character is new (not in EXISTING VISUALS), create a detailed visual description based on any appearance details in the chapter
+  * If the character already exists but has visual changes described in this chapter, update their description accordingly
+  * If no visual changes are described for an existing character, keep their previous description
+- Visual descriptions should be concise (25-40 words) but comprehensive
+- Focus only on visual/physical aspects (appearance, clothing, features, etc.) that would be relevant for image generation
+- For the protagonist, prioritize keeping their core appearance consistent while incorporating any described changes/evolution
+- Ensure each description is self-contained (someone reading only the description should get a complete picture)
+
+OUTPUT FORMAT:
+Return ONLY a valid JSON object with the updated character visuals, formatted exactly like this:
+```json
+{
+  "Character Name": "Visual description that includes appearance, clothing, and distinctive features",
+  "Another Character": "Their visual description...",
+  ...
+}
+```
+
+Do not include any explanations, only return the JSON.
 """

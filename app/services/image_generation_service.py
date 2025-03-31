@@ -241,6 +241,7 @@ class ImageGenerationService:
         protagonist_description: str,
         agency_details: Dict[str, str],
         story_visual_sensory_detail: str,
+        character_visuals: Dict[str, str] = None,
     ) -> str:
         """Synthesize a coherent image prompt using LLM to combine multiple inputs.
 
@@ -253,6 +254,7 @@ class ImageGenerationService:
             protagonist_description: The base appearance of the main character
             agency_details: Dictionary containing agency category, name, and visual details
             story_visual_sensory_detail: Overall visual mood element for the story's world
+            character_visuals: Dictionary of character names and their visual descriptions
 
         Returns:
             A synthesized prompt string ready for image generation
@@ -265,6 +267,18 @@ class ImageGenerationService:
 
             # Import the template from prompt_templates
             from app.services.llm.prompt_templates import IMAGE_SYNTHESIS_PROMPT
+            
+            # Format character visuals context
+            character_visual_context = ""
+            if character_visuals and len(character_visuals) > 0:
+                # Format as a list for easier reading
+                character_visual_context = "Character Visual Descriptions:\n"
+                for name, description in character_visuals.items():
+                    character_visual_context += f"- {name}: {description}\n"
+                logger.info(f"Including {len(character_visuals)} character visual descriptions in the prompt")
+            else:
+                character_visual_context = "No additional character visuals available"
+                logger.debug("No character visuals to include in the prompt")
 
             # Format the template with the provided inputs
             meta_prompt = IMAGE_SYNTHESIS_PROMPT.format(
@@ -274,6 +288,7 @@ class ImageGenerationService:
                 agency_name=agency_details.get("name", "N/A"),
                 agency_visual_details=agency_details.get("visual_details", "N/A"),
                 story_visual_sensory_detail=story_visual_sensory_detail,
+                character_visual_context=character_visual_context,
             )
 
             # Log the meta-prompt for debugging

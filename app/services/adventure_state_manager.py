@@ -427,6 +427,42 @@ class AdventureStateManager:
             logger.debug(
                 f"Found reference to agency element ({agency_name}) in chapter {chapter_data.chapter_number}"
             )
+    
+    def update_character_visuals(self, state: AdventureState, updated_visuals: Dict[str, str]) -> None:
+        """Update character visuals dictionary in the AdventureState.
+        
+        Args:
+            state: The current adventure state
+            updated_visuals: Dictionary with updated character visual descriptions
+        """
+        if not updated_visuals:
+            logger.warning("No updated character visuals to apply")
+            return
+            
+        if not hasattr(state, 'character_visuals'):
+            logger.warning("State doesn't have character_visuals attribute")
+            return
+            
+        # Get the current visuals or initialize if empty
+        current_visuals = getattr(state, 'character_visuals', {})
+        if not current_visuals:
+            logger.info("Initializing character_visuals with first updates")
+            state.character_visuals = updated_visuals
+            return
+            
+        # Update with new or changed visuals
+        updates_count = 0
+        for char_name, visual_desc in updated_visuals.items():
+            # Update only if it's a new character or the description has changed
+            if char_name not in current_visuals or current_visuals[char_name] != visual_desc:
+                current_visuals[char_name] = visual_desc
+                updates_count += 1
+                logger.info(f"Updated visual description for '{char_name}'")
+                
+        if updates_count > 0:
+            logger.info(f"Updated {updates_count} character visual descriptions")
+        else:
+            logger.debug("No character visual descriptions were changed")
 
     def append_new_chapter(self, chapter_data: ChapterData) -> None:
         """Appends a new chapter to the AdventureState."""

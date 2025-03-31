@@ -261,11 +261,15 @@ async def generate_chapter_image(
                 )
 
                 # Synthesize the prompt
+                # Get character visuals if available
+                character_visuals = getattr(state, 'character_visuals', {})
+                
                 prompt = await image_service.synthesize_image_prompt(
                     scene_description,
                     protagonist_description,
                     agency_details,
                     story_visual_sensory_detail,
+                    character_visuals,
                 )
 
                 # Create the image generation task
@@ -318,11 +322,15 @@ async def generate_chapter_image(
             )
 
             # Synthesize the prompt using the LLM
+            # Get character visuals if available
+            character_visuals = getattr(state, 'character_visuals', {})
+            
             prompt = await image_service.synthesize_image_prompt(
                 image_scene,
                 protagonist_description,
                 agency_details,
                 story_visual_sensory_detail,
+                character_visuals,
             )
 
             logger.info("\n" + "=" * 50)
@@ -362,11 +370,15 @@ async def generate_chapter_image(
             )
 
             # Use the fallback approach with synthesize_image_prompt
+            # Get character visuals if available
+            character_visuals = getattr(state, 'character_visuals', {})
+            
             prompt = await image_service.synthesize_image_prompt(
                 image_scene,
                 protagonist_description,
                 agency_details,
                 story_visual_sensory_detail,
+                character_visuals,
             )
 
             # Create the image generation task
