@@ -45,6 +45,7 @@ Create just enough tension and wonder to keep young readers begging to continue 
 1. Narrative Structure: Begin directly (never with "Chapter X") and end at natural decision points
 2. Educational Integration: Ensure lessons feel organic to the story, never forced or artificial
 3. Choice Format: Use <CHOICES> tags, format as "Choice [A/B/C]: [description]" on single lines, make choices meaningful and distinct
+4. Character Descriptions: Whenever introducing a new supporting character or side character (anyone besides the protagonist), include at least one sentence describing their visual appearance (clothing, physical features, distinctive characteristics) to help readers visualize them clearly
 """
 
 
