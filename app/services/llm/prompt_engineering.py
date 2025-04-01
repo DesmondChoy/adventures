@@ -92,13 +92,22 @@ def build_system_prompt(state: AdventureState) -> str:
     Args:
         state: The current adventure state containing selected story elements
     """
+    # Default agency values if agency not yet selected (for chapter 1)
+    agency_category = "choice"
+    agency_name = "to be selected in chapter 1"
+    
+    # If we're past chapter 1 and agency has been selected, use the actual values
+    if state.current_chapter_number > 1 and "agency" in state.metadata:
+        agency = state.metadata["agency"]
+        agency_category = agency.get("category", "choice")
+        agency_name = agency.get("description", "from Chapter 1")
+    
     return SYSTEM_PROMPT_TEMPLATE.format(
         settings=state.selected_narrative_elements["settings"],
         selected_theme=state.selected_theme,
         selected_moral_teaching=state.selected_moral_teaching,
-        visuals=state.selected_sensory_details["visuals"],
-        sounds=state.selected_sensory_details["sounds"],
-        smells=state.selected_sensory_details["smells"],
+        agency_category=agency_category,
+        agency_name=agency_name,
     )
 
 
@@ -246,6 +255,10 @@ def build_first_chapter_prompt(state: AdventureState) -> str:
         option_a=option_names[0],
         option_b=option_names[1],
         option_c=option_names[2],
+        visuals=state.selected_sensory_details["visuals"],
+        sounds=state.selected_sensory_details["sounds"],
+        smells=state.selected_sensory_details["smells"],
+        protagonist_description=state.protagonist_description,
     )
 
 

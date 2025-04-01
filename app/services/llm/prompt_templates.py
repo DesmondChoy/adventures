@@ -25,19 +25,14 @@ Create just enough tension and wonder to keep young readers begging to continue 
 - Setting: {settings} (described with wonder and child-friendly details)
 - Theme: {selected_theme} (presented in ways children can relate to)
 - Moral Teaching: {selected_moral_teaching} (woven into the adventure naturally)
-- Sensory Details:
-  - Visual: {visuals} (bright, memorable images kids can picture)
-  - Sound: {sounds} (engaging sounds that bring the story to life)
-  - Scent: {smells} (familiar and fantastic smells kids can imagine)
 
 # Storytelling Approach & Agency Integration
 1. Create ONE complete, satisfying chapter that advances the larger adventure
-2. Use clear, engaging language appropriate for 6-12 year olds
-3. Include moments of humor, surprise, and age-appropriate excitement
-4. End this chapter with a compelling moment that makes children eager for the next chapter
-5. The protagonist's pivotal first-chapter choice (item, companion, role, or ability):
+2. Include moments of humor, surprise, and age-appropriate excitement
+3. End this chapter with a compelling moment that makes children eager for the next chapter
+4. The protagonist's agency choice ({agency_category}: {agency_name}):
    - Represents a core aspect of their identity and must be referenced consistently throughout ALL chapters
-   - Should evolve as the protagonist learns and grows
+   - Should evolve as the protagonist learns and grows 
    - Will play a crucial role in the story's climax
    - Should feel like a natural part of the narrative
 
@@ -61,9 +56,17 @@ FIRST_CHAPTER_PROMPT = """# Current Context
 # Story History
 {story_history}
 
-# Chapter Development Guidelines
-1. Agency Decision: The chapter naturally and organically concludes with a situation where Agency Options are offered - each with the potential to shape the character's journey across all future chapters.
+# Sensory Details
+- Visual: {visuals} (bright, memorable images kids can picture)
+- Sound: {sounds} (engaging sounds that bring the story to life)
+- Scent: {smells} (familiar and fantastic smells kids can imagine)
 
+# Chapter Development Guidelines
+1. Protagonist Description: {protagonist_description}
+   - Use this description to establish a clear visual image of the protagonist
+   - This forms the foundation of the character's appearance throughout the story
+
+2. Agency Decision: The chapter naturally and organically concludes with a situation where Agency Options are offered - each with the potential to shape the character's journey across all future chapters.
 
 # Agency Options
 {agency_options}
