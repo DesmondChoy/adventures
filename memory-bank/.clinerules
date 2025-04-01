@@ -1,747 +1,108 @@
 # Cline Rules for Learning Odyssey
 
-## Core Concepts
+## Critical Implementation Rules
 
-### Naming Conventions
-1. Chapter: Unit of progression in ChapterType enum (LESSON, STORY, REFLECT, CONCLUSION, or SUMMARY)
-   - LESSON: Educational content from `lessons/*.csv` files with LLM narrative wrapper using Story Object Method
-   - STORY: Fully LLM-generated narrative content with choices, first chapter includes agency choice
-   - REFLECT: Follow-up to LESSON chapters with narrative-driven approach to test deeper understanding
-   - CONCLUSION: Final chapter with no choices, providing story resolution
-   - SUMMARY: Special chapter that follows CONCLUSION, providing statistics and a chapter-by-chapter summary of the adventure without narrative content
-2. State: Complete application state in `AdventureState` class
-3. Adventure: Overall user journey tracked in `AdventureState`
-4. Agency: User's first chapter choice that evolves throughout the adventure
+### 1. State Management
+- `AdventureState` MUST be single source of truth
+- NEVER hardcode chapter numbers (app logic may change)
+- Use `planned_chapter_types` for chapter progression
+- Implement logic on state properties, not assumptions
+- Complete state serialization required
+- Dynamic story length via `state.story_length`
+- Type hints required for all state properties
+- State changes must be logged
+- Agency choice MUST be stored in `state.metadata["agency"]`
+- When extending Pydantic models:
+  * New fields MUST be properly defined using Pydantic's Field
+  * Example: `new_field: Dict[str, Any] = Field(default_factory=dict, description="...")`
+  * Initialize fields in __init__ method by adding to kwargs before calling super().__init__
+  * Add null checking for all field operations
+  * Use proper type hints for all fields
+- Case Sensitivity in Chapter Types:
+  * Always convert to lowercase when storing or retrieving
+  * When comparing chapter types, use lowercase values
+  * When reconstructing state from storage, convert all chapter types to lowercase
+  * Special handling for the last chapter to ensure it's always a CONCLUSION chapter
 
-### File Organization (`app/`)
-1. Core application code:
-   - State management: `models/story.py`
-   - LLM integration: `services/llm/`
-   - WebSocket components:
-     * Routing: `routers/websocket_router.py`
-     * Business logic: `services/websocket_service.py`
-   - Chapter management: `services/chapter_manager.py`
-   - Image generation: `services/image_generation_service.py`
-   - State storage: `services/state_storage_service.py` (singleton implementation)
-   - Summary service: `services/summary/` (modular package)
-     * `__init__.py`: Package exports
-     * `service.py`: Main service class that orchestrates components
-     * `chapter_processor.py`: Chapter-related processing logic
-     * `question_processor.py`: Question extraction and processing
-     * `stats_processor.py`: Statistics calculation
-     * `dto.py`: Data transfer objects
-     * `helpers.py`: Utility functions and helper classes
-     * `exceptions.py`: Custom exception classes
-2. Content sources:
-   - Lesson database: `data/lessons/*.csv` (individual files for each topic)
-   - Story data: `data/stories/*.yaml` (individual files for each story category)
-   - Story loader: `data/story_loader.py`
-   - Lesson loader: `data/lesson_loader.py`
-3. Frontend components:
-   - HTML: `templates/index.html`
-   - CSS: `static/css/` (modular organization)
-     * `layout.css`: Structural elements, containers, and screen transitions
-     * `components.css`: Reusable UI components (toast notifications, buttons, loaders, choice cards, etc.)
-     * `carousel-component.css`: Specialized carousel component styles
-     * `theme.css`: Color scheme and theme variables
-     * `typography.css`: Text styling and formatting
-   - JavaScript: `static/js/`
-     * `carousel-manager.js`: Reusable carousel component
-     * `font-size-manager.js`: Text size adjustment for mobile
-4. Tests: `tests/` directory
-   - Simulation scripts: `tests/simulations/generate_all_chapters.py` (main simulation script)
-   - Chapter summary generation: `tests/simulations/generate_chapter_summaries.py`
-   - Test state generation: `tests/utils/generate_test_state.py` (creates realistic test states)
-   - Summary button testing: `tests/test_summary_button_flow.py` (tests "Take a Trip Down Memory Lane" button)
-   - Case sensitivity testing: `tests/test_state_storage_reconstruction.py` (tests case sensitivity handling)
-   - Data tests: `tests/data/` (story loader, elements, chapter manager)
+### 2. Chapter Requirements
+- First chapter MUST be STORY type with agency choice
+- Second-to-last chapter MUST be STORY type (for pivotal choices)
+- Last chapter MUST be CONCLUSION type (for story resolution)
+- 50% of remaining chapters, rounded down, MUST be LESSON type
+- 50% of LESSON chapters, rounded down, MUST be followed by REFLECT chapters
+- REFLECT chapters MUST only occur immediately after a LESSON chapter
+- STORY chapters MUST follow REFLECT chapters
+- No consecutive LESSON chapters allowed
+- At least 1 REFLECT chapter in every scenario
+- No question repetition in session
+- Answer options MUST be shuffled
+- Immediate feedback required
+- Error recovery for failed state updates
 
-### LLM Service Provider Differences
+### 3. Agency Implementation
+- First chapter MUST include agency choice from four categories
+- Agency MUST be referenced in all subsequent chapters
+- Agency MUST evolve in REFLECT chapters based on answers
+- Agency MUST play pivotal role in climax phase
+- Agency MUST have meaningful resolution in conclusion
+- Agency references MUST be tracked with `update_agency_references()`
 
-1. Streaming Response Handling:
-   - OpenAI and Gemini APIs handle streaming responses differently
-   - For OpenAI: Async streaming works reliably with `async for chunk in response`
-   - For Gemini: Direct API calls are more reliable than streaming for short responses
-   - When implementing features that use LLM responses:
-     * Check which service is being used: `isinstance(llm, LLMService) or "Gemini" in llm.__class__.__name__`
-     * Implement service-specific handling for critical features
-     * For short, single-response use cases (like summaries), prefer direct API calls with Gemini
-     * For long, streaming responses, implement robust chunk collection
+### 4. Image Generation
+- Use `GOOGLE_API_KEY` environment variable
+- Implement 5 retries with exponential backoff
+- Add robust null checking for API responses
+- Handle failed generation gracefully
+- Use asynchronous processing to maintain performance
+- Separate content generation for different purposes:
+  * Use `generate_chapter_summary()` for narrative summaries (70-100 words)
+  * Use `generate_image_scene()` for visual scene descriptions (20-30 words)
+- Store complete agency information during Chapter 1 choice selection
+- Image prompt structure MUST follow this format:
+  ```
+  Colorful storybook illustration of this scene: [Chapter Summary]. [Agency Prefix] [Agency Name] ([Visual Details])
+  ```
+- Use category-specific prefixes for agency representation:
+  * For companions: "He/she is accompanied by"
+  * For professions: "He/she is a"
+  * For abilities: "He/she has the power of"
+  * For artifacts: "He/she is wielding"
 
-2. Error Handling Differences:
-   - OpenAI errors typically include detailed error messages and status codes
-   - Gemini errors may be less specific and require additional logging
-   - Always implement robust fallback mechanisms for LLM-dependent features
-   - Use try/except blocks with specific error types when possible
-   - Log both the error type and message for debugging
+### 5. User Preference Patterns
+- Visual consistency is critical for engagement
+- Character appearance must stay consistent unless explicitly evolved
+- Educational content must be seamlessly integrated within narrative
+- Agency evolution must be visibly reflected throughout adventure
+- Children expect detailed, clear visual descriptions
+- Clear feedback needed for educational questions
+- Completion chapter must provide satisfying resolution
+- Summary chapter should reinforce both story events and learning
 
-3. Response Format Differences:
-   - OpenAI responses typically follow requested formats more consistently
-   - Gemini may require more explicit formatting instructions
-   - When parsing responses, implement flexible parsing that can handle variations
-   - Add validation to ensure critical information is extracted correctly
-   - Consider using regex patterns that can handle different response structures
-   - For critical format requirements, use the Format Example Pattern:
-     * Provide both incorrect and correct examples in prompts
-     * Show the incorrect example first to highlight what to avoid
-     * Follow with the correct example to demonstrate desired format
-     * Use clear section headers like "INCORRECT FORMAT (DO NOT USE)" and "CORRECT FORMAT (USE THIS)"
-     * Explicitly instruct the LLM to use exact section headers
-     * Example implementation in `SUMMARY_CHAPTER_PROMPT` for title and summary extraction
+### 6. Project-Specific Patterns
+- Focus on child-friendly language and imagery
+- Balance entertainment and education
+- Provide scaffolded learning through narrative context
+- Create a sense of agency and ownership for the user
+- Incorporate visual details to enhance imagination
+- Present educational content through Story Object Method
+- Maintain consistent narrative voice throughout
+- Ensure educational explanations are age-appropriate (6-12)
 
-### LLM Prompting Best Practices
+### 7. Known Challenges
+- LLM response formatting varies between providers
+- Image generation quality varies based on prompt structure
+- Chapter state sharing requires singleton pattern
+- Case sensitivity issues when reconstructing state
+- WebSocket disconnections during page navigation
+- Race conditions with asynchronous operations
+- Memory leaks with long-lived connections
+- Placeholder text appearing in simulation logs
 
-1. **Context Isolation**:
-   * Each prompt MUST be self-contained with all necessary context
-   * Never reference previous/future prompts (e.g., "for consistency with other chapters")
-   * GOOD: "Describe appearance to help readers visualize the character"
-   * BAD: "Describe appearance for visual consistency across chapters"
-
-2. **Immediate Purpose Framing**:
-   * Frame instructions with self-contained purposes
-   * GOOD: "Include visual details to create vivid mental images"
-   * BAD: "Include visual details for future image generation"
-
-3. **Avoid System References**:
-   * Never mention system components, pipelines, or other prompts
-   * Don't reference technical implementation details
-   * GOOD: "Describe supporting characters when they first appear"
-   * BAD: "Help CHARACTER_VISUAL_UPDATE_PROMPT track characters"
-
-4. **Concrete Over Abstract**:
-   * Provide specific examples rather than abstract descriptions
-   * GOOD: "Describe clothing, physical features, and distinctive characteristics"
-   * BAD: "Provide a comprehensive visual description"
-
-5. **Educational Integration**:
-   * Frame educational content as narrative opportunities
-   * GOOD: "Create a situation where the character naturally encounters [concept]"
-   * BAD: "Insert the educational content about [concept]"
-
-6. **Character Handling**:
-   * Focus on immediate role and appearance for characters
-   * GOOD: "When introducing the forest guardian, describe their appearance in this scene"
-   * BAD: "Introduce the forest guardian consistent with their established character"
-
-7. **Implementation Example**:
-   ```
-   INEFFECTIVE: "Include visual descriptions for consistency with future chapters and to help CHARACTER_VISUAL_UPDATE_PROMPT track them."
-   
-   EFFECTIVE: "Whenever introducing a supporting character, include at least one sentence describing their visual appearance (clothing, physical features, distinctive characteristics) to help readers visualize them clearly."
-   ```
-
-### Critical Implementation Rules
-1. State Management:
-   - `AdventureState` MUST be single source of truth
-   - NEVER hardcode chapter numbers (app logic may change)
-   - Use `planned_chapter_types` for chapter progression
-   - Implement logic on state properties, not assumptions
-   - Complete state serialization required
-   - Dynamic story length via `state.story_length` (between 5 and 10 chapters)
-   - Type hints required for all state properties
-   - State changes must be logged
-   - Agency choice MUST be stored in `state.metadata["agency"]`
-   - When extending Pydantic models like AdventureState:
-     * New fields MUST be properly defined using Pydantic's Field
-     * Example: `new_field: Dict[str, Any] = Field(default_factory=dict, description="...")`
-     * Initialize fields in __init__ method by adding to kwargs before calling super().__init__
-     * Add null checking for all field operations to handle edge cases
-     * Use proper type hints for all fields
-   - Case Sensitivity in Chapter Types:
-     * The `ChapterType` enum defines lowercase values:
-       ```python
-       class ChapterType(str, Enum):
-           LESSON = "lesson"
-           STORY = "story"
-           CONCLUSION = "conclusion"
-           REFLECT = "reflect"
-           SUMMARY = "summary"
-       ```
-     * When storing or retrieving chapter types, ALWAYS convert to lowercase
-     * When comparing chapter types, use lowercase values (e.g., `chapter.chapter_type == ChapterType.STORY`)
-     * When reconstructing state from storage, convert all chapter types to lowercase
-     * This is especially important for `planned_chapter_types` and each chapter's `chapter_type`
-     * The `reconstruct_state_from_storage` method in `AdventureStateManager` handles this conversion
-   - Robust State Validation:
-     * Always validate state structure before using it
-     * Use fallback values for missing or invalid fields
-     * Add detailed logging for validation failures
-     * Handle case sensitivity issues with string comparisons
-     * Special handling for the last chapter to ensure it's always treated as a CONCLUSION chapter:
-       ```python
-       # Special handling for the last chapter
-       chapter_number = chapter.get("chapter_number")
-       if chapter_number == stored_state.get("story_length", 10):
-           logger.info(f"Setting last chapter {chapter_number} type to 'conclusion'")
-           chapter["chapter_type"] = "conclusion"
-       ```
-     * Use flexible comparison for CONCLUSION chapter detection:
-       ```python
-       # Check for CONCLUSION chapter with multiple conditions
-       if (
-           ch.chapter_type == ChapterType.CONCLUSION
-           or str(ch.chapter_type).lower() == "conclusion"
-           or (ch.chapter_number == state.story_length and state.story_length > 0)
-       ):
-           has_conclusion = True
-       ```
-   - Singleton Pattern Implementation:
-     * Use class variables for shared state
-     * Implement `__new__` method to return the same instance
-     * Add thread safety with locks
-     * Provide explicit access method:
-       ```python
-       @classmethod
-       def get_instance(cls):
-           """Get the singleton instance"""
-           if cls._instance is None:
-               instance = cls()
-               return instance
-           return cls._instance
-       ```
-     * Update FastAPI dependency injection:
-       ```python
-       def get_state_storage_service():
-           """FastAPI dependency"""
-           return StateStorageService.get_instance()
-       ```
-   
-   - URL Parameter Handling:
-     * When generating URLs with query parameters, use proper URL construction:
-       ```javascript
-       // Create a clean URL with a single state_id parameter
-       const summaryUrl = new URL('/adventure/summary', window.location.origin);
-       summaryUrl.searchParams.append('state_id', stateId);
-       
-       // Navigate to the summary page with the state ID
-       window.location.href = summaryUrl.toString();
-       ```
-     * When handling URL parameters in FastAPI, check for duplicate parameters:
-       ```python
-       # Handle potential duplicate state_id parameters
-       if "," in state_id:
-           logger.warning(f"Multiple state_id values detected: {state_id}")
-           # Use only the first value
-           state_id = state_id.split(",")[0]
-       ```
-     * In JavaScript, clean up state_id values that might contain duplicates:
-       ```javascript
-       // Clean up state_id value (handle potential duplicates)
-       if (stateId && stateId.includes(',')) {
-           console.warn('Duplicate state_id detected, using first value');
-           stateId = stateId.split(',')[0];
-       }
-       ```
-     * When handling React Router parameters, ensure proper URL construction:
-       ```javascript
-       // In react-app-patch.js
-       // Handle existing parameters in URL
-       const existingParams = new URLSearchParams(window.location.search);
-       const stateId = existingParams.get('state_id');
-       
-       if (stateId) {
-           // Clean up state_id value (handle potential duplicates)
-           const cleanStateId = stateId.includes(',') ? stateId.split(',')[0] : stateId;
-           // Use the clean state_id value
-       }
-       ```
-
-2. Chapter Requirements:
-   - First chapter MUST be STORY type with agency choice
-   - Second-to-last chapter MUST be STORY type (for pivotal choices)
-   - Last chapter MUST be CONCLUSION type (for story resolution)
-   - 50% of remaining chapters, rounded down, MUST be LESSON type (subject to available questions)
-   - 50% of LESSON chapters, rounded down, MUST be followed by REFLECT chapters
-   - REFLECT chapters MUST only occur immediately after a LESSON chapter
-   - STORY chapters MUST follow REFLECT chapters
-   - No consecutive LESSON chapters allowed (highest priority)
-   - At least 1 REFLECT chapter in every scenario (required)
-   - No question repetition in session
-   - Answer options MUST be shuffled
-   - Immediate feedback required
-   - Error recovery for failed state updates
-
-3. Agency Implementation:
-   - First chapter MUST include agency choice from four categories
-   - Agency MUST be referenced in all subsequent chapters
-   - Agency MUST evolve in REFLECT chapters based on answers
-   - Agency MUST play pivotal role in climax phase
-   - Agency MUST have meaningful resolution in conclusion
-   - Agency references MUST be tracked with `update_agency_references()`
-
-4. Image Generation:
-   - Use `GOOGLE_API_KEY` environment variable
-   - Implement 5 retries with exponential backoff
-   - Add robust null checking for API responses
-   - Handle failed generation gracefully
-   - Use asynchronous processing to maintain performance
-   - Separate content generation for different purposes:
-     * Use `generate_chapter_summary()` for narrative summaries (70-100 words)
-     * Use `generate_image_scene()` for visual scene descriptions (20-30 words)
-   - Store complete agency information during Chapter 1 choice selection:
-     * Extract and store agency category and visual details in `state.metadata["agency"]`
-     * Include `visual_details` field extracted from square brackets in `prompt_templates.py`
-     * Include `category` field to identify the type of agency (companion, ability, artifact, profession)
-   - Image prompt structure MUST follow this format:
-     ```
-     Fantasy illustration of [Chapter Summary], [Agency Prefix] [Agency Name] ([Visual Details]), [Base Style]
-     ```
-   - Use category-specific prefixes for agency representation:
-     * For companions: "He/she is accompanied by"
-     * For professions: "He/she is a"
-     * For abilities: "He/she has the power of"
-     * For artifacts: "He/she is wielding"
-   - For chapter images (after Chapter 1):
-     * Use `generate_image_scene()` to extract the most visually striking moment
-     * Focus on specific dramatic action or emotional peak
-     * Include clear visual elements (character poses, expressions, environment)
-     * Target the moment with the most visual energy or emotional impact
-
-5. Data Model:
-   - Story categories in `new_stories.yaml` MUST include `settings` (renamed from `setting_types`)
-   - `story_rules` field has been removed from the data model
-   - Required narrative elements are now only `settings` (validator updated in `story.py`)
-   - System prompt template uses `settings` but no longer includes `story_rules`
-
-6. File Encoding:
-   - All YAML files in `app/data/stories/` MUST be opened with UTF-8 encoding
-   - Use `encoding="utf-8"` parameter when opening files in `story_loader.py`
-   - This ensures proper handling of special characters in story content
-   - Default Windows encoding (cp1252) cannot handle certain special characters
-
-7. Modular Summary Service Pattern:
-   - Package Structure:
-     * Create a dedicated package directory for related functionality (e.g., `app/services/summary/`)
-     * Use `__init__.py` to export only the public API components
-     * Separate code by responsibility into multiple files
-     * Implement proper dependency injection for testability
-   
-   - Component Organization:
-     * `exceptions.py`: Define custom exception classes for specific error scenarios
-     * `helpers.py`: Implement utility functions and helper classes
-     * `dto.py`: Create data transfer objects for clean data exchange
-     * `*_processor.py`: Implement specialized processors for different aspects of functionality
-     * `service.py`: Create a main service class that orchestrates the components
-   
-   - Dependency Injection:
-     * Components should receive dependencies through constructor parameters
-     * Use FastAPI's dependency injection system for API endpoints:
-       ```python
-       def get_service():
-           """Dependency injection for Service."""
-           dependency = Dependency()
-           return Service(dependency)
-           
-       @router.get("/endpoint")
-       async def endpoint(
-           param: Type,
-           service: Service = Depends(get_service)
-       ):
-           # Use injected service
-       ```
-     * This approach facilitates unit testing with mock objects
-     * It reduces coupling between components
-     * It makes the code more maintainable and extensible
-   
-   - Error Handling:
-     * Define specific exception types for different error scenarios
-     * Use a base exception class for the package (e.g., `SummaryError`)
-     * Implement specific exception subclasses (e.g., `StateNotFoundError`, `SummaryGenerationError`)
-     * Handle exceptions at the appropriate level:
-       ```python
-       try:
-           # Operation that might fail
-       except SpecificError as e:
-           # Handle specific error
-           logger.error(f"Specific error: {str(e)}")
-           # Take appropriate action
-       except BaseError as e:
-           # Handle base error
-           logger.error(f"Base error: {str(e)}")
-           # Take appropriate action
-       ```
-     * Convert internal exceptions to HTTP exceptions at the API boundary:
-       ```python
-       try:
-           # Operation that might fail
-       except SpecificError as e:
-           raise HTTPException(status_code=404, detail=str(e))
-       except BaseError as e:
-           raise HTTPException(status_code=500, detail=str(e))
-       ```
-   
-   - Logging:
-     * Use a dedicated logger for each module:
-       ```python
-       logger = logging.getLogger("summary_service.component_name")
-       ```
-     * Include detailed context in log messages:
-       ```python
-       logger.info(f"Processing chapter {chapter_number} of type {chapter_type}")
-       ```
-     * Use appropriate log levels:
-       * DEBUG: Detailed information for debugging
-       * INFO: General information about normal operation
-       * WARNING: Potential issues that don't prevent operation
-       * ERROR: Errors that prevent specific operations
-       * CRITICAL: Critical errors that prevent the application from functioning
-     * Log at the beginning and end of important operations:
-       ```python
-       logger.info(f"Starting operation: {operation_name}")
-       # Operation code
-       logger.info(f"Completed operation: {operation_name}")
-       ```
-
-8. Backend-Frontend Naming Conventions:
-   - Backend code (Python) uses snake_case naming convention
-   - Frontend code (JavaScript/React) uses camelCase naming convention
-   - Centralized conversion utility in `app/utils/case_conversion.py` handles the conversion
-   - Conversion happens at the API boundary in `get_adventure_summary()` function
-   - Backend functions consistently use snake_case internally:
-     * `extract_chapter_summaries()` uses `chapter_type` instead of `chapterType`
-     * `extract_educational_questions()` uses `user_answer` instead of `userAnswer`
-     * `calculate_adventure_statistics()` uses `chapters_completed` instead of `chaptersCompleted`
-     * `format_adventure_summary_data()` uses `educational_questions` instead of `educationalQuestions`
-   - Field names are standardized for semantic consistency:
-     * `user_answer` is used instead of `chosen_answer` for better clarity
-     * `educational_questions` is used instead of `lesson_questions` for consistency
-   - The conversion utility handles nested dictionaries and lists recursively:
-     ```python
-     # Convert snake_case to camelCase
-     def to_camel_case(snake_str):
-         components = snake_str.split("_")
-         return components[0] + "".join(x.title() for x in components[1:])
-     
-     # Recursively convert dictionary keys
-     def snake_to_camel_dict(d):
-         if not isinstance(d, dict):
-             return d
-         
-         result = {}
-         for key, value in d.items():
-             if isinstance(key, str) and not key.startswith("_"):
-                 camel_key = to_camel_case(key)
-                 
-                 if isinstance(value, dict):
-                     result[camel_key] = snake_to_camel_dict(value)
-                 elif isinstance(value, list):
-                     result[camel_key] = [
-                         snake_to_camel_dict(item) if isinstance(item, dict) else item
-                         for item in value
-                     ]
-                 else:
-                     result[camel_key] = value
-             else:
-                 result[key] = value
-         
-         return result
-     ```
-   - API endpoint applies conversion at the boundary:
-     ```python
-     @router.get("/api/adventure-summary")
-     async def get_adventure_summary(state_id: Optional[str] = None):
-         # ... existing code ...
-         
-         # Format the adventure state data (using snake_case consistently)
-         summary_data = format_adventure_summary_data(adventure_state)
-         
-         # Import the case conversion utility
-         from app.utils.case_conversion import snake_to_camel_dict
-         
-         # Convert all keys from snake_case to camelCase at the API boundary
-         camel_case_data = snake_to_camel_dict(summary_data)
-         
-         return camel_case_data
-     ```
-   - This approach respects the conventions of each language while providing a clean, consistent interface between them
-
-8. SUMMARY Chapter Implementation:
-   - SUMMARY chapter MUST follow the CONCLUSION chapter
-   - AdventureState MUST include a `chapter_summaries` field to store summaries
-   - Chapter summaries MUST be generated progressively after each user choice
-   - Use the `generate_chapter_summary` method from ChapterManager for narrative summaries
-   - Use the `generate_image_scene` method from ChapterManager for image generation
-   - Store summaries in the AdventureState's chapter_summaries list
-   - Add error handling to ensure the main flow continues even if summary generation fails
-   - The `generate_summary_content` function MUST use stored summaries when available
-   - Include fallback to the original LLM-based summary generation if no summaries are available
-   - Maintain backward compatibility with the existing summary functionality
-   - Preserve chapter context by showing chapter numbers and types in the summary
-   - Chapter summaries should NOT be artificially truncated - the full summary as generated by the LLM should be used
-   - The LLM prompt (SUMMARY_CHAPTER_PROMPT) already guides the model to generate concise summaries (70-100 words)
-   - The LLM prompt (IMAGE_SCENE_PROMPT) guides the model to generate vivid visual descriptions (20-30 words)
-   
-   - Consistent Summary Generation for CONCLUSION Chapter:
-     * For regular chapters, summaries are generated when a user makes a choice, which creates a chapter response
-     * The CONCLUSION chapter doesn't have choices, but we treat the "Take a Trip Down Memory Lane" button as a choice
-     * When the button is clicked, it sends a "reveal_summary" chosen_path to the WebSocket Service
-     * The WebSocket Service creates a placeholder response for the CONCLUSION chapter:
-       ```python
-       # Process it like a regular choice with placeholder values
-       story_response = StoryResponse(
-           chosen_path="end_of_story", 
-           choice_text="End of story"
-       )
-       conclusion_chapter.response = story_response
-       ```
-     * This allows the CONCLUSION chapter to go through the same summary generation process as other chapters
-     * The STORY_COMPLETE event is triggered when chapter count equals story length (not checking chapter type)
-     * This consistent approach simplifies the code, improves maintainability, and makes it more adaptable to future changes
-   
-   - Enhanced State Storage Process:
-     * The `store_adventure_state` function in `app/routers/summary_router.py` checks for missing chapter summaries:
-       ```python
-       # Ensure chapter_summaries exists
-       if not state_data.get('chapter_summaries'):
-           state_data['chapter_summaries'] = []
-           logger.info("Created empty chapter_summaries array")
-       ```
-     * It generates summaries for chapters that don't have them:
-       ```python
-       # Check if we need to generate a summary for this chapter
-       if len(state_data['chapter_summaries']) < chapter_number:
-           logger.info(f"Missing summary for chapter {chapter_number} ({chapter_type})")
-           
-           # Generate the summary
-           summary_result = await chapter_manager.generate_chapter_summary(
-               chapter.get('content', ''), choice_text, choice_context
-           )
-       ```
-     * Special handling for the CONCLUSION chapter with placeholder choice:
-       ```python
-       # For conclusion chapter, use placeholder choice
-       if chapter_type == "conclusion":
-           choice_text = "End of story"
-           choice_context = ""
-           logger.info(f"Using placeholder choice for CONCLUSION chapter")
-       ```
-     * Ensures consistent chapter summaries in the Summary Chapter
-     * Eliminates duplicate summary generation
-     * Works with existing frontend code (no client-side changes needed)
-     * Handles edge cases gracefully with fallback mechanisms
-     
-   - Summary Chapter Robustness:
-     * When chapter summaries are missing, generate placeholder summaries:
-       ```python
-       if not state.chapter_summaries or len(state.chapter_summaries) == 0:
-           logger.warning("No chapter summaries found in AdventureState")
-           # Generate placeholder summaries for each chapter
-           state.chapter_summaries = [
-               f"Summary for Chapter {i}" for i in range(1, len(state.chapters) + 1)
-           ]
-       ```
-     * When extracting titles, use fallbacks to ensure titles are always available:
-       ```python
-       # Use stored title if available
-       if hasattr(state, "summary_chapter_titles") and i <= len(state.summary_chapter_titles):
-           title = state.summary_chapter_titles[i - 1]
-       # Fall back to extraction if needed
-       elif ":" in summary and len(summary.split(":", 1)[0]) < 50:
-           title = summary.split(":", 1)[0].strip()
-           summary_text = summary.split(":", 1)[1].strip()
-       else:
-           # Generate a generic title if we couldn't extract one
-           title = f"Chapter {i}: {chapter.chapter_type.value.capitalize()} Chapter"
-       ```
-     * When educational questions are missing, add fallback questions:
-       ```python
-       # If we still have no questions but have LESSON chapters, add a fallback question
-       if len(educational_questions) == 0:
-           lesson_chapters = [ch for ch in state.chapters if ch.chapter_type == ChapterType.LESSON]
-           if lesson_chapters:
-               logger.warning("No questions found despite having LESSON chapters, adding fallback question")
-               educational_questions.append({
-                   "question": "What did you learn from this adventure?",
-                   "userAnswer": "The adventure was completed successfully",
-                   "isCorrect": True,
-                   "explanation": "This is a placeholder question because no actual questions could be extracted.",
-               })
-       ```
-     * Ensure statistics are always valid:
-       ```python
-       # Ensure we don't have more correct answers than questions
-       if statistics["correctAnswers"] > statistics["questionsAnswered"]:
-           logger.warning(f"More correct answers than questions, adjusting")
-           statistics["correctAnswers"] = statistics["questionsAnswered"]
-
-       # Ensure we have at least one question for the statistics
-       if statistics["questionsAnswered"] == 0:
-           logger.warning("No questions found, setting to 1 for statistics")
-           statistics["questionsAnswered"] = 1
-           statistics["correctAnswers"] = 1  # Assume correct for better user experience
-       ```
-     * Use case-insensitive chapter type matching:
-       ```python
-       # Get chapter type and convert to lowercase for case-insensitive comparison
-       chapter_type = str(chapter.get("chapter_type", "")).lower()
-       
-       # Check if this is a lesson chapter with a matching question
-       if chapter_type == "lesson" and chapter.get("question"):
-           # Process question data
-       ```
-   
-   - Known Issues and TODOs:
-     * The current implementations for data extraction related to the summary chapter are not working correctly yet
-     * Despite the fallback mechanisms, some users still experience issues with missing chapter summaries and questions
-     * The "Trip down memory lane" button sometimes fails to load the summary chapter properly
-     * TODO: Further investigate and fix the root cause of missing chapter summaries and questions
-     * TODO: Improve the robustness of the data extraction process
-     * TODO: Add more comprehensive logging to track the state of chapter summaries and questions
-     * TODO: Consider implementing a more persistent storage solution for adventure states
-
-8. Frontend Component Architecture:
-   - Use modular JavaScript classes for UI components
-   - Implement the Carousel class with these requirements:
-     * Constructor must accept configuration options (elementId, itemCount, dataAttribute, inputId, onSelect)
-     * Support keyboard, button, and touch controls
-     * Implement proper event handling and cleanup
-     * Use mobile-specific optimizations when needed
-   - Follow CSS organization pattern:
-     * Layout styles in layout.css (structural elements, containers, screen transitions)
-     * Component styles in components.css (reusable UI components)
-     * Specialized component styles in dedicated files (e.g., carousel-component.css)
-     * Base styles in theme.css (colors, variables) and typography.css (text styling)
-     * Mobile-specific styles with media queries
-   - Maintain progressive enhancement:
-     * Core functionality must work without JavaScript
-     * Add enhanced features when JavaScript is available
-     * Provide fallbacks for older browsers
-   - React App Development and Build Process:
-     * React app source code is located in `app/static/summary-chapter/`
-     * After making changes to React components, you MUST rebuild the app:
-       ```
-       cd app/static/summary-chapter
-       npm run build
-       ```
-     * The build process creates optimized files in the `dist` folder
-     * These files are served by FastAPI through the `/adventure/summary` endpoint
-     * Changes to React source files won't be reflected until you rebuild
-     * For development, you can use `npm run dev` for hot reloading
-     * Key React components:
-       * `ChapterCard.tsx`: Displays chapter information in the adventure summary
-       * `EducationalCard.tsx`: Displays educational questions and answers
-       * `StatisticCard.tsx`: Displays adventure statistics (chapters completed, questions answered, time spent)
-       * `AdventureSummary.tsx`: Main page component that integrates all other components
-     * Adventure Summary Statistics:
-       * Statistics are extracted from the AdventureState and displayed in StatisticCard components
-       * `chaptersCompleted`: Shows the total number of chapters in the adventure (typically 10)
-       * `questionsAnswered`: Shows the number of questions asked in LESSON chapters (typically 3)
-       * `correctAnswers`: Shows the number of questions answered correctly (calculated from educational questions)
-       * `timeSpent`: Shows the time spent on the adventure (currently hardcoded to "30 mins")
-
-9. Simulation and Testing:
-   - Simulation Scripts Organization:
-     * `generate_all_chapters.py`: Main simulation script for generating complete adventures
-     * `generate_chapter_summaries.py`: Standalone script for generating chapter summaries and React-compatible JSON data
-     * `chapter_tools.py`: Utility functions for working with chapters
-     * `log_utils.py`: Utility functions for log processing
-     * `analyze_chapter_state.py`: Tool for analyzing chapter state
-     * `test_chapter_sequence_validation.py` and `test_chapter_type_assignment.py`: Test files for validation
-   
-   - Chapter Summary Generation:
-     * Use `generate_chapter_summaries.py` with the `--react-json` flag to generate React-compatible JSON data
-     * The script extracts chapter content from simulation state JSON files
-     * It generates summaries using the same prompt template for all chapters
-     * It extracts educational questions and calculates statistics
-     * Command-line options:
-       ```
-       python tests/simulations/generate_chapter_summaries.py --react-json
-       ```
-     * Statistics calculation:
-       * `chaptersCompleted`: Extracted from `state.story_length` (typically 10)
-       * `questionsAnswered`: Hardcoded to 3 for the current implementation
-       * `correctAnswers`: Calculated by counting questions with `isCorrect: true`
-       * `timeSpent`: Hardcoded to "30 mins" for the current implementation
-   
-   - Standardized Logging Requirements:
-     * Use consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`, `EVENT:CHOICE_SELECTED`)
-     * Include source tracking for debugging (e.g., `source="chapter_update"`, `source="verification"`)
-     * Use structured data in log entries with standardized fields
-     * Implement multiple verification points to ensure complete data capture
-     * Use the `log_chapter_summary()` function for all chapter summary logging
-     * Use the `verify_chapter_summaries()` function to check for missed summaries
-   
-   - Error Handling Requirements:
-     * Use specific error types for different failure scenarios
-     * Implement exponential backoff for retries with configurable parameters
-     * Provide graceful degradation when services are unavailable
-     * Include comprehensive logging of error states and recovery attempts
-     * Use the `establish_websocket_connection()` function with proper retry logic
-     * Use the `send_message()` function for consistent WebSocket message sending
-   
-   - WebSocket Implementation Requirements:
-     * Use `import websockets.client` instead of `import websockets`
-     * Use `websockets.client.WebSocketClientProtocol` in type hints:
-       ```python
-       async def function_name(
-           websocket: websockets.client.WebSocketClientProtocol,
-           param: Type
-       ) -> ReturnType:
-       ```
-     * Implement proper timeout handling for different operation types:
-       ```python
-       STANDARD_TIMEOUT = 30  # seconds for general operations
-       CONCLUSION_TIMEOUT = 60  # seconds for conclusion chapter
-       SUMMARY_TIMEOUT = 60  # seconds for summary operations
-       ```
-     * Use `asyncio.wait_for()` with appropriate timeout values
-     * Handle connection closed events and timeouts gracefully
-     * Implement retry logic with exponential backoff for connection attempts
-   
-   - Simulation Structure:
-     * A complete simulation must include all 10 chapters plus the SUMMARY chapter
-     * The simulation must send the "reveal_summary" choice after the CONCLUSION chapter
-     * All chapter summaries must be captured and logged with standardized format
-     * The simulation must verify that all chapter summaries are properly logged
-     * The simulation must include comprehensive logging of all events and state transitions
-   
-   - Test State Generation:
-     * Use `tests/utils/generate_test_state.py` to create realistic test states
-     * By default, it uses actual simulation via `generate_all_chapters.py`
-     * It provides a fallback to mock state when simulation fails
-     * Use the `use_mock=True` parameter only for quick testing or when simulation fails
-     * The function adds metadata to track state source for debugging
-     * Command-line options:
-       ```
-       python tests/utils/generate_test_state.py --category "enchanted_forest_tales" --topic "Singapore History" --output "tests/data/test_state.json"
-       ```
-   
-   - Summary Button Testing:
-     * Use `tests/test_summary_button_flow.py` to test the "Take a Trip Down Memory Lane" button
-     * By default, it uses realistic states generated by `generate_test_state.py`
-     * It verifies the entire flow from storing a state to retrieving and reconstructing it
-     * It validates the summary data format, chapter summaries, educational questions, and statistics
-     * Command-line options:
-       ```
-       # Run with default settings (uses realistic state generation)
-       python tests/test_summary_button_flow.py
-       
-       # Run with synthetic hardcoded state
-       python tests/test_summary_button_flow.py --synthetic
-       
-       # Load state from a file
-       python tests/test_summary_button_flow.py --file path/to/state.json
-       
-       # Use specific story category and lesson topic
-       python tests/test_summary_button_flow.py --category "enchanted_forest_tales" --topic "Singapore History"
-       
-       # Compare synthetic and realistic states
-       python tests/test_summary_button_flow.py --compare
-       ```
-   
-   - Case Sensitivity Testing:
-     * Use `tests/test_state_storage_reconstruction.py` to test case sensitivity handling
-     * It creates a test state with uppercase chapter types
-     * It verifies that chapter types are correctly converted to lowercase during reconstruction
-     * It checks that the last chapter is correctly treated as a CONCLUSION chapter
-     * Command-line options:
-       ```
-       python tests/test_state_storage_reconstruction.py
-       ```
-
-## Documentation
-
-- Type hints are required for all functions.
-- Docstrings are mandatory for all classes and functions.
-- State changes must be logged.
-- Agency references must be tracked.
+### 8. Tool Usage Patterns
+- Wrap `sys.executable` in subprocess calls (not hardcoded "python")
+- Use detailed logging with context (chapter, state ID, etc.)
+- Implement exponential backoff for retries
+- Use structured data in log entries
+- Add verification points throughout critical paths
+- Implement graceful degradation for service failures
+- Define specific error types for different failure scenarios
+- Use dependency injection for better testability

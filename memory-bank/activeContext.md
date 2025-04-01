@@ -1,8 +1,95 @@
 # Active Context
 
-## Current Focus: Character Visual Consistency & Evolution Debugging (2025-04-01)
+## Current Focus: Protagonist Inconsistencies Fix (2025-04-01)
 
-We've implemented detailed logging for character visuals state management to help debug visual inconsistencies in character evolution. This implementation builds on the recently completed "Character Visual Consistency & Evolution Implementation" (see `wip/characters_evolution_visual_inconsistencies.md`).
+We're currently working on the `protagonist_inconsistencies` branch to address issues with protagonist visual consistency across chapters. The implementation has been partially completed with the two-step image prompt generation system, but there are remaining tasks to fully integrate protagonist descriptions throughout the application.
+
+### Problem Analysis
+
+The protagonist's visual appearance has shown inconsistencies across chapters:
+
+1. **Inconsistent Protagonist Descriptions:**
+   * Different chapters may describe the protagonist with varying visual details
+   * The image generation prompts don't consistently maintain the protagonist's base appearance
+   * Agency elements (companion, ability, etc.) sometimes replace rather than augment the protagonist's description
+
+2. **Gender Inconsistency:**
+   * The protagonist's gender sometimes changes between chapters
+   * No mechanism exists to maintain gender consistency in LLM-generated content
+   * Pronouns may switch unexpectedly (he/she/they) across the adventure
+
+3. **Missing Visual Extraction:**
+   * Character visuals are not consistently updated between chapters
+   * There's no formal validation for character visual extraction
+   * The protagonist's appearance evolution isn't properly tracked
+
+### Partial Implementation
+
+We've already implemented a two-step prompt generation process for images:
+
+1. **Predefined Protagonist Descriptions:**
+   * Added `PREDEFINED_PROTAGONIST_DESCRIPTIONS` to `prompt_templates.py`
+   * Added `protagonist_description` field to `AdventureState`
+   * Randomly selects a description during state initialization
+
+2. **Prompt Synthesis:**
+   * Created `synthesize_image_prompt` in `image_generation_service.py`
+   * Uses Gemini Flash to intelligently combine protagonist description, agency details, and scene
+   * Improved image consistency by prioritizing scene content while maintaining protagonist appearance
+
+3. **Agency-Focused Imagery:**
+   * Updated `generate_agency_images` to focus solely on agency elements
+   * Enhanced visual representation of agency choices
+   * Added better error handling and fallbacks
+
+### Remaining Tasks
+
+1. **Chapter 1 Prompt Enhancement:**
+   * Update `FIRST_CHAPTER_PROMPT` to incorporate protagonist description
+   * Modify `build_first_chapter_prompt` to pass protagonist description
+   * Ensure the LLM respects the chosen protagonist gender and appearance
+
+2. **Character Visual Management:**
+   * Enhance `update_character_visuals` in `adventure_state_manager.py`
+   * Add protagonist consistency checks
+   * Ensure protagonist description is included in all character visuals updates
+
+3. **Gender Consistency:**
+   * Extract protagonist gender from predefined description
+   * Store gender in `state.metadata["protagonist"]["gender"]`
+   * Add instructions in prompts to maintain gender consistency
+   * Add validation to ensure pronouns remain consistent
+
+4. **Visual Evolution Tracking:**
+   * Enhance logging to show protagonist visual evolution
+   * Ensure changes are intentional and story-driven
+   * Maintain a history of visual changes in the state
+
+### Implementation Files
+
+The key files requiring modification are:
+
+1. `app/services/llm/prompt_templates.py`:
+   * Update `FIRST_CHAPTER_PROMPT` to include protagonist description
+   * Add placeholder for protagonist gender consistency
+
+2. `app/services/llm/prompt_engineering.py`:
+   * Modify `build_first_chapter_prompt` to pass protagonist description
+   * Add gender consistency instructions
+
+3. `app/services/adventure_state_manager.py`:
+   * Enhance `update_character_visuals` with protagonist consistency
+   * Add gender extraction and validation
+   * Implement visual evolution tracking
+
+4. `app/services/websocket/choice_processor.py`:
+   * Update `_update_character_visuals` to respect protagonist description
+   * Add validation for extracted character visuals
+   * Enhance logging for protagonist visual changes
+
+## Previous Focus: Character Visual Consistency & Evolution Debugging (2025-04-01)
+
+We implemented detailed logging for character visuals state management to help debug visual inconsistencies in character evolution. This implementation builds on the recently completed "Character Visual Consistency & Evolution Implementation" (see `wip/characters_evolution_visual_inconsistencies.md`).
 
 ### Problem Analysis
 
@@ -25,7 +112,7 @@ The character visual consistency and evolution system was recently implemented, 
 
 ### Implemented Solution
 
-We've added comprehensive logging throughout the character visuals pipeline to provide complete visibility into the state management:
+We added comprehensive logging throughout the character visuals pipeline to provide complete visibility into the state management:
 
 1. **Character Visual Extraction** (`choice_processor.py`):
    * Added logging to show the existing character visuals before update
@@ -47,100 +134,3 @@ We've added comprehensive logging throughout the character visuals pipeline to p
 4. **Image Prompt Synthesis** (`image_generation_service.py`):
    * Added logging to show character visuals being included in the image prompt
    * Added logging when no character visuals are available
-
-All logs include the chapter number for context, making it easy to track character evolution across chapters. For example:
-
-```
-[CHAPTER 3] AdventureState.character_visuals BEFORE update:
-[CHAPTER 3] - Protagonist: "Wearing a blue tunic with a small pouch"
-[CHAPTER 3] - Wise Owl: "A grand owl with snowy feathers and golden spectacles"
-
-[CHAPTER 3] LLM response (character_visuals):
-[CHAPTER 3] - Protagonist: "Wearing a blue tunic with a small pouch, now with a scratch on his arm"
-[CHAPTER 3] - Wise Owl: "A grand owl with snowy feathers and golden spectacles"
-[CHAPTER 3] - Forest Guardian: "A tall figure with bark-like skin and leafy hair, eyes glowing green"
-
-[CHAPTER 3] AdventureState.character_visuals AFTER update:
-[CHAPTER 3] NEW: "Forest Guardian" - "A tall figure with bark-like skin and leafy hair, eyes glowing green"
-[CHAPTER 3] UPDATED: "Protagonist"
-[CHAPTER 3]   BEFORE: "Wearing a blue tunic with a small pouch"
-[CHAPTER 3]   AFTER:  "Wearing a blue tunic with a small pouch, now with a scratch on his arm"
-[CHAPTER 3] UNCHANGED: "Wise Owl" - "A grand owl with snowy feathers and golden spectacles"
-[CHAPTER 3] Summary: 1 new, 1 updated, 1 unchanged
-```
-
-### Implementation Details
-
-1. **Modified Files:**
-   * `app/services/websocket/choice_processor.py`: Enhanced `_update_character_visuals` function with detailed logging
-   * `app/services/adventure_state_manager.py`: Enhanced `update_character_visuals` method with detailed logging
-   * `app/services/websocket/image_generator.py`: Enhanced `generate_chapter_image` function with detailed logging
-   * `app/services/image_generation_service.py`: Enhanced `synthesize_image_prompt` method with detailed logging
-
-2. **Logging Approach:**
-   * Used consistent `[CHAPTER X]` prefix for all logs to provide context
-   * Added clear section headers (BEFORE update, AFTER update, etc.)
-   * Used detailed formatting for character visuals with quotes to show exact content
-   * Added summary counts to provide a quick overview of changes
-
-3. **Key Benefits:**
-   * Complete visibility into character visuals state management
-   * Ability to track character evolution across chapters
-   * Easy identification of issues with character visual extraction or updates
-   * Clear view of which character visuals are being used for image generation
-
-### Future Considerations
-
-1. **Log Level Optimization:**
-   * Consider moving some of the more detailed logs to DEBUG level in production
-   * Keep critical state changes at INFO level for monitoring
-
-2. **Structured Logging:**
-   * Consider implementing structured logging for easier parsing and analysis
-   * Could use JSON format for logs to enable automated monitoring and alerting
-
-3. **Performance Impact:**
-   * Monitor the performance impact of the additional logging
-   * Consider adding conditional logging based on a debug flag for production environments
-
-## Previous Focus: Chapter Number Calculation Fix in stream_handler.py (2025-03-31)
-
-We've fixed an issue with incorrect chapter number calculation in the `stream_chapter_content` function in `stream_handler.py`. This issue was causing the chapter number to be incorrectly reported as one higher than it should be.
-
-### Problem Analysis
-
-The issue was in how the chapter number was calculated in the `stream_chapter_content` function:
-
-1. **Incorrect Calculation:**
-   * The chapter number was calculated as `len(state.chapters) + 1`
-   * This calculation assumed the chapter was about to be added to the state
-   * However, by the time this function is called, the chapter has already been added to the state
-
-2. **Root Cause:**
-   * The function was using a calculation that would be correct before adding a chapter
-   * But since the chapter was already added, it was effectively counting the chapter twice
-
-3. **Impact:**
-   * Incorrect chapter numbers were being logged (e.g., "Current chapter number calculated as: 4" when processing chapter 3)
-   * This could potentially affect image generation and other processes that rely on the correct chapter number
-
-### Implemented Solution
-
-We modified the chapter number calculation in `stream_handler.py`:
-
-1. **Updated Calculation:**
-   * Changed from `current_chapter_number = len(state.chapters) + 1` to `current_chapter_number = len(state.chapters)`
-   * Updated the comment to clarify that the chapter has already been added to the state at this point
-
-2. **Implementation Details:**
-   * The fix was isolated to the `stream_chapter_content` function in `stream_handler.py`
-   * Other files (`content_generator.py` and `choice_processor.py`) correctly calculate the chapter number as they are called before the chapter is added to the state
-
-3. **Benefits:**
-   * Correct chapter numbers are now reported in logs
-   * Image generation and other processes now use the correct chapter number
-   * Improved code clarity with better comments explaining the calculation
-
-### Verification
-
-We verified that the other files (`content_generator.py` and `choice_processor.py`) correctly calculate the chapter number as `len(state.chapters) + 1` because they are called before the new chapter is added to the state. Only `stream_handler.py` needed to be fixed.

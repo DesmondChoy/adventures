@@ -1,68 +1,118 @@
 # Product Context: Learning Odyssey
 
-## 1. Why This Project Exists
+## 1. Product Mission
 
-Learning Odyssey exists to transform education for children (target age 6-12) by making it **engaging, interactive, and personalized**. Traditional learning methods can often be passive and fail to capture a child's imagination. This project aims to bridge the gap between entertainment and education by embedding learning concepts within immersive, choice-driven narrative adventures.
+Learning Odyssey transforms education for children (ages 6-12) by making learning **engaging, interactive, and personalized**. Traditional learning methods often fail to capture a child's imagination, leading to disengagement. This project bridges the gap between entertainment and education by embedding learning concepts within immersive, choice-driven narrative adventures.
 
-By leveraging Large Language Models (LLMs) for dynamic content generation and WebSockets for real-time interaction, Learning Odyssey creates unique, replayable experiences where learning feels like a natural part of an exciting journey, rather than a separate task.
+By leveraging LLMs for dynamic content generation and WebSockets for real-time interaction, Learning Odyssey creates unique, replayable experiences where learning feels like a natural part of an exciting journey rather than a separate task.
 
-## 2. Problems It Solves
+## 2. Problems Solved
 
-1.  **Passive Learning & Lack of Engagement:** Addresses the challenge of keeping children engaged with educational material by replacing static content with interactive stories, choices, and visual elements (AI-generated images).
-2.  **One-Size-Fits-All Education:** Creates personalized learning paths. The combination of user-selected story themes/lesson topics and choices made during the adventure ensures each journey is unique. The "Agency" concept (a core choice made early on) is designed to evolve and influence the narrative, giving the user a sense of ownership.
-3.  **Disconnection Between Fun and Learning:** Seamlessly integrates specific educational topics (e.g., Farm Animals, Human Body, Singapore History) into compelling fantasy narratives (e.g., Enchanted Forest, Circus Capers). LESSON and REFLECT chapters ensure learning objectives are met within the story's flow.
-4.  **Lack of Feedback and Reflection:** Incorporates REFLECT chapters specifically designed to deepen understanding after a LESSON, encouraging critical thinking. The final SUMMARY chapter provides a recap of both the story and the learning achievements.
-5.  **Scalability of Content Creation:** Uses LLMs to generate narrative content, potentially allowing for a wider variety of stories and adaptations based on user interaction, reducing the bottleneck of manual content creation.
+1. **Passive Learning & Disengagement:** 
+   * Replaces static content with interactive stories, meaningful choices, and visual elements
+   * Real-time streaming creates a dynamic reading experience
+   * AI-generated images bring concepts to life visually
 
-## 3. How It Should Work
+2. **One-Size-Fits-All Education:** 
+   * Creates personalized learning paths through user-selected themes and topics
+   * Choices made during the adventure ensure each journey is unique
+   * The "Agency" system evolves and influences the narrative, giving users ownership
 
-Learning Odyssey functions as a web application with a FastAPI backend and a dynamic frontend primarily driven by WebSockets, with specific components like the summary page potentially using React.
+3. **Disconnection Between Fun and Learning:** 
+   * Seamlessly integrates educational topics into compelling fantasy narratives
+   * LESSON and REFLECT chapters ensure learning objectives within the story's flow
+   * Learning becomes discovery rather than testing
 
-1.  **Initialization:**
-    *   The user accesses the web application (likely starting at `/` or `/adventure`).
-    *   They are presented with choices for a **Story Category** (e.g., "Enchanted Forest Tales") and a **Lesson Topic** (e.g., "Human Body") via interactive carousels (Jinja2 templates).
-    *   Upon confirmation, an `AdventureState` is initialized. This state includes the chosen category/topic, a predefined `story_length` (currently fixed at 10 chapters), a sequence of `planned_chapter_types` (e.g., STORY, LESSON, REFLECT, CONCLUSION, SUMMARY), and randomly selected core narrative/sensory elements based on the chosen story category YAML file.
+4. **Lack of Feedback and Reflection:** 
+   * REFLECT chapters deepen understanding after LESSON chapters
+   * Final SUMMARY chapter recaps both story and learning achievements
+   * Educational questions with explanations reinforce concepts
 
-2.  **Adventure Progression (WebSocket Interaction):**
-    *   A WebSocket connection is established (`/ws/story/{story_category}/{lesson_topic}`).
-    *   The backend sends the content for the current chapter, streaming it word-by-word for an engaging effect.
-    *   **Image Generation:** Relevant images (based on chapter content or choices) are generated asynchronously using `ImageGenerationService` (Google Imagen) and sent via WebSocket to enhance the visual experience.
-    *   **Chapter Types:**
-        *   **STORY:** Presents narrative generated by the LLM based on the `AdventureState` and prompt engineering rules. Ends with 3 choices. The *first* STORY chapter includes the crucial "Agency" choice, which is stored in the state's metadata.
-        *   **LESSON:** Presents a multiple-choice question related to the `lessonTopic`, wrapped in an LLM-generated narrative context (Story Object Method).
-        *   **REFLECT:** Follows a LESSON chapter. Uses LLM prompts to guide the user through narrative reflection on the previous lesson's concept, incorporating their Agency element. Ends with 3 story-driven choices.
-        *   **CONCLUSION:** The final narrative chapter (Chapter 10), generated by the LLM to provide resolution based on the journey and choices. Has no choices.
-    *   **User Choices:** The user selects a choice (story path or lesson answer). This is sent back via WebSocket.
-    *   **Backend Processing:**
-        *   The backend receives the choice.
-        *   It updates the `AdventureState` (adds the completed chapter, including the user's `response`).
-        *   It generates a concise **summary and title** for the *completed* chapter using the LLM and stores it in `state.chapter_summaries` and `state.summary_chapter_titles`.
-        *   It determines the next chapter type based on `planned_chapter_types`.
-        *   It generates the content for the *next* chapter using the LLM, appropriate prompts, and the updated `AdventureState`.
-        *   It sends the new chapter content back to the user via WebSocket.
+5. **Content Creation Bottlenecks:** 
+   * Uses LLMs to generate adaptive narrative content
+   * Allows for wider variety of stories and adaptations
+   * Reduces manual content creation requirements
 
-3.  **Adventure Completion & Summary:**
-    *   After the CONCLUSION chapter (Chapter 10) is streamed, the backend sends a `story_complete` message, enabling the "Take a Trip Down Memory Lane" button.
-    *   **Summary Trigger:** Clicking the summary button sends a special `reveal_summary` choice via WebSocket (with REST API fallback).
-    *   **Summary Generation:**
-        *   The backend receives the `reveal_summary` trigger.
-        *   It generates the summary for the just-completed CONCLUSION chapter.
-        *   It retrieves the full `AdventureState` (which now includes all chapter summaries).
-        *   It stores this final state using `StateStorageService`, getting a unique `state_id`.
-        *   It sends a `summary_ready` message back via WebSocket containing the `state_id`.
-    *   **Summary Display:**
-        *   The frontend receives the `state_id` and navigates the user to `/adventure/summary?state_id=<id>`.
-        *   The React application at `/adventure/summary` loads.
-        *   Helper scripts (`summary-state-handler.js`, `react-app-patch.js`) ensure the React app fetches data from `/adventure/api/adventure-summary?state_id=<id>`.
-        *   The API endpoint retrieves the stored state using the `state_id`, formats it using `SummaryService`, converts keys to camelCase, and returns the data.
-        *   The React app displays the chapter-by-chapter recap, learning questions/answers, and overall statistics.
+## 3. User Experience Flow
 
-## 4. User Experience Goals
+### Initialization
+* User accesses the web application (at `/` or `/adventure`)
+* Presented with choices for a **Story Category** and a **Lesson Topic** via interactive carousels
+* Upon confirmation, an `AdventureState` is initialized with:
+  - Chosen category/topic
+  - Predefined `story_length` (10 chapters)
+  - Sequence of `planned_chapter_types` (STORY, LESSON, REFLECT, CONCLUSION, SUMMARY)
+  - Randomly selected core narrative elements based on the chosen story category
 
-1.  **Engaging & Immersive:** Create a captivating experience through compelling narratives, meaningful choices, dynamic AI-generated content, real-time streaming, and evocative AI-generated images.
-2.  **Seamless Learning:** Integrate educational content organically within the story so learning feels like discovery, not testing. LESSON and REFLECT chapters should feel like natural parts of the adventure.
-3.  **Sense of Agency & Personalization:** Make user choices feel impactful. The initial Agency choice and subsequent decisions should visibly influence the narrative, plot twists, and resolution. Each playthrough should feel unique.
-4.  **Intuitive Interaction:** Provide a simple, clear interface for selecting adventures and making choices. The carousel UI and clearly presented choices support this. Ensure smooth transitions between selection screens and the story.
-5.  **Rewarding & Reflective:** The adventure should feel satisfying to complete. The SUMMARY chapter acts as a positive reinforcement, allowing users to revisit their journey, see their learning progress (correct/incorrect answers, explanations), and feel a sense of accomplishment.
-6.  **Accessible:** Offer adjustable font sizes for readability, especially on mobile devices. Ensure the UI is responsive across different screen sizes.
-7.  **Reliable:** Ensure a stable experience by handling potential issues like WebSocket disconnections (reconnect logic), race conditions (summary button fallback), and LLM/image generation failures (graceful degradation/fallbacks).
+### Adventure Progression (WebSocket Interaction)
+* WebSocket connection established (`/ws/story/{story_category}/{lesson_topic}`)
+* Backend sends content for current chapter, streaming it word-by-word
+* **Image Generation:** Relevant images are generated asynchronously using Google Imagen
+* **Chapter Types:**
+  - **STORY:** Narrative with 3 choices. First chapter includes crucial "Agency" choice
+  - **LESSON:** Multiple-choice question with narrative context (Story Object Method)
+  - **REFLECT:** Follow-up to LESSON chapters with narrative-driven reflection
+  - **CONCLUSION:** Final chapter with resolution (no choices)
+* **User Choices:** User selects a path or answers a question
+* **Backend Processing:**
+  - Updates `AdventureState` (adds completed chapter with user response)
+  - Generates concise summary and title for completed chapter
+  - Determines next chapter type and generates content
+  - Sends new chapter content back via WebSocket
+
+### Adventure Completion & Summary
+* After CONCLUSION chapter, backend sends `story_complete` message
+* "Take a Trip Down Memory Lane" button appears
+* **Summary Trigger:** Clicking button sends `reveal_summary` choice
+* **Summary Generation:**
+  - Backend receives trigger
+  - Generates summary for CONCLUSION chapter
+  - Retrieves full `AdventureState` with all chapter summaries
+  - Stores final state with `StateStorageService`, getting unique `state_id`
+  - Sends `summary_ready` message with `state_id`
+* **Summary Display:**
+  - Frontend navigates to `/adventure/summary?state_id=<id>`
+  - React application loads from API endpoint `/adventure/api/adventure-summary`
+  - Displays chapter-by-chapter recap, learning questions/answers, and statistics
+
+## 4. Experience Goals
+
+1. **Engaging & Immersive:**
+   * Compelling narratives with meaningful choices
+   * Dynamic AI-generated content
+   * Real-time streaming
+   * Evocative AI-generated images
+
+2. **Seamless Learning:**
+   * Educational content integrated organically
+   * Learning feels like discovery
+   * LESSON and REFLECT chapters as natural story parts
+
+3. **Sense of Agency & Personalization:**
+   * Impactful user choices
+   * Initial Agency choice influences narrative
+   * Visible evolution of choices throughout story
+   * Unique playthrough each time
+
+4. **Intuitive Interaction:**
+   * Simple, clear interface
+   * Carousel UI for selections
+   * Clear choice presentation
+   * Smooth transitions between screens
+
+5. **Rewarding & Reflective:**
+   * Satisfying adventure completion
+   * SUMMARY chapter as positive reinforcement
+   * Review of journey and learning progress
+   * Sense of accomplishment
+
+6. **Accessible:**
+   * Adjustable font sizes
+   * Responsive UI across devices
+   * Mobile-optimized reading experience
+
+7. **Reliable:**
+   * WebSocket reconnection logic
+   * Race condition handling
+   * LLM/image generation fallbacks
+   * Graceful degradation
