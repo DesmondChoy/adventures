@@ -174,10 +174,177 @@ async def generate_conclusion_chapter_summary(
             state.chapter_summaries.append("Chapter summary not available")
 
 
+async def diagnose_character_visuals(chapter_content, existing_visuals=None):
+    """Diagnostic function to test character visual extraction from chapter content.
+
+    Args:
+        chapter_content: Content of the chapter to analyze
+        existing_visuals: Dictionary of existing character visuals, if any
+
+    Returns:
+        Updated character visuals dictionary or None if extraction failed
+    """
+    if existing_visuals is None:
+        existing_visuals = {}
+
+    logger.info("Running character visual diagnostic")
+    logger.info(f"Chapter content length: {len(chapter_content)}")
+    logger.info(f"Existing visuals: {existing_visuals}")
+
+    # Format the prompt with chapter content and existing visuals
+    custom_prompt = CHARACTER_VISUAL_UPDATE_PROMPT.format(
+        chapter_content=chapter_content,
+        existing_visuals=json.dumps(existing_visuals, indent=2),
+    )
+
+    # Log a content snippet for debugging
+    content_snippet = (
+        chapter_content[:300] + "..." if len(chapter_content) > 300 else chapter_content
+    )
+    logger.debug(f"Chapter content snippet being analyzed: {content_snippet}")
+
+    # Create a minimal state for the LLM call
+    class MinimalState:
+        def __init__(self):
+            self.current_chapter_id = "character_visual_diagnostic"
+            self.story_length = 1
+            self.chapters = []
+            self.metadata = {"prompt_override": True}
+
+    minimal_state = MinimalState()
+
+    # Use the LLM service to generate the result
+    try:
+        logger.info("Calling LLM for character visual diagnostic")
+        chunks = []
+        async for chunk in llm_service.generate_chapter_stream(
+            story_config={},
+            state=minimal_state,
+            question=None,
+            previous_lessons=None,
+            context={"prompt_override": custom_prompt},
+        ):
+            chunks.append(chunk)
+
+        response = "".join(chunks).strip()
+        logger.debug(
+            f"Raw LLM response: {response[:500]}..."
+            if len(response) > 500
+            else response
+        )
+
+        # Extract JSON object from the response using our enhanced parsing
+        json_match = re.search(r"```json\s*(.*?)\s*```", response, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(1)
+            logger.debug(f"Extracted JSON from markdown block")
+        else:
+            # If not found, look for any JSON-like structure with curly braces
+            json_match = re.search(r"\{.*\}", response, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+                logger.debug(f"Extracted JSON-like structure")
+            else:
+                json_str = response
+                logger.debug("Using entire response as JSON")
+
+        # Try multiple parsing approaches
+        try:
+            updated_visuals = json.loads(json_str)
+        except json.JSONDecodeError:
+            # If parsing fails, try to clean the string and retry
+            cleaned_json_str = json_str.replace("'", '"').replace("\\", "\\\\")
+            try:
+                updated_visuals = json.loads(cleaned_json_str)
+            except json.JSONDecodeError:
+                # Try regex extraction as last resort
+                matches = re.findall(r'["\'](.*?)["\']: ["\'](.*?)["\']', response)
+                if matches:
+                    updated_visuals = {name: desc for name, desc in matches}
+                    logger.info(
+                        f"Extracted {len(updated_visuals)} character descriptions using regex"
+                    )
+                else:
+                    logger.error("All JSON parsing approaches failed")
+                    return None
+
+        if not isinstance(updated_visuals, dict):
+            logger.error(
+                f"Invalid character visuals format - expected dict, got {type(updated_visuals)}"
+            )
+            return None
+
+        logger.info("Successfully parsed character visuals:")
+        for char_name, description in updated_visuals.items():
+            logger.info(f'Character: "{char_name}", Description: "{description}"')
+
+        return updated_visuals
+
+    except Exception as e:
+        logger.error(f"Error during character visual diagnostic: {e}")
+        return None
+
+
+async def fix_missing_character_visuals(
+    state: AdventureState, state_manager: AdventureStateManager
+) -> None:
+    """Attempt to fix missing character visuals by analyzing all existing chapters.
+
+    This function is useful when character visuals aren't being picked up properly and need to be
+    retroactively extracted from existing chapter content.
+
+    Args:
+        state: Current adventure state
+        state_manager: The AdventureStateManager instance
+    """
+    if not state or not state.chapters:
+        logger.warning("No state or chapters to fix character visuals")
+        return
+
+    logger.info(
+        f"Attempting to fix missing character visuals across {len(state.chapters)} chapters"
+    )
+
+    # Get existing character visuals or initialize empty dict
+    existing_visuals = getattr(state, "character_visuals", {})
+    logger.info(f"Starting with {len(existing_visuals)} existing character visuals")
+
+    # Process each chapter in order
+    for chapter in state.chapters:
+        logger.info(
+            f"Processing Chapter {chapter.chapter_number} for character visuals"
+        )
+
+        # Extract visuals from this chapter's content
+        chapter_visuals = await diagnose_character_visuals(
+            chapter.content, existing_visuals
+        )
+
+        if chapter_visuals:
+            # Update our running dictionary with new/updated visuals
+            existing_visuals.update(chapter_visuals)
+            logger.info(f"Updated visuals, now have {len(existing_visuals)} characters")
+
+    # Finally, update the state with all collected visuals
+    if existing_visuals:
+        logger.info(
+            f"Updating state with {len(existing_visuals)} total character visuals"
+        )
+        state_manager.update_character_visuals(state, existing_visuals)
+        logger.info("Character visuals fix complete")
+    else:
+        logger.warning("No character visuals found in any chapters")
+
+
 async def _update_character_visuals(
     state: AdventureState, chapter_content: str, state_manager: AdventureStateManager
 ) -> None:
     """Update character visuals based on chapter content.
+
+    This function extracts character descriptions from the chapter content
+    and updates the character_visuals dictionary in the AdventureState.
+    It uses an LLM to identify character descriptions and ensures they are
+    properly persisted for image generation.
 
     Args:
         state: Current adventure state
@@ -216,14 +383,45 @@ async def _update_character_visuals(
                 f'[CHAPTER {chapter_number}] Base protagonist description: "{protagonist_desc}"'
             )
 
+        # Log a content snippet for debugging - just for display purposes
+        # Note: This is only truncated in the log, the full content is sent to the LLM
+        content_snippet = (
+            chapter_content[:300] + "..."
+            if len(chapter_content) > 300
+            else chapter_content
+        )
+        logger.debug(f"Chapter content snippet being analyzed (truncated for log display only): {content_snippet}")
+        logger.debug(f"Full chapter content length: {len(chapter_content)} characters")
+
         # Format the prompt with chapter content and existing visuals
         custom_prompt = CHARACTER_VISUAL_UPDATE_PROMPT.format(
             chapter_content=chapter_content,
             existing_visuals=json.dumps(existing_visuals, indent=2),
         )
 
-        # Log the prompt
-        logger.debug(f"Character visual update prompt:\n{custom_prompt}")
+        # Log the prompt with distinctive markers for easier debugging in terminal logs
+        logger.info(
+            f"\n=== CHARACTER_VISUAL_UPDATE_PROMPT TRIGGERED [CHAPTER {chapter_number}] ===\n"
+        )
+        # Split the prompt into chunks for better readability in logs
+        prompt_parts = custom_prompt.split("\n")
+        beginning = "\n".join(prompt_parts[:15])  # First 15 lines
+        middle_start = 15
+        middle_end = (
+            len(prompt_parts) - 15 if len(prompt_parts) > 30 else len(prompt_parts)
+        )
+        middle = "\n".join(prompt_parts[middle_start:middle_end])
+        end = "\n".join(prompt_parts[-15:]) if len(prompt_parts) > 30 else ""
+
+        logger.info(f"=== PROMPT BEGINNING ===\n{beginning}")
+        if middle:
+            logger.info(f"=== PROMPT MIDDLE ===\n{middle}")
+        if end:
+            logger.info(f"=== PROMPT END ===\n{end}")
+        logger.info(f"=== END CHARACTER_VISUAL_UPDATE_PROMPT ===\n")
+
+        # Also keep detailed debug log for full prompt
+        logger.debug(f"Complete Character visual update prompt:\n{custom_prompt}")
 
         # Create a minimal state object for the LLM call
         class MinimalState:
@@ -240,6 +438,14 @@ async def _update_character_visuals(
             logger.info(
                 f"[CHAPTER {chapter_number}] Calling LLM for character visual updates"
             )
+            # Extract a snippet for debugging purposes
+            content_snippet = (
+                chapter_content[:300] + "..."
+                if len(chapter_content) > 300
+                else chapter_content
+            )
+            logger.debug(f"Content being analyzed: {content_snippet}")
+
             chunks = []
             async for chunk in llm_service.generate_chapter_stream(
                 story_config={},
@@ -251,21 +457,101 @@ async def _update_character_visuals(
                 chunks.append(chunk)
 
             response = "".join(chunks).strip()
+            # Log the raw LLM response with distinctive markers
+            logger.info(
+                f"\n=== CHARACTER_VISUAL_UPDATE_PROMPT RESPONSE [CHAPTER {chapter_number}] ==="
+            )
+            # Avoid logging excessively long responses in INFO, but provide a meaningful excerpt
+            if len(response) > 1000:
+                logger.info(f"Response excerpt (first 500 chars):\n{response[:500]}")
+                logger.info(f"Response excerpt (last 500 chars):\n{response[-500:]}")
+                logger.info(
+                    f"Full response logged at DEBUG level (length: {len(response)} chars)"
+                )
+            else:
+                logger.info(f"Response:\n{response}")
+            logger.info(f"=== END RESPONSE ===\n")
+
+            # Keep detailed debug log
             logger.debug(f"Raw LLM response: {response}")
 
-            # Extract JSON object from the response
+            # Enhanced JSON extraction and parsing
+            logger.debug(f"Raw LLM response length: {len(response)}")
+            logger.debug(f"First 200 chars: {response[:200]}")
+            logger.debug(
+                f"Last 200 chars: {response[-200:] if len(response) > 200 else response}"
+            )
+
             # First, try to extract JSON between ```json and ``` markers
             json_match = re.search(r"```json\s*(.*?)\s*```", response, re.DOTALL)
             if json_match:
                 json_str = json_match.group(1)
                 logger.debug(f"Extracted JSON from markdown block: {json_str}")
             else:
-                # If not found, try to use the entire response as JSON
-                json_str = response
-                logger.debug("Using entire response as JSON")
+                # If not found, look for any JSON-like structure with curly braces
+                # The regex needs to be non-greedy to handle nested curly braces properly
+                json_match = re.search(r"\{.*?\}", response, re.DOTALL)
+                if json_match:
+                    json_str = json_match.group(0)
+                    logger.debug(f"Extracted JSON-like structure: {json_str}")
+                else:
+                    # Try a more comprehensive regex that can capture full JSON objects with nested structures
+                    json_match = re.search(r"\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{[^{}]*\}))*\}))*\}", response, re.DOTALL)
+                    if json_match:
+                        json_str = json_match.group(0)
+                        logger.debug(f"Extracted complex JSON structure: {json_str}")
+                    else:
+                        # If still not found, try to use the entire response as JSON
+                        json_str = response
+                        logger.debug("Using entire response as JSON")
 
-            # Parse the JSON
-            updated_visuals = json.loads(json_str)
+            # Parse the JSON with multiple fallback approaches
+            try:
+                updated_visuals = json.loads(json_str)
+            except json.JSONDecodeError:
+                # If parsing fails, try to clean the string and retry
+                cleaned_json_str = json_str.replace("'", '"').replace("\\", "\\\\")
+                logger.debug(
+                    f"First JSON parse failed, trying with cleaned string: {cleaned_json_str[:100]}..."
+                )
+                try:
+                    updated_visuals = json.loads(cleaned_json_str)
+                except json.JSONDecodeError:
+                    # Last resort: try multiple regex patterns to extract key-value pairs
+                    logger.debug("Attempting regex extraction of key-value pairs")
+                    
+                    # Try standard JSON pattern first
+                    matches = re.findall(
+                        r'["\']([^"\']+)["\']:\s*["\']([^"\']+)["\']', response
+                    )
+                    
+                    # If that doesn't work, try with double quotes only
+                    if not matches:
+                        logger.debug("First regex failed, trying double quotes only pattern")
+                        matches = re.findall(r'"([^"]+)":\s*"([^"]+)"', response)
+                    
+                    # If still no matches, try a more lenient pattern that doesn't require quotes for values
+                    if not matches:
+                        logger.debug("Second regex failed, trying lenient pattern")
+                        matches = re.findall(r'"([^"]+)":\s*([^,}]+)', response)
+                        # Clean up the matches to remove trailing whitespace and quotes
+                        matches = [(k, v.strip().strip('"\'')) for k, v in matches]
+                    
+                    # If we found matches with any pattern, create the dictionary
+                    if matches:
+                        updated_visuals = {name: desc for name, desc in matches}
+                        logger.info(
+                            f"Extracted {len(updated_visuals)} character descriptions using regex pattern"
+                        )
+                    else:
+                        # Last attempt: look for "You" or protagonist as a character if nothing else worked
+                        protagonist_desc = getattr(state, "protagonist_description", "")
+                        if protagonist_desc:
+                            logger.info("Creating fallback visuals with protagonist only")
+                            updated_visuals = {"You": protagonist_desc}
+                        else:
+                            logger.error("All JSON parsing approaches failed")
+                            return
 
             if not isinstance(updated_visuals, dict):
                 logger.error(
@@ -273,12 +559,23 @@ async def _update_character_visuals(
                 )
                 return
 
-            # Log the LLM response
-            logger.info(f"[CHAPTER {chapter_number}] LLM response (character_visuals):")
+            # Log parsing success with distinctive markers
+            logger.info(
+                f"\n=== CHARACTER VISUALS PARSED [CHAPTER {chapter_number}] ==="
+            )
+            logger.info(
+                f"Successfully extracted {len(updated_visuals)} character descriptions"
+            )
+
+            # Log the extracted character visuals
             for char_name, description in updated_visuals.items():
-                logger.info(
-                    f'[CHAPTER {chapter_number}] - {char_name}: "{description}"'
-                )
+                logger.info(f'- {char_name}: "{description}"')
+            logger.info(f"=== END CHARACTER VISUALS ===\n")
+
+            # Keep detailed debug log
+            logger.debug(
+                f"Successfully parsed character visuals with {len(updated_visuals)} entries"
+            )
 
             # Update the state with the new visuals
             state_manager.update_character_visuals(state, updated_visuals)
@@ -344,8 +641,15 @@ async def process_non_start_choice(
 
     # Update character visuals asynchronously based on the completed chapter
     # This runs in the background and doesn't block the main flow
-    asyncio.create_task(
+    character_visual_task = asyncio.create_task(
         _update_character_visuals(state, previous_chapter.content, state_manager)
+    )
+
+    # Add task completion callback to track success/failure
+    character_visual_task.add_done_callback(
+        lambda t: logger.info(
+            f"Character visual update task completed: {t.exception() or 'Successfully'}"
+        )
     )
 
     state.current_chapter_id = chosen_path
@@ -401,6 +705,17 @@ async def process_start_choice(
     chapter_content, sampled_question = await generate_chapter(
         story_category, lesson_topic, state
     )
+
+    # Create and append new chapter
+    new_chapter = await create_and_append_chapter(
+        chapter_content, chapter_type, sampled_question, state_manager, None
+    )
+
+    if new_chapter:
+        # Extract character visuals from the first chapter content
+        # This needs to happen immediately for Chapter 1 since we need visuals for image generation
+        logger.info("\nExtracting character visuals from Chapter 1 content")
+        await _update_character_visuals(state, new_chapter.content, state_manager)
 
     # No need to process previous chapter for start choice
     is_story_complete = False
@@ -539,6 +854,26 @@ async def process_story_response(
             "references": [],
         }
 
+        # Add agency to character_visuals dictionary for image generation
+        # Since this is agency-specific info that might not be captured by normal character extraction
+        if visual_details and "character_visuals" in state.__dict__:
+            agency_name = (
+                choice_text.split("-")[0].strip() if "-" in choice_text else choice_text
+            )
+
+            # If specific object/companion names are in the agency choice, extract those
+            refined_name = (
+                agency_name.split(":")[-1].strip()
+                if ":" in agency_name
+                else agency_name
+            )
+
+            # Add to character_visuals with special prefix to identify as agency
+            state.character_visuals["AGENCY_" + refined_name] = visual_details
+            logger.info(
+                f"Added agency to character_visuals: {refined_name} - {visual_details}"
+            )
+
         logger.debug(f"Stored agency choice from Chapter 1: {choice_text}")
         logger.debug(f"Agency category: {agency_category}")
         logger.debug(f"Visual details: {visual_details}")
@@ -623,7 +958,7 @@ async def create_and_append_chapter(
     chapter_type: ChapterType,
     sampled_question: Optional[Dict[str, Any]],
     state_manager: AdventureStateManager,
-    websocket: WebSocket,
+    websocket: Optional[WebSocket],
 ) -> Optional[ChapterData]:
     """Create and append a new chapter to the state."""
     from .content_generator import clean_chapter_content
@@ -647,7 +982,8 @@ async def create_and_append_chapter(
         return new_chapter
     except ValueError as e:
         logger.error(f"Error adding chapter: {e}")
-        await websocket.send_text(
-            "An error occurred while processing your choice. Please try again."
-        )
+        if websocket:  # Only send message if websocket is provided
+            await websocket.send_text(
+                "An error occurred while processing your choice. Please try again."
+            )
         return None

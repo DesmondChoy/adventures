@@ -40,7 +40,13 @@ Create just enough tension and wonder to keep young readers begging to continue 
 1. Narrative Structure: Begin directly (never with "Chapter X") and end at natural decision points
 2. Educational Integration: Ensure lessons feel organic to the story, never forced or artificial
 3. Choice Format: Use <CHOICES> tags, format as "Choice [A/B/C]: [description]" on single lines, make choices meaningful and distinct
-4. Character Descriptions: Whenever introducing a new supporting character or side character (anyone besides the protagonist), include at least one sentence describing their visual appearance (clothing, physical features, distinctive characteristics) to help readers visualize them clearly
+4. Character Descriptions: VERY IMPORTANT - For EVERY character (including protagonist):
+   - When first introducing any character, provide 2-3 detailed sentences about their visual appearance
+   - Always describe clothing, physical features (hair, eyes, height, build), and any distinctive characteristics
+   - For the protagonist, reinforce their visual description in each chapter with at least one reference
+   - For recurring characters, add any changes to their appearance (new clothing, accessories, expressions)
+   - Explicitly state these descriptions when the character first appears in the scene
+   - Make visual descriptions clear, specific, and easy to visualize
 """
 
 
@@ -611,6 +617,11 @@ EXISTING VISUALS:
 {existing_visuals}
 
 INSTRUCTIONS:
+- CRITICALLY IMPORTANT: Thoroughly scan the entire chapter for ANY character descriptions, no matter how brief or scattered
+- Pay special attention to paragraphs that introduce new characters or scenes
+- Search for descriptive language about physical appearance, clothing, accessories, or anything visual
+- Look for subtle phrases like "the tall woman with red hair" or "his weathered face crinkled into a smile"
+- If a character is mentioned without a detailed description, still include them with whatever visual cues you can find
 - For each character mentioned in the chapter, including the protagonist and NPCs:
   * If the character is new (not in EXISTING VISUALS), create a detailed visual description based on any appearance details in the chapter
   * If the character already exists but has visual changes described in this chapter, update their description accordingly
@@ -619,6 +630,13 @@ INSTRUCTIONS:
 - Focus only on visual/physical aspects (appearance, clothing, features, etc.) that would be relevant for image generation
 - For the protagonist, prioritize keeping their core appearance consistent while incorporating any described changes/evolution
 - Ensure each description is self-contained (someone reading only the description should get a complete picture)
+
+EXAMPLES OF CHARACTER DESCRIPTIONS TO LOOK FOR:
+- "A tall man with a red hat and bushy mustache approached"
+- "Sarah's blonde braids bounced as she ran, her yellow dress fluttering in the wind"
+- "The shopkeeper adjusted his wire-rimmed spectacles and smoothed his gray apron"
+- "His eyes were as dark as night, set in a face weathered by years at sea"
+- "She wore a cloak of emerald green, fastened with a silver pin shaped like a leaf"
 
 OUTPUT FORMAT:
 Return ONLY a valid JSON object with the updated character visuals, formatted exactly like this:
@@ -629,6 +647,8 @@ Return ONLY a valid JSON object with the updated character visuals, formatted ex
   ...
 }
 ```
+
+IMPORTANT: Even if you find only minimal descriptions, include them in the output. If you can't find any descriptions at all, at minimum include characters' names with placeholder descriptions noting they need more visual details.
 
 Do not include any explanations, only return the JSON.
 """

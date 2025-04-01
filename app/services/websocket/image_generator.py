@@ -219,6 +219,9 @@ async def generate_chapter_image(
     3. Pass this scene description to image_service.synthesize_image_prompt along with protagonist and agency details
     4. Generate the image using the synthesized prompt
 
+    For Chapter 1, if character_visuals is empty, it will attempt to extract character descriptions
+    from the chapter content to ensure visual consistency.
+
     Args:
         current_chapter_number: The chapter number
         state: The current adventure state
@@ -324,6 +327,28 @@ async def generate_chapter_image(
             # Synthesize the prompt using the LLM
             # Get character visuals if available
             character_visuals = getattr(state, "character_visuals", {})
+            
+            # If Chapter 1 is lacking character visuals, attempt to extract them from the chapter content
+            if current_chapter_number == 1 and not character_visuals:
+                logger.info("Chapter 1: No character visuals found - attempting to extract them from content")
+                
+                # Import the function dynamically to avoid circular imports
+                from app.services.websocket.choice_processor import diagnose_character_visuals
+                
+                try:
+                    # Use the diagnostic function to extract character visuals
+                    extracted_visuals = await diagnose_character_visuals(current_content, {})
+                    
+                    if extracted_visuals:
+                        logger.info(f"Successfully extracted {len(extracted_visuals)} character visuals from Chapter 1")
+                        character_visuals = extracted_visuals
+                        
+                        # Update the state directly for future use
+                        state.character_visuals = extracted_visuals
+                    else:
+                        logger.warning("Failed to extract character visuals from Chapter 1 content")
+                except Exception as extraction_error:
+                    logger.error(f"Error extracting character visuals: {extraction_error}")
 
             # Log character visuals being used for image generation
             logger.info(
