@@ -174,29 +174,57 @@ async def generate_conclusion_chapter_summary(
             state.chapter_summaries.append("Chapter summary not available")
 
 
-async def _update_character_visuals(state: AdventureState, chapter_content: str, state_manager: AdventureStateManager) -> None:
+async def _update_character_visuals(
+    state: AdventureState, chapter_content: str, state_manager: AdventureStateManager
+) -> None:
     """Update character visuals based on chapter content.
-    
+
     Args:
         state: Current adventure state
         chapter_content: Content of the completed chapter
         state_manager: The AdventureStateManager instance
     """
     try:
-        logger.info("Starting character visual update from chapter content")
-        
+        # Get chapter number for logging
+        chapter_number = len(state.chapters)
+
+        logger.info(
+            f"[CHAPTER {chapter_number}] Starting character visual update from chapter content"
+        )
+
         # Get existing character visuals or empty dict
-        existing_visuals = getattr(state, 'character_visuals', {})
-        
+        existing_visuals = getattr(state, "character_visuals", {})
+
+        # Log the existing visuals
+        logger.info(
+            f"[CHAPTER {chapter_number}] AdventureState.character_visuals BEFORE update:"
+        )
+        if existing_visuals:
+            for char_name, description in existing_visuals.items():
+                logger.info(
+                    f'[CHAPTER {chapter_number}] - {char_name}: "{description}"'
+                )
+        else:
+            logger.info(
+                f"[CHAPTER {chapter_number}] - Empty (no character visuals tracked yet)"
+            )
+
+        # Log base protagonist description
+        protagonist_desc = getattr(state, "protagonist_description", "")
+        if protagonist_desc:
+            logger.info(
+                f'[CHAPTER {chapter_number}] Base protagonist description: "{protagonist_desc}"'
+            )
+
         # Format the prompt with chapter content and existing visuals
         custom_prompt = CHARACTER_VISUAL_UPDATE_PROMPT.format(
             chapter_content=chapter_content,
-            existing_visuals=json.dumps(existing_visuals, indent=2)
+            existing_visuals=json.dumps(existing_visuals, indent=2),
         )
-        
+
         # Log the prompt
         logger.debug(f"Character visual update prompt:\n{custom_prompt}")
-        
+
         # Create a minimal state object for the LLM call
         class MinimalState:
             def __init__(self):
@@ -204,28 +232,30 @@ async def _update_character_visuals(state: AdventureState, chapter_content: str,
                 self.story_length = 1
                 self.chapters = []
                 self.metadata = {"prompt_override": True}
-                
+
         minimal_state = MinimalState()
-        
+
         # Use the LLM service to generate the updated visuals
         try:
-            logger.info("Calling LLM for character visual updates")
+            logger.info(
+                f"[CHAPTER {chapter_number}] Calling LLM for character visual updates"
+            )
             chunks = []
             async for chunk in llm_service.generate_chapter_stream(
                 story_config={},
                 state=minimal_state,
                 question=None,
                 previous_lessons=None,
-                context={"prompt_override": custom_prompt}
+                context={"prompt_override": custom_prompt},
             ):
                 chunks.append(chunk)
-            
+
             response = "".join(chunks).strip()
             logger.debug(f"Raw LLM response: {response}")
-            
+
             # Extract JSON object from the response
             # First, try to extract JSON between ```json and ``` markers
-            json_match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
+            json_match = re.search(r"```json\s*(.*?)\s*```", response, re.DOTALL)
             if json_match:
                 json_str = json_match.group(1)
                 logger.debug(f"Extracted JSON from markdown block: {json_str}")
@@ -233,27 +263,43 @@ async def _update_character_visuals(state: AdventureState, chapter_content: str,
                 # If not found, try to use the entire response as JSON
                 json_str = response
                 logger.debug("Using entire response as JSON")
-            
+
             # Parse the JSON
             updated_visuals = json.loads(json_str)
-            
+
             if not isinstance(updated_visuals, dict):
-                logger.error(f"Invalid character visuals format - expected dict, got {type(updated_visuals)}")
+                logger.error(
+                    f"Invalid character visuals format - expected dict, got {type(updated_visuals)}"
+                )
                 return
-                
+
+            # Log the LLM response
+            logger.info(f"[CHAPTER {chapter_number}] LLM response (character_visuals):")
+            for char_name, description in updated_visuals.items():
+                logger.info(
+                    f'[CHAPTER {chapter_number}] - {char_name}: "{description}"'
+                )
+
             # Update the state with the new visuals
             state_manager.update_character_visuals(state, updated_visuals)
-            logger.info(f"Successfully updated character visuals with {len(updated_visuals)} entries")
-            
+            logger.info(
+                f"[CHAPTER {chapter_number}] Successfully updated character visuals with {len(updated_visuals)} entries"
+            )
+
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON from LLM response: {e}")
+            logger.error(
+                f"[CHAPTER {chapter_number}] Failed to parse JSON from LLM response: {e}"
+            )
             logger.debug(f"Raw response causing JSONDecodeError: {response}")
         except Exception as e:
-            logger.error(f"Error generating character visuals: {e}")
-            
+            logger.error(
+                f"[CHAPTER {chapter_number}] Error generating character visuals: {e}"
+            )
+
     except Exception as e:
         logger.error(f"Error in _update_character_visuals: {e}")
         # Don't re-raise - this is an auxiliary function that shouldn't block the main flow
+
 
 async def process_non_start_choice(
     chosen_path: str,
@@ -295,10 +341,12 @@ async def process_non_start_choice(
 
     # Generate a chapter summary for the previous chapter
     await generate_chapter_summary(previous_chapter, state)
-    
+
     # Update character visuals asynchronously based on the completed chapter
     # This runs in the background and doesn't block the main flow
-    asyncio.create_task(_update_character_visuals(state, previous_chapter.content, state_manager))
+    asyncio.create_task(
+        _update_character_visuals(state, previous_chapter.content, state_manager)
+    )
 
     state.current_chapter_id = chosen_path
 

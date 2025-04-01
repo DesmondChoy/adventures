@@ -103,11 +103,11 @@ async def generate_agency_images(
                 logger.debug(f"Extracted agency name: {agency_name}")
 
                 # Construct the focused prompt
-                prompt = f"Fantasy illustration of {agency_name} - {visual_details}. The background has subtle elements of {story_visual_sensory_detail}."
+                prompt = f"Fantasy illustration of {agency_name} - {visual_details}. The background has subtle elements of {story_visual_sensory_detail}"
             else:
                 # If no match found, use the choice text directly
                 logger.debug(f"Using choice text directly: {choice.text}")
-                prompt = f"Fantasy illustration of {choice.text}. The background has subtle hints of: {story_visual_sensory_detail}."
+                prompt = f"Fantasy illustration of {choice.text}. The background has subtle hints of: {story_visual_sensory_detail}"
 
             logger.info("\n" + "=" * 50)
             logger.info(f"AGENCY CHOICE {i + 1} IMAGE PROMPT:")
@@ -262,8 +262,8 @@ async def generate_chapter_image(
 
                 # Synthesize the prompt
                 # Get character visuals if available
-                character_visuals = getattr(state, 'character_visuals', {})
-                
+                character_visuals = getattr(state, "character_visuals", {})
+
                 prompt = await image_service.synthesize_image_prompt(
                     scene_description,
                     protagonist_description,
@@ -323,8 +323,40 @@ async def generate_chapter_image(
 
             # Synthesize the prompt using the LLM
             # Get character visuals if available
-            character_visuals = getattr(state, 'character_visuals', {})
-            
+            character_visuals = getattr(state, "character_visuals", {})
+
+            # Log character visuals being used for image generation
+            logger.info(
+                f"[CHAPTER {current_chapter_number}] AdventureState.character_visuals for image generation:"
+            )
+            if character_visuals:
+                for char_name, description in character_visuals.items():
+                    logger.info(
+                        f'[CHAPTER {current_chapter_number}] - {char_name}: "{description}"'
+                    )
+            else:
+                logger.info(
+                    f"[CHAPTER {current_chapter_number}] - Empty (no character visuals available)"
+                )
+
+            # Log base protagonist description
+            logger.info(
+                f'[CHAPTER {current_chapter_number}] Base protagonist description: "{protagonist_description}"'
+            )
+
+            # Log agency details
+            if agency_details:
+                logger.info(f"[CHAPTER {current_chapter_number}] Agency details:")
+                logger.info(
+                    f'[CHAPTER {current_chapter_number}] - Category: "{agency_details.get("category", "N/A")}"'
+                )
+                logger.info(
+                    f'[CHAPTER {current_chapter_number}] - Name: "{agency_details.get("name", "N/A")}"'
+                )
+                logger.info(
+                    f'[CHAPTER {current_chapter_number}] - Visual details: "{agency_details.get("visual_details", "N/A")}"'
+                )
+
             prompt = await image_service.synthesize_image_prompt(
                 image_scene,
                 protagonist_description,
@@ -334,7 +366,9 @@ async def generate_chapter_image(
             )
 
             logger.info("\n" + "=" * 50)
-            logger.info("CHAPTER IMAGE PROMPT (BEFORE SENDING TO IMAGE SERVICE):")
+            logger.info(
+                f"[CHAPTER {current_chapter_number}] CHAPTER IMAGE PROMPT (BEFORE SENDING TO IMAGE SERVICE):"
+            )
             logger.info(f"{prompt}")
             logger.info("=" * 50 + "\n")
 
@@ -371,8 +405,8 @@ async def generate_chapter_image(
 
             # Use the fallback approach with synthesize_image_prompt
             # Get character visuals if available
-            character_visuals = getattr(state, 'character_visuals', {})
-            
+            character_visuals = getattr(state, "character_visuals", {})
+
             prompt = await image_service.synthesize_image_prompt(
                 image_scene,
                 protagonist_description,

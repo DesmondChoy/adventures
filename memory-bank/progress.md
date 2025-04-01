@@ -2,6 +2,21 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-04-01
+- Implemented detailed logging for character visuals state management to help debug visual inconsistencies
+- Enhanced `_update_character_visuals` function in `choice_processor.py` with detailed logging
+- Enhanced `update_character_visuals` method in `adventure_state_manager.py` with detailed logging
+- Enhanced `generate_chapter_image` function in `image_generator.py` with detailed logging
+- Enhanced `synthesize_image_prompt` method in `image_generation_service.py` with detailed logging
+- Added logging to show character visuals before and after updates
+- Added logging to show which characters are NEW, UPDATED, or UNCHANGED
+- Added logging to show BEFORE/AFTER comparison for updated characters
+- Added logging to show character visuals being used for image generation
+- Added logging to show character visuals being included in image prompts
+- Used consistent `[CHAPTER X]` prefix for all logs to provide context
+- Added summary counts to provide a quick overview of changes
+- Updated Memory Bank documentation to reflect the character visuals debugging enhancements
+
 ### 2025-03-31
 - Fixed incorrect chapter number calculation in `stream_handler.py`
 - Identified issue where chapter number was calculated as `len(state.chapters) + 1` when it should be `len(state.chapters)`
@@ -385,6 +400,12 @@
 - Responsive design for both desktop and mobile
 
 ### Recent Enhancements
+- Implemented detailed logging for character visuals state management to help debug visual inconsistencies
+- Added comprehensive logging throughout the character visuals pipeline
+- Added logging to show character visuals before and after updates
+- Added logging to show which characters are NEW, UPDATED, or UNCHANGED
+- Added logging to show character visuals being used for image generation
+- Fixed incorrect chapter number calculation in `stream_handler.py`
 - Fixed image generation for CONCLUSION chapter to ensure consistent visual experience
 - Enhanced agency visual details in image generation for more accurate representation
 - Fixed missing state storage issue in Summary Chapter

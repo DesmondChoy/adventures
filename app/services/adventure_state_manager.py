@@ -427,42 +427,86 @@ class AdventureStateManager:
             logger.debug(
                 f"Found reference to agency element ({agency_name}) in chapter {chapter_data.chapter_number}"
             )
-    
-    def update_character_visuals(self, state: AdventureState, updated_visuals: Dict[str, str]) -> None:
+
+    def update_character_visuals(
+        self, state: AdventureState, updated_visuals: Dict[str, str]
+    ) -> None:
         """Update character visuals dictionary in the AdventureState.
-        
+
         Args:
             state: The current adventure state
             updated_visuals: Dictionary with updated character visual descriptions
         """
+        # Get chapter number for logging
+        chapter_number = len(state.chapters)
+
         if not updated_visuals:
-            logger.warning("No updated character visuals to apply")
+            logger.warning(
+                f"[CHAPTER {chapter_number}] No updated character visuals to apply"
+            )
             return
-            
-        if not hasattr(state, 'character_visuals'):
-            logger.warning("State doesn't have character_visuals attribute")
+
+        if not hasattr(state, "character_visuals"):
+            logger.warning(
+                f"[CHAPTER {chapter_number}] State doesn't have character_visuals attribute"
+            )
             return
-            
+
         # Get the current visuals or initialize if empty
-        current_visuals = getattr(state, 'character_visuals', {})
+        current_visuals = getattr(state, "character_visuals", {})
+
+        logger.info(
+            f"[CHAPTER {chapter_number}] AdventureState.character_visuals AFTER update:"
+        )
+
         if not current_visuals:
-            logger.info("Initializing character_visuals with first updates")
+            logger.info(
+                f"[CHAPTER {chapter_number}] Initializing character_visuals with first updates"
+            )
             state.character_visuals = updated_visuals
+
+            # Log all new entries
+            for char_name, description in updated_visuals.items():
+                logger.info(
+                    f'[CHAPTER {chapter_number}] NEW: "{char_name}" - "{description}"'
+                )
+
+            logger.info(
+                f"[CHAPTER {chapter_number}] Summary: {len(updated_visuals)} new, 0 updated, 0 unchanged"
+            )
             return
-            
+
         # Update with new or changed visuals
+        new_count = 0
         updates_count = 0
+        unchanged_count = 0
+
         for char_name, visual_desc in updated_visuals.items():
-            # Update only if it's a new character or the description has changed
-            if char_name not in current_visuals or current_visuals[char_name] != visual_desc:
+            # New character
+            if char_name not in current_visuals:
+                current_visuals[char_name] = visual_desc
+                new_count += 1
+                logger.info(
+                    f'[CHAPTER {chapter_number}] NEW: "{char_name}" - "{visual_desc}"'
+                )
+            # Updated character
+            elif current_visuals[char_name] != visual_desc:
+                old_desc = current_visuals[char_name]
                 current_visuals[char_name] = visual_desc
                 updates_count += 1
-                logger.info(f"Updated visual description for '{char_name}'")
-                
-        if updates_count > 0:
-            logger.info(f"Updated {updates_count} character visual descriptions")
-        else:
-            logger.debug("No character visual descriptions were changed")
+                logger.info(f'[CHAPTER {chapter_number}] UPDATED: "{char_name}"')
+                logger.info(f'[CHAPTER {chapter_number}]   BEFORE: "{old_desc}"')
+                logger.info(f'[CHAPTER {chapter_number}]   AFTER:  "{visual_desc}"')
+            # Unchanged character
+            else:
+                unchanged_count += 1
+                logger.info(
+                    f'[CHAPTER {chapter_number}] UNCHANGED: "{char_name}" - "{visual_desc}"'
+                )
+
+        logger.info(
+            f"[CHAPTER {chapter_number}] Summary: {new_count} new, {updates_count} updated, {unchanged_count} unchanged"
+        )
 
     def append_new_chapter(self, chapter_data: ChapterData) -> None:
         """Appends a new chapter to the AdventureState."""
@@ -595,39 +639,57 @@ class AdventureStateManager:
                 # Handle chapter_type case sensitivity and ensure chapter 10 is CONCLUSION
                 if "chapter_type" in chapter:
                     chapter_number = chapter.get("chapter_number", 0)
-                    
+
                     # Log the original chapter type for debugging
-                    logger.debug(f"Original chapter_type for chapter {chapter_number}: {chapter['chapter_type']} (type: {type(chapter['chapter_type'])})")
-                    
+                    logger.debug(
+                        f"Original chapter_type for chapter {chapter_number}: {chapter['chapter_type']} (type: {type(chapter['chapter_type'])})"
+                    )
+
                     # Convert chapter_type to proper ChapterType enum
                     if isinstance(chapter["chapter_type"], str):
                         chapter_type_str = chapter["chapter_type"].lower()
-                        logger.debug(f"Converted chapter_type to lowercase: {chapter_type_str}")
-                        
+                        logger.debug(
+                            f"Converted chapter_type to lowercase: {chapter_type_str}"
+                        )
+
                         # Map the lowercase string to proper ChapterType enum
                         try:
                             # Map string to ChapterType enum
                             if chapter_type_str == "lesson":
                                 chapter["chapter_type"] = ChapterType.LESSON
-                                logger.debug(f"Mapped string 'lesson' to ChapterType.LESSON enum for chapter {chapter_number}")
+                                logger.debug(
+                                    f"Mapped string 'lesson' to ChapterType.LESSON enum for chapter {chapter_number}"
+                                )
                             elif chapter_type_str == "story":
                                 chapter["chapter_type"] = ChapterType.STORY
-                                logger.debug(f"Mapped string 'story' to ChapterType.STORY enum for chapter {chapter_number}")
+                                logger.debug(
+                                    f"Mapped string 'story' to ChapterType.STORY enum for chapter {chapter_number}"
+                                )
                             elif chapter_type_str == "conclusion":
                                 chapter["chapter_type"] = ChapterType.CONCLUSION
-                                logger.info(f"Found CONCLUSION chapter: {chapter_number}")
+                                logger.info(
+                                    f"Found CONCLUSION chapter: {chapter_number}"
+                                )
                             elif chapter_type_str == "reflect":
                                 chapter["chapter_type"] = ChapterType.REFLECT
-                                logger.debug(f"Mapped string 'reflect' to ChapterType.REFLECT enum for chapter {chapter_number}")
+                                logger.debug(
+                                    f"Mapped string 'reflect' to ChapterType.REFLECT enum for chapter {chapter_number}"
+                                )
                             elif chapter_type_str == "summary":
                                 chapter["chapter_type"] = ChapterType.SUMMARY
-                                logger.debug(f"Mapped string 'summary' to ChapterType.SUMMARY enum for chapter {chapter_number}")
+                                logger.debug(
+                                    f"Mapped string 'summary' to ChapterType.SUMMARY enum for chapter {chapter_number}"
+                                )
                             else:
                                 # Default to STORY if not recognized
-                                logger.warning(f"Unrecognized chapter_type '{chapter_type_str}' for chapter {chapter_number}, defaulting to STORY")
+                                logger.warning(
+                                    f"Unrecognized chapter_type '{chapter_type_str}' for chapter {chapter_number}, defaulting to STORY"
+                                )
                                 chapter["chapter_type"] = ChapterType.STORY
                         except Exception as e:
-                            logger.warning(f"Error converting chapter_type to enum: {e}")
+                            logger.warning(
+                                f"Error converting chapter_type to enum: {e}"
+                            )
                             # Keep as string but ensure lowercase
                             chapter["chapter_type"] = chapter_type_str
 
@@ -701,10 +763,14 @@ class AdventureStateManager:
                                 planned_chapter_types.append(ChapterType.SUMMARY)
                             else:
                                 # Default to STORY for unrecognized types
-                                logger.warning(f"Unrecognized planned chapter type: {chapter_type_str}, using STORY")
+                                logger.warning(
+                                    f"Unrecognized planned chapter type: {chapter_type_str}, using STORY"
+                                )
                                 planned_chapter_types.append(ChapterType.STORY)
                         except Exception as e:
-                            logger.warning(f"Error converting planned chapter type: {e}")
+                            logger.warning(
+                                f"Error converting planned chapter type: {e}"
+                            )
                             # Keep as lowercase string if conversion fails
                             planned_chapter_types.append(chapter_type_str)
                     else:
@@ -721,45 +787,61 @@ class AdventureStateManager:
             # Generate chapter summaries if they don't exist
             chapter_summaries = stored_state.get("chapter_summaries", [])
             summary_chapter_titles = stored_state.get("summary_chapter_titles", [])
-            
+
             # If chapter_summaries is empty but we have chapters, generate summaries
             if (not chapter_summaries or len(chapter_summaries) == 0) and chapters:
-                logger.warning("No chapter summaries found, generating default summaries")
+                logger.warning(
+                    "No chapter summaries found, generating default summaries"
+                )
                 chapter_summaries = []
                 summary_chapter_titles = []
-                
-                for chapter in sorted(chapters, key=lambda x: x.get("chapter_number", 0)):
+
+                for chapter in sorted(
+                    chapters, key=lambda x: x.get("chapter_number", 0)
+                ):
                     chapter_number = chapter.get("chapter_number", 0)
                     chapter_type = chapter.get("chapter_type", "story")
                     content = chapter.get("content", "")
-                    
+
                     # Generate a simple default summary from the first 100 characters
-                    summary_text = f"Summary of chapter {chapter_number}: {content[:100]}..."
-                    title = f"Chapter {chapter_number}: {chapter_type.capitalize()} Chapter"
-                    
+                    summary_text = (
+                        f"Summary of chapter {chapter_number}: {content[:100]}..."
+                    )
+                    title = (
+                        f"Chapter {chapter_number}: {chapter_type.capitalize()} Chapter"
+                    )
+
                     chapter_summaries.append(summary_text)
                     summary_chapter_titles.append(title)
-                    
-                    logger.info(f"Generated default summary for chapter {chapter_number}")
-                
+
+                    logger.info(
+                        f"Generated default summary for chapter {chapter_number}"
+                    )
+
                 # Update stored state with generated summaries
                 stored_state["chapter_summaries"] = chapter_summaries
                 stored_state["summary_chapter_titles"] = summary_chapter_titles
-                
-                logger.info(f"Generated {len(chapter_summaries)} default chapter summaries")
-            
+
+                logger.info(
+                    f"Generated {len(chapter_summaries)} default chapter summaries"
+                )
+
             # Extract lesson questions if they don't exist
             lesson_questions = stored_state.get("lesson_questions", [])
-            
+
             if (not lesson_questions or len(lesson_questions) == 0) and chapters:
                 logger.warning("No lesson questions found, extracting from chapters")
                 lesson_questions = []
-                
+
                 for chapter in chapters:
                     chapter_type = str(chapter.get("chapter_type", "")).lower()
-                    if chapter_type == "lesson" and "question" in chapter and chapter["question"]:
+                    if (
+                        chapter_type == "lesson"
+                        and "question" in chapter
+                        and chapter["question"]
+                    ):
                         question_data = chapter["question"]
-                        
+
                         # Get response if available
                         response = chapter.get("response", {})
                         if response:
@@ -768,43 +850,51 @@ class AdventureStateManager:
                         else:
                             is_correct = False
                             chosen_answer = "No answer recorded"
-                        
+
                         # Find correct answer
                         correct_answer = None
                         for answer in question_data.get("answers", []):
                             if answer.get("is_correct"):
                                 correct_answer = answer.get("text")
                                 break
-                        
+
                         # Create question object
                         question_obj = {
-                            "question": question_data.get("question", "Unknown question"),
+                            "question": question_data.get(
+                                "question", "Unknown question"
+                            ),
                             "answers": question_data.get("answers", []),
                             "chosen_answer": chosen_answer,
                             "is_correct": is_correct,
                             "explanation": question_data.get("explanation", ""),
                         }
-                        
+
                         if correct_answer:
                             question_obj["correct_answer"] = correct_answer
-                            
+
                         lesson_questions.append(question_obj)
-                        logger.info(f"Extracted question from chapter: {question_obj['question']}")
-                
+                        logger.info(
+                            f"Extracted question from chapter: {question_obj['question']}"
+                        )
+
                 # If still no questions, add a fallback
                 if len(lesson_questions) == 0:
-                    logger.warning("No questions found in any chapter, adding fallback question")
-                    lesson_questions.append({
-                        "question": "What did you learn from this adventure?",
-                        "answers": [
-                            {"text": "Many valuable lessons", "is_correct": True},
-                            {"text": "Nothing at all", "is_correct": False},
-                            {"text": "I'm not sure", "is_correct": False}
-                        ],
-                        "correct_answer": "Many valuable lessons",
-                        "explanation": "This adventure was designed to teach important concepts."
-                    })
-                
+                    logger.warning(
+                        "No questions found in any chapter, adding fallback question"
+                    )
+                    lesson_questions.append(
+                        {
+                            "question": "What did you learn from this adventure?",
+                            "answers": [
+                                {"text": "Many valuable lessons", "is_correct": True},
+                                {"text": "Nothing at all", "is_correct": False},
+                                {"text": "I'm not sure", "is_correct": False},
+                            ],
+                            "correct_answer": "Many valuable lessons",
+                            "explanation": "This adventure was designed to teach important concepts.",
+                        }
+                    )
+
                 # Update stored state with extracted questions
                 stored_state["lesson_questions"] = lesson_questions
                 logger.info(f"Extracted {len(lesson_questions)} lesson questions")
@@ -823,11 +913,15 @@ class AdventureStateManager:
                 "current_storytelling_phase": stored_state[
                     "current_storytelling_phase"
                 ],
-                "chapter_summaries": stored_state.get("chapter_summaries", chapter_summaries),
+                "chapter_summaries": stored_state.get(
+                    "chapter_summaries", chapter_summaries
+                ),
                 "summary_chapter_titles": stored_state.get(
                     "summary_chapter_titles", summary_chapter_titles
                 ),
-                "lesson_questions": stored_state.get("lesson_questions", lesson_questions),
+                "lesson_questions": stored_state.get(
+                    "lesson_questions", lesson_questions
+                ),
                 "metadata": stored_state["metadata"],
             }
 
@@ -861,35 +955,56 @@ class AdventureStateManager:
         # Log detailed state information for debugging
         logger.info("\n=== DEBUG: AdventureState Summary Data ===")
         logger.info(f"Total chapters: {len(state.chapters)}")
-        logger.info(f"Number of chapter summaries: {len(state.chapter_summaries) if hasattr(state, 'chapter_summaries') else 0}")
-        logger.info(f"Number of summary chapter titles: {len(state.summary_chapter_titles) if hasattr(state, 'summary_chapter_titles') else 0}")
-        logger.info(f"Number of lesson questions: {len(state.lesson_questions) if hasattr(state, 'lesson_questions') else 0}")
-        
+        logger.info(
+            f"Number of chapter summaries: {len(state.chapter_summaries) if hasattr(state, 'chapter_summaries') else 0}"
+        )
+        logger.info(
+            f"Number of summary chapter titles: {len(state.summary_chapter_titles) if hasattr(state, 'summary_chapter_titles') else 0}"
+        )
+        logger.info(
+            f"Number of lesson questions: {len(state.lesson_questions) if hasattr(state, 'lesson_questions') else 0}"
+        )
+
         # If we have chapters but no summaries, that's a problem
-        if len(state.chapters) > 0 and (not hasattr(state, 'chapter_summaries') or len(state.chapter_summaries) == 0):
+        if len(state.chapters) > 0 and (
+            not hasattr(state, "chapter_summaries") or len(state.chapter_summaries) == 0
+        ):
             logger.warning("State has chapters but no chapter summaries!")
-            
+
         # If we have lesson chapters but no questions, that's a problem
         # Check using both enum comparison and string comparison for case-insensitivity
         lesson_chapters = [
-            ch for ch in state.chapters 
-            if ch.chapter_type == ChapterType.LESSON or 
-               (isinstance(ch.chapter_type, str) and ch.chapter_type.lower() == "lesson")
+            ch
+            for ch in state.chapters
+            if ch.chapter_type == ChapterType.LESSON
+            or (
+                isinstance(ch.chapter_type, str) and ch.chapter_type.lower() == "lesson"
+            )
         ]
         logger.info(f"Found {len(lesson_chapters)} lesson chapters during analysis")
-        
+
         # Log each chapter's type for debugging
         for idx, ch in enumerate(state.chapters):
             chapter_type = ch.chapter_type
             if isinstance(chapter_type, str):
                 chapter_type_str = chapter_type
             else:
-                chapter_type_str = chapter_type.value if hasattr(chapter_type, 'value') else str(chapter_type)
-            logger.info(f"Chapter {idx+1} type: {chapter_type_str} (type: {type(chapter_type)})")
-            
-        if len(lesson_chapters) > 0 and (not hasattr(state, 'lesson_questions') or len(state.lesson_questions) == 0):
-            logger.warning(f"State has {len(lesson_chapters)} lesson chapters but no lesson questions!")
-            
+                chapter_type_str = (
+                    chapter_type.value
+                    if hasattr(chapter_type, "value")
+                    else str(chapter_type)
+                )
+            logger.info(
+                f"Chapter {idx + 1} type: {chapter_type_str} (type: {type(chapter_type)})"
+            )
+
+        if len(lesson_chapters) > 0 and (
+            not hasattr(state, "lesson_questions") or len(state.lesson_questions) == 0
+        ):
+            logger.warning(
+                f"State has {len(lesson_chapters)} lesson chapters but no lesson questions!"
+            )
+
         logger.info("=========================================\n")
         # Extract chapter summaries with titles
         chapter_summaries = []
@@ -900,24 +1015,30 @@ class AdventureStateManager:
             # Generate more meaningful placeholder summaries for each chapter
             state.chapter_summaries = []
             state.summary_chapter_titles = []
-            
+
             # Sort chapters by chapter number to ensure correct order
             for ch in sorted(state.chapters, key=lambda x: x.chapter_number):
                 # Get a snippet of content for the summary
-                content_snippet = ch.content[:200] + "..." if len(ch.content) > 200 else ch.content
+                content_snippet = (
+                    ch.content[:200] + "..." if len(ch.content) > 200 else ch.content
+                )
                 summary = f"In this chapter: {content_snippet}"
                 state.chapter_summaries.append(summary)
-                
+
                 # Create a title based on chapter type
                 chapter_type_str = ""
                 if isinstance(ch.chapter_type, str):
                     chapter_type_str = ch.chapter_type.capitalize()
                 else:
-                    chapter_type_str = ch.chapter_type.value.capitalize() if hasattr(ch.chapter_type, 'value') else str(ch.chapter_type).capitalize()
-                    
+                    chapter_type_str = (
+                        ch.chapter_type.value.capitalize()
+                        if hasattr(ch.chapter_type, "value")
+                        else str(ch.chapter_type).capitalize()
+                    )
+
                 title = f"Chapter {ch.chapter_number}: {chapter_type_str} Chapter"
                 state.summary_chapter_titles.append(title)
-                
+
             logger.info(
                 f"Generated {len(state.chapter_summaries)} placeholder summaries and titles"
             )
@@ -990,20 +1111,26 @@ class AdventureStateManager:
                 if "is_correct" in question_data:
                     is_correct = question_data["is_correct"]
                     logger.debug(f"Using is_correct from question_data: {is_correct}")
-                
+
                 if "chosen_answer" in question_data:
                     chosen_answer = question_data["chosen_answer"]
-                    logger.debug(f"Using chosen_answer from question_data: {chosen_answer}")
+                    logger.debug(
+                        f"Using chosen_answer from question_data: {chosen_answer}"
+                    )
                 # If not in question_data, try to get from chapter.response
                 elif chapter and chapter.response:
                     # Check if response is a LessonResponse or has the right attributes
                     response = chapter.response
                     if hasattr(response, "is_correct"):
                         is_correct = response.is_correct
-                        logger.debug(f"Using is_correct from chapter response: {is_correct}")
+                        logger.debug(
+                            f"Using is_correct from chapter response: {is_correct}"
+                        )
                     if hasattr(response, "chosen_answer"):
                         chosen_answer = response.chosen_answer
-                        logger.debug(f"Using chosen_answer from chapter response: {chosen_answer}")
+                        logger.debug(
+                            f"Using chosen_answer from chapter response: {chosen_answer}"
+                        )
 
                 question_obj = {
                     "question": question_data.get("question", "Unknown question"),
@@ -1024,7 +1151,9 @@ class AdventureStateManager:
                         for answer in question_data.get("answers", []):
                             if answer.get("is_correct"):
                                 correct_answer = answer.get("text")
-                                logger.debug(f"Found correct answer in answers array: {correct_answer}")
+                                logger.debug(
+                                    f"Found correct answer in answers array: {correct_answer}"
+                                )
                                 break
 
                     if correct_answer:
@@ -1032,35 +1161,42 @@ class AdventureStateManager:
 
                 educational_questions.append(question_obj)
                 logger.info(f"Added question: {question_obj['question']}")
-        
+
         # If no questions yet, extract directly from LESSON chapters
         if len(educational_questions) == 0:
-            logger.info("No questions from lesson_questions array, extracting from LESSON chapters")
+            logger.info(
+                "No questions from lesson_questions array, extracting from LESSON chapters"
+            )
             for chapter in state.chapters:
                 # Get chapter type and handle both enum and string representations for case-insensitivity
                 chapter_type = chapter.chapter_type
-                is_lesson = (
-                    chapter_type == ChapterType.LESSON or 
-                    (isinstance(chapter_type, str) and chapter_type.lower() == "lesson")
+                is_lesson = chapter_type == ChapterType.LESSON or (
+                    isinstance(chapter_type, str) and chapter_type.lower() == "lesson"
                 )
-                
-                logger.debug(f"Checking chapter {chapter.chapter_number}: type={chapter_type}, is_lesson={is_lesson}")
+
+                logger.debug(
+                    f"Checking chapter {chapter.chapter_number}: type={chapter_type}, is_lesson={is_lesson}"
+                )
 
                 if is_lesson and chapter.question:
                     question_data = chapter.question
-                    logger.debug(f"Processing question from chapter: {question_data.get('question')}")
+                    logger.debug(
+                        f"Processing question from chapter: {question_data.get('question')}"
+                    )
 
                     # Get response if available
                     is_correct = False
                     chosen_answer = "No answer recorded"
-                    
+
                     if chapter.response:
                         response = chapter.response
                         if hasattr(response, "is_correct"):
                             is_correct = response.is_correct
                         if hasattr(response, "chosen_answer"):
                             chosen_answer = response.chosen_answer
-                        logger.debug(f"Found response: correct={is_correct}, answer={chosen_answer}")
+                        logger.debug(
+                            f"Found response: correct={is_correct}, answer={chosen_answer}"
+                        )
 
                     question_obj = {
                         "question": question_data.get("question", "Unknown question"),
@@ -1079,13 +1215,15 @@ class AdventureStateManager:
                                 if answer.get("is_correct"):
                                     correct_answer = answer.get("text")
                                     break
-                        
+
                         if correct_answer:
                             question_obj["correctAnswer"] = correct_answer
                             logger.debug(f"Added correct answer: {correct_answer}")
 
                     educational_questions.append(question_obj)
-                    logger.info(f"Added question from LESSON chapter: {question_obj['question']}")
+                    logger.info(
+                        f"Added question from LESSON chapter: {question_obj['question']}"
+                    )
 
         # If we still have no questions but have LESSON chapters, add a fallback question
         if len(educational_questions) == 0:
@@ -1121,10 +1259,14 @@ class AdventureStateManager:
         if statistics["questionsAnswered"] == 0:
             logger.warning("No questions found, setting to 1 for statistics")
             statistics["questionsAnswered"] = 1
-            statistics["correctAnswers"] = 1  # Assume correct for better user experience
+            statistics["correctAnswers"] = (
+                1  # Assume correct for better user experience
+            )
 
-        logger.info(f"Final summary data: {len(chapter_summaries)} chapters, {len(educational_questions)} questions")
-        
+        logger.info(
+            f"Final summary data: {len(chapter_summaries)} chapters, {len(educational_questions)} questions"
+        )
+
         return {
             "chapterSummaries": chapter_summaries,
             "educationalQuestions": educational_questions,

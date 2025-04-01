@@ -267,18 +267,29 @@ class ImageGenerationService:
 
             # Import the template from prompt_templates
             from app.services.llm.prompt_templates import IMAGE_SYNTHESIS_PROMPT
-            
+
             # Format character visuals context
             character_visual_context = ""
             if character_visuals and len(character_visuals) > 0:
                 # Format as a list for easier reading
                 character_visual_context = "Character Visual Descriptions:\n"
+
+                # Log detailed character visuals being included
+                logger.info(
+                    f"AdventureState.character_visuals being included in image prompt:"
+                )
                 for name, description in character_visuals.items():
                     character_visual_context += f"- {name}: {description}\n"
-                logger.info(f"Including {len(character_visuals)} character visual descriptions in the prompt")
+                    logger.info(f'- {name}: "{description}"')
+
+                logger.info(
+                    f"Including {len(character_visuals)} character visual descriptions in the prompt"
+                )
             else:
                 character_visual_context = "No additional character visuals available"
-                logger.debug("No character visuals to include in the prompt")
+                logger.info(
+                    "AdventureState.character_visuals is empty - no character visuals to include in the prompt"
+                )
 
             # Format the template with the provided inputs
             meta_prompt = IMAGE_SYNTHESIS_PROMPT.format(
