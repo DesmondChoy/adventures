@@ -620,8 +620,11 @@ INSTRUCTIONS:
 - CRITICALLY IMPORTANT: Thoroughly scan the entire chapter for ANY character descriptions, no matter how brief or scattered
 - Pay special attention to paragraphs that introduce new characters or scenes
 - Search for descriptive language about physical appearance, clothing, accessories, or anything visual
+- Look for character names followed by descriptions: "That's Giggles," The Showman sighed. "A particularly stout clown with bright orange hair"
 - Look for subtle phrases like "the tall woman with red hair" or "his weathered face crinkled into a smile"
+- For named characters (like "Giggles", "Sarah", "The Showman"), extract even minimal visual details
 - If a character is mentioned without a detailed description, still include them with whatever visual cues you can find
+- Sometimes descriptions are split across multiple paragraphs - connect these details for a complete character description
 - For each character mentioned in the chapter, including the protagonist and NPCs:
   * If the character is new (not in EXISTING VISUALS), create a detailed visual description based on any appearance details in the chapter
   * If the character already exists but has visual changes described in this chapter, update their description accordingly
@@ -637,6 +640,9 @@ EXAMPLES OF CHARACTER DESCRIPTIONS TO LOOK FOR:
 - "The shopkeeper adjusted his wire-rimmed spectacles and smoothed his gray apron"
 - "His eyes were as dark as night, set in a face weathered by years at sea"
 - "She wore a cloak of emerald green, fastened with a silver pin shaped like a leaf"
+- "A stout clown with bright orange hair escaping from under a tiny hat and a teardrop painted under one eye"
+- "One of the performers, a juggler with a shock of purple hair and silver bells on his costume"
+- "The old woman's wrinkled face broke into a smile, her eyes twinkling behind half-moon spectacles"
 
 OUTPUT FORMAT:
 Return ONLY a valid JSON object with the updated character visuals, formatted exactly like this:

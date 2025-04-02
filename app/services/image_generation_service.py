@@ -89,6 +89,7 @@ class ImageGenerationService:
 
         while attempt <= retries:
             try:
+                # Only log the complete prompt and model/attempt info - essential for debugging
                 logger.info("\n" + "=" * 50)
                 logger.info("COMPLETE IMAGE PROMPT SENT TO MODEL:")
                 logger.info(f"{prompt}")
@@ -104,31 +105,12 @@ class ImageGenerationService:
                     config=GenerateImagesConfig(number_of_images=1),
                 )
 
-                # Log response structure for debugging
-                logger.debug("\n=== DEBUG: Image Generation Response ===")
-                logger.debug(f"Response type: {type(response)}")
-
-                if (
-                    hasattr(response, "generated_images")
-                    and response.generated_images is not None
-                ):
-                    logger.debug(
-                        f"Generated images count: {len(response.generated_images)}"
-                    )
-                    if response.generated_images:
-                        logger.debug(
-                            f"First image type: {type(response.generated_images[0])}"
-                        )
-                else:
-                    logger.debug("No generated_images attribute or it is None")
-                    logger.debug(f"Response details: {response}")
-                logger.debug("========================\n")
-
                 # Extract image data from response
                 if response.generated_images:
                     try:
                         # Convert to base64
                         image_bytes = response.generated_images[0].image.image_bytes
+                        # Log essential file size for debug
                         logger.debug(
                             f"Found image data with size: {len(image_bytes)} bytes"
                         )
@@ -137,7 +119,7 @@ class ImageGenerationService:
                         image.save(buffered, format="JPEG")
                         img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
                         logger.info(
-                            f"Successfully generated image for prompt: {prompt}"
+                            f"Successfully generated image for prompt: {prompt[:50]}..."
                         )
                         return img_str
                     except Exception as img_error:
@@ -156,7 +138,7 @@ class ImageGenerationService:
                             )
                             raise
 
-                logger.warning(f"No images generated for prompt: {prompt}")
+                logger.warning(f"No images generated for prompt (attempt {attempt + 1}/{retries + 1})")
                 # If we got a response but no images, increment attempt and try again
                 attempt += 1
                 last_error = ValueError(
@@ -171,7 +153,6 @@ class ImageGenerationService:
 
             except Exception as e:
                 logger.error(f"Image generation attempt {attempt + 1} failed: {str(e)}")
-                logger.error(f"Error type: {type(e).__name__}")
                 last_error = e
                 attempt += 1
 
@@ -183,19 +164,10 @@ class ImageGenerationService:
 
         # If we reach here, all attempts failed
         logger.error(
-            f"All {retries + 1} image generation attempts failed for prompt: {prompt}"
+            f"All {retries + 1} image generation attempts failed for prompt"
         )
         if last_error:
             logger.error(f"Last error: {type(last_error).__name__}: {str(last_error)}")
-
-        # Return a fallback image for testing if needed
-        # Uncomment the following code to provide a fallback test image
-        # try:
-        #     logger.warning("Using fallback test image")
-        #     with open('app/static/images/fallback_image.jpg', 'rb') as img_file:
-        #         return base64.b64encode(img_file.read()).decode('utf-8')
-        # except Exception as fallback_error:
-        #     logger.error(f"Fallback image also failed: {str(fallback_error)}")
 
         return None
 
@@ -263,8 +235,6 @@ class ImageGenerationService:
             Exception: If the LLM call fails or returns invalid content
         """
         try:
-            logger.info("Synthesizing image prompt with LLM")
-
             # Import the template from prompt_templates
             from app.services.llm.prompt_templates import IMAGE_SYNTHESIS_PROMPT
 
@@ -273,23 +243,10 @@ class ImageGenerationService:
             if character_visuals and len(character_visuals) > 0:
                 # Format as a list for easier reading
                 character_visual_context = "Character Visual Descriptions:\n"
-
-                # Log detailed character visuals being included
-                logger.info(
-                    f"AdventureState.character_visuals being included in image prompt:"
-                )
                 for name, description in character_visuals.items():
                     character_visual_context += f"- {name}: {description}\n"
-                    logger.info(f'- {name}: "{description}"')
-
-                logger.info(
-                    f"Including {len(character_visuals)} character visual descriptions in the prompt"
-                )
             else:
                 character_visual_context = "No additional character visuals available"
-                logger.info(
-                    "AdventureState.character_visuals is empty - no character visuals to include in the prompt"
-                )
 
             # Format the template with the provided inputs
             meta_prompt = IMAGE_SYNTHESIS_PROMPT.format(
@@ -302,9 +259,6 @@ class ImageGenerationService:
                 character_visual_context=character_visual_context,
             )
 
-            # Log the meta-prompt for debugging
-            logger.debug(f"Meta-prompt for LLM synthesis:\n{meta_prompt}")
-
             # Use LLMService to call Gemini Flash
             llm = LLMService()
 
@@ -312,18 +266,16 @@ class ImageGenerationService:
             is_gemini = (
                 isinstance(llm, LLMService) or "Gemini" in llm.__class__.__name__
             )
-            logger.debug(f"Using LLM service: {llm.__class__.__name__}")
 
+            synthesized_prompt = ""
             # For Gemini, use a direct approach instead of streaming
             if is_gemini:
                 try:
                     # Initialize the model with system prompt
                     from google import generativeai as genai
 
-                    # Explicitly verify we're using the correct model
+                    # Use Gemini Flash
                     model_name = "gemini-2.0-flash"
-                    logger.info(f"Using model {model_name} for image prompt synthesis")
-
                     model = genai.GenerativeModel(
                         model_name=model_name,
                         system_instruction="You are a helpful assistant that follows instructions precisely.",
@@ -334,19 +286,10 @@ class ImageGenerationService:
 
                     # Extract the text directly
                     synthesized_prompt = response.text.strip()
-                    logger.debug(f"Direct Gemini response: '{synthesized_prompt}'")
                 except Exception as e:
                     logger.error(f"Error with direct Gemini call: {str(e)}")
                     # Fallback to streaming approach
-                    logger.info("Falling back to LLMService for image prompt synthesis")
-
-                    # Verify the LLMService is using the correct model
-                    if hasattr(llm, "model"):
-                        logger.info(f"LLMService is using model: {llm.model}")
-                        if llm.model != "gemini-2.0-flash":
-                            logger.warning(
-                                f"LLMService is using {llm.model} instead of gemini-2.0-flash"
-                            )
+                    logger.info("Falling back to LLMService")
 
                     chunks = []
 
@@ -391,23 +334,14 @@ class ImageGenerationService:
 
             # Ensure the prompt is not empty
             if not synthesized_prompt or len(synthesized_prompt) < 10:
-                logger.warning(
-                    f"Generated prompt is empty or too short: '{synthesized_prompt}', using fallback"
-                )
                 # Use a fallback approach
                 fallback_prompt = f"Colorful storybook illustration of this scene: {image_scene_description}. Protagonist: {protagonist_description}. Agency: {agency_details.get('visual_details', '')}. Atmosphere: {story_visual_sensory_detail}."
-                logger.info(f"Using fallback prompt: {fallback_prompt}")
                 return fallback_prompt
 
-            logger.info("\n" + "=" * 50)
-            logger.info("SYNTHESIZED IMAGE PROMPT (BEFORE SENDING TO IMAGE MODEL):")
-            logger.info(f"{synthesized_prompt}")
-            logger.info("=" * 50 + "\n")
             return synthesized_prompt
 
         except Exception as e:
             logger.error(f"Error synthesizing image prompt: {str(e)}")
             # Return a fallback prompt
             fallback_prompt = f"Colorful storybook illustration of this scene: {image_scene_description}. Protagonist: {protagonist_description}. Agency: {agency_details.get('visual_details', '')}. Atmosphere: {story_visual_sensory_detail}."
-            logger.info(f"Using fallback prompt due to error: {fallback_prompt}")
             return fallback_prompt

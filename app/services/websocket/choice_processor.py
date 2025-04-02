@@ -359,22 +359,12 @@ async def _update_character_visuals(
             f"[CHAPTER {chapter_number}] Starting character visual update from chapter content"
         )
 
-        # Get existing character visuals or empty dict
+        # Get existing character visuals or empty dict - we need this for the prompt
+        # but we'll avoid logging it to keep the terminal cleaner and more focused
         existing_visuals = getattr(state, "character_visuals", {})
-
-        # Log the existing visuals
-        logger.info(
-            f"[CHAPTER {chapter_number}] AdventureState.character_visuals BEFORE update:"
-        )
-        if existing_visuals:
-            for char_name, description in existing_visuals.items():
-                logger.info(
-                    f'[CHAPTER {chapter_number}] - {char_name}: "{description}"'
-                )
-        else:
-            logger.info(
-                f"[CHAPTER {chapter_number}] - Empty (no character visuals tracked yet)"
-            )
+        
+        # Just log how many existing visuals we have, not the details (we'll log final result at the end)
+        logger.info(f"[CHAPTER {chapter_number}] Starting with {len(existing_visuals)} existing character visual entries")
 
         # Log base protagonist description
         protagonist_desc = getattr(state, "protagonist_description", "")
@@ -390,14 +380,43 @@ async def _update_character_visuals(
             if len(chapter_content) > 300
             else chapter_content
         )
-        logger.debug(f"Chapter content snippet being analyzed (truncated for log display only): {content_snippet}")
-        logger.debug(f"Full chapter content length: {len(chapter_content)} characters")
+        logger.debug(
+            f"Chapter content snippet being analyzed (truncated for log display only): {content_snippet}"
+        )
+        logger.debug(
+            f"Full chapter content length: {len(chapter_content)} characters\n"
+        )
 
         # Format the prompt with chapter content and existing visuals
-        custom_prompt = CHARACTER_VISUAL_UPDATE_PROMPT.format(
-            chapter_content=chapter_content,
-            existing_visuals=json.dumps(existing_visuals, indent=2),
-        )
+        # Use string formatting carefully to avoid template key errors
+        try:
+            # First safely escape any braces in the chapter content and existing visuals
+            safe_chapter_content = chapter_content.replace("{", "{{").replace("}", "}}")
+            safe_existing_visuals = json.dumps(existing_visuals, indent=2).replace("{", "{{").replace("}", "}}")
+            
+            # Now create the prompt with the safe strings
+            custom_prompt = CHARACTER_VISUAL_UPDATE_PROMPT.format(
+                chapter_content=safe_chapter_content,
+                existing_visuals=safe_existing_visuals,
+            )
+        except KeyError as e:
+            logger.error(f"KeyError while formatting prompt: {e}")
+            # Create a simplified prompt without any fancy formatting
+            custom_prompt = f"""
+ROLE: Visual Character Tracker
+
+TASK:
+Extract character visual descriptions from this chapter and return JSON.
+
+CHAPTER CONTENT:
+{chapter_content}
+
+EXISTING VISUALS:
+{json.dumps(existing_visuals, indent=2)}
+
+OUTPUT FORMAT:
+Return ONLY a valid JSON with character names and descriptions.
+            """
 
         # Log the prompt with distinctive markers for easier debugging in terminal logs
         logger.info(
@@ -496,7 +515,11 @@ async def _update_character_visuals(
                     logger.debug(f"Extracted JSON-like structure: {json_str}")
                 else:
                     # Try a more comprehensive regex that can capture full JSON objects with nested structures
-                    json_match = re.search(r"\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{[^{}]*\}))*\}))*\}", response, re.DOTALL)
+                    json_match = re.search(
+                        r"\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{[^{}]*\}))*\}))*\}",
+                        response,
+                        re.DOTALL,
+                    )
                     if json_match:
                         json_str = json_match.group(0)
                         logger.debug(f"Extracted complex JSON structure: {json_str}")
@@ -519,24 +542,26 @@ async def _update_character_visuals(
                 except json.JSONDecodeError:
                     # Last resort: try multiple regex patterns to extract key-value pairs
                     logger.debug("Attempting regex extraction of key-value pairs")
-                    
+
                     # Try standard JSON pattern first
                     matches = re.findall(
                         r'["\']([^"\']+)["\']:\s*["\']([^"\']+)["\']', response
                     )
-                    
+
                     # If that doesn't work, try with double quotes only
                     if not matches:
-                        logger.debug("First regex failed, trying double quotes only pattern")
+                        logger.debug(
+                            "First regex failed, trying double quotes only pattern"
+                        )
                         matches = re.findall(r'"([^"]+)":\s*"([^"]+)"', response)
-                    
+
                     # If still no matches, try a more lenient pattern that doesn't require quotes for values
                     if not matches:
                         logger.debug("Second regex failed, trying lenient pattern")
                         matches = re.findall(r'"([^"]+)":\s*([^,}]+)', response)
                         # Clean up the matches to remove trailing whitespace and quotes
-                        matches = [(k, v.strip().strip('"\'')) for k, v in matches]
-                    
+                        matches = [(k, v.strip().strip("\"'")) for k, v in matches]
+
                     # If we found matches with any pattern, create the dictionary
                     if matches:
                         updated_visuals = {name: desc for name, desc in matches}
@@ -547,7 +572,9 @@ async def _update_character_visuals(
                         # Last attempt: look for "You" or protagonist as a character if nothing else worked
                         protagonist_desc = getattr(state, "protagonist_description", "")
                         if protagonist_desc:
-                            logger.info("Creating fallback visuals with protagonist only")
+                            logger.info(
+                                "Creating fallback visuals with protagonist only"
+                            )
                             updated_visuals = {"You": protagonist_desc}
                         else:
                             logger.error("All JSON parsing approaches failed")
@@ -579,6 +606,19 @@ async def _update_character_visuals(
 
             # Update the state with the new visuals
             state_manager.update_character_visuals(state, updated_visuals)
+            
+            # Show the character visuals after updating - this is what matters to users
+            logger.info(f"\n=== CHARACTER VISUALS TRACKED [CHAPTER {chapter_number}] ===")
+            # Get the updated character visuals 
+            after_visuals = getattr(state, "character_visuals", {})
+            if after_visuals:
+                # Sort by key to make it easier to scan
+                for char_name, description in sorted(after_visuals.items()):
+                    logger.info(f'- {char_name}: "{description}"')
+            else:
+                logger.info("- Empty (no character visuals being tracked)")
+            logger.info(f"=== END CHARACTER VISUALS ===\n")
+            
             logger.info(
                 f"[CHAPTER {chapter_number}] Successfully updated character visuals with {len(updated_visuals)} entries"
             )
@@ -594,7 +634,22 @@ async def _update_character_visuals(
             )
 
     except Exception as e:
-        logger.error(f"Error in _update_character_visuals: {e}")
+        logger.error(f"Error in _update_character_visuals: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        
+        # Add more debugging info
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        
+        # Try to create a fallback with protagonist only
+        try:
+            protagonist_desc = getattr(state, "protagonist_description", "")
+            if protagonist_desc and state and hasattr(state, "character_visuals"):
+                logger.info("Creating fallback protagonist entry after error")
+                state.character_visuals["You"] = protagonist_desc
+        except Exception as fallback_error:
+            logger.error(f"Failed to create fallback: {fallback_error}")
+            
         # Don't re-raise - this is an auxiliary function that shouldn't block the main flow
 
 
