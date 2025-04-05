@@ -592,8 +592,7 @@ class ChapterManager:
             )
 
             logger.info(
-                "Selected protagonist description",
-                extra={"protagonist_description": selected_protagonist_desc},
+                f"Selected protagonist description: {selected_protagonist_desc}"
             )
 
             # Create adventure state with validated elements

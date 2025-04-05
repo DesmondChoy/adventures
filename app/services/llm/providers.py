@@ -460,10 +460,11 @@ class GeminiService(BaseLLMService):
             context=context,
         )
 
-        logger.debug("\n=== DEBUG: LLM Prompt Request ===")
-        logger.debug(f"System Prompt:\n{system_prompt}")
-        logger.debug(f"User Prompt:\n{user_prompt}")
-        logger.debug("========================\n")
+        # Log the prompts at INFO level
+        logger.info("\n=== LLM Prompt Request (Gemini) ===")
+        logger.info(f"System Prompt:\n{system_prompt}")
+        logger.info(f"User Prompt:\n{user_prompt}")
+        logger.info("========================\n")
 
         try:
             # Initialize the model with system prompt

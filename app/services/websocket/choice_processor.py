@@ -362,9 +362,11 @@ async def _update_character_visuals(
         # Get existing character visuals or empty dict - we need this for the prompt
         # but we'll avoid logging it to keep the terminal cleaner and more focused
         existing_visuals = getattr(state, "character_visuals", {})
-        
+
         # Just log how many existing visuals we have, not the details (we'll log final result at the end)
-        logger.info(f"[CHAPTER {chapter_number}] Starting with {len(existing_visuals)} existing character visual entries")
+        logger.info(
+            f"[CHAPTER {chapter_number}] Starting with {len(existing_visuals)} existing character visual entries"
+        )
 
         # Log base protagonist description
         protagonist_desc = getattr(state, "protagonist_description", "")
@@ -387,21 +389,26 @@ async def _update_character_visuals(
             f"Full chapter content length: {len(chapter_content)} characters\n"
         )
 
-        # Format the prompt with chapter content and existing visuals
-        # Use string formatting carefully to avoid template key errors
+        # Format the prompt using string replacement for safer substitution
         try:
-            # First safely escape any braces in the chapter content and existing visuals
-            safe_chapter_content = chapter_content.replace("{", "{{").replace("}", "}}")
-            safe_existing_visuals = json.dumps(existing_visuals, indent=2).replace("{", "{{").replace("}", "}}")
-            
-            # Now create the prompt with the safe strings
-            custom_prompt = CHARACTER_VISUAL_UPDATE_PROMPT.format(
-                chapter_content=safe_chapter_content,
-                existing_visuals=safe_existing_visuals,
+            existing_visuals_json = json.dumps(existing_visuals, indent=2)
+            # Directly substitute using string replacement.
+            custom_prompt = CHARACTER_VISUAL_UPDATE_PROMPT.replace(
+                "{chapter_content}", chapter_content
+            ).replace("{existing_visuals}", existing_visuals_json)
+            # Log success for debugging
+            logger.debug(
+                "Successfully formatted CHARACTER_VISUAL_UPDATE_PROMPT using .replace()"
             )
-        except KeyError as e:
-            logger.error(f"KeyError while formatting prompt: {e}")
-            # Create a simplified prompt without any fancy formatting
+
+        except Exception as e:
+            # Log the specific error during formatting
+            logger.error(
+                f"Error formatting prompt using .replace(): {e}", exc_info=True
+            )
+            # Fallback to a simpler f-string based prompt if replacement fails
+            logger.warning("Falling back to simplified prompt formatting due to error.")
+            existing_visuals_json = json.dumps(existing_visuals, indent=2)
             custom_prompt = f"""
 ROLE: Visual Character Tracker
 
@@ -606,10 +613,12 @@ Return ONLY a valid JSON with character names and descriptions.
 
             # Update the state with the new visuals
             state_manager.update_character_visuals(state, updated_visuals)
-            
+
             # Show the character visuals after updating - this is what matters to users
-            logger.info(f"\n=== CHARACTER VISUALS TRACKED [CHAPTER {chapter_number}] ===")
-            # Get the updated character visuals 
+            logger.info(
+                f"\n=== CHARACTER VISUALS TRACKED [CHAPTER {chapter_number}] ==="
+            )
+            # Get the updated character visuals
             after_visuals = getattr(state, "character_visuals", {})
             if after_visuals:
                 # Sort by key to make it easier to scan
@@ -618,7 +627,7 @@ Return ONLY a valid JSON with character names and descriptions.
             else:
                 logger.info("- Empty (no character visuals being tracked)")
             logger.info(f"=== END CHARACTER VISUALS ===\n")
-            
+
             logger.info(
                 f"[CHAPTER {chapter_number}] Successfully updated character visuals with {len(updated_visuals)} entries"
             )
@@ -636,11 +645,12 @@ Return ONLY a valid JSON with character names and descriptions.
     except Exception as e:
         logger.error(f"Error in _update_character_visuals: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
-        
+
         # Add more debugging info
         import traceback
+
         logger.error(f"Traceback: {traceback.format_exc()}")
-        
+
         # Try to create a fallback with protagonist only
         try:
             protagonist_desc = getattr(state, "protagonist_description", "")
@@ -649,7 +659,7 @@ Return ONLY a valid JSON with character names and descriptions.
                 state.character_visuals["You"] = protagonist_desc
         except Exception as fallback_error:
             logger.error(f"Failed to create fallback: {fallback_error}")
-            
+
         # Don't re-raise - this is an auxiliary function that shouldn't block the main flow
 
 

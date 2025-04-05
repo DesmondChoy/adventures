@@ -1,8 +1,29 @@
 # Active Context
 
-## Current Focus: Protagonist Inconsistencies Fix (2025-04-01)
+## Current Focus: Logging Improvements & Bug Fixes (2025-04-05)
 
-We're currently working on the `protagonist_inconsistencies` branch to address issues with protagonist visual consistency across chapters. The implementation has been partially completed with the two-step image prompt generation system, but there are remaining tasks to fully integrate protagonist descriptions throughout the application.
+We addressed several logging issues and a prompt formatting bug to improve debugging visibility and stability.
+
+### Implemented Changes
+
+1.  **Protagonist Description Logging:**
+    *   Modified `app/services/chapter_manager.py` to log the selected protagonist description directly in the INFO message (`logger.info(f"Selected protagonist description: {selected_protagonist_desc}")`) instead of using the `extra` dictionary. This makes the description visible in standard console output.
+
+2.  **Prompt Formatting Fix:**
+    *   Fixed a `KeyError` in `app/services/websocket/choice_processor.py` that occurred when formatting the `CHARACTER_VISUAL_UPDATE_PROMPT`.
+    *   Changed the formatting method from `.format()` to `.replace()` to safely substitute the `chapter_content` and `existing_visuals` JSON string without misinterpreting curly braces within the JSON.
+
+3.  **Narrative Prompt Logging Level:**
+    *   Updated the Gemini implementation in `app/services/llm/providers.py` to log the narrative generation prompts (system and user) at the INFO level instead of DEBUG.
+    *   This ensures these prompts are visible in the console, which is configured to show INFO level logs and above (`app/utils/logging_config.py`).
+
+### Next Steps
+
+Continue working on the remaining tasks for the `protagonist_inconsistencies` branch.
+
+## Previous Focus: Protagonist Inconsistencies Fix (2025-04-01)
+
+We were working on the `protagonist_inconsistencies` branch to address issues with protagonist visual consistency across chapters. The implementation has been partially completed with the two-step image prompt generation system, but there are remaining tasks to fully integrate protagonist descriptions throughout the application.
 
 ### Problem Analysis
 

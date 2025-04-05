@@ -2,6 +2,11 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-04-05: Logging Improvements & Bug Fixes
+- Enhanced protagonist description logging in `chapter_manager.py` to show description directly in INFO message
+- Fixed `KeyError` during prompt formatting in `choice_processor.py` by using `.replace()` instead of `.format()`
+- Changed narrative prompt logging level in Gemini provider (`providers.py`) from DEBUG to INFO for console visibility
+
 ### 2025-04-01: Character Visual Consistency Debugging
 - Implemented detailed logging for character visuals state management
 - Enhanced `_update_character_visuals` function in `choice_processor.py` with logging
@@ -144,6 +149,8 @@
 - Responsive design for both desktop and mobile
 
 ### Recent Enhancements
+- Improved logging visibility for protagonist description and narrative prompts
+- Fixed prompt formatting bug in character visual extraction
 - Detailed logging for character visuals state management
 - Complete logging throughout the character visuals pipeline
 - Fixed incorrect chapter number calculation
