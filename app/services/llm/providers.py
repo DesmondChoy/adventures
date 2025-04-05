@@ -519,9 +519,9 @@ class GeminiService(BaseLLMService):
                 logger.info("Sent reformatted text with proper paragraphing")
 
             # Log the complete response
-            logger.debug("\n=== DEBUG: LLM Response ===")
-            logger.debug(reformatted_text if needs_formatting else full_response)
-            logger.debug("========================\n")
+            logger.info("\n=== LLM Response ===")
+            logger.info(reformatted_text if needs_formatting else full_response)
+            logger.info("========================\n")
 
         except Exception as e:
             logger.error("\n=== ERROR: LLM Request Failed ===")

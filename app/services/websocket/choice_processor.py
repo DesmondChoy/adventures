@@ -429,24 +429,12 @@ Return ONLY a valid JSON with character names and descriptions.
         logger.info(
             f"\n=== CHARACTER_VISUAL_UPDATE_PROMPT TRIGGERED [CHAPTER {chapter_number}] ===\n"
         )
-        # Split the prompt into chunks for better readability in logs
-        prompt_parts = custom_prompt.split("\n")
-        beginning = "\n".join(prompt_parts[:15])  # First 15 lines
-        middle_start = 15
-        middle_end = (
-            len(prompt_parts) - 15 if len(prompt_parts) > 30 else len(prompt_parts)
+        logger.info(
+            f"Character visual update prompt for chapter {chapter_number} (content length: {len(chapter_content)} chars)"
         )
-        middle = "\n".join(prompt_parts[middle_start:middle_end])
-        end = "\n".join(prompt_parts[-15:]) if len(prompt_parts) > 30 else ""
-
-        logger.info(f"=== PROMPT BEGINNING ===\n{beginning}")
-        if middle:
-            logger.info(f"=== PROMPT MIDDLE ===\n{middle}")
-        if end:
-            logger.info(f"=== PROMPT END ===\n{end}")
         logger.info(f"=== END CHARACTER_VISUAL_UPDATE_PROMPT ===\n")
 
-        # Also keep detailed debug log for full prompt
+        # Keep detailed debug log for full prompt if needed
         logger.debug(f"Complete Character visual update prompt:\n{custom_prompt}")
 
         # Create a minimal state object for the LLM call
