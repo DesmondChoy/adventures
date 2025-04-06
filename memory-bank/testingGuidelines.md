@@ -1,5 +1,17 @@
 # Testing Guidelines for Learning Odyssey
 
+## General Testing Principles
+
+- **Handling Dynamic Narrative Content:**
+  - **DO NOT assert against specific LLM-generated narrative text (sentences, paragraphs, character names, etc.).** This content is variable and will break tests.
+  - **Focus tests on:**
+    - Correct state transitions (`AdventureState` updates).
+    - Structural correctness of data (e.g., does a chapter have content? Does a summary have a title?).
+    - Presence and type correctness of expected data fields.
+    - Correct function calls and interactions between services.
+    - Validation of chapter types (`ChapterType`) and sequence.
+  - Use mocking to provide structurally correct, but not specific, narrative content when testing components that consume it.
+
 ## State Testing
 
 ### Summary Button Testing

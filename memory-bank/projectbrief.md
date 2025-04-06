@@ -56,6 +56,10 @@ Learning Odyssey solves these challenges through:
 - Browser-based state persistence
 - Robust error handling and recovery
 
+## Core Development Principles
+
+- **Dynamic Content Integrity:** Narrative content is AI-generated and variable. Application logic and tests MUST NOT hardcode narrative elements. Rely on state structure (`AdventureState`), metadata, and defined types (`ChapterType`) for validation and control. Handle narrative content as dynamic data flowing through a defined structure.
+
 ## Success Criteria
 
 ### Technical Requirements

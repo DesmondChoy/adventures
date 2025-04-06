@@ -670,6 +670,10 @@ class ChapterManager:
 
             # Create a custom prompt for the image scene using the template
             custom_prompt = IMAGE_SCENE_PROMPT.format(chapter_content=chapter_content)
+            logger.info("\n" + "=" * 50)
+            logger.info("IMAGE_SCENE_PROMPT SENT TO LLM:")
+            logger.info(f"{custom_prompt}")
+            logger.info("=" * 50 + "\n")
 
             # We need to override the prompt engineering system
             # Create a minimal AdventureState-like object with just what we need

@@ -106,3 +106,10 @@
 - Implement graceful degradation for service failures
 - Define specific error types for different failure scenarios
 - Use dependency injection for better testability
+
+### 9. Dynamic Content Handling (CRITICAL)
+- **NEVER hardcode narrative strings, character names, or plot points.** The narrative is AI-generated and will differ each time.
+- **Rely on state structure:** Base logic and tests on `AdventureState` fields, `ChapterType`, presence/absence of data, and event sequence.
+- **Use metadata:** Leverage structured data in `state.metadata` (e.g., agency details, extracted identifiers) instead of parsing free-form text.
+- **Abstract testing:** Focus tests on state transitions, structural correctness, service interactions, and function calls. Avoid asserting against specific LLM-generated sentences.
+- **LLM-based extraction:** If information *must* be pulled from narrative text, use robust LLM-based extraction methods and store the result in structured fields. Avoid brittle regex.
