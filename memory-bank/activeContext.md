@@ -1,6 +1,50 @@
 # Active Context
 
-## Current Focus: Logging Improvements & Bug Fixes (2025-04-05)
+## Current Focus: Character Visual Extraction Timing Fix (2025-04-06)
+
+We implemented a fix for the character visual extraction timing issue that was causing character visuals to not be properly extracted from LLM responses.
+
+### Problem Addressed
+
+The system was attempting to extract character visuals from streamed LLM responses before the complete response was received, resulting in empty or incomplete character visual dictionaries. This was particularly evident in the logs:
+
+```
+=== CHARACTER_VISUAL_UPDATE_PROMPT RESPONSE [CHAPTER 1] ===
+Response:
+
+=== END RESPONSE ===
+
+JSON parsing error: Expecting value: line 1 column 1 (char 0)
+```
+
+### Implemented Solution
+
+1. **LLM Service API Enhancement:**
+   * Added a new non-streaming `generate_character_visuals_json()` method to the `BaseLLMService` abstract class
+   * Implemented this method in both OpenAI and Gemini service providers
+   * This ensures we get complete, synchronous responses for character visual extraction
+
+2. **Character Visual Extraction Improvement:**
+   * Modified `_update_character_visuals()` to use the new non-streaming API
+   * Enhanced JSON extraction to better handle different response formats
+   * Added proper validation for extracted character visuals
+   * Improved error handling and fallbacks
+
+3. **State Management Robustness:**
+   * Ensured proper state initialization for character visuals
+   * Improved error handling in the state update process
+   * Added better logging of character visual extraction results
+
+The key insight was that character visual extraction should not use streaming responses, as the complete JSON object is critical for proper extraction. By using a dedicated non-streaming API method, we've eliminated the race conditions that were causing empty responses.
+
+### Affected Files
+
+1. `app/services/llm/base.py`: Added new abstract method for character visual extraction
+2. `app/services/llm/providers.py`: Implemented non-streaming methods for both LLM providers
+3. `app/services/websocket/choice_processor.py`: Updated character visual extraction process
+4. `app/services/adventure_state_manager.py`: Enhanced state handling for character visuals
+
+## Previous Focus: Logging Improvements & Bug Fixes (2025-04-05)
 
 We addressed several logging issues and a prompt formatting bug to improve debugging visibility and stability.
 
@@ -16,10 +60,6 @@ We addressed several logging issues and a prompt formatting bug to improve debug
 3.  **Narrative Prompt Logging Level:**
     *   Updated the Gemini implementation in `app/services/llm/providers.py` to log the narrative generation prompts (system and user) at the INFO level instead of DEBUG.
     *   This ensures these prompts are visible in the console, which is configured to show INFO level logs and above (`app/utils/logging_config.py`).
-
-### Next Steps
-
-Continue working on the remaining tasks for the `protagonist_inconsistencies` branch.
 
 ## Previous Focus: Protagonist Inconsistencies Fix (2025-04-01)
 

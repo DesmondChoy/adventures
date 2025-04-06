@@ -336,11 +336,100 @@ async def fix_missing_character_visuals(
         logger.warning("No character visuals found in any chapters")
 
 
+# This function is no longer needed since we use the non-streaming API directly
+
+
+async def extract_character_visuals_from_response(response, chapter_number):
+    """Extract character visuals from LLM response with reliable JSON parsing.
+    
+    Args:
+        response: Complete LLM response text from non-streaming API
+        chapter_number: Current chapter number for logging
+        
+    Returns:
+        dict: Extracted character visuals dictionary or empty dict if extraction failed
+    """
+    # Log what we're working with
+    logger.info(f"[CHAPTER {chapter_number}] Extracting character visuals from response of length {len(response)}")
+    if response:
+        logger.info(f"[CHAPTER {chapter_number}] Response excerpt: {response[:100]}...")
+    else:
+        logger.error(f"[CHAPTER {chapter_number}] Empty response received from LLM")
+        return {}
+    
+    # First try to extract from markdown JSON code block (common LLM response format)
+    json_match = re.search(r"```json\s*([\s\S]*?)\s*```", response, re.DOTALL)
+    if json_match:
+        json_str = json_match.group(1).strip()
+        logger.info(f"[CHAPTER {chapter_number}] Found JSON in markdown code block")
+        
+        try:
+            updated_visuals = json.loads(json_str)
+            if isinstance(updated_visuals, dict):
+                logger.info(f"[CHAPTER {chapter_number}] Successfully parsed JSON from markdown block")
+                return updated_visuals
+        except json.JSONDecodeError as e:
+            logger.warning(f"[CHAPTER {chapter_number}] JSON from markdown block parse error: {e}")
+    
+    # Try parsing the direct response if it looks like JSON
+    try:
+        if response.strip().startswith('{') and response.strip().endswith('}'):
+            direct_json = json.loads(response)
+            if isinstance(direct_json, dict):
+                logger.info(f"[CHAPTER {chapter_number}] Successfully parsed direct JSON response")
+                return direct_json
+    except json.JSONDecodeError:
+        logger.debug(f"[CHAPTER {chapter_number}] Response is not directly parseable as JSON")
+    
+    # Fallback regex pattern for JSON-like structures
+    pattern = r"\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{[^{}]*\}))*\}))*\}"
+    json_matches = re.findall(pattern, response, re.DOTALL)
+    
+    if json_matches:
+        # Try each match, starting with the longest
+        for json_str in sorted(json_matches, key=len, reverse=True):
+            try:
+                updated_visuals = json.loads(json_str)
+                if isinstance(updated_visuals, dict):
+                    logger.info(f"[CHAPTER {chapter_number}] Successfully parsed JSON from regex match")
+                    return updated_visuals
+            except json.JSONDecodeError:
+                continue
+    
+    # Ultimate fallback - return empty dict
+    logger.error(f"[CHAPTER {chapter_number}] All JSON extraction methods failed")
+    return {}
+
+
+def validate_character_visuals(visuals):
+    """Validate that the extracted character visuals are in the expected format.
+    
+    Args:
+        visuals: Dictionary of character visuals to validate
+        
+    Returns:
+        bool: True if visuals are valid, False otherwise
+    """
+    if not isinstance(visuals, dict):
+        return False
+        
+    # Check that we have at least one character
+    if len(visuals) == 0:
+        return False
+        
+    # Check that values are all strings
+    for name, description in visuals.items():
+        if not isinstance(name, str) or not isinstance(description, str):
+            return False
+            
+    return True
+
+
 async def _update_character_visuals(
     state: AdventureState, chapter_content: str, state_manager: AdventureStateManager
-) -> None:
+) -> dict:
     """Update character visuals based on chapter content.
-
+    
     This function extracts character descriptions from the chapter content
     and updates the character_visuals dictionary in the AdventureState.
     It uses an LLM to identify character descriptions and ensures they are
@@ -350,6 +439,9 @@ async def _update_character_visuals(
         state: Current adventure state
         chapter_content: Content of the completed chapter
         state_manager: The AdventureStateManager instance
+        
+    Returns:
+        dict: The updated visuals dictionary for immediate use or None on failure
     """
     try:
         # Get chapter number for logging
@@ -452,25 +544,12 @@ Return ONLY a valid JSON with character names and descriptions.
             logger.info(
                 f"[CHAPTER {chapter_number}] Calling LLM for character visual updates"
             )
-            # Extract a snippet for debugging purposes
-            content_snippet = (
-                chapter_content[:300] + "..."
-                if len(chapter_content) > 300
-                else chapter_content
-            )
-            logger.debug(f"Content being analyzed: {content_snippet}")
-
-            chunks = []
-            async for chunk in llm_service.generate_chapter_stream(
-                story_config={},
-                state=minimal_state,
-                question=None,
-                previous_lessons=None,
-                context={"prompt_override": custom_prompt},
-            ):
-                chunks.append(chunk)
-
-            response = "".join(chunks).strip()
+            
+            # IMPORTANT: Use the non-streaming API for character visuals
+            # This directly gets the complete, synchronous response
+            logger.info(f"[CHAPTER {chapter_number}] Using non-streaming API for character visuals")
+            response = await llm_service.generate_character_visuals_json(custom_prompt)
+            
             # Log the raw LLM response with distinctive markers
             logger.info(
                 f"\n=== CHARACTER_VISUAL_UPDATE_PROMPT RESPONSE [CHAPTER {chapter_number}] ==="
@@ -488,99 +567,21 @@ Return ONLY a valid JSON with character names and descriptions.
 
             # Keep detailed debug log
             logger.debug(f"Raw LLM response: {response}")
-
-            # Enhanced JSON extraction and parsing
-            logger.debug(f"Raw LLM response length: {len(response)}")
-            logger.debug(f"First 200 chars: {response[:200]}")
-            logger.debug(
-                f"Last 200 chars: {response[-200:] if len(response) > 200 else response}"
-            )
-
-            # First, try to extract JSON between ```json and ``` markers
-            json_match = re.search(r"```json\s*(.*?)\s*```", response, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(1)
-                logger.debug(f"Extracted JSON from markdown block: {json_str}")
-            else:
-                # If not found, look for any JSON-like structure with curly braces
-                # The regex needs to be non-greedy to handle nested curly braces properly
-                json_match = re.search(r"\{.*?\}", response, re.DOTALL)
-                if json_match:
-                    json_str = json_match.group(0)
-                    logger.debug(f"Extracted JSON-like structure: {json_str}")
+            
+            # Extract JSON directly from the complete response
+            updated_visuals = await extract_character_visuals_from_response(response, chapter_number)
+            
+            if not validate_character_visuals(updated_visuals):
+                logger.error(f"[CHAPTER {chapter_number}] Character visuals validation failed")
+                # Try to use protagonist as fallback if nothing else worked
+                protagonist_desc = getattr(state, "protagonist_description", "")
+                if protagonist_desc:
+                    logger.info(f"[CHAPTER {chapter_number}] Creating fallback visuals with protagonist only")
+                    updated_visuals = {"You": protagonist_desc}
                 else:
-                    # Try a more comprehensive regex that can capture full JSON objects with nested structures
-                    json_match = re.search(
-                        r"\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{[^{}]*\}))*\}))*\}",
-                        response,
-                        re.DOTALL,
-                    )
-                    if json_match:
-                        json_str = json_match.group(0)
-                        logger.debug(f"Extracted complex JSON structure: {json_str}")
-                    else:
-                        # If still not found, try to use the entire response as JSON
-                        json_str = response
-                        logger.debug("Using entire response as JSON")
-
-            # Parse the JSON with multiple fallback approaches
-            try:
-                updated_visuals = json.loads(json_str)
-            except json.JSONDecodeError:
-                # If parsing fails, try to clean the string and retry
-                cleaned_json_str = json_str.replace("'", '"').replace("\\", "\\\\")
-                logger.debug(
-                    f"First JSON parse failed, trying with cleaned string: {cleaned_json_str[:100]}..."
-                )
-                try:
-                    updated_visuals = json.loads(cleaned_json_str)
-                except json.JSONDecodeError:
-                    # Last resort: try multiple regex patterns to extract key-value pairs
-                    logger.debug("Attempting regex extraction of key-value pairs")
-
-                    # Try standard JSON pattern first
-                    matches = re.findall(
-                        r'["\']([^"\']+)["\']:\s*["\']([^"\']+)["\']', response
-                    )
-
-                    # If that doesn't work, try with double quotes only
-                    if not matches:
-                        logger.debug(
-                            "First regex failed, trying double quotes only pattern"
-                        )
-                        matches = re.findall(r'"([^"]+)":\s*"([^"]+)"', response)
-
-                    # If still no matches, try a more lenient pattern that doesn't require quotes for values
-                    if not matches:
-                        logger.debug("Second regex failed, trying lenient pattern")
-                        matches = re.findall(r'"([^"]+)":\s*([^,}]+)', response)
-                        # Clean up the matches to remove trailing whitespace and quotes
-                        matches = [(k, v.strip().strip("\"'")) for k, v in matches]
-
-                    # If we found matches with any pattern, create the dictionary
-                    if matches:
-                        updated_visuals = {name: desc for name, desc in matches}
-                        logger.info(
-                            f"Extracted {len(updated_visuals)} character descriptions using regex pattern"
-                        )
-                    else:
-                        # Last attempt: look for "You" or protagonist as a character if nothing else worked
-                        protagonist_desc = getattr(state, "protagonist_description", "")
-                        if protagonist_desc:
-                            logger.info(
-                                "Creating fallback visuals with protagonist only"
-                            )
-                            updated_visuals = {"You": protagonist_desc}
-                        else:
-                            logger.error("All JSON parsing approaches failed")
-                            return
-
-            if not isinstance(updated_visuals, dict):
-                logger.error(
-                    f"Invalid character visuals format - expected dict, got {type(updated_visuals)}"
-                )
-                return
-
+                    logger.error(f"[CHAPTER {chapter_number}] No visuals could be extracted and no protagonist fallback available")
+                    return None
+            
             # Log parsing success with distinctive markers
             logger.info(
                 f"\n=== CHARACTER VISUALS PARSED [CHAPTER {chapter_number}] ==="
@@ -599,6 +600,11 @@ Return ONLY a valid JSON with character names and descriptions.
                 f"Successfully parsed character visuals with {len(updated_visuals)} entries"
             )
 
+            # Ensure the character_visuals attribute exists before updating
+            if not hasattr(state, "character_visuals"):
+                logger.info(f"[CHAPTER {chapter_number}] Initializing character_visuals attribute in state")
+                state.character_visuals = {}
+                
             # Update the state with the new visuals
             state_manager.update_character_visuals(state, updated_visuals)
 
@@ -619,16 +625,20 @@ Return ONLY a valid JSON with character names and descriptions.
             logger.info(
                 f"[CHAPTER {chapter_number}] Successfully updated character visuals with {len(updated_visuals)} entries"
             )
+            
+            return updated_visuals
 
         except json.JSONDecodeError as e:
             logger.error(
                 f"[CHAPTER {chapter_number}] Failed to parse JSON from LLM response: {e}"
             )
             logger.debug(f"Raw response causing JSONDecodeError: {response}")
+            return None
         except Exception as e:
             logger.error(
                 f"[CHAPTER {chapter_number}] Error generating character visuals: {e}"
             )
+            return None
 
     except Exception as e:
         logger.error(f"Error in _update_character_visuals: {str(e)}")
@@ -645,10 +655,11 @@ Return ONLY a valid JSON with character names and descriptions.
             if protagonist_desc and state and hasattr(state, "character_visuals"):
                 logger.info("Creating fallback protagonist entry after error")
                 state.character_visuals["You"] = protagonist_desc
+                return {"You": protagonist_desc}
+            return None
         except Exception as fallback_error:
             logger.error(f"Failed to create fallback: {fallback_error}")
-
-        # Don't re-raise - this is an auxiliary function that shouldn't block the main flow
+            return None
 
 
 async def process_non_start_choice(
@@ -692,18 +703,19 @@ async def process_non_start_choice(
     # Generate a chapter summary for the previous chapter
     await generate_chapter_summary(previous_chapter, state)
 
-    # Update character visuals asynchronously based on the completed chapter
-    # This runs in the background and doesn't block the main flow
-    character_visual_task = asyncio.create_task(
-        _update_character_visuals(state, previous_chapter.content, state_manager)
-    )
-
-    # Add task completion callback to track success/failure
-    character_visual_task.add_done_callback(
-        lambda t: logger.info(
-            f"Character visual update task completed: {t.exception() or 'Successfully'}"
-        )
-    )
+    # Update character visuals based on the completed chapter
+    # DO NOT create a background task - this is critical visual information
+    try:
+        logger.info(f"Extracting character visuals from chapter {previous_chapter.chapter_number}")
+        updated_visuals = await _update_character_visuals(state, previous_chapter.content, state_manager)
+        
+        if updated_visuals:
+            logger.info(f"Successfully extracted {len(updated_visuals)} character visuals")
+        else:
+            logger.warning("Character visual extraction returned no results")
+    except Exception as e:
+        logger.error(f"Error during character visual extraction: {e}")
+        # Continue with the story flow even if visual extraction fails
 
     state.current_chapter_id = chosen_path
 
@@ -767,8 +779,17 @@ async def process_start_choice(
     if new_chapter:
         # Extract character visuals from the first chapter content
         # This needs to happen immediately for Chapter 1 since we need visuals for image generation
-        logger.info("\nExtracting character visuals from Chapter 1 content")
-        await _update_character_visuals(state, new_chapter.content, state_manager)
+        try:
+            logger.info("\nExtracting character visuals from Chapter 1 content")
+            updated_visuals = await _update_character_visuals(state, new_chapter.content, state_manager)
+            
+            if updated_visuals:
+                logger.info(f"Successfully extracted {len(updated_visuals)} character visuals from first chapter")
+            else:
+                logger.warning("Character visual extraction from first chapter returned no results")
+        except Exception as e:
+            logger.error(f"Error during character visual extraction from first chapter: {e}")
+            # Continue with the story flow even if visual extraction fails
 
     # No need to process previous chapter for start choice
     is_story_complete = False

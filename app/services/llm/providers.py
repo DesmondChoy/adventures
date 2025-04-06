@@ -22,6 +22,57 @@ class OpenAIService(BaseLLMService):
         self.client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         if not os.getenv("OPENAI_API_KEY"):
             logger.warning("OPENAI_API_KEY is not set in environment variables!")
+            
+    async def generate_character_visuals_json(
+        self,
+        custom_prompt: str,
+    ) -> str:
+        """Generate character visuals JSON with direct response (no streaming).
+        
+        This method is specifically for character visual extraction where we need
+        the complete response before processing. It avoids streaming to ensure
+        we get a complete JSON response.
+        
+        Args:
+            custom_prompt: The prompt to send to the LLM
+            
+        Returns:
+            str: Complete response text from the LLM
+        """
+        # For OpenAI we'll use a simple system prompt
+        system_prompt = "You are a visual detail extractor for a storytelling application."
+        user_prompt = custom_prompt
+        
+        logger.info("\n=== CHARACTER VISUAL JSON REQUEST (OpenAI) ===")
+        logger.info(f"User Prompt Excerpt:\n{user_prompt[:300]}...")
+        logger.info("========================\n")
+        
+        try:
+            # Generate complete response in one call (no streaming)
+            completion = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.7,
+                stream=False,  # NO STREAMING for this specific use case
+            )
+            
+            # Extract the text
+            response_text = completion.choices[0].message.content
+            
+            logger.info("\n=== CHARACTER VISUAL JSON RESPONSE ===")
+            logger.info(f"Response excerpt:\n{response_text[:300]}...")
+            logger.info(f"Response length: {len(response_text)} characters")
+            logger.info("========================\n")
+            
+            return response_text
+            
+        except Exception as e:
+            logger.error(f"Error generating character visuals JSON (OpenAI): {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
+            return ""  # Return empty string on error
 
     async def generate_with_prompt(
         self,
@@ -314,6 +365,55 @@ class GeminiService(BaseLLMService):
                 max_output_tokens=8000,  # Adjust based on your needs
             ),
         )
+        
+    async def generate_character_visuals_json(
+        self,
+        custom_prompt: str,
+    ) -> str:
+        """Generate character visuals JSON with direct response (no streaming).
+        
+        This method is specifically for character visual extraction where we need
+        the complete response before processing. It avoids streaming to ensure
+        we get a complete JSON response.
+        
+        Args:
+            custom_prompt: The prompt to send to the LLM
+            
+        Returns:
+            str: Complete response text from the LLM
+        """
+        # For Gemini we'll use a simple system prompt
+        system_prompt = "You are a visual detail extractor for a storytelling application."
+        user_prompt = custom_prompt
+        
+        logger.info("\n=== CHARACTER VISUAL JSON REQUEST (Gemini) ===")
+        logger.info(f"User Prompt Excerpt:\n{user_prompt[:300]}...")
+        logger.info("========================\n")
+        
+        try:
+            # Initialize the model with system prompt - NO STREAMING
+            model = genai.GenerativeModel(
+                model_name=self.model,
+                system_instruction=system_prompt,
+            )
+            
+            # Generate complete response in one call (no streaming)
+            response = model.generate_content(user_prompt)
+            
+            # Extract the text
+            response_text = response.text
+            
+            logger.info("\n=== CHARACTER VISUAL JSON RESPONSE ===")
+            logger.info(f"Response excerpt:\n{response_text[:300]}...")
+            logger.info(f"Response length: {len(response_text)} characters")
+            logger.info("========================\n")
+            
+            return response_text
+            
+        except Exception as e:
+            logger.error(f"Error generating character visuals JSON: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
+            return ""  # Return empty string on error
 
     async def generate_with_prompt(
         self,

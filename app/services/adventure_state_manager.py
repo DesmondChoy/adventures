@@ -446,14 +446,24 @@ class AdventureStateManager:
             )
             return
 
+        # Ensure the character_visuals attribute exists in state
         if not hasattr(state, "character_visuals"):
             logger.warning(
-                f"[CHAPTER {chapter_number}] State doesn't have character_visuals attribute"
+                f"[CHAPTER {chapter_number}] State doesn't have character_visuals attribute, creating it"
             )
-            return
+            # Add the attribute dynamically
+            setattr(state, "character_visuals", {})
 
-        # Get the current visuals or initialize if empty
+        # Get the current visuals
         current_visuals = getattr(state, "character_visuals", {})
+        
+        # Ensure it's a dictionary
+        if not isinstance(current_visuals, dict):
+            logger.warning(
+                f"[CHAPTER {chapter_number}] character_visuals is not a dictionary (type: {type(current_visuals)}), reinitializing"
+            )
+            state.character_visuals = {}
+            current_visuals = state.character_visuals
 
         logger.info(
             f"[CHAPTER {chapter_number}] AdventureState.character_visuals AFTER update:"

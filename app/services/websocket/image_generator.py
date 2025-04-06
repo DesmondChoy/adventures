@@ -262,9 +262,13 @@ async def generate_chapter_image(
         try:
             # Generate a description of the most visually striking moment
             image_scene = await chapter_manager.generate_image_scene(current_content)
+            logger.info(f"\n=== IMAGE SCENE FOR CHAPTER {current_chapter_number} ===")
+            logger.info(image_scene)
+            logger.info("=======================================\n")
             
             # Get protagonist description
             protagonist_description = getattr(state, "protagonist_description", "A young adventurer")
+            logger.info(f"Protagonist description: {protagonist_description}")
 
             # Get agency details
             agency_details = state.metadata.get("agency", {})
@@ -274,6 +278,15 @@ async def generate_chapter_image(
 
             # Get character visuals if available
             character_visuals = getattr(state, "character_visuals", {})
+            
+            # Log character visuals for all chapters at INFO level for consistent visibility
+            logger.info(f"\n=== CHARACTER VISUALS FOR CHAPTER {current_chapter_number} IMAGE ===")
+            if character_visuals and len(character_visuals) > 0:
+                for char_name, description in sorted(character_visuals.items()):
+                    logger.info(f"- {char_name}: {description}")
+            else:
+                logger.info("- No character visuals available")
+            logger.info("==============================================\n")
             
             # If Chapter 1 is lacking character visuals, attempt to extract them from the chapter content
             if current_chapter_number == 1 and not character_visuals:
@@ -290,6 +303,12 @@ async def generate_chapter_image(
                         
                         # Update the state directly for future use
                         state.character_visuals = extracted_visuals
+                        
+                        # Log the newly extracted visuals
+                        logger.info(f"\n=== NEWLY EXTRACTED CHARACTER VISUALS FOR CHAPTER 1 ===")
+                        for char_name, description in sorted(extracted_visuals.items()):
+                            logger.info(f"- {char_name}: {description}")
+                        logger.info("=================================================\n")
                 except Exception as extraction_error:
                     logger.error(f"Error extracting character visuals: {extraction_error}")
 

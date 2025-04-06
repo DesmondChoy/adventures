@@ -238,6 +238,30 @@ class ImageGenerationService:
             # Import the template from prompt_templates
             from app.services.llm.prompt_templates import IMAGE_SYNTHESIS_PROMPT
 
+            # Log all image synthesis inputs at INFO level for consistent visibility across chapters
+            logger.info("\n=== IMAGE SYNTHESIS INPUTS ===")
+            logger.info(f"Scene Description: {image_scene_description}")
+            logger.info(f"Protagonist Description: {protagonist_description}")
+            logger.info(f"Story Visual Sensory Detail: {story_visual_sensory_detail}")
+            
+            # Log agency details if available
+            if agency_details:
+                logger.info("Agency Details:")
+                logger.info(f"- Category: {agency_details.get('category', 'N/A')}")
+                logger.info(f"- Name: {agency_details.get('name', 'N/A')}")
+                logger.info(f"- Visual Details: {agency_details.get('visual_details', 'N/A')}")
+            else:
+                logger.info("Agency Details: None")
+            
+            # Log character visuals
+            logger.info("Character Visuals:")
+            if character_visuals and len(character_visuals) > 0:
+                for name, description in character_visuals.items():
+                    logger.info(f"- {name}: {description}")
+            else:
+                logger.info("- None available")
+            logger.info("================================\n")
+
             # Format character visuals context
             character_visual_context = ""
             if character_visuals and len(character_visuals) > 0:
@@ -336,12 +360,26 @@ class ImageGenerationService:
             if not synthesized_prompt or len(synthesized_prompt) < 10:
                 # Use a fallback approach
                 fallback_prompt = f"Colorful storybook illustration of this scene: {image_scene_description}. Protagonist: {protagonist_description}. Agency: {agency_details.get('visual_details', '')}. Atmosphere: {story_visual_sensory_detail}."
+                logger.info("\n=== USING FALLBACK IMAGE PROMPT ===")
+                logger.info(fallback_prompt)
+                logger.info("===================================\n")
                 return fallback_prompt
 
+            # Log the synthesized prompt at INFO level
+            logger.info("\n=== SYNTHESIZED IMAGE PROMPT ===")
+            logger.info(synthesized_prompt)
+            logger.info("===============================\n")
+            
             return synthesized_prompt
 
         except Exception as e:
             logger.error(f"Error synthesizing image prompt: {str(e)}")
             # Return a fallback prompt
             fallback_prompt = f"Colorful storybook illustration of this scene: {image_scene_description}. Protagonist: {protagonist_description}. Agency: {agency_details.get('visual_details', '')}. Atmosphere: {story_visual_sensory_detail}."
+            
+            # Log this fallback prompt too
+            logger.info("\n=== USING ERROR FALLBACK IMAGE PROMPT ===")
+            logger.info(fallback_prompt)
+            logger.info("========================================\n")
+            
             return fallback_prompt

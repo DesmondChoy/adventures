@@ -75,3 +75,22 @@ class BaseLLMService(ABC):
     ) -> AsyncGenerator[str, None]:
         """Generate content with custom system and user prompts as a stream of chunks."""
         pass
+        
+    @abstractmethod
+    async def generate_character_visuals_json(
+        self,
+        custom_prompt: str,
+    ) -> str:
+        """Generate character visuals JSON with direct response (no streaming).
+        
+        This method is specifically for character visual extraction where we need
+        the complete response before processing. It avoids streaming to ensure
+        we get a complete JSON response.
+        
+        Args:
+            custom_prompt: The prompt to send to the LLM
+            
+        Returns:
+            str: Complete response text from the LLM
+        """
+        pass
