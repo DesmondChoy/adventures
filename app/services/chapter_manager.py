@@ -3,6 +3,7 @@ import random
 import logging
 import math
 import re
+import json
 from datetime import datetime
 from app.models.story import ChapterType, AdventureState, ChapterData, ChapterContent
 from app.data.story_loader import StoryLoader
@@ -654,22 +655,31 @@ class ChapterManager:
             raise ValueError(error_msg) from e
 
     @staticmethod
-    async def generate_image_scene(chapter_content: str) -> str:
+    async def generate_image_scene(
+        chapter_content: str, character_visuals: Dict[str, str]
+    ) -> str:
         """Generate a description of the most visually striking moment from the chapter.
 
         Args:
             chapter_content: The full text of the chapter (current chapter being displayed)
+            character_visuals: Dictionary of current character visual descriptions
 
         Returns:
-            A vivid description (20-30 words) of the most visually striking moment
+            A vivid description (approx 100 words) of the most visually striking moment
             from the chapter, suitable for image generation
         """
         try:
             # Use the LLM service to generate an image scene
             llm = LLMService()
 
+            # Format character visuals as a JSON string for the prompt
+            character_visual_context = json.dumps(character_visuals, indent=2)
+
             # Create a custom prompt for the image scene using the template
-            custom_prompt = IMAGE_SCENE_PROMPT.format(chapter_content=chapter_content)
+            custom_prompt = IMAGE_SCENE_PROMPT.format(
+                chapter_content=chapter_content,
+                character_visual_context=character_visual_context,
+            )
             logger.info("\n" + "=" * 50)
             logger.info("IMAGE_SCENE_PROMPT SENT TO LLM:")
             logger.info(f"{custom_prompt}")

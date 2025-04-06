@@ -55,7 +55,7 @@
 - Use asynchronous processing to maintain performance
 - Separate content generation for different purposes:
   * Use `generate_chapter_summary()` for narrative summaries (70-100 words)
-  * Use `generate_image_scene()` for visual scene descriptions (20-30 words)
+  * Use `generate_image_scene()` for visual scene descriptions (approximately 100 words)
 - Store complete agency information during Chapter 1 choice selection
 - Image prompt structure MUST follow this format:
   ```

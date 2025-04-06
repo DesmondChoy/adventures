@@ -970,9 +970,24 @@ async def process_story_response(
                     visual_part = f" [{match.group(1)}]"
 
                 # Reconstruct the choice text with visual details
-                enhanced_choice_text = (
-                    f"{agency_name}{visual_part} - {agency_description}"
-                )
+            enhanced_choice_text = f"{agency_name}{visual_part} - {agency_description}"
+
+        # --- Start: Extract Agency Name ---
+        extracted_name = "Unknown Agency"  # Default value
+        try:
+            # Split at " - " to separate name part from description
+            name_part = choice_text.split(" - ", 1)[0]
+            # Check for category prefix (e.g., "Category: Name")
+            if ":" in name_part:
+                extracted_name = name_part.split(":", 1)[1].strip()
+            else:
+                extracted_name = name_part.strip()
+            logger.debug(f"Extracted agency name: {extracted_name}")
+        except Exception as name_ex:
+            logger.error(
+                f"Error extracting agency name from '{choice_text}': {name_ex}"
+            )
+        # --- End: Extract Agency Name ---
 
         # Create the story response with the enhanced choice text
         story_response = StoryResponse(
@@ -986,8 +1001,8 @@ async def process_story_response(
         # Store agency choice in metadata with visual details
         state.metadata["agency"] = {
             "type": "choice",
-            "name": "from Chapter 1",
-            "description": choice_text,
+            "name": extracted_name,  # Use the extracted name
+            "description": choice_text,  # Keep original full text as description
             "category": agency_category,
             "visual_details": visual_details,
             "properties": {"strength": 1},

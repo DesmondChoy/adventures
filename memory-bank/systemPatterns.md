@@ -173,7 +173,7 @@
 
 - **Image Scenes** (`generate_image_scene()`)
   * Focus on the most visually striking moment from a chapter
-  * 20-30 words of pure visual description
+  * Approximately 100 words of pure visual description, incorporating character visual context
   * Used exclusively for image generation
   * Describes specific dramatic action or emotional peak
 

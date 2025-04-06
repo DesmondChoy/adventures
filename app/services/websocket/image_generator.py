@@ -277,8 +277,13 @@ async def generate_chapter_image(
             return image_tasks
 
         try:
+            # Get character visuals if available
+            character_visuals = getattr(state, "character_visuals", {})
+
             # Generate a description of the most visually striking moment
-            image_scene = await chapter_manager.generate_image_scene(current_content)
+            image_scene = await chapter_manager.generate_image_scene(
+                current_content, character_visuals
+            )
             logger.info(f"\n=== IMAGE SCENE FOR CHAPTER {current_chapter_number} ===")
             logger.info(image_scene)
             logger.info("=======================================\n")
@@ -296,9 +301,6 @@ async def generate_chapter_image(
             story_visual_sensory_detail = state.selected_sensory_details.get(
                 "visuals", ""
             )
-
-            # Get character visuals if available
-            character_visuals = getattr(state, "character_visuals", {})
 
             # Log character visuals for all chapters at INFO level for consistent visibility
             logger.info(

@@ -251,7 +251,11 @@ We followed Alex into the enchanted forest, where towering trees whispered ancie
 # CHAPTER SUMMARY
 """
 
-IMAGE_SCENE_PROMPT = """Identify the single most visually striking moment from this chapter that would make a compelling illustration. 
+IMAGE_SCENE_PROMPT = """
+
+# TASK
+ 
+Identify the single most visually striking scene in CHAPTER_CONTENT that would make a compelling illustration. 
 
 Focus on:
 1. A specific dramatic action or emotional peak
@@ -259,15 +263,25 @@ Focus on:
 3. The moment with the most visual energy or emotional impact
 4. Elements that best represent the chapter's theme or turning point
 
-Describe ONLY this scene in **approximately 100 words** using vivid, specific language. 
-Focus purely on the visual elements and action, not narrative explanation. 
-Include character names and their respective visual elements if provided in a narrative.
-If not provided, do not hallucinate.
+# CONTEXT
 
-CHAPTER CONTENT:
+ALL_CHARACTERS_DESCRIPTIONS (use where appropriate): {character_visual_context}
+
+# CHAPTER_CONTENT:
 {chapter_content}
 
-SCENE DESCRIPTION:
+# OUTPUT 
+
+Describe ONLY this scene in **approximately 100 words** using vivid, specific language. 
+For characters mentioned in CHAPTER_CONTENT, reference ALL_CHARACTERS_DESCRIPTIONS to understand how characters are described. 
+If it's different, update the description accordingly to reflect how it's being described in CHAPTER_CONTENT.
+Focus purely on the visual elements and action, not narrative explanation.
+In # SCENE_DESCRIPTION, you MUST identify the protagonist before describing the scene.
+
+# SCENE_DESCRIPTION
+
+The Protagonist is: 
+
 """
 
 # Choice format instructions
@@ -550,30 +564,29 @@ Expert Prompt Engineer for Text-to-Image Models
 
 # CONTEXT
 
-Combine # INPUTS into a single, coherent, vivid visual scene prompt (target 30-50 words) suitable for text-to-image models.
-This prompt creates an image that will be used for a children's educational adventure story (ages 6-12).
+Combine # INPUTS into a single, coherent, vivid visual scene prompt (target 30-50 words) suitable for text-to-image models ("SYNTHESIZED_PROMPT")
+SYNTHESIZED_PROMPT is used to create an image that will be used for a children's educational adventure story (ages 6-12).
 The protagonist has a special "agency" element (an item, companion, role, or ability) chosen at the start, with its own visual details.
 
 # INPUTS
 
 - SCENE_DESCRIPTION (Prioritize this scene): "{image_scene_description}"
-- Protagonist Agency Element: The special element associated with the protagonist.
-   - Category: "{agency_category}"
-   - Name: "{agency_name}"
-   - Visuals: "{agency_visual_details}"
+- PROTAGONIST_AGENCY_ELEMENTS:
+   - AGENCY_CATEGORY: "{agency_category}"
+   - AGENCY_NAME: "{agency_name}"
+   - AGENCY_VISUALS: "{agency_visual_details}"
 - Story Sensory Visual: An overall visual mood element for this story's world. **Apply this only if it fits logically with the Scene Description.**
    "{story_visual_sensory_detail}"
 - ALL_CHARACTERS_DESCRIPTIONS (use where appropriate): {character_visual_context}
 
 # TASK
 Combine # INPUTS into a single, coherent, vivid visual scene prompt (target 30-50 words) suitable for text-to-image models.
-Logically merge the Protagonist with the Agency Element Visuals. For example:
-  - If Agency is "Guardian [gleaming silver armor]", describe the protagonist *wearing* the armor over their base clothes.
-  - If Agency is "Wise Owl [snowy feathers...]", describe the protagonist *accompanied by* the owl within the scene.
-  - If Agency is "Luminous Lantern [golden...]", describe the protagonist *holding* or *using* the lantern in the scene.
-  - If Agency is "Element Bender [sparking flames...]", describe the protagonist *manifesting* these elements as part of the scene's action.
+Logically merge the Protagonist with chosen PROTAGONIST_AGENCY_ELEMENTS. For example:
+  - If `AGENCY_CATEGORY: Take on a Profession`, describe how the protagonist looks like (AGENCY_VISUALS) after becoming a AGENCY_NAME 
+  - If `AGENCY_CATEGORY: Choose a Companion`, describe the protagonist is *accompanied by* AGENCY_NAME which looks like AGENCY_VISUALS
+  - If `AGENCY_CATEGORY: Craft a Magical Artifact`, describe the protagonist is *holding* or *using* a AGENCY_NAME which looks like AGENCY_VISUALS
+  - If `AGENCY_CATEGORY: Gain a Special Ability`, describe how the protagonist looks like (AGENCY_VISUALS) after gaining abilities of a AGENCY_NAME
 Integrate the combined character description naturally into the SCENE_DESCRIPTION.
-The prompt MUST focus on what's happening *in the scene* while clearly including the protagonist and their agency element.
 Prioritize SCENE_DESCRIPTION: If the Story Sensory Visual detail contradicts SCENE_DESCRIPTION (e.g., sensory detail mentions 'sparkling leaves at dawn' but the scene is 'inside a dark cave'), OMIT the sensory detail or adapt it subtly (e.g., 'glowing crystals line the cave walls' instead of 'sparkling leaves').
 For any characters mentioned in SCENE_DESCRIPTION that matches ALL_CHARACTERS_DESCRIPTIONS, incorporate their visual descriptions accordingly.
 
@@ -586,10 +599,11 @@ GOOD (Sensory omitted): Scene="Inside a cozy tent", Sensory="Aurora Dewdrops on 
 BAD (Sensory forced): Scene="Inside a cozy tent", Sensory="Aurora Dewdrops on leaves", Output="...boy sits inside a cozy tent, strangely, there are dewdrops on leaves inside the tent..."
 ---
 # OUTPUT
-The final output should be ONLY the synthesized prompt string itself, ready for a text-to-image model.
+The final output should be ONLY SYNTHESIZED_PROMPT, ready for a text-to-image model.
+Since the downstream image model lacks context for specific names, convert all character and place names into descriptive visual terms (referencing ALL_CHARACTERS_DESCRIPTIONS) before finalizing SYNTHESIZED_PROMPT.
 Adopt a "Fantasy illustration" style.
 
-OUTPUT (Synthesized Prompt String Only):
+OUTPUT (SYNTHESIZED_PROMPT):
 """
 
 # Character visual update

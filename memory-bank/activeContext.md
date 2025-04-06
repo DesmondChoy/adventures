@@ -1,6 +1,39 @@
 # Active Context
 
-## Current Focus: Agency Choice Visual Details Enhancement (2025-04-06)
+## Current Focus: Image Scene Prompt Enhancement (2025-04-06)
+
+We updated the `IMAGE_SCENE_PROMPT` to include character visual context, improving image generation consistency.
+
+### Problem Addressed
+
+The `IMAGE_SCENE_PROMPT` used for generating a visual scene description for image generation did not include the context of existing character visual descriptions (`state.character_visuals`). This meant the LLM generating the scene description might not be aware of established character appearances, potentially leading to inconsistencies in the final generated image.
+
+### Implemented Solution
+
+1.  **Prompt Template Update:**
+    *   Modified `IMAGE_SCENE_PROMPT` in `app/services/llm/prompt_templates.py` to include a new placeholder: `{character_visual_context}`.
+    *   Added instructions for the LLM to use this context when describing characters in the scene.
+
+2.  **Function Signature Update:**
+    *   Modified the `generate_image_scene` static method in `app/services/chapter_manager.py` to accept an additional argument: `character_visuals: Dict[str, str]`.
+
+3.  **Prompt Formatting Update:**
+    *   Updated the `generate_image_scene` method to format the `IMAGE_SCENE_PROMPT` by passing the `character_visuals` dictionary (serialized as JSON) into the new `{character_visual_context}` placeholder.
+
+4.  **Calling Code Update:**
+    *   Modified the call to `chapter_manager.generate_image_scene` within `app/services/websocket/image_generator.py` to pass the `state.character_visuals` dictionary.
+
+### Result
+
+The LLM responsible for generating the image scene description now receives the current visual descriptions of all known characters. This allows it to generate scene descriptions that are more consistent with the established character appearances throughout the adventure, leading to more coherent image generation via the `IMAGE_SYNTHESIS_PROMPT` which already used this context.
+
+### Affected Files
+
+1.  `app/services/llm/prompt_templates.py`: Updated `IMAGE_SCENE_PROMPT`.
+2.  `app/services/chapter_manager.py`: Updated `generate_image_scene` method signature and prompt formatting.
+3.  `app/services/websocket/image_generator.py`: Updated the call to `generate_image_scene`.
+
+## Previous Focus: Agency Choice Visual Details Enhancement (2025-04-06)
 
 We implemented an enhancement to include visual details of agency choices in the story history for Chapter 2 onwards. This ensures the LLM has access to the complete visual description of the agency choice when generating subsequent chapters.
 

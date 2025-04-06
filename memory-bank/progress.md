@@ -2,6 +2,13 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-04-06: Image Scene Prompt Enhancement
+- Updated `IMAGE_SCENE_PROMPT` in `app/services/llm/prompt_templates.py` to include `{character_visual_context}` placeholder and instructions to use it.
+- Modified `generate_image_scene` in `app/services/chapter_manager.py` to accept `character_visuals` dictionary and format the prompt accordingly.
+- Updated the call to `generate_image_scene` in `app/services/websocket/image_generator.py` to pass `state.character_visuals`.
+- Ensured the LLM generating image scene descriptions receives character visual context for improved consistency.
+- Updated Memory Bank documentation (`activeContext.md`, `systemPatterns.md`, `progress.md`).
+
 ### 2025-04-06: Agency Choice Visual Details Enhancement
 - Implemented enhancement to include visual details of agency choices in the story history for Chapter 2 onwards
 - Modified `process_story_response()` in `choice_processor.py` to extract the full option text with visual details

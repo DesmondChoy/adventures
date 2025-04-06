@@ -222,7 +222,8 @@ Learning Odyssey requires sequential chapter generation due to:
     - Third person, past tense narrative style
   
   * **Image Scenes** (`generate_image_scene()`)
-    - Most visually striking moment from a chapter (20-30 words)
+    - Most visually striking moment from a chapter (approx 100 words)
+    - Incorporates character visual context from `state.character_visuals`
     - Used exclusively for image generation
     - Describes specific dramatic action or emotional peak
 
