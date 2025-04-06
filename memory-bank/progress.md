@@ -2,6 +2,14 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-04-06: Agency Choice Visual Details Enhancement
+- Implemented enhancement to include visual details of agency choices in the story history for Chapter 2 onwards
+- Modified `process_story_response()` in `choice_processor.py` to extract the full option text with visual details
+- Created an enhanced choice text that includes the visual details in square brackets
+- Used this enhanced choice text when creating the `StoryResponse` object
+- Ensured the LLM has access to the complete visual description of the agency choice when generating subsequent chapters
+- Updated Memory Bank documentation to reflect the agency choice visual details enhancement
+
 ### 2025-04-05: Logging Improvements & Bug Fixes
 - Enhanced protagonist description logging in `chapter_manager.py` to show description directly in INFO message
 - Fixed `KeyError` during prompt formatting in `choice_processor.py` by using `.replace()` instead of `.format()`

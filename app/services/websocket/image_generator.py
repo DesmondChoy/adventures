@@ -23,7 +23,9 @@ async def start_image_generation_tasks(
 
     # Validate chapter number
     if current_chapter_number <= 0:
-        logger.error(f"Invalid chapter number: {current_chapter_number}, must be positive")
+        logger.error(
+            f"Invalid chapter number: {current_chapter_number}, must be positive"
+        )
         current_chapter_number = 1  # Set to 1 as a fallback
 
     # For Chapter 1, generate images for agency choices
@@ -33,9 +35,13 @@ async def start_image_generation_tasks(
     elif current_chapter_number > 1:
         image_tasks = await generate_chapter_image(current_chapter_number, state)
     else:
-        logger.warning(f"No image tasks started for chapter {current_chapter_number}, type: {chapter_type}")
+        logger.warning(
+            f"No image tasks started for chapter {current_chapter_number}, type: {chapter_type}"
+        )
 
-    logger.info(f"Started {len(image_tasks)} image tasks for chapter {current_chapter_number}")
+    logger.info(
+        f"Started {len(image_tasks)} image tasks for chapter {current_chapter_number}"
+    )
     return image_tasks
 
 
@@ -67,7 +73,7 @@ async def generate_agency_images(
 
     # Retrieve the story visual sensory detail
     story_visual_sensory_detail = state.selected_sensory_details.get("visuals", "")
-    
+
     # Start async image generation for each choice
     for i, choice in enumerate(chapter_content.choices):
         try:
@@ -206,7 +212,9 @@ async def generate_chapter_image(
 
     # Skip image generation for chapter 0 (invalid chapter number)
     if current_chapter_number <= 0:
-        logger.error(f"Invalid chapter number {current_chapter_number}, cannot generate image")
+        logger.error(
+            f"Invalid chapter number {current_chapter_number}, cannot generate image"
+        )
         return image_tasks
 
     try:
@@ -219,13 +227,17 @@ async def generate_chapter_image(
                 scene_description = f"Adventure beginning in a wondrous {story_category} setting with colorful characters and magical elements"
 
                 # Get protagonist description
-                protagonist_description = getattr(state, "protagonist_description", "A young adventurer")
+                protagonist_description = getattr(
+                    state, "protagonist_description", "A young adventurer"
+                )
 
                 # Get agency details (empty for first chapter)
                 agency_details = {}
 
                 # Get story visual sensory detail
-                story_visual_sensory_detail = state.selected_sensory_details.get("visuals", "")
+                story_visual_sensory_detail = state.selected_sensory_details.get(
+                    "visuals", ""
+                )
 
                 # Get character visuals if available
                 character_visuals = getattr(state, "character_visuals", {})
@@ -236,6 +248,11 @@ async def generate_chapter_image(
                     agency_details,
                     story_visual_sensory_detail,
                     character_visuals,
+                )
+
+                # DEBUG: Log the prompt value just before creating the task
+                logger.info(
+                    f"DEBUG: Value of 'prompt' being passed to generate_image_async: {prompt}"
                 )
 
                 # Create the image generation task
@@ -265,52 +282,70 @@ async def generate_chapter_image(
             logger.info(f"\n=== IMAGE SCENE FOR CHAPTER {current_chapter_number} ===")
             logger.info(image_scene)
             logger.info("=======================================\n")
-            
+
             # Get protagonist description
-            protagonist_description = getattr(state, "protagonist_description", "A young adventurer")
+            protagonist_description = getattr(
+                state, "protagonist_description", "A young adventurer"
+            )
             logger.info(f"Protagonist description: {protagonist_description}")
 
             # Get agency details
             agency_details = state.metadata.get("agency", {})
 
             # Get story visual sensory detail
-            story_visual_sensory_detail = state.selected_sensory_details.get("visuals", "")
+            story_visual_sensory_detail = state.selected_sensory_details.get(
+                "visuals", ""
+            )
 
             # Get character visuals if available
             character_visuals = getattr(state, "character_visuals", {})
-            
+
             # Log character visuals for all chapters at INFO level for consistent visibility
-            logger.info(f"\n=== CHARACTER VISUALS FOR CHAPTER {current_chapter_number} IMAGE ===")
+            logger.info(
+                f"\n=== CHARACTER VISUALS FOR CHAPTER {current_chapter_number} IMAGE ==="
+            )
             if character_visuals and len(character_visuals) > 0:
                 for char_name, description in sorted(character_visuals.items()):
                     logger.info(f"- {char_name}: {description}")
             else:
                 logger.info("- No character visuals available")
             logger.info("==============================================\n")
-            
+
             # If Chapter 1 is lacking character visuals, attempt to extract them from the chapter content
             if current_chapter_number == 1 and not character_visuals:
                 # Import the function dynamically to avoid circular imports
-                from app.services.websocket.choice_processor import diagnose_character_visuals
-                
+                from app.services.websocket.choice_processor import (
+                    diagnose_character_visuals,
+                )
+
                 try:
                     # Use the diagnostic function to extract character visuals
-                    extracted_visuals = await diagnose_character_visuals(current_content, {})
-                    
+                    extracted_visuals = await diagnose_character_visuals(
+                        current_content, {}
+                    )
+
                     if extracted_visuals:
-                        logger.info(f"Extracted {len(extracted_visuals)} character visuals from Chapter 1")
+                        logger.info(
+                            f"Extracted {len(extracted_visuals)} character visuals from Chapter 1"
+                        )
                         character_visuals = extracted_visuals
-                        
+
                         # Update the state directly for future use
                         state.character_visuals = extracted_visuals
-                        
+
                         # Log the newly extracted visuals
-                        logger.info(f"\n=== NEWLY EXTRACTED CHARACTER VISUALS FOR CHAPTER 1 ===")
+                        logger.info(
+                            f"\n=== NEWLY EXTRACTED CHARACTER VISUALS FOR CHAPTER 1 ==="
+                        )
                         for char_name, description in sorted(extracted_visuals.items()):
                             logger.info(f"- {char_name}: {description}")
-                        logger.info("=================================================\n")
+                        logger.info(
+                            "=================================================\n"
+                        )
                 except Exception as extraction_error:
-                    logger.error(f"Error extracting character visuals: {extraction_error}")
+                    logger.error(
+                        f"Error extracting character visuals: {extraction_error}"
+                    )
 
             # Synthesize the image prompt
             prompt = await image_service.synthesize_image_prompt(
@@ -337,13 +372,17 @@ async def generate_chapter_image(
             image_scene = f"A scene from the story showing {content_preview}..."
 
             # Get protagonist description
-            protagonist_description = getattr(state, "protagonist_description", "A young adventurer")
+            protagonist_description = getattr(
+                state, "protagonist_description", "A young adventurer"
+            )
 
             # Get agency details
             agency_details = state.metadata.get("agency", {})
 
             # Get story visual sensory detail
-            story_visual_sensory_detail = state.selected_sensory_details.get("visuals", "")
+            story_visual_sensory_detail = state.selected_sensory_details.get(
+                "visuals", ""
+            )
 
             # Get character visuals if available
             character_visuals = getattr(state, "character_visuals", {})
@@ -369,6 +408,7 @@ async def generate_chapter_image(
         logger.error(f"Error generating chapter image: {str(e)}")
         # Log stack trace for debugging
         import traceback
+
         logger.error(f"Traceback: {traceback.format_exc()}")
 
     return image_tasks
@@ -381,10 +421,14 @@ async def process_image_tasks(
 ) -> None:
     """Process completed image generation tasks."""
     if not image_tasks:
-        logger.warning(f"No image tasks to process for chapter {current_chapter_number}")
+        logger.warning(
+            f"No image tasks to process for chapter {current_chapter_number}"
+        )
         return
 
-    logger.info(f"Chapter {current_chapter_number}: Waiting for {len(image_tasks)} image generation tasks to complete")
+    logger.info(
+        f"Chapter {current_chapter_number}: Waiting for {len(image_tasks)} image generation tasks to complete"
+    )
 
     # Set a timeout for all image tasks
     timeout_seconds = 30  # Adjust this value as needed
@@ -395,7 +439,9 @@ async def process_image_tasks(
             try:
                 image_data = await asyncio.wait_for(task, timeout=timeout_seconds)
             except asyncio.TimeoutError:
-                logger.error(f"Image generation for {identifier} timed out after {timeout_seconds} seconds")
+                logger.error(
+                    f"Image generation for {identifier} timed out after {timeout_seconds} seconds"
+                )
                 continue
 
             if not image_data:
@@ -430,4 +476,5 @@ async def process_image_tasks(
             logger.error(f"Error processing image task for {identifier}: {str(e)}")
             # Log the stack trace for debugging
             import traceback
+
             logger.error(f"Traceback: {traceback.format_exc()}")

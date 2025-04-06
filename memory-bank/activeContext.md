@@ -1,6 +1,33 @@
 # Active Context
 
-## Current Focus: Character Visual Extraction Timing Fix (2025-04-06)
+## Current Focus: Agency Choice Visual Details Enhancement (2025-04-06)
+
+We implemented an enhancement to include visual details of agency choices in the story history for Chapter 2 onwards. This ensures the LLM has access to the complete visual description of the agency choice when generating subsequent chapters.
+
+### Problem Addressed
+
+When a user selects an agency choice in Chapter 1 (e.g., "Tiny Dragon"), the visual details in square brackets (e.g., "[a palm-sized dragon with shimmering scales that shift like a rainbow, friendly violet eyes, and puffs of glittery smoke]") were not being included in the story history section of the prompt for Chapter 2 onwards. This resulted in the LLM not having access to the complete visual description of the agency choice when generating subsequent chapters.
+
+### Implemented Solution
+
+1. **Enhanced Agency Choice Processing:**
+   * Modified `process_story_response()` in `choice_processor.py` to extract the full option text with visual details
+   * Created an enhanced choice text that includes the visual details in square brackets
+   * Used this enhanced choice text when creating the `StoryResponse` object
+
+2. **Story History Enhancement:**
+   * When the story history is built for subsequent chapters in `_build_base_prompt()` (in `prompt_engineering.py`), it now automatically includes the visual details because they're already part of the `choice_text` field in the `StoryResponse` object
+
+3. **Result:**
+   * Now, when the LLM generates Chapter 2 and beyond, the prompt includes the complete agency choice with visual details in the story history section:
+   ```
+   # Story History
+   ## Chapter 1
+   <Content...>
+   **Choice Made**: Choose a Companion: Tiny Dragon [a palm-sized dragon with shimmering scales that shift like a rainbow, friendly violet eyes, and puffs of glittery smoke] - Befriend a creature that can light the darkest paths, provide warmth in the coldest climates, and cook a mean marshmallow over its tiny flames.
+   ```
+
+## Previous Focus: Character Visual Extraction Timing Fix (2025-04-06)
 
 We implemented a fix for the character visual extraction timing issue that was causing character visuals to not be properly extracted from LLM responses.
 
