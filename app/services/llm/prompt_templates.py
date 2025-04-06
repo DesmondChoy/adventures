@@ -17,7 +17,7 @@ SYSTEM_PROMPT_TEMPLATE = """
 # Storyteller Role
 You are a master storyteller crafting adventures for children aged 6-12 years old. 
 Your task is to create ONE CHAPTER AT A TIME in an ongoing Choose-Your-Own-Adventure style narrative.
-Think of yourself as writing a single exciting episode in a favorite TV show - this chapter could reference past chapters, needs to stand on its own while also advancing the bigger adventure. 
+Think of yourself as writing a single exciting episode in a favorite TV show - this chapters continues on from # Story History (if applicable), but it needs to stand on its own while also advancing the bigger adventure. 
 Your chapter should captivate young minds with vibrant imagery, age-appropriate language, and thrilling action that makes them feel like the hero of their own adventure. 
 Create just enough tension and wonder to keep young readers begging to continue the adventure in the next chapter.
 
@@ -25,19 +25,13 @@ Create just enough tension and wonder to keep young readers begging to continue 
 - Setting: {settings} (described with wonder and child-friendly details)
 - Theme: {selected_theme} (presented in ways children can relate to)
 - Moral Teaching: {selected_moral_teaching} (woven into the adventure naturally)
-- Sensory Details:
-  - Visual: {visuals} (bright, memorable images kids can picture)
-  - Sound: {sounds} (engaging sounds that bring the story to life)
-  - Scent: {smells} (familiar and fantastic smells kids can imagine)
 
 # Storytelling Approach & Agency Integration
 1. Create ONE complete, satisfying chapter that advances the larger adventure
-2. Use clear, engaging language appropriate for 6-12 year olds
-3. Include moments of humor, surprise, and age-appropriate excitement
-4. End this chapter with a compelling moment that makes children eager for the next chapter
-5. The protagonist's pivotal first-chapter choice (item, companion, role, or ability):
+2. End this chapter with a compelling moment that makes children eager for the next chapter
+3. The protagonist's agency choice ({agency_category}: {agency_name}):
    - Represents a core aspect of their identity and must be referenced consistently throughout ALL chapters
-   - Should evolve as the protagonist learns and grows
+   - Should evolve as the protagonist learns and grows 
    - Will play a crucial role in the story's climax
    - Should feel like a natural part of the narrative
 
@@ -45,6 +39,10 @@ Create just enough tension and wonder to keep young readers begging to continue 
 1. Narrative Structure: Begin directly (never with "Chapter X") and end at natural decision points
 2. Educational Integration: Ensure lessons feel organic to the story, never forced or artificial
 3. Choice Format: Use <CHOICES> tags, format as "Choice [A/B/C]: [description]" on single lines, make choices meaningful and distinct
+4. Character Descriptions: VERY IMPORTANT - For EVERY character (including protagonist):
+   - When first introducing any character, provide 2-3 detailed sentences about their visual appearance
+   - Always describe clothing, physical features (hair, eyes, height, build), and any distinctive characteristics - keep it clear, specific, and easy to visualize
+   - Reference # Story History to ensure visual elements consistency for the protagonist and characters described in past chapters (if applicable)
 """
 
 
@@ -60,9 +58,17 @@ FIRST_CHAPTER_PROMPT = """# Current Context
 # Story History
 {story_history}
 
-# Chapter Development Guidelines
-1. Agency Decision: The chapter naturally and organically concludes with a situation where Agency Options are offered - each with the potential to shape the character's journey across all future chapters.
+# Sensory Details
+- Visual: {visuals} (bright, memorable images kids can picture)
+- Sound: {sounds} (engaging sounds that bring the story to life)
+- Scent: {smells} (familiar and fantastic smells kids can imagine)
 
+# Chapter Development Guidelines
+1. Protagonist Description: {protagonist_description}
+   - Use this description to establish a clear visual image of the protagonist
+   - This forms the foundation of the character's appearance throughout the story
+
+2. Agency Decision: The chapter naturally and organically concludes with a situation where Agency Options are offered - each with the potential to shape the character's journey across all future chapters.
 
 # Agency Options
 {agency_options}
@@ -245,7 +251,11 @@ We followed Alex into the enchanted forest, where towering trees whispered ancie
 # CHAPTER SUMMARY
 """
 
-IMAGE_SCENE_PROMPT = """Identify the single most visually striking moment from this chapter that would make a compelling illustration. 
+IMAGE_SCENE_PROMPT = """
+
+# TASK
+ 
+Identify the single most visually striking scene in CHAPTER_CONTENT that would make a compelling illustration. 
 
 Focus on:
 1. A specific dramatic action or emotional peak
@@ -253,12 +263,25 @@ Focus on:
 3. The moment with the most visual energy or emotional impact
 4. Elements that best represent the chapter's theme or turning point
 
-Describe ONLY this scene in 20-30 words using vivid, specific language. Focus purely on the visual elements and action, not narrative explanation. Do not include character names or story title.
+# CONTEXT
 
-CHAPTER CONTENT:
+ALL_CHARACTERS_DESCRIPTIONS (use where appropriate): {character_visual_context}
+
+# CHAPTER_CONTENT:
 {chapter_content}
 
-SCENE DESCRIPTION:
+# OUTPUT 
+
+Describe ONLY this scene in **approximately 100 words** using vivid, specific language. 
+For characters mentioned in CHAPTER_CONTENT, reference ALL_CHARACTERS_DESCRIPTIONS to understand how characters are described. 
+If it's different, update the description accordingly to reflect how it's being described in CHAPTER_CONTENT.
+Focus purely on the visual elements and action, not narrative explanation.
+In # SCENE_DESCRIPTION, you MUST identify the protagonist before describing the scene.
+
+# SCENE_DESCRIPTION
+
+The Protagonist is: 
+
 """
 
 # Choice format instructions
@@ -316,6 +339,15 @@ Choice C: [Third story-driven choice]
 # Agency choice categories
 # -----------------------
 
+
+# Predefined protagonist descriptions for consistent image generation
+PREDEFINED_PROTAGONIST_DESCRIPTIONS = [
+    "A curious young boy with short brown hair, bright green eyes, wearing simple traveler's clothes (tunic and trousers).",
+    "An adventurous girl with braided blonde hair, freckles, wearing practical leather gear and carrying a small satchel.",
+    "A thoughtful child with glasses, dark curly hair, wearing a slightly oversized, patched cloak over plain clothes.",
+    "A nimble young person with vibrant red hair tied back, keen blue eyes, dressed in flexible, forest-green attire.",
+    "A gentle-looking kid with warm brown eyes, black hair, wearing a comfortable-looking blue tunic and sturdy boots.",
+]
 
 # Agency categories dictionary - exposed for direct access by image generation
 categories = {
@@ -522,3 +554,119 @@ REFLECT_CONFIG = {
         "correct_answer_info": 'The correct answer was: "{correct_answer}".',
     },
 }
+
+# Image prompt synthesis
+# --------------------
+
+IMAGE_SYNTHESIS_PROMPT = """
+# ROLE
+Expert Prompt Engineer for Text-to-Image Models
+
+# CONTEXT
+
+Combine # INPUTS into a single, coherent, vivid visual scene prompt (target 30-50 words) suitable for text-to-image models ("SYNTHESIZED_PROMPT")
+SYNTHESIZED_PROMPT is used to create an image that will be used for a children's educational adventure story (ages 6-12).
+The protagonist has a special "agency" element (an item, companion, role, or ability) chosen at the start, with its own visual details.
+
+# INPUTS
+
+- SCENE_DESCRIPTION (Prioritize this scene): "{image_scene_description}"
+- PROTAGONIST_AGENCY_ELEMENTS:
+   - AGENCY_CATEGORY: "{agency_category}"
+   - AGENCY_NAME: "{agency_name}"
+   - AGENCY_VISUALS: "{agency_visual_details}"
+- Story Sensory Visual: An overall visual mood element for this story's world. **Apply this only if it fits logically with the Scene Description.**
+   "{story_visual_sensory_detail}"
+- ALL_CHARACTERS_DESCRIPTIONS (use where appropriate): {character_visual_context}
+
+# TASK
+Combine # INPUTS into a single, coherent, vivid visual scene prompt (target 30-50 words) suitable for text-to-image models.
+Logically merge the Protagonist with chosen PROTAGONIST_AGENCY_ELEMENTS. For example:
+  - If `AGENCY_CATEGORY: Take on a Profession`, describe how the protagonist looks like (AGENCY_VISUALS) after becoming a AGENCY_NAME 
+  - If `AGENCY_CATEGORY: Choose a Companion`, describe the protagonist is *accompanied by* AGENCY_NAME which looks like AGENCY_VISUALS
+  - If `AGENCY_CATEGORY: Craft a Magical Artifact`, describe the protagonist is *holding* or *using* a AGENCY_NAME which looks like AGENCY_VISUALS
+  - If `AGENCY_CATEGORY: Gain a Special Ability`, describe how the protagonist looks like (AGENCY_VISUALS) after gaining abilities of a AGENCY_NAME
+Integrate the combined character description naturally into the SCENE_DESCRIPTION.
+Prioritize SCENE_DESCRIPTION: If the Story Sensory Visual detail contradicts SCENE_DESCRIPTION (e.g., sensory detail mentions 'sparkling leaves at dawn' but the scene is 'inside a dark cave'), OMIT the sensory detail or adapt it subtly (e.g., 'glowing crystals line the cave walls' instead of 'sparkling leaves').
+For any characters mentioned in SCENE_DESCRIPTION that matches ALL_CHARACTERS_DESCRIPTIONS, incorporate their visual descriptions accordingly.
+
+# PRIORITIES
+Prioritize the recent visual descriptions of characters over the base protagonist description if any character has evolved visually.
+
+--- Examples of Prioritization ---
+GOOD (Sensory fits Scene): Scene="Walking through a moonlit forest", Sensory="Glowing Juggling Pins", Output="...girl walks through a moonlit forest, juggling pins glow softly..."
+GOOD (Sensory omitted): Scene="Inside a cozy tent", Sensory="Aurora Dewdrops on leaves", Output="...boy sits inside a cozy tent, reading a map..." (Dewdrops omitted as they don't fit).
+BAD (Sensory forced): Scene="Inside a cozy tent", Sensory="Aurora Dewdrops on leaves", Output="...boy sits inside a cozy tent, strangely, there are dewdrops on leaves inside the tent..."
+---
+# OUTPUT
+The final output should be ONLY SYNTHESIZED_PROMPT, ready for a text-to-image model.
+Since the downstream image model lacks context for specific names, convert all character and place names into descriptive visual terms (referencing ALL_CHARACTERS_DESCRIPTIONS) before finalizing SYNTHESIZED_PROMPT.
+Adopt a "Fantasy illustration" style.
+
+OUTPUT (SYNTHESIZED_PROMPT):
+"""
+
+# Character visual update
+# ----------------------
+
+CHARACTER_VISUAL_UPDATE_PROMPT = """
+ROLE: Visual Character Tracker for a Children's Adventure Story
+
+TASK:
+Track and update the visual descriptions of all characters in the story. Parse the chapter content to:
+1. Identify all characters (protagonist and NPCs)
+2. Extract or update their visual descriptions
+3. Return an updated JSON dictionary with character names as keys and their current visual descriptions as values
+
+INPUTS:
+1. Chapter Content: The latest chapter content, which may introduce new characters or update existing ones
+2. Existing Visuals: A dictionary of character names and their current visual descriptions
+
+CHAPTER CONTENT:
+{chapter_content}
+
+EXISTING VISUALS:
+{existing_visuals}
+
+INSTRUCTIONS:
+- CRITICALLY IMPORTANT: Thoroughly scan the entire chapter for ANY character descriptions, no matter how brief or scattered
+- Pay special attention to paragraphs that introduce new characters or scenes
+- Search for descriptive language about physical appearance, clothing, accessories, or anything visual
+- Look for character names followed by descriptions: "That's Giggles," The Showman sighed. "A particularly stout clown with bright orange hair"
+- Look for subtle phrases like "the tall woman with red hair" or "his weathered face crinkled into a smile"
+- For named characters (like "Giggles", "Sarah", "The Showman"), extract even minimal visual details
+- If a character is mentioned without a detailed description, still include them with whatever visual cues you can find
+- Sometimes descriptions are split across multiple paragraphs - connect these details for a complete character description
+- For each character mentioned in the chapter, including the protagonist and NPCs:
+  * If the character is new (not in EXISTING VISUALS), create a detailed visual description based on any appearance details in the chapter
+  * If the character already exists but has visual changes described in this chapter, update their description accordingly
+  * If no visual changes are described for an existing character, keep their previous description
+- Visual descriptions should be concise (25-40 words) but comprehensive
+- Focus only on visual/physical aspects (appearance, clothing, features, etc.) that would be relevant for image generation
+- For the protagonist, prioritize keeping their core appearance consistent while incorporating any described changes/evolution
+- Ensure each description is self-contained (someone reading only the description should get a complete picture)
+
+EXAMPLES OF CHARACTER DESCRIPTIONS TO LOOK FOR:
+- "A tall man with a red hat and bushy mustache approached"
+- "Sarah's blonde braids bounced as she ran, her yellow dress fluttering in the wind"
+- "The shopkeeper adjusted his wire-rimmed spectacles and smoothed his gray apron"
+- "His eyes were as dark as night, set in a face weathered by years at sea"
+- "She wore a cloak of emerald green, fastened with a silver pin shaped like a leaf"
+- "A stout clown with bright orange hair escaping from under a tiny hat and a teardrop painted under one eye"
+- "One of the performers, a juggler with a shock of purple hair and silver bells on his costume"
+- "The old woman's wrinkled face broke into a smile, her eyes twinkling behind half-moon spectacles"
+
+OUTPUT FORMAT:
+Return ONLY a valid JSON object with the updated character visuals, formatted exactly like this:
+```json
+{
+  "Character Name": "Visual description that includes appearance, clothing, and distinctive features",
+  "Another Character": "Their visual description...",
+  ...
+}
+```
+
+IMPORTANT: Even if you find only minimal descriptions, include them in the output. If you can't find any descriptions at all, at minimum include characters' names with placeholder descriptions noting they need more visual details.
+
+Do not include any explanations, only return the JSON.
+"""

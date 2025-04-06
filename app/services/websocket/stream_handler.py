@@ -29,22 +29,24 @@ async def stream_chapter_content(
     content_to_stream = clean_chapter_content(chapter_content.content)
 
     # Get chapter type for current chapter
-    # The current chapter is the one we're about to add, so it should be length + 1
-    current_chapter_number = len(state.chapters) + 1
-    
+    # The current chapter has already been added to the state at this point
+    current_chapter_number = len(state.chapters)
+
     # Debug log to check chapter number calculation
-    logger.debug(f"Current chapter number calculated as: {current_chapter_number}")
+    logger.debug(f"Current chapter number: {current_chapter_number}")
     logger.debug(f"State has {len(state.chapters)} existing chapters")
-    
+
     # Make sure we have a valid chapter number (never 0)
     if current_chapter_number < 1:
         logger.warning(f"Invalid chapter number {current_chapter_number}, setting to 1")
         current_chapter_number = 1
-        
+
     # Get the chapter type from planned types (index is 0-based, so subtract 1)
     chapter_type_index = current_chapter_number - 1
     if chapter_type_index < 0 or chapter_type_index >= len(state.planned_chapter_types):
-        logger.error(f"Chapter type index {chapter_type_index} out of range for planned_chapter_types with length {len(state.planned_chapter_types)}")
+        logger.error(
+            f"Chapter type index {chapter_type_index} out of range for planned_chapter_types with length {len(state.planned_chapter_types)}"
+        )
         # Use a default chapter type as fallback
         chapter_type = ChapterType.STORY
     else:
@@ -57,18 +59,25 @@ async def stream_chapter_content(
         image_tasks = await start_image_generation_tasks(
             current_chapter_number, chapter_type, chapter_content, state
         )
-        logger.info(f"Started {len(image_tasks)} image generation tasks for chapter {current_chapter_number}")
+        logger.info(
+            f"Started {len(image_tasks)} image generation tasks for chapter {current_chapter_number}"
+        )
     except Exception as e:
         logger.error(f"Error starting image generation tasks: {str(e)}")
         image_tasks = []  # Empty list as fallback
-    
+
     # Stream chapter content
     await stream_text_content(content_to_stream, websocket)
 
     # Send complete chapter data with choices included
     await send_chapter_data(
-        content_to_stream, chapter_content, chapter_type, current_chapter_number, 
-        sampled_question, state, websocket
+        content_to_stream,
+        chapter_content,
+        chapter_type,
+        current_chapter_number,
+        sampled_question,
+        state,
+        websocket,
     )
 
     # Also send choices separately for backward compatibility
@@ -91,7 +100,9 @@ async def stream_chapter_content(
             await process_image_tasks(image_tasks, current_chapter_number, websocket)
             logger.info(f"Processed image tasks for chapter {current_chapter_number}")
         else:
-            logger.warning(f"No image tasks available for chapter {current_chapter_number}, using fallback image")
+            logger.warning(
+                f"No image tasks available for chapter {current_chapter_number}, using fallback image"
+            )
             await send_fallback_image(state, current_chapter_number, websocket)
     except Exception as e:
         logger.error(f"Error processing image tasks: {str(e)}")
@@ -99,24 +110,26 @@ async def stream_chapter_content(
         await send_fallback_image(state, current_chapter_number, websocket)
 
 
-async def send_fallback_image(state: AdventureState, chapter_number: int, websocket: WebSocket) -> None:
+async def send_fallback_image(
+    state: AdventureState, chapter_number: int, websocket: WebSocket
+) -> None:
     """Send a fallback image for the chapter from static files.
-    
+
     This function tries different static image files in order of preference:
     1. Story category specific image
     2. Lesson topic specific image
     3. Any available story image as a last resort
-    
+
     Args:
         state: The current adventure state
         chapter_number: The chapter number
         websocket: The WebSocket connection
     """
     logger.info(f"Sending fallback image for chapter {chapter_number}")
-    
+
     # Different image sources in order of preference
     image_paths = []
-    
+
     # Get the story category (which might be in different formats)
     story_category = None
     if hasattr(state, "storyCategory"):
@@ -125,14 +138,14 @@ async def send_fallback_image(state: AdventureState, chapter_number: int, websoc
         story_category = getattr(state, "story_category", "")
     elif hasattr(state, "metadata") and "story_category" in state.metadata:
         story_category = state.metadata["story_category"]
-    
+
     # 1. Try story category specific image
     if story_category:
         logger.info(f"Found story category: {story_category}")
         # Try different formats and casing
         image_paths.append(f"app/static/images/stories/{story_category}.jpg")
         image_paths.append(f"app/static/images/stories/{story_category.lower()}.jpg")
-        
+
         # Common story categories in the standard format
         story_mappings = {
             "enchanted_forest": "enchanted_forest_tales",
@@ -143,44 +156,50 @@ async def send_fallback_image(state: AdventureState, chapter_number: int, websoc
             "jade": "jade_mountain",
             "mountain": "jade_mountain",
             "festival": "festival_of_lights_and_colors",
-            "lights": "festival_of_lights_and_colors"
+            "lights": "festival_of_lights_and_colors",
         }
-        
+
         # Try to map the story category to a standard filename
         for key, value in story_mappings.items():
             if key in story_category.lower():
                 image_paths.append(f"app/static/images/stories/{value}.jpg")
-    
+
     # 2. Try lesson topic specific image
     lesson_topic = getattr(state, "lessonTopic", "")
     if lesson_topic:
         logger.info(f"Found lesson topic: {lesson_topic}")
         image_paths.append(f"app/static/images/lessons/{lesson_topic}.jpg")
-        
+
         # Try with spaces instead of underscores
         if "_" in lesson_topic:
-            image_paths.append(f"app/static/images/lessons/{lesson_topic.replace('_', ' ')}.jpg")
-        
+            image_paths.append(
+                f"app/static/images/lessons/{lesson_topic.replace('_', ' ')}.jpg"
+            )
+
         # Try with capitalization
         words = lesson_topic.split("_")
         capitalized = " ".join(word.capitalize() for word in words)
         image_paths.append(f"app/static/images/lessons/{capitalized}.jpg")
-    
+
     # 3. Try any story image as last resort
-    image_paths.extend([
-        "app/static/images/stories/enchanted_forest_tales.jpg",
-        "app/static/images/stories/circus_and_carnival_capers.jpg",
-        "app/static/images/stories/jade_mountain.jpg",
-        "app/static/images/stories/festival_of_lights_and_colors.jpg"
-    ])
-    
+    image_paths.extend(
+        [
+            "app/static/images/stories/enchanted_forest_tales.jpg",
+            "app/static/images/stories/circus_and_carnival_capers.jpg",
+            "app/static/images/stories/jade_mountain.jpg",
+            "app/static/images/stories/festival_of_lights_and_colors.jpg",
+        ]
+    )
+
     # 4. Try any lesson image as a very last resort
-    image_paths.extend([
-        "app/static/images/lessons/Farm Animals.jpg",
-        "app/static/images/lessons/Human Body.jpg",
-        "app/static/images/lessons/Singapore History.jpg"
-    ])
-    
+    image_paths.extend(
+        [
+            "app/static/images/lessons/Farm Animals.jpg",
+            "app/static/images/lessons/Human Body.jpg",
+            "app/static/images/lessons/Singapore History.jpg",
+        ]
+    )
+
     # Try each path in order until one works
     logger.info(f"Trying {len(image_paths)} possible image paths")
     for path in image_paths:
@@ -189,20 +208,25 @@ async def send_fallback_image(state: AdventureState, chapter_number: int, websoc
             if os.path.exists(path):
                 logger.info(f"Found fallback image at {path}")
                 import base64
-                with open(path, 'rb') as img_file:
+
+                with open(path, "rb") as img_file:
                     img_data = img_file.read()
-                    fallback_image = base64.b64encode(img_data).decode('utf-8')
-                    await websocket.send_json({
-                        "type": "chapter_image_update",
-                        "chapter_number": chapter_number,
-                        "image_data": fallback_image,
-                    })
-                    logger.info(f"Successfully sent fallback image ({len(img_data)} bytes) for chapter {chapter_number}")
+                    fallback_image = base64.b64encode(img_data).decode("utf-8")
+                    await websocket.send_json(
+                        {
+                            "type": "chapter_image_update",
+                            "chapter_number": chapter_number,
+                            "image_data": fallback_image,
+                        }
+                    )
+                    logger.info(
+                        f"Successfully sent fallback image ({len(img_data)} bytes) for chapter {chapter_number}"
+                    )
                     return  # Exit after successfully sending an image
         except Exception as img_error:
             logger.error(f"Error with fallback image path {path}: {str(img_error)}")
             continue
-    
+
     logger.error("No valid fallback image found - tried all possible paths")
 
 
@@ -333,7 +357,7 @@ async def send_chapter_data(
     chapter_number: int,
     sampled_question: Optional[Dict[str, Any]],
     state: AdventureState,
-    websocket: WebSocket
+    websocket: WebSocket,
 ) -> None:
     """Send complete chapter data to the client."""
     chapter_data = {

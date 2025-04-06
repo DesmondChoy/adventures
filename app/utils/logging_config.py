@@ -91,9 +91,10 @@ def setup_logging():
     logger.setLevel(logging.DEBUG)  # Keep logger level at DEBUG to capture all logs
 
     try:
-        # Console handler - show DEBUG and above in console
+        # Console handler - show INFO and above in console to reduce verbosity
+        # Change to INFO to reduce debug logging in the console
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.DEBUG)  # <----- CHANGE THIS LINE TO DEBUG
+        console_handler.setLevel(logging.INFO)  
         logger.addHandler(console_handler)
 
         # File handler for persistent logs - keep all logs
@@ -106,8 +107,8 @@ def setup_logging():
         print(f"Failed to setup logging handlers: {str(e)}")
         # Fallback to basic logging
         logging.basicConfig(
-            level=logging.DEBUG
-        )  # Fallback to DEBUG in case of setup failure
+            level=logging.INFO
+        )  # Fallback to INFO in case of setup failure
         logger = logging.getLogger("story_app")
         logger.error(f"Logging setup failed: {str(e)}")
 

@@ -1,7 +1,7 @@
 # Project Brief: Learning Odyssey
 
 ## Overview
-Learning Odyssey is an interactive educational platform that combines dynamic storytelling with structured learning through LLM-powered narrative experiences. The application creates personalized learning journeys where educational content and story-driven choices work together to create an immersive journey, culminating in satisfying narrative resolutions.
+Learning Odyssey is an interactive educational platform that combines dynamic storytelling with structured learning through LLM-powered narrative experiences. The application creates personalized learning journeys that integrate educational content with user-driven story choices, culminating in satisfying narrative resolutions.
 
 ## Problem Space
 Traditional educational platforms often lack:
@@ -11,89 +11,73 @@ Traditional educational platforms often lack:
 - Personalized learning paths
 
 Learning Odyssey solves these challenges through:
-1. Pre-defined educational content (`app/data/lessons/*.csv` files) with dynamic narrative delivery
+1. Pre-defined educational content with dynamic narrative delivery
 2. User-selected topics and adventure length
 3. LLM-generated narrative choices and resolutions
 4. Real-time state synchronization
 5. Agency system with meaningful character choices
 
-## Key Features and Objectives
+## Key Features
 
-1. **State Management (`app/models/story.py`):**
-   * `AdventureState` as the single source of truth
-   * WebSocket state synchronization
-   * Dynamic adventure length via `state.story_length`
-   * `ChapterType` enum (LESSON/STORY/REFLECT/CONCLUSION/SUMMARY)
-   * Complete state serialization
-   * Error recovery mechanisms
-   * Metadata tracking for agency and story elements
+### 1. State Management System
+- `AdventureState` as the single source of truth
+- WebSocket state synchronization
+- Dynamic chapter flow via `state.story_length` and `state.planned_chapter_types`
+- Comprehensive serialization and recovery
 
-2. **LLM Integration (`app/services/llm/`):**
-   * Provider abstraction layer
-   * GPT-4o/Gemini compatibility
-   * Streamlined prompt engineering system
-   * Response standardization
-   * Narrative resolution generation
-   * Phase-specific guidance for plot development
+### 2. LLM Integration
+- Provider abstraction layer (GPT-4o/Gemini compatibility)
+- Standardized prompt engineering system
+- Response formatting and validation
+- Narrative generation with phase-specific guidance
 
-3. **Content Flow (`app/services/chapter_manager.py`):**
-   * First chapter: STORY type with agency choice
-   * Second-to-last chapter: STORY type
-   * Last chapter: CONCLUSION type
-   * After CONCLUSION: SUMMARY type (statistics and chapter-by-chapter recap)
-   * 50% of remaining chapters, rounded down: LESSON type
-   * 50% of LESSON chapters, rounded down: REFLECT chapters
-   * REFLECT chapters only occur immediately after a LESSON chapter
-   * STORY chapters must follow REFLECT chapters
-   * LESSON chapters: `app/data/lessons/*.csv` files + LLM with Story Object Method
-   * STORY chapters: Full LLM generation with three choices
-   * REFLECT chapters: Narrative-driven reflection on previous LESSON
-   * CONCLUSION chapters: Full LLM generation without choices
-   * SUMMARY chapters: Statistics display and chapter-by-chapter summaries without narrative content
+### 3. Content Flow
+- First chapter: STORY with agency choice
+- Second-to-last chapter: STORY for pivotal choices
+- Last chapter: CONCLUSION with resolution (no choices)
+- After CONCLUSION: SUMMARY with statistics and chapter recaps
+- 50% of remaining chapters: LESSON (educational content)
+- 50% of LESSON chapters: REFLECT (follow LESSON chapters)
+- REFLECT chapters only after LESSON chapters
+- STORY chapters must follow REFLECT chapters
 
-4. **Agency System:**
-   * First chapter choice from four categories (items, companions, roles, abilities)
-   * AI-generated images for agency choices
-   * Agency evolution throughout the adventure
-   * Pivotal role in climax phase
-   * Meaningful resolution in conclusion
+### 4. Agency System
+- First chapter choice from four categories (items, companions, roles, abilities)
+- AI-generated images for agency choices
+- Agency evolution throughout the adventure
+- Pivotal role in climax phase
+- Meaningful resolution in conclusion
 
-5. **System Architecture:**
-   * FastAPI/WebSocket backend
-   * Real-time state updates
-   * Story simulation framework
-   * Error recovery system
-   * Question availability validation
-   * Asynchronous image generation
-   * Progressive enhancement (text first, images as available)
-   * React-based Summary Chapter with educational recap
+### 5. Technical Architecture
+- FastAPI backend with WebSocket real-time communication
+- Progressive enhancement (text first, images as available)
+- Asynchronous image generation via Google Imagen
+- React-based Summary Chapter
+- Browser-based state persistence
+- Robust error handling and recovery
 
-6. **Project Goals:**
-   * Personalized learning journeys
-   * Provider-agnostic AI integration
-   * Reliable state management
-   * Automated testing suite
-   * Dynamic content system
-   * Satisfying narrative arcs
+## Core Development Principles
+
+- **Dynamic Content Integrity:** Narrative content is AI-generated and variable. Application logic and tests MUST NOT hardcode narrative elements. Rely on state structure (`AdventureState`), metadata, and defined types (`ChapterType`) for validation and control. Handle narrative content as dynamic data flowing through a defined structure.
 
 ## Success Criteria
-1. Technical Requirements
-   * Real-time state synchronization
-   * Consistent chapter flow
-   * Cross-provider LLM support
-   * Comprehensive test coverage
-   * Robust error handling
-   * Graceful degradation for image generation
 
-2. User Experience
-   * Strong narrative opening with agency choice
-   * Engaging story progression with meaningful choice impact
-   * Effective learning integration through narrative wrapper
-   * Satisfying story conclusions with agency resolution
-   * Comprehensive summary chapter with statistics and chapter recaps
-   * Reliable error recovery and graceful degradation
-   * Visual representation of agency choices through AI-generated images
-   * Word-by-word streaming for natural reading experience
-   * Markdown formatting for enhanced text presentation
-   * Progressive enhancement (text first, images as they become available)
-   * Responsive design for both desktop and mobile
+### Technical Requirements
+- Real-time state synchronization
+- Consistent chapter flow
+- Cross-provider LLM support
+- Comprehensive test coverage
+- Robust error handling
+- Graceful degradation
+
+### User Experience
+- Strong narrative opening with agency choice
+- Engaging story progression with meaningful choice impact
+- Effective educational integration through narrative wrapper
+- Satisfying conclusions with agency resolution
+- Comprehensive summary chapter
+- Reliable error recovery
+- Visual representation through AI-generated images
+- Word-by-word streaming for natural reading
+- Responsive design for desktop and mobile
+- Persistent state across sessions

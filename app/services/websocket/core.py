@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, Union
 from fastapi import WebSocket
 import logging
 
@@ -17,7 +17,7 @@ logger = logging.getLogger("story_app")
 
 async def process_choice(
     state_manager: AdventureStateManager,
-    choice_data: Dict[str, Any],
+    choice_data: Union[Dict[str, Any], str],
     story_category: str,
     lesson_topic: str,
     websocket: WebSocket,
@@ -26,7 +26,7 @@ async def process_choice(
 
     Args:
         state_manager: The state manager instance
-        choice_data: The choice data from the client
+        choice_data: The choice data from the client (can be a dictionary or a string)
         story_category: The story category
         lesson_topic: The lesson topic
         websocket: The WebSocket connection

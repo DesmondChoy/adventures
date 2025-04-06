@@ -82,13 +82,6 @@ async def favicon():
     return FileResponse("app/static/favicon.ico")
 
 
-# Direct test routes to diagnose routing issues
-@app.get("/test-summary")
-async def test_summary():
-    """Test route to diagnose routing issues."""
-    return FileResponse("test_summary_button.html")
-
-
 # Direct test route with the same path as the summary router
 @app.get("/adventure/direct-summary")
 async def direct_summary():

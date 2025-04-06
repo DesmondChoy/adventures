@@ -1,5 +1,17 @@
 # Testing Guidelines for Learning Odyssey
 
+## General Testing Principles
+
+- **Handling Dynamic Narrative Content:**
+  - **DO NOT assert against specific LLM-generated narrative text (sentences, paragraphs, character names, etc.).** This content is variable and will break tests.
+  - **Focus tests on:**
+    - Correct state transitions (`AdventureState` updates).
+    - Structural correctness of data (e.g., does a chapter have content? Does a summary have a title?).
+    - Presence and type correctness of expected data fields.
+    - Correct function calls and interactions between services.
+    - Validation of chapter types (`ChapterType`) and sequence.
+  - Use mocking to provide structurally correct, but not specific, narrative content when testing components that consume it.
+
 ## State Testing
 
 ### Summary Button Testing
@@ -52,34 +64,125 @@ This test verifies:
 3. Chapter 10 is correctly treated as a CONCLUSION chapter
 4. Summary data is correctly formatted with lowercase chapter types
 
-## Testing Requirements
+## Story Simulation Testing
 
-### Backend Testing
-Run story simulation on changes to:
-   - `app/services/llm/*`
-   - `app/routers/websocket_router.py`
-   - `app/services/websocket_service.py`
-   - `app/services/chapter_manager.py`
-   - `app/services/image_generation_service.py`
-   - `app/models/story.py`
-   - `app/init_data.py`
-   - `app/data/stories/*.yaml`
-   - `app/data/lessons/*.csv`
-   - `app/templates/index.html`
+### Full Adventure Simulation
+Run `generate_all_chapters.py` to simulate a complete adventure:
+```bash
+# Run with default settings
+python tests/simulations/generate_all_chapters.py
 
-### Frontend Testing
-Test frontend components manually:
-   - `app/static/js/carousel-manager.js`:
-     * Test with keyboard navigation (arrow keys and Enter)
-     * Test with touch gestures (swipe left/right)
-     * Test with button clicks (navigation arrows)
-     * Test selection functionality
-   - `app/static/js/font-size-manager.js`:
-     * Test size adjustment controls
-     * Verify persistence across page reloads
-     * Test show/hide behavior on scroll
+# Specify category and topic
+python tests/simulations/generate_all_chapters.py --category "enchanted_forest_tales" --topic "Singapore History"
+
+# Save to specific output file
+python tests/simulations/generate_all_chapters.py --output "tests/data/test_adventure.json"
+```
+
+This simulation:
+1. Generates a complete 10-chapter adventure (9 interactive + 1 conclusion)
+2. Creates chapter summaries for each chapter
+3. Captures all WebSocket messages and responses
+4. Records the complete AdventureState
+5. Saves the simulation state to a JSON file
+
+### Chapter Summary Generation
+Run `generate_chapter_summaries.py` to generate summaries from a simulation state:
+```bash
+# Generate chapter summaries
+python tests/simulations/generate_chapter_summaries.py --state-file "tests/data/test_adventure.json"
+
+# Generate React-compatible JSON
+python tests/simulations/generate_chapter_summaries.py --react-json --state-file "tests/data/test_adventure.json"
+
+# Add delay between API calls
+python tests/simulations/generate_chapter_summaries.py --delay 2
+```
+
+This script:
+1. Extracts chapter content from a simulation state
+2. Generates summaries using the LLM
+3. Extracts educational questions and statistics
+4. Formats data for React or for testing
+
+## Chapter Management Testing
+
+### Chapter Sequence Validation
+Run `test_chapter_sequence_validation.py` to verify chapter sequencing:
+```bash
+python tests/simulations/test_chapter_sequence_validation.py
+```
+
+This test verifies:
+1. First chapter is STORY type
+2. Second-to-last chapter is STORY type
+3. Last chapter is CONCLUSION type
+4. 50% of remaining chapters are LESSON type
+5. No consecutive LESSON chapters
+6. REFLECT chapters follow LESSON chapters
+7. STORY chapters follow REFLECT chapters
+
+### Chapter Type Assignment
+Run `test_chapter_type_assignment.py` to verify chapter type assignment:
+```bash
+python tests/simulations/test_chapter_type_assignment.py
+```
+
+This test verifies:
+1. Chapter types are assigned according to the rules
+2. The correct ratio of LESSON/REFLECT/STORY chapters is maintained
+3. Chapter sequence constraints are enforced
+
+## Data Testing
+
+### Story Loader Testing
+Run `test_story_loader.py` to verify story loading:
+```bash
+python tests/data/test_story_loader.py
+```
+
+This test verifies:
+1. Story files are loaded correctly
+2. Required elements are present
+3. File encoding is handled properly
+
+### Lesson Loader Testing
+Run `test_lesson_loader.py` to verify lesson loading:
+```bash
+python tests/data/test_lesson_loader.py
+```
+
+This test verifies:
+1. Lesson files are loaded correctly
+2. Question format is valid
+3. Sufficient questions are available
+
+## Frontend Testing Guidelines
+
+### Carousel Component Testing
+Test `carousel-manager.js` functionality manually:
+* Test with keyboard navigation (arrow keys and Enter)
+* Test with touch gestures (swipe left/right)
+* Test with button clicks (navigation arrows)
+* Test selection functionality
+* Verify persistent selection
+
+### Font Size Manager Testing
+Test `font-size-manager.js` functionality manually:
+* Test size adjustment controls
+* Verify persistence across page reloads
+* Test show/hide behavior on scroll
+* Verify accessibility on different devices
 
 ## Critical Debugging Guidelines
+
+### WebSocket Connection Debugging
+When debugging WebSocket issues:
+1. Check connection establishment in browser console
+2. Verify correct URL format (`/ws/story/{story_category}/{lesson_topic}`)
+3. Check message handling in `websocket_router.py`
+4. Check disconnection handling and reconnection logic
+5. Use WebSocket.onclose and WebSocket.onerror handlers for diagnostics
 
 ### Subprocess Execution
 1. Always use `sys.executable` instead of "python" when creating subprocess commands:
@@ -92,80 +195,52 @@ Test frontend components manually:
    ```
 2. This ensures the subprocess uses the same Python interpreter as the main script, with access to all installed packages in the virtual environment.
 
-### Question Flow
-1. Verify topic selection in `websocket_router.py`.
-2. Check sampling logic in `chapter_manager.py`.
-3. Confirm shuffle implementation in `chapter_manager.py`.
-4. Validate answer tracking in `websocket_service.py`.
-5. Verify question persistence in `adventure_state_manager.py`.
-
 ### State Validation
-1. Check question history in `AdventureState`.
-2. Verify answer selections in `AdventureState`.
-3. Validate chapter types in `AdventureState`.
-4. Confirm state transitions in `adventure_state_manager.py`.
-5. Verify agency tracking in `state.metadata["agency"]`.
-
-### Response Chain
-1. Verify question format in `websocket_service.py`.
-2. Check answer order in `websocket_service.py`.
-3. Validate feedback in `websocket_service.py`.
-4. Confirm state updates in `adventure_state_manager.py`.
-5. Check "chapter" prefix removal in `websocket_service.py`:
-   - Verify regex pattern `r"^Chapter(?:\s+\d+)?:?\s*"` catches all variations
-
-### Prompt Debugging
-1. Verify State Passing:
-   - Check what properties are available in `AdventureState`.
-   - Confirm they're being passed to prompt builder in `prompt_engineering.py`.
-   - Verify they appear in final prompt.
-2. Check Data Flow:
-   - Trace data from state to prompt.
-   - Look for optional parameters.
-   - Verify history inclusion.
-3. Verify Adventure Topic Reference:
-   - Confirm `state.metadata["non_random_elements"]["name"]` contains the adventure topic name.
-   - Check that `_get_phase_guidance()` correctly replaces the {adventure_topic} placeholder in Exposition phase.
+1. Check question history in `AdventureState`
+2. Verify answer selections in `AdventureState`
+3. Validate chapter types in `AdventureState`
+4. Confirm state transitions in `adventure_state_manager.py`
+5. Verify agency tracking in `state.metadata["agency"]`
 
 ### Image Generation Debugging
 1. Verify API Configuration:
-   - Check `GOOGLE_API_KEY` environment variable.
-   - Confirm API initialization in `image_generation_service.py`.
+   - Check `GOOGLE_API_KEY` environment variable
+   - Confirm API initialization in `image_generation_service.py`
 2. Check Request Flow:
-   - Trace prompt construction.
-   - Verify API call parameters.
-   - Check response handling.
+   - Trace prompt construction
+   - Verify API call parameters
+   - Check response handling
 3. Analyze Error Handling:
-   - Verify retry mechanism (5 retries with exponential backoff).
-   - Check null response handling.
-   - Confirm fallback behavior.
+   - Verify retry mechanism (5 retries with exponential backoff)
+   - Check null response handling
+   - Confirm fallback behavior
 4. Agency Choice Visual Details:
-   - Verify `categories` dictionary is exposed in `prompt_templates.py`.
-   - Check agency name extraction from "As a..." choice texts in `enhance_prompt()`.
-   - Confirm visual details extraction from square brackets.
+   - Verify agency name extraction from choice texts
+   - Check visual details extraction
+   - Confirm category-specific prefixes
 
 ## Key Error Handling Strategies
 
 ### Question Errors
-- Handle sampling failures in `chapter_manager.py`.
-- Manage shuffle errors in `chapter_manager.py`.
-- Track invalid answers in `websocket_service.py`.
-- Handle missing questions in `chapter_manager.py`.
+- Handle sampling failures in `chapter_manager.py`
+- Manage shuffle errors in `chapter_manager.py`
+- Track invalid answers in `websocket_service.py`
+- Handle missing questions in `chapter_manager.py`
 
 ### State Errors
-- Handle synchronization failures in `adventure_state_manager.py`.
-- Implement recovery mechanisms in `adventure_state_manager.py`.
-- Maintain error boundaries in `adventure_state_manager.py`.
-- Log state transitions in `adventure_state_manager.py`.
+- Handle synchronization failures in `adventure_state_manager.py`
+- Implement recovery mechanisms in `adventure_state_manager.py`
+- Maintain error boundaries in `adventure_state_manager.py`
+- Log state transitions in `adventure_state_manager.py`
 
 ### WebSocket Errors
-- Handle connection drops in `websocket_router.py`.
-- Manage reconnection attempts in client-side code.
-- Process choice errors in `websocket_service.py`.
-- Handle streaming issues in `websocket_service.py`.
+- Handle connection drops in `websocket_router.py`
+- Manage reconnection attempts in client-side code
+- Process choice errors in `websocket_service.py`
+- Handle streaming issues in `websocket_service.py`
 
 ### Image Generation Errors
-- Handle API failures in `image_generation_service.py`.
-- Implement retry mechanism with exponential backoff.
-- Add robust null checking for responses.
-- Provide graceful degradation when images fail.
+- Handle API failures in `image_generation_service.py`
+- Implement retry mechanism with exponential backoff
+- Add robust null checking for responses
+- Provide graceful degradation when images fail

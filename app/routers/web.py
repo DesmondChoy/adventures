@@ -138,32 +138,6 @@ async def root(request: Request):
         raise
 
 
-@router.get("/test-summary")
-async def test_summary_button(request: Request):
-    """Serve the test summary button page."""
-    context = get_session_context(request)
-
-    try:
-        logger.info(
-            "Loading test summary button page",
-            extra={**context, "path": "/test-summary", "method": "GET"},
-        )
-
-        # Serve the test summary button page
-        return FileResponse("test_summary_button.html")
-    except Exception as e:
-        logger.error(
-            "Error rendering test summary button page",
-            extra={
-                **context,
-                "path": "/test-summary",
-                "method": "GET",
-                "error": str(e),
-            },
-        )
-        raise
-
-
 @router.get("/story/{chapter}")
 async def story_page(request: Request, chapter: int):
     """Render the story page for the given chapter."""

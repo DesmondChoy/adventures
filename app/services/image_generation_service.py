@@ -8,6 +8,7 @@ import asyncio
 import logging
 import re
 import time
+from typing import Dict, Optional
 from app.services.llm import LLMService
 
 logger = logging.getLogger("story_app")
@@ -88,12 +89,14 @@ class ImageGenerationService:
 
         while attempt <= retries:
             try:
-                logger.info(f"Generating image for prompt: {prompt}")
-                logger.debug("\n=== DEBUG: Image Generation Request ===")
-                logger.debug(f"Prompt: {prompt}")
-                logger.debug(f"Model: {self.model_name}")
-                logger.debug(f"Attempt: {attempt + 1}/{retries + 1}")
-                logger.debug("========================\n")
+                # Only log the complete prompt and model/attempt info - essential for debugging
+                logger.info("\n" + "=" * 50)
+                logger.info("COMPLETE IMAGE PROMPT SENT TO MODEL:")
+                logger.info(f"{prompt}")
+                logger.info(
+                    f"Model: {self.model_name} | Attempt: {attempt + 1}/{retries + 1}"
+                )
+                logger.info("=" * 50 + "\n")
 
                 # Generate image using the client's models interface
                 response = self.client.models.generate_images(
@@ -102,31 +105,12 @@ class ImageGenerationService:
                     config=GenerateImagesConfig(number_of_images=1),
                 )
 
-                # Log response structure for debugging
-                logger.debug("\n=== DEBUG: Image Generation Response ===")
-                logger.debug(f"Response type: {type(response)}")
-
-                if (
-                    hasattr(response, "generated_images")
-                    and response.generated_images is not None
-                ):
-                    logger.debug(
-                        f"Generated images count: {len(response.generated_images)}"
-                    )
-                    if response.generated_images:
-                        logger.debug(
-                            f"First image type: {type(response.generated_images[0])}"
-                        )
-                else:
-                    logger.debug("No generated_images attribute or it is None")
-                    logger.debug(f"Response details: {response}")
-                logger.debug("========================\n")
-
                 # Extract image data from response
                 if response.generated_images:
                     try:
                         # Convert to base64
                         image_bytes = response.generated_images[0].image.image_bytes
+                        # Log essential file size for debug
                         logger.debug(
                             f"Found image data with size: {len(image_bytes)} bytes"
                         )
@@ -135,7 +119,7 @@ class ImageGenerationService:
                         image.save(buffered, format="JPEG")
                         img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
                         logger.info(
-                            f"Successfully generated image for prompt: {prompt}"
+                            f"Successfully generated image for prompt: {prompt[:50]}..."
                         )
                         return img_str
                     except Exception as img_error:
@@ -154,7 +138,7 @@ class ImageGenerationService:
                             )
                             raise
 
-                logger.warning(f"No images generated for prompt: {prompt}")
+                logger.warning(f"No images generated for prompt (attempt {attempt + 1}/{retries + 1})")
                 # If we got a response but no images, increment attempt and try again
                 attempt += 1
                 last_error = ValueError(
@@ -169,7 +153,6 @@ class ImageGenerationService:
 
             except Exception as e:
                 logger.error(f"Image generation attempt {attempt + 1} failed: {str(e)}")
-                logger.error(f"Error type: {type(e).__name__}")
                 last_error = e
                 attempt += 1
 
@@ -181,183 +164,12 @@ class ImageGenerationService:
 
         # If we reach here, all attempts failed
         logger.error(
-            f"All {retries + 1} image generation attempts failed for prompt: {prompt}"
+            f"All {retries + 1} image generation attempts failed for prompt"
         )
         if last_error:
             logger.error(f"Last error: {type(last_error).__name__}: {str(last_error)}")
 
-        # Return a fallback image for testing if needed
-        # Uncomment the following code to provide a fallback test image
-        # try:
-        #     logger.warning("Using fallback test image")
-        #     with open('app/static/images/fallback_image.jpg', 'rb') as img_file:
-        #         return base64.b64encode(img_file.read()).decode('utf-8')
-        # except Exception as fallback_error:
-        #     logger.error(f"Fallback image also failed: {str(fallback_error)}")
-
         return None
-
-    def enhance_prompt(
-        self,
-        original_prompt,
-        adventure_state=None,
-        choice_text=None,
-        chapter_summary=None,
-    ):
-        """Streamlined prompt enhancement with updated order of elements.
-
-        Args:
-            original_prompt: The basic text prompt
-            adventure_state: Optional AdventureState object containing story elements
-            choice_text: Optional text of the selected choice to include in the prompt
-            chapter_summary: Optional summary of the current chapter for non-first chapters
-
-        Returns:
-            Enhanced prompt with elements in the specified order
-        """
-        # Base style guidance
-        base_style = "vibrant colors, detailed, whimsical, digital art"
-
-        # Build components in the specified order
-        components = []
-
-        # Log all input parameters for debugging
-        logger.debug(f"enhance_prompt called with:")
-        logger.debug(f"  original_prompt: '{original_prompt}'")
-        logger.debug(f"  chapter_summary: '{chapter_summary}'")
-        if adventure_state:
-            logger.debug(
-                f"  adventure_state: present with {len(getattr(adventure_state, 'chapters', []))} chapters"
-            )
-            if (
-                hasattr(adventure_state, "metadata")
-                and "agency" in adventure_state.metadata
-            ):
-                logger.debug(
-                    f"  agency: {adventure_state.metadata['agency'].get('description', 'None')}"
-                )
-
-        # If we have a chapter summary, use that as the main subject
-        if chapter_summary:
-            logger.debug(f"Using chapter summary in prompt: '{chapter_summary}'")
-            # Ensure chapter_summary is not empty or just whitespace
-            if chapter_summary and chapter_summary.strip():
-                components.append(
-                    f"Colorful storybook illustration of this scene: {chapter_summary}"
-                )
-                logger.debug(f"Added chapter summary to components")
-            else:
-                logger.warning("Chapter summary is empty or whitespace only")
-                # Use a fallback approach - add a generic component
-                components.append(
-                    "Colorful storybook illustration of a scene from the story"
-                )
-                logger.debug("Added generic scene component as fallback")
-        else:
-            # Extract the combined name and visual details up to the closing bracket
-            name_with_details = ""
-            full_bracket_match = re.match(r"(.*?\])", original_prompt)
-            if full_bracket_match:
-                name_with_details = full_bracket_match.group(1).strip()
-                logger.debug(f"Extracted name with visual details: {name_with_details}")
-            else:
-                # Fallback to just extracting the name if no bracket is found
-                name = original_prompt.split(" - ")[0].strip()
-
-                # Handle agency name extraction from choice text if needed
-                if re.match(r"(?:[^:]+):\s*([^-]+)", name):
-                    agency_name = (
-                        re.match(r"(?:[^:]+):\s*([^-]+)", name).group(1).strip()
-                    )
-                    logger.debug(
-                        f"Extracted agency name from choice text: {agency_name}"
-                    )
-                    name = agency_name
-                elif re.match(r"As a (\w+\s*\w*)", name):
-                    as_a_match = re.match(r"As a (\w+\s*\w*)", name)
-                    agency_name = as_a_match.group(1).strip()
-                    logger.debug(
-                        f"Extracted agency name from legacy 'As a' format: {agency_name}"
-                    )
-                    name = agency_name
-
-                name_with_details = name
-                logger.debug(f"Using name without visual details: {name}")
-
-                # Try to look up visual details for this name
-                visual_details = self._lookup_visual_details(name)
-                if visual_details:
-                    name_with_details = f"{name} [{visual_details}]"
-                    logger.debug(f"Added visual details from lookup: {visual_details}")
-
-            # Start with "Colorful storybook illustration of this scene: [Agency Name with Visual Details]"
-            components.append(
-                f"Colorful storybook illustration of this scene: {name_with_details}"
-            )
-
-        # Add agency information from adventure state regardless of chapter type
-        if (
-            adventure_state
-            and hasattr(adventure_state, "metadata")
-            and "agency" in adventure_state.metadata
-        ):
-            agency = adventure_state.metadata["agency"]
-            agency_description = agency.get("description", "")
-            agency_visual_details = agency.get("visual_details", "")
-            agency_category = agency.get("category", "")
-
-            if agency_description:
-                # Extract just the agency name/item without extra details
-                agency_name = (
-                    agency_description.split(" - ")[0].strip()
-                    if " - " in agency_description
-                    else agency_description
-                )
-                if ":" in agency_name:
-                    agency_name = agency_name.split(":", 1)[1].strip()
-
-                # If we don't have visual details stored, try to look them up
-                if not agency_visual_details:
-                    agency_visual_details = self._lookup_visual_details(agency_name)
-
-                # Add appropriate prefix based on agency category
-                if agency_category == "Choose a Companion":
-                    prefix = "He/she is accompanied by"
-                elif agency_category == "Take on a Profession":
-                    prefix = "He/she is a"
-                elif agency_category == "Gain a Special Ability":
-                    prefix = "He/she has the power of"
-                elif agency_category == "Craft a Magical Artifact":
-                    prefix = "He/she carries a magical"
-                else:
-                    prefix = "He/she has"
-
-                if agency_visual_details:
-                    components.append(
-                        f"{prefix} {agency_name} ({agency_visual_details})"
-                    )
-                else:
-                    components.append(f"{prefix} {agency_name}")
-
-                logger.debug(
-                    f"Added agency to chapter image with prefix '{prefix}': {agency_name}"
-                )
-                if agency_visual_details:
-                    logger.debug(f"Added visual details: {agency_visual_details}")
-
-        # Join components with appropriate separators
-        if len(components) >= 2:
-            # Join the first component (illustration) with the second component (agency)
-            # using a period instead of a comma
-            prompt = f"{components[0]}. {components[1]}"
-        else:
-            # If there's only one component, just use that
-            prompt = components[0]
-
-        # No longer adding base style
-
-        logger.info(f"Enhanced prompt: {prompt}")
-        return prompt
 
     def _lookup_visual_details(self, name):
         """Helper method to look up visual details from categories."""
@@ -394,3 +206,180 @@ class ImageGenerationService:
             logger.error(f"Error looking up visual details: {e}")
 
         return ""
+
+    async def synthesize_image_prompt(
+        self,
+        image_scene_description: str,
+        protagonist_description: str,
+        agency_details: Dict[str, str],
+        story_visual_sensory_detail: str,
+        character_visuals: Dict[str, str] = None,
+    ) -> str:
+        """Synthesize a coherent image prompt using LLM to combine multiple inputs.
+
+        This function uses Gemini Flash to intelligently combine the protagonist description,
+        agency details, scene description, and sensory details into a coherent, optimized
+        prompt for image generation.
+
+        Args:
+            image_scene_description: A concise summary of the key visual moment in the chapter
+            protagonist_description: The base appearance of the main character
+            agency_details: Dictionary containing agency category, name, and visual details
+            story_visual_sensory_detail: Overall visual mood element for the story's world
+            character_visuals: Dictionary of character names and their visual descriptions
+
+        Returns:
+            A synthesized prompt string ready for image generation
+
+        Raises:
+            Exception: If the LLM call fails or returns invalid content
+        """
+        try:
+            # Import the template from prompt_templates
+            from app.services.llm.prompt_templates import IMAGE_SYNTHESIS_PROMPT
+
+            # Log all image synthesis inputs at INFO level for consistent visibility across chapters
+            logger.info("\n=== IMAGE SYNTHESIS INPUTS ===")
+            logger.info(f"Scene Description: {image_scene_description}")
+            logger.info(f"Protagonist Description: {protagonist_description}")
+            logger.info(f"Story Visual Sensory Detail: {story_visual_sensory_detail}")
+            
+            # Log agency details if available
+            if agency_details:
+                logger.info("Agency Details:")
+                logger.info(f"- Category: {agency_details.get('category', 'N/A')}")
+                logger.info(f"- Name: {agency_details.get('name', 'N/A')}")
+                logger.info(f"- Visual Details: {agency_details.get('visual_details', 'N/A')}")
+            else:
+                logger.info("Agency Details: None")
+            
+            # Log character visuals
+            logger.info("Character Visuals:")
+            if character_visuals and len(character_visuals) > 0:
+                for name, description in character_visuals.items():
+                    logger.info(f"- {name}: {description}")
+            else:
+                logger.info("- None available")
+            logger.info("================================\n")
+
+            # Format character visuals context
+            character_visual_context = ""
+            if character_visuals and len(character_visuals) > 0:
+                # Format as a list for easier reading
+                character_visual_context = "Character Visual Descriptions:\n"
+                for name, description in character_visuals.items():
+                    character_visual_context += f"- {name}: {description}\n"
+            else:
+                character_visual_context = "No additional character visuals available"
+
+            # Format the template with the provided inputs
+            meta_prompt = IMAGE_SYNTHESIS_PROMPT.format(
+                image_scene_description=image_scene_description,
+                protagonist_description=protagonist_description,
+                agency_category=agency_details.get("category", "N/A"),
+                agency_name=agency_details.get("name", "N/A"),
+                agency_visual_details=agency_details.get("visual_details", "N/A"),
+                story_visual_sensory_detail=story_visual_sensory_detail,
+                character_visual_context=character_visual_context,
+            )
+
+            # Use LLMService to call Gemini Flash
+            llm = LLMService()
+
+            # Check if we're using Gemini or OpenAI
+            is_gemini = (
+                isinstance(llm, LLMService) or "Gemini" in llm.__class__.__name__
+            )
+
+            synthesized_prompt = ""
+            # For Gemini, use a direct approach instead of streaming
+            if is_gemini:
+                try:
+                    # Initialize the model with system prompt
+                    from google import generativeai as genai
+
+                    # Use Gemini Flash
+                    model_name = "gemini-2.0-flash"
+                    model = genai.GenerativeModel(
+                        model_name=model_name,
+                        system_instruction="You are a helpful assistant that follows instructions precisely.",
+                    )
+
+                    # Generate content without streaming
+                    response = model.generate_content(meta_prompt)
+
+                    # Extract the text directly
+                    synthesized_prompt = response.text.strip()
+                except Exception as e:
+                    logger.error(f"Error with direct Gemini call: {str(e)}")
+                    # Fallback to streaming approach
+                    logger.info("Falling back to LLMService")
+
+                    chunks = []
+
+                    # Create a minimal AdventureState-like object with just what we need
+                    class MinimalState:
+                        def __init__(self):
+                            self.current_chapter_id = "image_prompt_synthesis"
+                            self.story_length = 1
+                            self.chapters = []
+                            self.metadata = {"prompt_override": True}
+
+                    async for chunk in llm.generate_chapter_stream(
+                        story_config={},
+                        state=MinimalState(),
+                        question=None,
+                        previous_lessons=None,
+                        context={"prompt_override": meta_prompt},
+                    ):
+                        chunks.append(chunk)
+                    synthesized_prompt = "".join(chunks).strip()
+            else:
+                # For OpenAI, use the streaming approach
+                chunks = []
+
+                # Create a minimal AdventureState-like object with just what we need
+                class MinimalState:
+                    def __init__(self):
+                        self.current_chapter_id = "image_prompt_synthesis"
+                        self.story_length = 1
+                        self.chapters = []
+                        self.metadata = {"prompt_override": True}
+
+                async for chunk in llm.generate_chapter_stream(
+                    story_config={},
+                    state=MinimalState(),
+                    question=None,
+                    previous_lessons=None,
+                    context={"prompt_override": meta_prompt},
+                ):
+                    chunks.append(chunk)
+                synthesized_prompt = "".join(chunks).strip()
+
+            # Ensure the prompt is not empty
+            if not synthesized_prompt or len(synthesized_prompt) < 10:
+                # Use a fallback approach
+                fallback_prompt = f"Colorful storybook illustration of this scene: {image_scene_description}. Protagonist: {protagonist_description}. Agency: {agency_details.get('visual_details', '')}. Atmosphere: {story_visual_sensory_detail}."
+                logger.info("\n=== USING FALLBACK IMAGE PROMPT ===")
+                logger.info(fallback_prompt)
+                logger.info("===================================\n")
+                return fallback_prompt
+
+            # Log the synthesized prompt at INFO level
+            logger.info("\n=== SYNTHESIZED IMAGE PROMPT ===")
+            logger.info(synthesized_prompt)
+            logger.info("===============================\n")
+            
+            return synthesized_prompt
+
+        except Exception as e:
+            logger.error(f"Error synthesizing image prompt: {str(e)}")
+            # Return a fallback prompt
+            fallback_prompt = f"Colorful storybook illustration of this scene: {image_scene_description}. Protagonist: {protagonist_description}. Agency: {agency_details.get('visual_details', '')}. Atmosphere: {story_visual_sensory_detail}."
+            
+            # Log this fallback prompt too
+            logger.info("\n=== USING ERROR FALLBACK IMAGE PROMPT ===")
+            logger.info(fallback_prompt)
+            logger.info("========================================\n")
+            
+            return fallback_prompt
