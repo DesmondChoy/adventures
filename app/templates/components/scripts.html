@@ -5,9 +5,17 @@
     class AdventureStateManager {
         constructor() {
             this.STORAGE_KEY = 'adventure_state';
+            this.CLIENT_UUID_KEY = 'learning_odyssey_user_uuid';
+            this.ensureClientUuid();
         }
 
         saveState(state) {
+            // Ensure client_uuid is stored in state metadata
+            if (!state.metadata) {
+                state.metadata = {};
+            }
+            state.metadata.client_uuid = this.getClientUuid();
+            
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
         }
 
@@ -18,6 +26,33 @@
 
         clearState() {
             localStorage.removeItem(this.STORAGE_KEY);
+            // Note: We don't clear the client UUID as it's used for persistence
+        }
+        
+        ensureClientUuid() {
+            // Generate a UUID if one doesn't exist
+            if (!localStorage.getItem(this.CLIENT_UUID_KEY)) {
+                // Use crypto.randomUUID() if available (modern browsers)
+                const uuid = crypto.randomUUID ? 
+                    crypto.randomUUID() : 
+                    this.generateFallbackUuid();
+                    
+                localStorage.setItem(this.CLIENT_UUID_KEY, uuid);
+                console.log('Generated new client UUID for persistence');
+            }
+        }
+        
+        getClientUuid() {
+            return localStorage.getItem(this.CLIENT_UUID_KEY);
+        }
+        
+        // Fallback UUID generator for older browsers
+        generateFallbackUuid() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
         }
     }
 
@@ -29,13 +64,26 @@
             this.maxReconnectAttempts = 5;
             this.baseDelay = 1000; // 1 second
             this.maxDelay = 30000; // 30 seconds
+            this.adventureId = null; // Store adventure_id for persistence
         }
 
         getWebSocketUrl() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const storyCategory = document.getElementById('storyCategory').value;
             const lessonTopic = document.getElementById('lessonTopic').value;
-            return `${protocol}//${window.location.host}/ws/story/${storyCategory}/${lessonTopic}`;
+            const clientUuid = this.stateManager.getClientUuid();
+            
+            // Include client UUID as query parameter for user identification
+            return `${protocol}//${window.location.host}/ws/story/${storyCategory}/${lessonTopic}?client_uuid=${clientUuid}`;
+        }
+        
+        setAdventureId(id) {
+            this.adventureId = id;
+            console.log(`Set adventure_id: ${id} for persistence`);
+        }
+        
+        getAdventureId() {
+            return this.adventureId;
         }
 
         async handleDisconnect() {
@@ -329,6 +377,13 @@ function startAdventure() {
             } else if (data.type === 'summary_complete') {
                 // Display the complete summary
                 displaySummaryComplete(data.state);
+            } else if (data.type === 'adventure_created' || data.type === 'adventure_loaded') {
+                // Store the adventure_id for persistence
+                if (data.adventure_id) {
+                    wsManager.setAdventureId(data.adventure_id);
+                    console.log(`Received adventure_id: ${data.adventure_id} from server`);
+                }
+                // Don't hide loader here - wait for hide_loader message
             } else {
                 // For any other message types, hide the loader as a fallback
                 hideLoader();
@@ -524,6 +579,9 @@ function startAdventure() {
         if (renderTimeout) {
             clearTimeout(renderTimeout);
         }
+        
+        // Reset adventure_id
+        wsManager.setAdventureId(null);
         
         // Reset active paragraphs
         activeParagraphs.clear();
@@ -972,8 +1030,16 @@ function startAdventure() {
                     return;
                 }
                 
+                // Get the adventure_id if available
+                const adventureId = wsManager.getAdventureId();
+                
                 // First store the state via REST API
-                const response = await fetch('/adventure/api/store-adventure-state', {
+                const url = new URL('/adventure/api/store-adventure-state', window.location.origin);
+                if (adventureId) {
+                    url.searchParams.append('adventure_id', adventureId);
+                }
+                
+                const response = await fetch(url.toString(), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(currentState),

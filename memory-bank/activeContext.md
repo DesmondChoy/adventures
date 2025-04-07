@@ -1,6 +1,31 @@
 # Active Context
 
-## Current Focus: Image Scene Prompt Enhancement (2025-04-06)
+## Current Focus: Logging Configuration Fix (2025-04-07)
+
+We fixed a logging configuration issue in `app/utils/logging_config.py` that caused both a `TypeError` on startup and potential `UnicodeEncodeError` during runtime on Windows.
+
+### Problem Addressed
+
+1.  **`TypeError` on Startup:** The `logging.StreamHandler` was incorrectly initialized with an `encoding="utf-8"` argument, which it does not accept.
+2.  **`UnicodeEncodeError` during Runtime:** The default Windows console encoding (`cp1252`) could not handle certain Unicode characters, causing errors when logging messages containing them.
+
+### Implemented Solution
+
+1.  **Removed Invalid Argument:** Removed the `encoding="utf-8"` argument from the `logging.StreamHandler` initialization.
+2.  **Wrapped `sys.stdout`:** Wrapped the standard output stream (`sys.stdout.buffer`) using `io.TextIOWrapper` configured with `encoding='utf-8'` and `errors='replace'`. This ensures the stream passed to `StreamHandler` correctly handles UTF-8 and replaces problematic characters instead of crashing.
+3.  **Added Basic Console Formatter:** Added a simple `logging.Formatter('%(message)s')` to the console handler to prevent the `StructuredLogger` from causing duplicate message prints (once via `print`, once via the handler).
+4.  **Ensured File Handler Encoding:** Explicitly set `encoding='utf-8'` for the `logging.FileHandler` as well for consistency.
+5.  **Added JSON File Formatter:** Added a basic JSON formatter to the file handler to maintain structured logging in the file output.
+
+### Result
+
+The application now starts without the `TypeError`, and console logging correctly handles Unicode characters without causing `UnicodeEncodeError`, ensuring robust logging on different platforms.
+
+### Affected Files
+
+1.  `app/utils/logging_config.py`: Updated `setup_logging` function.
+
+## Previous Focus: Image Scene Prompt Enhancement (2025-04-06)
 
 We updated the `IMAGE_SCENE_PROMPT` to include character visual context, improving image generation consistency.
 

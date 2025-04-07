@@ -2,6 +2,15 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-04-07: Logging Configuration Fix
+- Fixed logging setup in `app/utils/logging_config.py` to prevent `TypeError` on startup and `UnicodeEncodeError` during runtime.
+- Removed invalid `encoding` argument from `logging.StreamHandler`.
+- Wrapped `sys.stdout` with `io.TextIOWrapper` using `utf-8` encoding and `errors='replace'` for robust console output.
+- Added basic formatter to console handler to avoid duplicate log messages.
+- Ensured file handler also uses `utf-8` encoding.
+- Added JSON formatter to file handler.
+- Updated Memory Bank documentation (`activeContext.md`, `progress.md`).
+
 ### 2025-04-06: Image Scene Prompt Enhancement
 - Updated `IMAGE_SCENE_PROMPT` in `app/services/llm/prompt_templates.py` to include `{character_visual_context}` placeholder and instructions to use it.
 - Modified `generate_image_scene` in `app/services/chapter_manager.py` to accept `character_visuals` dictionary and format the prompt accordingly.

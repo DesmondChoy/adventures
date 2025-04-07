@@ -65,7 +65,7 @@ async def test_plain():
 @router.get("/api/adventure-summary")
 async def get_adventure_summary(
     state_id: Optional[str] = None,
-    summary_service: SummaryService = Depends(get_summary_service)
+    summary_service: SummaryService = Depends(get_summary_service),
 ):
     """API endpoint to get the adventure summary data.
 
@@ -154,12 +154,13 @@ async def get_adventure_summary(
 @router.post("/api/store-adventure-state")
 async def store_adventure_state(
     state_data: dict,
-    summary_service: SummaryService = Depends(get_summary_service)
+    adventure_id: Optional[str] = None,
+    summary_service: SummaryService = Depends(get_summary_service),
 ):
     """Store adventure state and return a unique ID."""
     try:
         # Store the state with the service
-        state_id = await summary_service.store_adventure_state(state_data)
+        state_id = await summary_service.store_adventure_state(state_data, adventure_id)
         return {"state_id": state_id}
     except SummaryError as e:
         logger.error(f"Error storing adventure state: {str(e)}")
@@ -171,8 +172,7 @@ async def store_adventure_state(
 
 @router.get("/api/get-adventure-state/{state_id}")
 async def get_adventure_state(
-    state_id: str,
-    summary_service: SummaryService = Depends(get_summary_service)
+    state_id: str, summary_service: SummaryService = Depends(get_summary_service)
 ):
     """Retrieve adventure state by ID."""
     try:

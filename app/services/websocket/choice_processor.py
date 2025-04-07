@@ -29,7 +29,10 @@ llm_service = LLMService()
 
 
 async def handle_reveal_summary(
-    state: AdventureState, state_manager: AdventureStateManager, websocket: WebSocket
+    state: AdventureState,
+    state_manager: AdventureStateManager,
+    websocket: WebSocket,
+    connection_data: Optional[Dict[str, Any]] = None,
 ) -> Tuple[None, None, bool]:
     """Handle the reveal_summary special choice."""
     logger.info("Processing reveal_summary choice")
@@ -51,7 +54,9 @@ async def handle_reveal_summary(
             "Created placeholder response for CONCLUSION chapter with whitespace"
         )
 
-        await generate_conclusion_chapter_summary(conclusion_chapter, state, websocket)
+        await generate_conclusion_chapter_summary(
+            conclusion_chapter, state, websocket, connection_data
+        )
 
     # Create and generate the SUMMARY chapter
     summary_chapter = chapter_manager.create_summary_chapter(state)
@@ -93,7 +98,10 @@ async def handle_reveal_summary(
 
 
 async def generate_conclusion_chapter_summary(
-    conclusion_chapter: ChapterData, state: AdventureState, websocket: WebSocket
+    conclusion_chapter: ChapterData,
+    state: AdventureState,
+    websocket: WebSocket,
+    connection_data: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Generate and store summary for the conclusion chapter."""
     try:
@@ -158,10 +166,30 @@ async def generate_conclusion_chapter_summary(
             )
 
         # Store the updated state in StateStorageService
-        state_id = await state_storage_service.store_state(state.dict())
-        logger.info(
-            f"Stored state with ID: {state_id} after generating CONCLUSION chapter summary"
-        )
+        adventure_id = None
+
+        # Use existing adventure_id if available in connection_data
+        if connection_data and "adventure_id" in connection_data:
+            adventure_id = connection_data["adventure_id"]
+            logger.info(
+                f"Using existing adventure_id: {adventure_id} for state storage"
+            )
+
+            # Update the existing record with is_complete=True
+            state_id = await state_storage_service.store_state(
+                state.dict(),
+                adventure_id=adventure_id,
+                user_id=None,  # No authenticated user yet
+            )
+            logger.info(
+                f"Updated state with ID: {state_id} after generating CONCLUSION chapter summary"
+            )
+        else:
+            # Create a new record if no adventure_id is available
+            state_id = await state_storage_service.store_state(state.dict())
+            logger.info(
+                f"Stored new state with ID: {state_id} after generating CONCLUSION chapter summary"
+            )
 
         # Include the state_id in the response to the client
         await websocket.send_json({"type": "summary_ready", "state_id": state_id})
@@ -694,6 +722,7 @@ async def process_non_start_choice(
     story_category: str,
     lesson_topic: str,
     websocket: WebSocket,
+    connection_data: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Optional[ChapterContent], Optional[dict], bool]:
     """Process a non-start choice from the user."""
     logger.debug(f"Processing non-start choice: {chosen_path}")

@@ -21,6 +21,7 @@ async def process_choice(
     story_category: str,
     lesson_topic: str,
     websocket: WebSocket,
+    connection_data: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Optional[ChapterContent], Optional[dict], bool]:
     """Process a user's choice and generate the next chapter.
 
@@ -30,6 +31,7 @@ async def process_choice(
         story_category: The story category
         lesson_topic: The lesson topic
         websocket: The WebSocket connection
+        connection_data: Optional connection-specific data including adventure_id
 
     Returns:
         Tuple of (chapter_content, sampled_question, is_story_complete)
@@ -59,7 +61,9 @@ async def process_choice(
 
     # Check for special "reveal_summary" choice
     if chosen_path == "reveal_summary":
-        return await handle_reveal_summary(state, state_manager, websocket)
+        return await handle_reveal_summary(
+            state, state_manager, websocket, connection_data
+        )
 
     # Handle non-start choices
     if chosen_path != "start":
@@ -71,6 +75,7 @@ async def process_choice(
             story_category,
             lesson_topic,
             websocket,
+            connection_data,
         )
 
     # Handle start choice (initialize new story)
@@ -99,12 +104,14 @@ async def stream_and_send_chapter(
 async def send_story_complete(
     websocket: WebSocket,
     state: AdventureState,
+    connection_data: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Send story completion data to the client.
 
     Args:
         websocket: The WebSocket connection
         state: The current state
+        connection_data: Optional connection-specific data including adventure_id
     """
     from .stream_handler import stream_conclusion_content
     from .image_generator import start_image_generation_tasks, process_image_tasks

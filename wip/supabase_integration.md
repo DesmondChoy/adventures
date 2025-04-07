@@ -153,26 +153,65 @@ This document outlines the steps required to integrate Supabase into the Learnin
         *   [x] Removed `__new__` method
         *   [x] Simplified `__init__` method to just initialize the Supabase client
 
-- [ ] **3. Integrate into WebSocket/API Flow:**
-    *   [ ] **Revise `StateStorageService` for Upsert & Resume:**
-        *   [ ] Modify `store_state` to accept an optional `adventure_id` parameter for upsert operations.
-        *   [ ] Implement upsert logic: if `adventure_id` is provided, update existing record; if not, insert new record.
-        *   [ ] Add a new `get_active_adventure_id(user_identifier)` method to find incomplete adventures for a user.
-    *   [ ] **Adventure Start & Resume:**
-        *   [ ] On WebSocket connect, check for an existing active adventure for the user (using `StateStorageService.get_active_adventure_id`).
-        *   [ ] If active adventure found, load state using `StateStorageService.get_state` and store `adventure_id` in connection scope.
-        *   [ ] If no active adventure, create initial `AdventureState`, save immediately using `StateStorageService.store_state` to get the persistent `adventure_id`, and store ID in connection scope.
-    *   [ ] **Adventure Progress:**
-        *   [ ] Implement periodic saves after each significant state update (e.g., chapter completion, choice made).
-        *   [ ] Call `StateStorageService.store_state` with the current `adventure_id` and state data to update the record.
-        *   [ ] Ensure `is_complete` remains `false` during these updates.
-    *   [ ] **Adventure Completion:**
-        *   [ ] In the relevant function (`summary_generator.py` or `core.py`), after the final `AdventureState` is ready:
-            *   [ ] Call `StateStorageService.store_state` one last time, passing the final state, `adventure_id`, and ensuring `is_complete` is set to `true`.
-            *   [ ] Send the `adventure_id` back to the client in the `summary_ready` message.
-    *   [ ] **Summary Retrieval (`summary_router.py`):**
-        *   [ ] Ensure the `/adventure/api/adventure-summary` endpoint receives the `adventure_id` (as `state_id` query param).
-        *   [ ] Update the endpoint to use the refactored `StateStorageService.get_state` to fetch the `state_data` from Supabase using the provided `adventure_id`.
+- [x] **3. Integrate into WebSocket/API Flow:**
+    *   [x] **Revise `StateStorageService` for Upsert & Resume:**
+        *   [x] Modified `store_state` to accept an optional `adventure_id` parameter for upsert operations.
+        *   [x] Implemented upsert logic: if `adventure_id` is provided, update existing record; if not, insert new record.
+        *   [x] Added a new `get_active_adventure_id(user_identifier)` method to find incomplete adventures for a user.
+    *   [x] **Adventure Start & Resume:**
+        *   [x] On WebSocket connect, check for an existing active adventure for the user (using `StateStorageService.get_active_adventure_id`).
+        *   [x] If active adventure found, load state using `StateStorageService.get_state` and store `adventure_id` in connection scope.
+        *   [x] If no active adventure, create initial `AdventureState`, save immediately using `StateStorageService.store_state` to get the persistent `adventure_id`, and store ID in connection scope.
+    *   [x] **Adventure Progress:**
+        *   [x] Implemented periodic saves after each significant state update (e.g., chapter completion, choice made).
+        *   [x] Call `StateStorageService.store_state` with the current `adventure_id` and state data to update the record.
+        *   [x] Ensure `is_complete` remains `false` during these updates.
+    *   [x] **Adventure Completion:**
+        *   [x] In the relevant function (`choice_processor.py`), after the final `AdventureState` is ready:
+            *   [x] Call `StateStorageService.store_state` one last time, passing the final state, `adventure_id`, and ensuring `is_complete` is set to `true`.
+            *   [x] Send the `adventure_id` back to the client in the `summary_ready` message.
+    *   [x] **Summary Retrieval (`summary_router.py`):**
+        *   [x] Ensured the `/adventure/api/adventure-summary` endpoint receives the `adventure_id` (as `state_id` query param).
+        *   [x] Updated the endpoint to use the refactored `StateStorageService.get_state` to fetch the `state_data` from Supabase using the provided `adventure_id`.
+
+- [x] **4. Add Environment Column for Data Differentiation:**
+    *   [x] **Goal:** Differentiate between data generated during local development and data from production users.
+    *   [x] **Database Migration:** Created a new migration (`20250407130602_add_environment_column.sql`) to add an `environment TEXT NULL DEFAULT 'unknown'` column to the `adventures` table. Applied the migration using `npx supabase db push`.
+    *   [x] **Environment Variables:**
+        *   Added `APP_ENVIRONMENT="development"` to the local `.env` file.
+        *   Instructed user to add `APP_ENVIRONMENT="production"` to Railway environment variables.
+    *   [x] **Code Update:** Modified `StateStorageService.store_state` to read the `APP_ENVIRONMENT` variable (`os.getenv("APP_ENVIRONMENT", "unknown")`) and include its value in the `record` dictionary saved to the `environment` column in Supabase.
+
+### Debugging Notes (Phase 2 Completion)
+
+During local testing after completing Phase 2, the following issues were identified and resolved:
+
+1.  **Issue:** Supabase table `adventures` was not being populated. Logs showed `Could not find the 'client_uuid' column of 'adventures' in the schema cache`.
+    *   **Cause:** `StateStorageService.store_state` was attempting to insert data into a `client_uuid` column, which does not exist in the defined schema (the `client_uuid` is stored within the `state_data` JSONB). The `get_active_adventure_id` method was also incorrectly trying to query this non-existent column.
+    *   **Fix:**
+        *   Removed the `client_uuid` key from the `record` dictionary being inserted/updated in `store_state`.
+        *   Updated `get_active_adventure_id` to query the JSONB field using the correct path: `state_data->'metadata'->>'client_uuid'`.
+
+2.  **Issue:** The `lesson_topic` column in the `adventures` table was NULL upon initial adventure creation.
+    *   **Cause:** `StateStorageService.store_state` extracted `lesson_topic` only from `state_data.metadata`, which wasn't populated during the very first save operation.
+    *   **Fix:**
+        *   Modified `StateStorageService.store_state` signature to accept `lesson_topic` as an optional parameter.
+        *   Updated the `record` preparation logic to prioritize the passed `lesson_topic` parameter.
+        *   Modified `websocket_router.py` to pass the `lesson_topic` from the URL directly to `store_state` during the initial save.
+
+3.  **Issue:** Logs showed `Error finding active adventure: BaseSelectRequestBuilder.order() got an unexpected keyword argument 'options'`.
+    *   **Cause:** Incorrect syntax used for descending order in the `get_active_adventure_id` query.
+    *   **Fix:** Corrected the `.order()` call in `get_active_adventure_id` to use `desc=True` instead of `options={"ascending": False}`.
+
+4.  **Issue:** `lesson_topic` became NULL after the first chapter load, while `completed_chapter_count` incremented to 1.
+    *   **Cause:** An automatic state save occurred after Chapter 1 generation but before user choice. During this save, `store_state` re-extracted `lesson_topic` from `state_data.metadata` (where it wasn't explicitly stored after initialization), resulting in NULL. The `completed_chapter_count` correctly reflected `len(state.chapters) == 1`.
+    *   **Fix:** Modified `StateStorageService.store_state` so that when updating an existing record (`adventure_id` is present), only `state_data`, `is_complete`, and `completed_chapter_count` are included in the update payload. This prevents overwriting the initially set `lesson_topic` and `story_category`.
+
+5.  **Issue:** Summary chapter page (`/adventure/summary?state_id=...`) failed to load with a 500 Internal Server Error. Logs showed `Unexpected error serving summary data: 'StateStorageService' object has no attribute '_memory_cache'`.
+    *   **Cause:** A debug log line in `app/services/summary/service.py` within the `get_adventure_state_from_id` method was attempting to access `self.state_storage_service._memory_cache`. This attribute was removed when `StateStorageService` was refactored to use Supabase, causing an `AttributeError` that crashed the API endpoint.
+    *   **Fix:** Removed the outdated debug log line (`logger.info(f"Memory cache keys before retrieval: {list(self.state_storage_service._memory_cache.keys())}")`) from `app/services/summary/service.py`.
+
+These fixes ensure the application correctly interacts with the defined Supabase schema and handles initial state creation properly.
 
 ## Phase 3: Telemetry (Supabase Database) - *Deferred until Persistent State (including resume) is complete*
 
@@ -242,4 +281,20 @@ This document outlines the steps required to integrate Supabase into the Learnin
 *   [ ] **Security:** Ensure RLS policies are correctly implemented if data access needs restriction beyond backend service key access. Review Supabase security best practices.
 *   [ ] **Client-side State:** Decide how much state still needs to be managed client-side (e.g., current chapter content being streamed) vs. relying solely on backend/DB state.
 
-This plan provides a structured approach. We will now focus on completing Phase 2 (Persistent State including resume functionality) before moving to Telemetry or Authentication.
+This plan provides a structured approach. 
+
+## Current Status
+
+**Phase 2 (Persistent Adventure State) is now complete!** 
+
+The application now has:
+- A fully functional Supabase database integration
+- Persistent adventure state across sessions
+- Adventure resumption capabilities
+- Proper state management throughout the WebSocket/API flow
+- Complete integration with the summary generation system
+
+Next steps:
+1. Test the implementation thoroughly to ensure all persistence features work as expected
+2. Consider implementing Phase 3 (Telemetry) to gain insights into user behavior
+3. Evaluate the need for Phase 4 (User Authentication) based on user feedback and product requirements

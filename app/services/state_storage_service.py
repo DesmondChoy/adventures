@@ -29,13 +29,20 @@ class StateStorageService:
         logger.info("Initialized StateStorageService with Supabase client")
 
     async def store_state(
-        self, state_data: Dict[str, Any], user_id: Optional[str] = None
+        self,
+        state_data: Dict[str, Any],
+        adventure_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        lesson_topic: Optional[str] = None,  # Add lesson_topic parameter
     ) -> str:
         """
         Store adventure state data in Supabase and return the unique ID.
+        If adventure_id is provided, updates the existing record (upsert).
+        If not provided, creates a new record.
 
         Args:
             state_data: The complete adventure state data
+            adventure_id: Optional ID of an existing adventure to update
             user_id: Optional user ID for authenticated users
 
         Returns:
@@ -44,17 +51,26 @@ class StateStorageService:
         try:
             # Extract key fields for dedicated columns
             story_category = None
-            lesson_topic = None
+            # Use passed lesson_topic if available, otherwise try extracting from metadata
+            extracted_lesson_topic = lesson_topic
+            if (
+                not extracted_lesson_topic
+                and "metadata" in state_data
+                and "lesson_topic" in state_data["metadata"]
+            ):
+                extracted_lesson_topic = state_data["metadata"]["lesson_topic"]
+
             is_complete = False
             completed_chapter_count = 0
+            client_uuid = None  # Keep this for extraction, but don't save to column
 
             # Extract story_category from metadata or selected_narrative_elements
             if "metadata" in state_data and "story_category" in state_data["metadata"]:
                 story_category = state_data["metadata"]["story_category"]
 
-            # Extract lesson_topic from metadata or directly
-            if "metadata" in state_data and "lesson_topic" in state_data["metadata"]:
-                lesson_topic = state_data["metadata"]["lesson_topic"]
+            # Extract client_uuid from metadata if available (for anonymous users)
+            if "metadata" in state_data and "client_uuid" in state_data["metadata"]:
+                client_uuid = state_data["metadata"]["client_uuid"]
 
             # Determine if adventure is complete based on chapters
             chapters = state_data.get("chapters", [])
@@ -65,33 +81,68 @@ class StateStorageService:
                 last_chapter_type = chapters[-1].get("chapter_type", "").lower()
                 is_complete = last_chapter_type in ["conclusion", "summary"]
 
-            # Prepare the record for insertion
+            # Prepare the record for insertion/update
             record = {
                 "user_id": user_id,
                 "state_data": state_data,  # Supabase will handle JSON serialization
                 "story_category": story_category,
-                "lesson_topic": lesson_topic,
+                "lesson_topic": extracted_lesson_topic,  # Use the extracted/passed topic
                 "is_complete": is_complete,
                 "completed_chapter_count": completed_chapter_count,
+                # Note: client_uuid is already stored within state_data.metadata.client_uuid
+                # We don't need a separate column for it
+                "environment": os.getenv(
+                    "APP_ENVIRONMENT", "unknown"
+                ),  # Add environment
             }
 
-            # Insert the record into Supabase
-            response = self.supabase.table("adventures").insert(record).execute()
-
-            # Extract the ID from the response
-            if not response.data or len(response.data) == 0:
-                logger.error("Failed to store state: No data returned from Supabase")
-                raise ValueError(
-                    "Failed to store state: No data returned from Supabase"
+            if adventure_id:
+                # Prepare record for UPDATE - only include fields that change during the adventure
+                update_record = {
+                    "state_data": state_data,
+                    "is_complete": is_complete,
+                    "completed_chapter_count": completed_chapter_count,
+                    # updated_at is handled by the trigger
+                }
+                logger.info(f"Updating existing adventure with ID: {adventure_id}")
+                response = (
+                    self.supabase.table("adventures")
+                    .update(update_record)  # Use the specific update record
+                    .eq("id", adventure_id)
+                    .execute()
                 )
 
-            adventure_id = response.data[0]["id"]
-            logger.info(f"Stored state with ID: {adventure_id}")
-            logger.info(
-                f"Stored state with {completed_chapter_count} chapters and {len(state_data.get('chapter_summaries', []))} summaries"
-            )
+                if not response.data or len(response.data) == 0:
+                    logger.error(
+                        f"Failed to update adventure {adventure_id}: No data returned from Supabase"
+                    )
+                    raise ValueError(f"Failed to update adventure {adventure_id}")
 
-            return adventure_id
+                logger.info(f"Updated adventure with ID: {adventure_id}")
+                logger.info(
+                    f"Updated state with {completed_chapter_count} chapters and {len(state_data.get('chapter_summaries', []))} summaries"
+                )
+                return adventure_id
+            else:
+                # Insert new record
+                response = self.supabase.table("adventures").insert(record).execute()
+
+                # Extract the ID from the response
+                if not response.data or len(response.data) == 0:
+                    logger.error(
+                        "Failed to store state: No data returned from Supabase"
+                    )
+                    raise ValueError(
+                        "Failed to store state: No data returned from Supabase"
+                    )
+
+                adventure_id = response.data[0]["id"]
+                logger.info(f"Stored new adventure with ID: {adventure_id}")
+                logger.info(
+                    f"Stored state with {completed_chapter_count} chapters and {len(state_data.get('chapter_summaries', []))} summaries"
+                )
+
+                return adventure_id
 
         except Exception as e:
             logger.error(f"Error storing state in Supabase: {str(e)}")
@@ -136,6 +187,45 @@ class StateStorageService:
 
         except Exception as e:
             logger.error(f"Error retrieving state from Supabase: {str(e)}")
+            return None
+
+    async def get_active_adventure_id(self, client_uuid: str) -> Optional[str]:
+        """
+        Find an active (incomplete) adventure for the given client UUID.
+
+        Args:
+            client_uuid: The client's UUID stored in localStorage
+
+        Returns:
+            Optional[str]: The adventure ID if found, None otherwise
+        """
+        try:
+            logger.info(f"Looking for active adventure for client UUID: {client_uuid}")
+
+            # Query Supabase for incomplete adventures with matching client_uuid in the metadata
+            # We need to use the JSON path syntax to query inside the JSONB field
+            # Order by updated_at DESC to get the most recently updated one
+            response = (
+                self.supabase.table("adventures")
+                .select("id, updated_at")
+                .eq("state_data->'metadata'->>'client_uuid'", client_uuid)
+                .eq("is_complete", False)
+                .order("updated_at", desc=True)  # Corrected order syntax
+                .limit(1)
+                .execute()
+            )
+
+            # Check if any active adventure was found
+            if response.data and len(response.data) > 0:
+                adventure_id = response.data[0]["id"]
+                logger.info(f"Found active adventure with ID: {adventure_id}")
+                return adventure_id
+
+            logger.info(f"No active adventure found for client UUID: {client_uuid}")
+            return None
+
+        except Exception as e:
+            logger.error(f"Error finding active adventure: {str(e)}")
             return None
 
     async def cleanup_expired(self) -> int:
