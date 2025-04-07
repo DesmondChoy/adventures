@@ -19,6 +19,29 @@
     {% block scripts %}
     <script src="/static/js/font-size-manager.js"></script>
     <script src="/static/js/carousel-manager.js"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+      // Initialize Supabase client using variables passed from backend
+      const SUPABASE_URL = '{{ supabase_url | default('') }}'; // Use Jinja variable, provide default
+      const SUPABASE_ANON_KEY = '{{ supabase_anon_key | default('') }}'; // Use Jinja variable, provide default
+      
+      let supabase = null; // Initialize as null
+      if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+        try {
+          supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+          console.log("Supabase client initialized.");
+        } catch (error) {
+          console.error("Error initializing Supabase client:", error);
+        }
+      } else {
+        console.warn("Supabase URL or Anon Key not provided. Supabase client not initialized.");
+      }
+      
+      // You can now use the 'supabase' variable elsewhere in your frontend JS
+      // Make sure subsequent scripts that need 'supabase' are loaded after this block
+      // or access it appropriately (e.g., window.supabase = supabase;)
+    </script>
     {% endblock %}
 </body>
 </html>
