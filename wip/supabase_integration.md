@@ -93,49 +93,95 @@ This document outlines the steps required to integrate Supabase into the Learnin
 
 ## Phase 2: Persistent Adventure State (Supabase Database)
 
-- [ ] **1. Define Database Schema (`adventures` table):**
-    *   [ ] Using the Supabase SQL Editor or dashboard UI, create a table named `adventures`.
-    *   [ ] **Define Columns:**
+- [x] **1. Define Database Schema (`adventures` table):**
+    *   [x] Using Supabase CLI migrations, created a table named `adventures` with version control for database schema changes.
+    *   [x] **Setup Steps:**
+        *   [x] Installed Supabase CLI locally (`npm install supabase`)
+        *   [x] Authenticated with Supabase (`npx supabase login`)
+        *   [x] Linked project to Supabase instance (`npx supabase link --project-ref zgipcnqauuwlalucjwqk`)
+        *   [x] Created a new migration (`npx supabase migration new create_adventures_table`)
+        *   [x] Defined the table schema in the generated SQL file (`20250407101938_create_adventures_table.sql`)
+        *   [x] Applied the migration (`npx supabase db push`)
+    *   [x] **Defined Columns (Hybrid Approach):**
         *   `id` (UUID, Primary Key, default: `gen_random_uuid()`)
         *   `user_id` (UUID, Nullable - *will link to `auth.users` if Auth is implemented*)
-        *   `state_data` (JSONB, Not Null) - Stores the complete `AdventureState` JSON.
-        *   `story_category` (TEXT, Nullable) - Extracted for easier querying.
-        *   `lesson_topic` (TEXT, Nullable) - Extracted for easier querying.
-        *   `is_complete` (BOOLEAN, default: `false`) - To distinguish in-progress vs. completed.
+        *   `state_data` (JSONB, Not Null) - Stores the complete `AdventureState` JSON for full state reconstruction.
+        *   `story_category` (TEXT, Nullable) - Extracted for easier querying and filtering.
+        *   `lesson_topic` (TEXT, Nullable) - Extracted for easier querying and filtering.
+        *   `is_complete` (BOOLEAN, default: `false`) - To distinguish in-progress vs. completed adventures.
+        *   `completed_chapter_count` (INTEGER, Nullable) - Number of chapters completed, useful for engagement metrics.
         *   `created_at` (TimestampTZ, default: `now()`)
-        *   `updated_at` (TimestampTZ, default: `now()`)
-    *   [ ] **Configure Row Level Security (RLS):** Initially, disable RLS or create a policy allowing backend access via service key. Plan for stricter policies if frontend access or user-specific access is needed later.
+        *   `updated_at` (TimestampTZ, default: `now()`) - With automatic update trigger
+    *   [x] **Schema Approach:** Implemented the hybrid approach that balances simplicity with query needs:
+        *   Keeps the full state in `state_data` for easy reconstruction
+        *   Extracts key fields as dedicated columns for efficient filtering and analytics
+        *   Allows for future schema evolution by adding more columns as needed
+    *   [x] **Configured Row Level Security (RLS):** 
+        *   Enabled RLS on the table
+        *   Created a policy allowing backend access via service key
+        *   Added appropriate grants for the service_role
+        *   Added comments to document table and columns
 
-- [ ] **2. Refactor Backend `StateStorageService` (`app/services/state_storage_service.py`):**
-    *   [ ] Initialize the Supabase client using environment variables (likely in a shared config or upon service instantiation).
-    *   [ ] Modify `store_state` method:
-        *   [ ] Accept `user_id` (optional for now).
-        *   [ ] Remove writing to `_memory_cache`.
-        *   [ ] Construct a record dictionary with `state_data`, `user_id`, `story_category`, `lesson_topic`, `is_complete=true`.
-        *   [ ] Use the Supabase client (`supabase.table('adventures').insert(record).execute()`) to insert the record.
-        *   [ ] Return the generated `id` (UUID) from the insert response.
-    *   [ ] Modify `get_state` method:
-        *   [ ] Accept `state_id` (which is the adventure `id`).
-        *   [ ] Use the Supabase client (`supabase.table('adventures').select('state_data').eq('id', state_id).maybe_single().execute()`) to fetch the record.
-        *   [ ] Return the `state_data` field if found, else `None`.
-    *   [ ] Remove the in-memory cache (`_memory_cache`) and related singleton logic if no longer needed.
+- [x] **2. Refactor Backend `StateStorageService` (`app/services/state_storage_service.py`):**
+    *   [x] Initialized the Supabase client using environment variables in the `__init__` method:
+        *   Added imports for `os`, `supabase`, and `load_dotenv`
+        *   Used `load_dotenv()` to load environment variables
+        *   Retrieved `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` using `os.getenv()`
+        *   Created the Supabase client instance with proper error handling
+    *   [x] Modified `store_state` method:
+        *   [x] Updated signature to accept `user_id` (optional parameter)
+        *   [x] Removed code related to `_memory_cache`
+        *   [x] Added logic to extract key fields from the state data:
+            *   `state_data`: The entire serialized state object
+            *   `story_category`: From state metadata
+            *   `lesson_topic`: From state metadata
+            *   `is_complete`: Based on last chapter type (CONCLUSION or SUMMARY)
+            *   `completed_chapter_count`: From `len(chapters)`
+        *   [x] Constructed a record dictionary with all fields
+        *   [x] Used Supabase client to insert the record
+        *   [x] Added error handling with try/except
+        *   [x] Extracted and returned the generated UUID from the response
+    *   [x] Modified `get_state` method:
+        *   [x] Removed code related to `_memory_cache`
+        *   [x] Used Supabase client to query the record by ID
+        *   [x] Added error handling
+        *   [x] Extracted and returned the `state_data` field if found
+    *   [x] Modified `cleanup_expired` method:
+        *   [x] Updated to delete expired records from Supabase based on timestamp
+    *   [x] Removed singleton pattern:
+        *   [x] Removed `_memory_cache`, `_instance`, and `_initialized` class variables
+        *   [x] Removed `__new__` method
+        *   [x] Simplified `__init__` method to just initialize the Supabase client
 
 - [ ] **3. Integrate into WebSocket/API Flow:**
-    *   [ ] **Adventure Start:** Decide if an initial record is needed. If so, create it here (`is_complete=false`) and pass the `adventure_id` to the client.
-    *   [ ] **Adventure Progress (Optional):** Implement periodic saves if cross-device resume for *in-progress* games is desired.
+    *   [ ] **Revise `StateStorageService` for Upsert & Resume:**
+        *   [ ] Modify `store_state` to accept an optional `adventure_id` parameter for upsert operations.
+        *   [ ] Implement upsert logic: if `adventure_id` is provided, update existing record; if not, insert new record.
+        *   [ ] Add a new `get_active_adventure_id(user_identifier)` method to find incomplete adventures for a user.
+    *   [ ] **Adventure Start & Resume:**
+        *   [ ] On WebSocket connect, check for an existing active adventure for the user (using `StateStorageService.get_active_adventure_id`).
+        *   [ ] If active adventure found, load state using `StateStorageService.get_state` and store `adventure_id` in connection scope.
+        *   [ ] If no active adventure, create initial `AdventureState`, save immediately using `StateStorageService.store_state` to get the persistent `adventure_id`, and store ID in connection scope.
+    *   [ ] **Adventure Progress:**
+        *   [ ] Implement periodic saves after each significant state update (e.g., chapter completion, choice made).
+        *   [ ] Call `StateStorageService.store_state` with the current `adventure_id` and state data to update the record.
+        *   [ ] Ensure `is_complete` remains `false` during these updates.
     *   [ ] **Adventure Completion:**
         *   [ ] In the relevant function (`summary_generator.py` or `core.py`), after the final `AdventureState` is ready:
-            *   [ ] Call the refactored `StateStorageService.store_state`, passing the final state and the current `user_id` (if available).
-            *   [ ] Get the `adventure.id` (UUID) returned by `store_state`.
-            *   [ ] Send this `adventure.id` back to the client in the `summary_ready` message.
+            *   [ ] Call `StateStorageService.store_state` one last time, passing the final state, `adventure_id`, and ensuring `is_complete` is set to `true`.
+            *   [ ] Send the `adventure_id` back to the client in the `summary_ready` message.
     *   [ ] **Summary Retrieval (`summary_router.py`):**
-        *   [ ] Ensure the `/adventure/api/adventure-summary` endpoint receives the `adventure.id` (as `state_id` query param).
-        *   [ ] Update the endpoint to use the refactored `StateStorageService.get_state` to fetch the `state_data` from Supabase using the provided `adventure.id`.
+        *   [ ] Ensure the `/adventure/api/adventure-summary` endpoint receives the `adventure_id` (as `state_id` query param).
+        *   [ ] Update the endpoint to use the refactored `StateStorageService.get_state` to fetch the `state_data` from Supabase using the provided `adventure_id`.
 
-## Phase 3: Telemetry (Supabase Database)
+## Phase 3: Telemetry (Supabase Database) - *Deferred until Persistent State (including resume) is complete*
 
 - [ ] **1. Define Database Schema (`telemetry_events` table):**
-    *   [ ] Create a table named `telemetry_events` using the Supabase SQL Editor or UI.
+    *   [ ] Using Supabase CLI migrations, create a table named `telemetry_events`. This approach provides version control for database schema changes.
+    *   [ ] **Setup Steps:**
+        *   [ ] Create a new migration (`supabase migration new create_telemetry_events_table`)
+        *   [ ] Define the table schema in the generated SQL file
+        *   [ ] Apply the migration (`supabase migration up`)
     *   [ ] **Define Columns:**
         *   `id` (BIGSERIAL, Primary Key - using sequence for high insert rate)
         *   `event_name` (TEXT, Not Null) - e.g., 'adventure_started', 'chapter_viewed', 'choice_made', 'summary_viewed'.
@@ -159,9 +205,7 @@ This document outlines the steps required to integrate Supabase into the Learnin
         *   `SELECT event_name, COUNT(*) FROM telemetry_events WHERE timestamp > now() - interval '7 days' GROUP BY event_name;`
         *   Analyze `metadata` JSONB fields for deeper insights.
 
-## Phase 4: Optional User Authentication (Supabase Auth)
-
-*(Implement after Persistent State is working)*
+## Phase 4: Optional User Authentication (Supabase Auth) - *Deferred until Persistent State (including resume) is complete*
 
 - [ ] **1. Configure Supabase Auth:**
     *   [ ] Enable the Google provider in the Supabase project dashboard (requires setting up OAuth credentials in Google Cloud Console).
@@ -182,16 +226,20 @@ This document outlines the steps required to integrate Supabase into the Learnin
     *   [ ] Update database interactions (`adventures`, `telemetry_events`) to store the `user_id`.
 
 - [ ] **4. Update Database Schema/RLS:**
-    *   [ ] Ensure the `user_id` columns in `adventures` and `telemetry_events` are correctly linked (potentially as foreign keys using `references auth.users(id)`) to the `auth.users` table created by Supabase Auth.
-    *   [ ] Implement Row Level Security (RLS) policies (e.g., `CREATE POLICY "Users can manage their own adventures." ON adventures FOR ALL USING (auth.uid() = user_id);`).
+    *   [ ] Using Supabase CLI migrations, update the database schema and implement RLS policies:
+        *   [ ] Create a new migration (`supabase migration new add_auth_foreign_keys_and_rls`)
+        *   [ ] Define the SQL to add foreign key constraints linking `user_id` columns in `adventures` and `telemetry_events` to the `auth.users` table
+        *   [ ] Define the SQL to implement Row Level Security (RLS) policies (e.g., `CREATE POLICY "Users can manage their own adventures." ON adventures FOR ALL USING (auth.uid() = user_id);`)
+        *   [ ] Apply the migration (`supabase migration up`)
 
 ## Considerations & Next Steps
 
+*   [ ] **User Identification:** Define how to identify users for resuming adventures (e.g., session ID, browser fingerprint, anonymous user ID from Supabase Auth, full user ID). This is critical for the `get_active_adventure_id` method to work properly.
 *   [ ] **Error Handling:** Implement robust error handling for all Supabase interactions (DB writes/reads, auth).
 *   [ ] **Data Migration:** Plan how to handle any existing state data (if applicable, though current state is transient).
-*   [ ] **Testing:** Update existing tests and create new ones to cover Supabase interactions and authentication flows.
+*   [ ] **Testing:** Update existing tests and create new ones to cover Supabase interactions, periodic saves, and resume functionality.
 *   [ ] **Scalability:** Monitor Supabase usage and scale the database plan if necessary. Consider database indexing for performance as data grows.
 *   [ ] **Security:** Ensure RLS policies are correctly implemented if data access needs restriction beyond backend service key access. Review Supabase security best practices.
 *   [ ] **Client-side State:** Decide how much state still needs to be managed client-side (e.g., current chapter content being streamed) vs. relying solely on backend/DB state.
 
-This plan provides a structured approach. We should tackle Persistent State first, then Telemetry, and finally Authentication if desired.
+This plan provides a structured approach. We will now focus on completing Phase 2 (Persistent State including resume functionality) before moving to Telemetry or Authentication.
