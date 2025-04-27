@@ -1,6 +1,30 @@
 # Active Context
 
-## Current Focus: Logging Configuration Fix (2025-04-07)
+## Current Focus: Testing Supabase Persistence & Resume (2025-04-27)
+
+Following the completion of Phase 2 of the Supabase integration (Persistent Adventure State), the current focus is on thoroughly testing this implementation.
+
+### Goal
+
+Verify that the Supabase backend correctly stores adventure state throughout the user journey and reliably allows users to resume incomplete adventures after disconnection or session interruption.
+
+### Key Areas to Test
+
+1.  **Initial Save:** Ensure a new adventure record is created in the `adventures` table upon starting.
+2.  **Progress Updates:** Verify that the state (`state_data`, `completed_chapter_count`, `updated_at`) is correctly updated in Supabase as the user progresses.
+3.  **Adventure Resumption:** Confirm that the application can identify (`get_active_adventure_id`) and load the correct state for an incomplete adventure when the user reconnects.
+4.  **Completion:** Check that the `is_complete` flag is set correctly upon finishing an adventure.
+5.  **Summary Retrieval:** Ensure the summary page can successfully fetch the final state from Supabase using the `adventure_id`.
+
+### Next Steps
+
+1.  Execute the planned test cases (manual or simulated).
+2.  Analyze results and address any bugs found.
+3.  Once validated, proceed to Phase 3 (Telemetry) or Phase 4 (Authentication) as prioritized.
+
+---
+
+## Previous Focus: Logging Configuration Fix (2025-04-07)
 
 We fixed a logging configuration issue in `app/utils/logging_config.py` that caused both a `TypeError` on startup and potential `UnicodeEncodeError` during runtime on Windows.
 

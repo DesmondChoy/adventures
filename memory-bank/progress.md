@@ -2,6 +2,17 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-04-07 (Approx): Supabase Integration - Phase 2 (Persistent State)
+- Completed integration of Supabase for persistent adventure state storage.
+- Created `adventures` table schema using Supabase migrations (`20250407101938_create_adventures_table.sql`, `20250407130602_add_environment_column.sql`).
+- Refactored `StateStorageService` (`app/services/state_storage_service.py`) to use Supabase client, removing the previous in-memory singleton pattern.
+- Implemented state storage on adventure start, periodic updates during progress, and final save on completion.
+- Added `get_active_adventure_id` method to enable adventure resumption based on `client_uuid` stored in `state_data`.
+- Integrated state loading/saving into WebSocket (`websocket_router.py`) and API (`summary_router.py`) flows.
+- Added `environment` column to differentiate development/production data.
+- Resolved several bugs related to database interaction, initial state saving, and query syntax identified during initial testing (see `wip/supabase_integration.md` for details).
+- **Result:** Application now supports persistent adventure state and adventure resumption via Supabase backend.
+
 ### 2025-04-07: Logging Configuration Fix
 - Fixed logging setup in `app/utils/logging_config.py` to prevent `TypeError` on startup and `UnicodeEncodeError` during runtime.
 - Removed invalid `encoding` argument from `logging.StreamHandler`.
@@ -188,23 +199,19 @@
 ### Known Issues
 - CONCLUSION chapter summary still showing placeholder text in simulation logs
 - CONCLUSION chapter content is visible in terminal but not captured in simulation log file
-- In-memory storage is not persistent across server restarts
+- *Note: Non-persistent storage issue resolved by Supabase integration.*
 
 ## Next Steps
 
-1. **Protagonist Inconsistencies Fix** (Current Branch)
-   - Address inconsistencies in protagonist descriptions
-   - Implement protagonist gender consistency checks
-   - Add validation for character visual extraction
-   - Enhance character visual management in AdventureState
+1.  **Test Supabase Persistence & Resume:** Thoroughly test the completed Phase 2 Supabase integration to ensure persistence and adventure resumption work reliably across various scenarios.
 
-2. **Persistent Storage Implementation**
-   - Implement database storage option for production
-   - Options include using Redis, MongoDB, or file-based storage
-   - Add server restart recovery mechanisms
-   - Implement data pruning for old states
+2.  **Protagonist Inconsistencies Fix** (Current Branch)
+    *   Address inconsistencies in protagonist descriptions
+    *   Implement protagonist gender consistency checks
+    *   Add validation for character visual extraction
+    *   Enhance character visual management in AdventureState
 
-3. **WebSocket Disconnection Fix**
+3.  **WebSocket Disconnection Fix**
    - Fix error when client navigates to summary page
    - Add proper connection closure detection
    - Implement cleanup for orphaned WebSocket connections

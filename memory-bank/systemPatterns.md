@@ -2,27 +2,41 @@
 
 ## Key Design Patterns
 
-### 1. Singleton Pattern for State Storage
+### 1. Supabase Persistence Pattern
 - **StateStorageService** (`app/services/state_storage_service.py`)
-  * Ensures all instances share the same memory cache
-  * Implemented with class variables and `__new__` method
-  * Prevents state loss between different service instances
-  * Critical for "Take a Trip Down Memory Lane" button functionality
+  * Uses the `supabase-py` client to interact with a Supabase backend.
+  * Initializes the client using environment variables (`SUPABASE_URL`, `SUPABASE_SERVICE_KEY`).
+  * Provides methods (`store_state`, `get_state`, `get_active_adventure_id`) for CRUD operations on the `adventures` table.
+  * Handles JSON serialization/deserialization for the `state_data` column.
+  * Implements an upsert mechanism in `store_state` (update if `adventure_id` exists, insert otherwise).
+  * Extracts key fields (`story_category`, `lesson_topic`, `is_complete`, `completed_chapter_count`, `environment`) into dedicated columns for querying, while storing the full state in `state_data`.
+  * Enables persistent adventure state across sessions and server restarts.
   ```python
+  # Example Initialization in StateStorageService
   class StateStorageService:
-      _instance = None
-      _memory_cache = {}  # Shared memory cache across all instances
-      _initialized = False
-
-      def __new__(cls):
-          if cls._instance is None:
-              cls._instance = super(StateStorageService, cls).__new__(cls)
-          return cls._instance
-
       def __init__(self):
-          if not StateStorageService._initialized:
-              StateStorageService._initialized = True
-              logger.info("Initializing StateStorageService singleton")
+          load_dotenv()
+          supabase_url = os.getenv("SUPABASE_URL")
+          supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
+          # ... error handling ...
+          self.supabase: Client = create_client(supabase_url, supabase_key)
+          logger.info("Initialized StateStorageService with Supabase client")
+
+      async def store_state(self, state_data: Dict[str, Any], adventure_id: Optional[str] = None, ...) -> str:
+          # ... prepares record ...
+          if adventure_id:
+              # ... update logic using self.supabase.table("adventures").update()...
+          else:
+              # ... insert logic using self.supabase.table("adventures").insert()...
+          # ... returns adventure_id ...
+
+      async def get_state(self, state_id: str) -> Optional[Dict[str, Any]]:
+          # ... logic using self.supabase.table("adventures").select("state_data")...
+          # ... returns state_data ...
+
+      async def get_active_adventure_id(self, client_uuid: str) -> Optional[str]:
+          # ... logic using self.supabase.table("adventures").select("id")...
+          # ... returns adventure_id or None ...
   ```
 
 ### 2. Case Sensitivity Handling Pattern

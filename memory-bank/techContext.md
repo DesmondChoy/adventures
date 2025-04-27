@@ -56,23 +56,8 @@
 ## Core Data Structures
 
 ### StateStorageService
-```python
-class StateStorageService:
-    # Singleton pattern implementation
-    _instance = None
-    _memory_cache = {}  # Shared memory cache across all instances
-    _initialized = False
-    
-    # Methods
-    async def store_state(self, state_data: Dict[str, Any]) -> str:
-        # Stores state with UUID and returns the ID
-        
-    async def get_state(self, state_id: str) -> Optional[Dict[str, Any]]:
-        # Retrieves state by ID
-        
-    async def cleanup_expired(self) -> int:
-        # Removes expired states
-```
+- **Implementation:** `app/services/state_storage_service.py`
+- **Description:** Provides persistent storage for `AdventureState` using a Supabase backend. Handles state creation, retrieval, updates (upsert), and retrieval of active adventures for resumption. See `memory-bank/systemPatterns.md` for the Supabase Persistence Pattern details.
 
 ### AdventureState
 ```python
