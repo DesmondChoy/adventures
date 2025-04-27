@@ -213,6 +213,118 @@ During local testing after completing Phase 2, the following issues were identif
 
 These fixes ensure the application correctly interacts with the defined Supabase schema and handles initial state creation properly.
 
+## Phase 2 Testing Plan (Collaborative Approach)
+
+This section outlines the manual testing steps to verify the Phase 2 Supabase integration. This requires collaboration: Cline (AI) will manage the backend server and ask verification questions, while the User will interact with the web application and check the Supabase dashboard/application logs.
+
+**General Setup (Cline's Role - Act Mode):**
+1.  Start the local FastAPI development server (e.g., `uvicorn app.main:app --reload`).
+2.  Provide the local URL (e.g., `http://127.0.0.1:8000`) to the User.
+
+**Test Cases:**
+
+*   **[x] Test Case 1: New Adventure & Initial Save (Passed 2025-04-27)**
+    *   **Goal:** Verify a new adventure is created in Supabase upon starting.
+    *   **User Actions:**
+        1.  Open the provided local URL in a browser.
+        2.  Select a Story Category and Lesson Topic.
+        3.  Click "Start Adventure".
+        4.  Wait for the first chapter content to load.
+        5.  Open the Supabase dashboard, navigate to the Table Editor, and view the `adventures` table.
+        6.  Check the application's terminal logs.
+    *   **Cline Verification Questions:**
+        *   "Is there a new row in the `adventures` table?"
+        *   "Does the new row have the correct `story_category` and `lesson_topic` you selected?"
+        *   "Is the `is_complete` column `false` for the new row?"
+        *   "Did you see any errors in the terminal logs related to `store_state`?"
+    *   **Result:** Passed. New row created correctly with expected initial data. No errors logged.
+
+*   **[x] Test Case 2: Progress & Mid-Adventure Save (Passed 2025-04-27)**
+    *   **Goal:** Verify adventure state is updated in Supabase during progress.
+    *   **User Actions:**
+        1.  Continue the adventure from Test Case 1 for 1-2 chapters, making choices.
+        2.  Re-check the corresponding row for this adventure in the Supabase `adventures` table.
+        3.  Check the application's terminal logs.
+    *   **Cline Verification Questions:**
+        *   "Has the `updated_at` timestamp changed for the adventure row compared to Test Case 1?"
+        *   "Has the `completed_chapter_count` increased correctly (e.g., to 1 or 2)?"
+        *   "If you inspect the `state_data` JSON, does it contain the details of the chapter(s) you just completed?"
+        *   "Did you see any errors in the terminal logs during the save operations?"
+    *   **Result:** Passed. `updated_at`, `completed_chapter_count`, and `state_data` updated correctly in Supabase. No errors logged.
+
+*   **[FAILED] Test Case 3: Resume Adventure (Failed 2025-04-27)**
+    *   **Goal:** Verify an incomplete adventure can be resumed successfully.
+    *   **User Actions:**
+        1.  Continue the adventure until you have completed 3-4 chapters.
+        2.  Simulate a disconnection: Close the browser tab **OR** refresh the page.
+        3.  Navigate back to the application's starting page (the root URL).
+        4.  Select the **exact same** Story Category and Lesson Topic as the interrupted adventure.
+        5.  Click "Start Adventure".
+        6.  Observe which chapter loads.
+        7.  Check the application's terminal logs.
+    *   **Cline Verification Questions:**
+        *   "Did the adventure resume from the chapter you left off at (e.g., Chapter 4 or 5), or did it restart from Chapter 1?"
+        *   "Did you see log messages like 'Found active adventure with ID: ...' followed by 'Successfully retrieved state with ID: ...' or 'Successfully reconstructed and set state...' in the terminal?"
+    *   **Result:** Failed (Fourth Attempt: 2025-04-27).
+        *   **Observed Behavior (Attempt 1):** Incorrect chapter content (Ch 1) despite correct chapter number display. Missing logs. Code modified to load state earlier.
+        *   **Observed Behavior (Attempt 2):** Still incorrect chapter content (Ch 1). Duplicate row created in Supabase. Missing logs. Added logging for received `client_uuid`.
+        *   **Observed Behavior (Attempt 3 & 4):**
+            *   Backend **received the correct, consistent `client_uuid`** on both initial connection and reconnection (verified via logs).
+            *   DEBUG log added to `store_state` confirmed `client_uuid` **is present** in `state_data.metadata` during initial insert.
+            *   DEBUG log added to `get_active_adventure_id` confirmed the Supabase query runs but returns **`data=[]`** (no results) upon reconnection.
+            *   A **new duplicate row** was created in Supabase upon reconnection.
+            *   Application still displayed Chapter 1 content after reconnection attempt.
+        *   **Confirmed Cause:** The `StateStorageService.get_active_adventure_id` method is failing to find the existing adventure row in Supabase using the query `.eq("state_data->'metadata'->>'client_uuid'", client_uuid)`, even though the correct `client_uuid` is provided and exists in the initially saved `state_data`.
+        *   **Next Steps:** The reason for the query failure is still unclear. Potential next steps:
+            1.  Manually inspect the `state_data` JSONB content in the Supabase table for the *original* adventure row to ensure `metadata.client_uuid` is exactly as expected (no hidden characters, correct nesting).
+            2.  Try simplifying the query in `get_active_adventure_id` temporarily (e.g., query only by `client_uuid` without the `is_complete=False` filter) to see if *any* row is returned.
+            3.  Consider adding a dedicated `client_uuid` column to the `adventures` table (requires migration) and querying against that directly, bypassing potential JSONB query issues.
+        *   **Observed Behavior (Attempt 1):** Incorrect chapter content (Ch 1) despite correct chapter number display. Missing logs. Code modified to load state earlier.
+        *   **Observed Behavior (Attempt 2):** Still incorrect chapter content (Ch 1). Duplicate row created in Supabase. Missing logs. Added logging for received `client_uuid`.
+        *   **Observed Behavior (Attempt 3):**
+            *   Backend **received the correct, consistent `client_uuid`** on both initial connection and reconnection (verified via logs).
+            *   Backend logs explicitly showed **`No active adventure found for client UUID: ...`** upon reconnection, despite the correct UUID being used for the lookup.
+            *   A **new duplicate row** was created in Supabase upon reconnection.
+            *   Application still displayed Chapter 1 content after reconnection attempt.
+        *   **Confirmed Cause:** The `StateStorageService.get_active_adventure_id` method is failing to find the existing adventure row in Supabase using the query `.eq("state_data->'metadata'->>'client_uuid'", client_uuid)`, even when provided with the correct `client_uuid` that exists in a previous record's `state_data`.
+        *   **Next Steps:** Investigate *why* the query fails. Possibilities include: 1) `client_uuid` not being present in `state_data.metadata` during the *initial* insert. 2) Subtle issue with the JSONB query execution/syntax in Supabase. Add logging to `store_state` (initial insert) and `get_active_adventure_id` (query response) to pinpoint the failure.
+
+*   **[ ] Test Case 4: Complete Adventure**
+    *   **Goal:** Verify the adventure is marked as complete in Supabase.
+    *   **User Actions:**
+        1.  Play through an entire adventure until the CONCLUSION chapter is finished.
+        2.  Click the button to trigger the summary generation (e.g., "Take a Trip Down Memory Lane").
+        3.  Wait for the `summary_ready` message/navigation trigger.
+        4.  Check the adventure's row in the Supabase `adventures` table.
+        5.  Check the application's terminal logs.
+    *   **Cline Verification Questions:**
+        *   "Is the `is_complete` flag now set to `true` in the Supabase table for that adventure row?"
+        *   "Did you see any errors during the final state save in the logs?"
+
+*   **[ ] Test Case 5: Summary Retrieval**
+    *   **Goal:** Verify the summary page correctly loads the state from Supabase.
+    *   **User Actions:**
+        1.  After completing Test Case 4, the application should navigate to the summary page URL (e.g., `/adventure/summary?state_id=...`).
+        2.  Verify the summary page loads and displays content.
+        3.  Check the application's terminal logs for activity related to the `/adventure/api/adventure-summary` endpoint.
+    *   **Cline Verification Questions:**
+        *   "Did the summary page load successfully using the correct `adventure_id` in the URL?"
+        *   "Did you see logs indicating the state was retrieved successfully for the summary API endpoint (e.g., 'Successfully retrieved state with ID: ...')?"
+
+*   **[ ] Test Case 6: Multiple Incomplete Adventures (Optional)**
+    *   **Goal:** Verify the system correctly identifies and resumes the specific adventure requested.
+    *   **User Actions:**
+        1.  Start Adventure A (e.g., Story 1 / Lesson 1), complete 2 chapters, then disconnect (close tab).
+        2.  Start Adventure B (e.g., Story 2 / Lesson 2), complete 3 chapters, then disconnect (close tab).
+        3.  Attempt to resume Adventure A by selecting Story 1 / Lesson 1. Observe the loaded chapter. Disconnect.
+        4.  Attempt to resume Adventure B by selecting Story 2 / Lesson 2. Observe the loaded chapter.
+    *   **Cline Verification Questions:**
+        *   "When you tried to resume Adventure A, did it load Chapter 3?"
+        *   "When you tried to resume Adventure B, did it load Chapter 4?"
+
+**Monitoring:** Throughout all tests, both User and Cline should monitor the application terminal logs for any unexpected errors or warnings, particularly those related to `StateStorageService` or Supabase interactions.
+
+
 ## Phase 3: Telemetry (Supabase Database) - *Deferred until Persistent State (including resume) is complete*
 
 - [ ] **1. Define Database Schema (`telemetry_events` table):**

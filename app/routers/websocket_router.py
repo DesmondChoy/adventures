@@ -30,6 +30,9 @@ async def story_websocket(
         difficulty: Optional difficulty level for lessons ("Reasonably Challenging" or "Very Challenging")
     """
     await websocket.accept()
+    # --- ADDED LOGGING ---
+    logger.info(f"WebSocket attempting connection with client_uuid: {client_uuid}")
+    # --- END ADDED LOGGING ---
     logger.info(
         f"WebSocket connection established for story category: {story_category}, lesson topic: {lesson_topic}, client_uuid: {client_uuid}, difficulty: {difficulty}"
     )
@@ -81,6 +84,64 @@ async def story_websocket(
                 logger.error(f"Error checking for active adventure: {e}")
                 # Continue with normal flow - we'll create a new adventure
 
+        # --- Load state immediately if an active adventure was found ---
+        loaded_state_from_storage = None
+        if connection_data["adventure_id"]:
+            try:
+                stored_state = await state_storage_service.get_state(
+                    connection_data["adventure_id"]
+                )
+                if stored_state:
+                    logger.info(
+                        f"Attempting to reconstruct state from storage for ID: {connection_data['adventure_id']}"
+                    )
+                    # Reconstruct the state immediately using the state_manager instance
+                    loaded_state_from_storage = (
+                        await state_manager.reconstruct_state_from_storage(stored_state)
+                    )
+                    if loaded_state_from_storage:
+                        logger.info(
+                            "Successfully reconstructed and set state from storage upon connection."
+                        )
+                        # Send confirmation to client
+                        await websocket.send_json(
+                            {
+                                "type": "adventure_loaded",
+                                "adventure_id": connection_data["adventure_id"],
+                                "current_chapter": loaded_state_from_storage.current_chapter_number,
+                                "total_chapters": loaded_state_from_storage.story_length,
+                            }
+                        )
+                        # Send the current chapter of the loaded state immediately
+                        # NOTE: stream_and_send_chapter needs modification to handle sending only current chapter without generating new one
+                        # For now, we might just send a confirmation and let the client request normally?
+                        # Or modify stream_and_send_chapter later. Let's just log for now.
+                        logger.info(
+                            f"Loaded state indicates current chapter is {loaded_state_from_storage.current_chapter_number}"
+                        )
+                        # TODO: Decide how to send the current chapter content upon resume.
+                        # await stream_and_send_chapter(
+                        #     websocket=websocket,
+                        #     chapter_content=None,
+                        #     sampled_question=None,
+                        #     state=loaded_state_from_storage,
+                        #     # send_only_current_chapter=True # This flag needs to be implemented in the service
+                        # )
+                    else:
+                        logger.error(
+                            f"Failed to reconstruct state from storage for ID: {connection_data['adventure_id']}. Will create new adventure."
+                        )
+                        connection_data["adventure_id"] = None  # Clear invalid ID
+                else:
+                    logger.warning(
+                        f"No state found in storage for supposedly active ID: {connection_data['adventure_id']}. Will create new adventure."
+                    )
+                    connection_data["adventure_id"] = None  # Clear invalid ID
+            except Exception as e:
+                logger.error(f"Error loading state from storage upon connection: {e}")
+                connection_data["adventure_id"] = None  # Clear invalid ID
+        # --- End of immediate state loading ---
+
         while True:
             data = await websocket.receive_json()
             # logger.debug(f"Received data: {data}")
@@ -128,53 +189,19 @@ async def story_websocket(
                 continue
 
             try:
-                # Handle state initialization or loading
+                # --- State Handling within loop ---
+                # Get the state (might have been loaded on connection, or needs init)
                 current_state = state_manager.get_current_state()
 
-                # If we have an active adventure_id, try to load it
-                if current_state is None and connection_data["adventure_id"]:
-                    try:
-                        # Try to load the state from storage
-                        stored_state = await state_storage_service.get_state(
-                            connection_data["adventure_id"]
-                        )
-
-                        if stored_state:
-                            logger.info(
-                                f"Loaded state from storage with ID: {connection_data['adventure_id']}"
-                            )
-
-                            # Reconstruct the state from storage
-                            state = await state_manager.reconstruct_state_from_storage(
-                                stored_state
-                            )
-
-                            if state:
-                                logger.info(
-                                    "Successfully reconstructed state from storage"
-                                )
-
-                                # Send a message to the client with the adventure_id
-                                await websocket.send_json(
-                                    {
-                                        "type": "adventure_loaded",
-                                        "adventure_id": connection_data["adventure_id"],
-                                    }
-                                )
-                            else:
-                                logger.error("Failed to reconstruct state from storage")
-                                # Fall through to create a new state
-                        else:
-                            logger.warning(
-                                f"No state found with ID: {connection_data['adventure_id']}"
-                            )
-                            # Fall through to create a new state
-                    except Exception as e:
-                        logger.error(f"Error loading state from storage: {e}")
-                        # Fall through to create a new state
-
-                # If we still don't have a state, initialize a new one
+                # If state is still None (wasn't loaded on connect and not init yet), initialize it
                 if current_state is None:
+                    # This should only happen for BRAND NEW adventures now
+                    if connection_data["adventure_id"]:
+                        logger.warning(
+                            f"State is None but adventure_id {connection_data['adventure_id']} exists. Re-initializing."
+                        )
+                        connection_data["adventure_id"] = None  # Force re-creation
+
                     # Initialize new state
                     total_chapters = validated_state.get(
                         "story_length", 10
@@ -230,26 +257,18 @@ async def story_websocket(
                         await websocket.send_text(error_message)
                         await websocket.close(code=1001)
                         return  # Exit to prevent further processing
+                # This 'else' corresponds to 'if current_state is None:'
                 else:
-                    # Update existing state with validated state
-                    logger.debug("\nUpdating state from validated state")
-                    logger.debug(
-                        f"Validated state chapters: {len(validated_state.get('chapters', []))}"
-                    )
-                    if validated_state.get("chapters"):
-                        last_chapter = validated_state["chapters"][-1]
-                        logger.debug(
-                            f"Last chapter type: {last_chapter.get('chapter_type')}"
-                        )
-                        logger.debug(
-                            f"Last chapter has choices: {'choices' in last_chapter}"
-                        )
+                    # State exists (either loaded on connect or from previous loop iteration)
+                    # Update it with the state received from the client
+                    logger.debug("\nUpdating existing state from client message")
                     state_manager.update_state_from_client(validated_state)
-                    state = state_manager.get_current_state()
+                    state = state_manager.get_current_state()  # Get the updated state
                     logger.debug(
-                        f"State after update - chapters: {len(state.chapters)}"
+                        f"State after update from client - chapters: {len(state.chapters)}"
                     )
 
+                # Ensure we have a valid state object after init or update
                 if state is None:
                     logger.error("State is None after initialization/update.")
                     await websocket.send_text(
@@ -290,6 +309,7 @@ async def story_websocket(
                     chapter_content=chapter_content,
                     sampled_question=sampled_question,
                     state=state_manager.get_current_state(),
+                    # send_only_current_chapter=False # Flag removed
                 )
 
                 # After streaming the chapter, save the updated state to Supabase

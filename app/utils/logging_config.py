@@ -99,7 +99,7 @@ def setup_logging():
             sys.stdout.buffer, encoding="utf-8", errors="replace"
         )
         console_handler = logging.StreamHandler(utf8_stdout)
-        console_handler.setLevel(logging.INFO)
+        console_handler.setLevel(logging.DEBUG)  # Changed from INFO to DEBUG
         # Use a basic formatter for the console to avoid double printing from StructuredLogger
         console_formatter = logging.Formatter("%(message)s")
         console_handler.setFormatter(console_formatter)

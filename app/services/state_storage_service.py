@@ -125,6 +125,11 @@ class StateStorageService:
                 return adventure_id
             else:
                 # Insert new record
+                # --- ADDED LOGGING ---
+                logger.debug(
+                    f"Attempting to insert new adventure record. State data being inserted (metadata check): {state_data.get('metadata', 'METADATA_KEY_MISSING')}"
+                )
+                # --- END ADDED LOGGING ---
                 response = self.supabase.table("adventures").insert(record).execute()
 
                 # Extract the ID from the response
@@ -214,6 +219,9 @@ class StateStorageService:
                 .limit(1)
                 .execute()
             )
+            # --- ADDED LOGGING ---
+            logger.debug(f"Raw response from get_active_adventure_id query: {response}")
+            # --- END ADDED LOGGING ---
 
             # Check if any active adventure was found
             if response.data and len(response.data) > 0:
