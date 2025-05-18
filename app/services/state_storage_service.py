@@ -214,9 +214,9 @@ class StateStorageService:
                 self.supabase.table("adventures")
                 .select("id, updated_at")
                 .eq("state_data->'metadata'->>'client_uuid'", client_uuid)
-                .eq("is_complete", False)
-                .order("updated_at", desc=True)  # Corrected order syntax
-                .limit(1)
+                # .eq("is_complete", False)  # Test 2.1: Temporarily removed
+                # .order("updated_at", desc=True)  # Test 2.2: Temporarily removed
+                # .limit(1)  # Test 2.2: Temporarily removed
                 .execute()
             )
             # --- ADDED LOGGING ---

@@ -287,7 +287,17 @@ This section outlines the manual testing steps to verify the Phase 2 Supabase in
             *   A **new duplicate row** was created in Supabase upon reconnection.
             *   Application still displayed Chapter 1 content after reconnection attempt.
         *   **Confirmed Cause:** The `StateStorageService.get_active_adventure_id` method is failing to find the existing adventure row in Supabase using the query `.eq("state_data->'metadata'->>'client_uuid'", client_uuid)`, even when provided with the correct `client_uuid` that exists in a previous record's `state_data`.
-        *   **Next Steps:** Investigate *why* the query fails. Possibilities include: 1) `client_uuid` not being present in `state_data.metadata` during the *initial* insert. 2) Subtle issue with the JSONB query execution/syntax in Supabase. Add logging to `store_state` (initial insert) and `get_active_adventure_id` (query response) to pinpoint the failure.
+        *   **Next Steps (Original):** Investigate *why* the query fails. Possibilities include: 1) `client_uuid` not being present in `state_data.metadata` during the *initial* insert. 2) Subtle issue with the JSONB query execution/syntax in Supabase. Add logging to `store_state` (initial insert) and `get_active_adventure_id` (query response) to pinpoint the failure.
+        *   **Debugging Attempts (2025-05-18):**
+            1.  **Manual Inspection of `state_data`:** Confirmed that the correct `client_uuid` *is* present in `state_data.metadata.client_uuid` in the Supabase table for the initially saved adventure row. This ruled out simple data mismatch for the `client_uuid` itself.
+            2.  **Query Simplification in `get_active_adventure_id`:**
+                *   **Test 2.1:** Temporarily removed the `.eq("is_complete", False)` filter. The query still returned `data=[]` (no results).
+                *   **Test 2.2:** Further simplified by also removing `.order("updated_at", desc=True)` and `.limit(1)`, leaving only the `.eq("state_data->'metadata'->>'client_uuid'", client_uuid)` filter. The query *still* returned `data=[]`.
+            *   **Conclusion from Simplification:** The consistent failure of even the most basic version of the query strongly suggests the issue lies with the reliability or behavior of the JSONB path query (`state_data->'metadata'->>'client_uuid'`) as executed by `supabase-py` against the Supabase instance for this specific setup.
+        *   **Revised Next Step:** Pivot to a more robust strategy for identifying active adventures. The primary recommendation is to **add a dedicated `client_uuid` column** to the `adventures` table. This involves:
+            1.  Creating a database migration to add the new column (e.g., `client_session_id UUID` or `TEXT`).
+            2.  Modifying `StateStorageService.store_state()` to populate this new column from `state_data.metadata.client_uuid` during inserts/updates.
+            3.  Modifying `StateStorageService.get_active_adventure_id()` to query against this new dedicated column instead of the JSONB path.
 
 *   **[ ] Test Case 4: Complete Adventure**
     *   **Goal:** Verify the adventure is marked as complete in Supabase.
@@ -397,16 +407,22 @@ This plan provides a structured approach.
 
 ## Current Status
 
-**Phase 2 (Persistent Adventure State) is now complete!** 
+**Phase 2 (Persistent Adventure State) is largely implemented, but a critical issue with adventure resumption (Test Case 3) persists.**
 
-The application now has:
-- A fully functional Supabase database integration
-- Persistent adventure state across sessions
-- Adventure resumption capabilities
-- Proper state management throughout the WebSocket/API flow
-- Complete integration with the summary generation system
+Key achievements in Phase 2:
+- Supabase project setup and library integration.
+- Secure environment variable configuration for API keys.
+- `adventures` table schema defined and migrated.
+- `StateStorageService` refactored to use Supabase for storing and retrieving adventure state.
+- Integration of state storage into WebSocket/API flows for initial save, progress updates, and completion marking.
+- Environment column added for data differentiation.
+- Several initial bugs related to schema interaction and state saving were resolved.
+
+**Outstanding Issue:**
+- **Adventure Resumption Failure (Test Case 3):** The `get_active_adventure_id` method consistently fails to find existing incomplete adventures using the current JSONB path query for `client_uuid`, even when the `client_uuid` is confirmed to be correctly stored. This prevents users from resuming adventures and leads to the creation of duplicate adventure records.
 
 Next steps:
-1. Test the implementation thoroughly to ensure all persistence features work as expected
-2. Consider implementing Phase 3 (Telemetry) to gain insights into user behavior
-3. Evaluate the need for Phase 4 (User Authentication) based on user feedback and product requirements
+1. **Resolve Test Case 3:** Implement the strategy of adding a dedicated `client_uuid` column to the `adventures` table and update the service logic accordingly.
+2. **Complete Phase 2 Testing:** Once resumption is fixed, re-verify all test cases in the "Phase 2 Testing Plan."
+3. **Proceed to Phase 3 (Telemetry):** After Phase 2 is fully validated.
+4. **Evaluate Phase 4 (User Authentication):** Based on product requirements.
