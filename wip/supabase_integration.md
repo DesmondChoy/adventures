@@ -252,54 +252,94 @@ This section outlines the manual testing steps to verify the Phase 2 Supabase in
         *   "Did you see any errors in the terminal logs during the save operations?"
     *   **Result:** Passed. `updated_at`, `completed_chapter_count`, and `state_data` updated correctly in Supabase. No errors logged.
 
-*   **[FAILED] Test Case 3: Resume Adventure (Failed 2025-04-27)**
-    *   **Goal:** Verify an incomplete adventure can be resumed successfully.
-    *   **User Actions:**
-        1.  Continue the adventure until you have completed 3-4 chapters.
-        2.  Simulate a disconnection: Close the browser tab **OR** refresh the page.
-        3.  Navigate back to the application's starting page (the root URL).
-        4.  Select the **exact same** Story Category and Lesson Topic as the interrupted adventure.
-        5.  Click "Start Adventure".
-        6.  Observe which chapter loads.
-        7.  Check the application's terminal logs.
-    *   **Cline Verification Questions:**
-        *   "Did the adventure resume from the chapter you left off at (e.g., Chapter 4 or 5), or did it restart from Chapter 1?"
-        *   "Did you see log messages like 'Found active adventure with ID: ...' followed by 'Successfully retrieved state with ID: ...' or 'Successfully reconstructed and set state...' in the terminal?"
-    *   **Result:** Failed (Fourth Attempt: 2025-04-27).
-        *   **Observed Behavior (Attempt 1):** Incorrect chapter content (Ch 1) despite correct chapter number display. Missing logs. Code modified to load state earlier.
-        *   **Observed Behavior (Attempt 2):** Still incorrect chapter content (Ch 1). Duplicate row created in Supabase. Missing logs. Added logging for received `client_uuid`.
-        *   **Observed Behavior (Attempt 3 & 4):**
-            *   Backend **received the correct, consistent `client_uuid`** on both initial connection and reconnection (verified via logs).
-            *   DEBUG log added to `store_state` confirmed `client_uuid` **is present** in `state_data.metadata` during initial insert.
-            *   DEBUG log added to `get_active_adventure_id` confirmed the Supabase query runs but returns **`data=[]`** (no results) upon reconnection.
-            *   A **new duplicate row** was created in Supabase upon reconnection.
-            *   Application still displayed Chapter 1 content after reconnection attempt.
-        *   **Confirmed Cause:** The `StateStorageService.get_active_adventure_id` method is failing to find the existing adventure row in Supabase using the query `.eq("state_data->'metadata'->>'client_uuid'", client_uuid)`, even though the correct `client_uuid` is provided and exists in the initially saved `state_data`.
-        *   **Next Steps:** The reason for the query failure is still unclear. Potential next steps:
-            1.  Manually inspect the `state_data` JSONB content in the Supabase table for the *original* adventure row to ensure `metadata.client_uuid` is exactly as expected (no hidden characters, correct nesting).
-            2.  Try simplifying the query in `get_active_adventure_id` temporarily (e.g., query only by `client_uuid` without the `is_complete=False` filter) to see if *any* row is returned.
-            3.  Consider adding a dedicated `client_uuid` column to the `adventures` table (requires migration) and querying against that directly, bypassing potential JSONB query issues.
-        *   **Observed Behavior (Attempt 1):** Incorrect chapter content (Ch 1) despite correct chapter number display. Missing logs. Code modified to load state earlier.
-        *   **Observed Behavior (Attempt 2):** Still incorrect chapter content (Ch 1). Duplicate row created in Supabase. Missing logs. Added logging for received `client_uuid`.
-        *   **Observed Behavior (Attempt 3):**
-            *   Backend **received the correct, consistent `client_uuid`** on both initial connection and reconnection (verified via logs).
-            *   Backend logs explicitly showed **`No active adventure found for client UUID: ...`** upon reconnection, despite the correct UUID being used for the lookup.
-            *   A **new duplicate row** was created in Supabase upon reconnection.
-            *   Application still displayed Chapter 1 content after reconnection attempt.
-        *   **Confirmed Cause:** The `StateStorageService.get_active_adventure_id` method is failing to find the existing adventure row in Supabase using the query `.eq("state_data->'metadata'->>'client_uuid'", client_uuid)`, even when provided with the correct `client_uuid` that exists in a previous record's `state_data`.
-        *   **Next Steps (Original):** Investigate *why* the query fails. Possibilities include: 1) `client_uuid` not being present in `state_data.metadata` during the *initial* insert. 2) Subtle issue with the JSONB query execution/syntax in Supabase. Add logging to `store_state` (initial insert) and `get_active_adventure_id` (query response) to pinpoint the failure.
-        *   **Debugging Attempts (2025-05-18):**
-            1.  **Manual Inspection of `state_data`:** Confirmed that the correct `client_uuid` *is* present in `state_data.metadata.client_uuid` in the Supabase table for the initially saved adventure row. This ruled out simple data mismatch for the `client_uuid` itself.
-            2.  **Query Simplification in `get_active_adventure_id`:**
-                *   **Test 2.1:** Temporarily removed the `.eq("is_complete", False)` filter. The query still returned `data=[]` (no results).
-                *   **Test 2.2:** Further simplified by also removing `.order("updated_at", desc=True)` and `.limit(1)`, leaving only the `.eq("state_data->'metadata'->>'client_uuid'", client_uuid)` filter. The query *still* returned `data=[]`.
-            *   **Conclusion from Simplification:** The consistent failure of even the most basic version of the query strongly suggests the issue lies with the reliability or behavior of the JSONB path query (`state_data->'metadata'->>'client_uuid'`) as executed by `supabase-py` against the Supabase instance for this specific setup.
-        *   **Revised Next Step:** Pivot to a more robust strategy for identifying active adventures. The primary recommendation is to **add a dedicated `client_uuid` column** to the `adventures` table. This involves:
-            1.  Creating a database migration to add the new column (e.g., `client_session_id UUID` or `TEXT`).
-            2.  Modifying `StateStorageService.store_state()` to populate this new column from `state_data.metadata.client_uuid` during inserts/updates.
-            3.  Modifying `StateStorageService.get_active_adventure_id()` to query against this new dedicated column instead of the JSONB path.
+*   **[FAILED] Test Case 3: Resume Adventure (Failed 2025-05-19)**
+    *   **Goal:** Verify an incomplete adventure can be resumed successfully, displaying the content of the chapter the user was on before disconnection.
+    *   **Implementation Attempts & Debugging (2025-05-19):**
+        1.  **Dedicated `client_uuid` Column:**
+            *   **Action:** Added a dedicated `client_uuid TEXT` column to the `adventures` table via migration (`20250519080600_add_client_uuid_to_adventures.sql`).
+            *   **Action:** Modified `StateStorageService.store_state()` to populate this new column.
+            *   **Action:** Modified `StateStorageService.get_active_adventure_id()` to query this new column.
+            *   **Result:** This successfully allowed `get_active_adventure_id` to find the existing adventure record.
+        2.  **`AdventureStateManager` Fix:**
+            *   **Action:** Modified `AdventureStateManager.reconstruct_state_from_storage()` to correctly set `self.state` with the reconstructed state.
+            *   **Result:** This ensured that upon WebSocket connection, the `state_manager` instance within `websocket_router.py` holds the loaded state.
+    *   **Observed Behavior (Post-Above Fixes - Attempt 2025-05-19):**
+        *   User played through 3 chapters. Disconnected (refreshed page).
+        *   **Positive:**
+            *   Terminal logs confirmed `get_active_adventure_id` found the correct active adventure ID using the new `client_uuid` column.
+            *   Logs confirmed `StateStorageService.get_state` retrieved the state for this ID.
+            *   Logs confirmed `AdventureStateManager.reconstruct_state_from_storage` successfully reconstructed the state, and `websocket_router.py` logged "Successfully reconstructed and set state from storage upon connection." and "Loaded state indicates current chapter is 4" (meaning 3 chapters were complete).
+        *   **Negative:**
+            *   The adventure effectively restarted by generating and displaying content for Chapter 4, even though the UI indicated Chapter 3. The user was expecting to see the content of Chapter 3 again, awaiting their choice.
+            *   A new adventure row was *not* created for the *same adventure ID*, but the existing adventure was incorrectly advanced.
+            *   Terminal logs showed the client sent a message with `Choice data: start` upon reconnection.
+            *   Crucial log line after successful state load: `State is None but adventure_id <id> exists. Re-initializing.` **This log was from a previous attempt and is no longer appearing after the `AdventureStateManager` fix.** The current issue is that even with the state correctly loaded, the "start" message from the client causes the router to proceed as if starting the *next* part of the adventure.
+            *   User's key observation: "What should be happening is after reconnecting, it loads the text in Chapter 3 ... and no prompts should be sent to the LLM for any story generation."
+    *   **Confirmed Cause (Current):**
+        *   The server correctly identifies and loads the existing adventure state.
+        *   However, when the client reconnects, it appears to send an initial message that includes `choice: "start"`.
+        *   The server-side WebSocket logic in `app/routers/websocket_router.py`, upon receiving this "start" message, proceeds to generate the *next* chapter (e.g., Chapter 4 if Chapter 3 was the last completed one) instead of re-sending the content of the incomplete chapter the user was on (Chapter 3). The logic for handling a "start" choice when a state *already exists* doesn't differentiate between starting a brand new adventure segment versus resuming an incomplete chapter.
+    *   **Next Steps (Detailed for next assistant):**
+        1.  **Primary Goal:** Modify the server-side WebSocket logic to proactively re-send the content of the *current incomplete chapter* (the one the user was viewing before disconnection) immediately after a successful state load on reconnection, *before* processing further messages from the client like "start".
+        2.  **Investigate Client-Side Message on Reconnect (Informational):**
+            *   Briefly examine `app/templates/index.html` (JavaScript) to understand what message it sends upon WebSocket reconnection, particularly if an `adventure_id` is present in `localStorage`. This is to confirm if it always sends `choice: "start"`.
+            *   *Note: Modifying client-side might be out of scope if the primary fix can be server-side, but understanding it is useful.*
+        3.  **Modify `app/routers/websocket_router.py`:**
+            *   Locate the section after `loaded_state_from_storage = await state_manager.reconstruct_state_from_storage(stored_state)` succeeds.
+            *   **Determine Chapter to Resend:**
+                *   The `loaded_state_from_storage.current_chapter_number` indicates the *next* chapter to be generated. The chapter the user was on is `loaded_state_from_storage.current_chapter_number - 1`.
+                *   Retrieve this `ChapterData` object from `loaded_state_from_storage.chapters`. Let's call it `chapter_to_display`.
+            *   **Verify it's Incomplete:** Check if `chapter_to_display` is indeed the one awaiting user action (e.g., it's the last chapter in the `chapters` list and its `response` attribute is `None` or not set).
+            *   **Proactively Send Chapter:** If it's the correct chapter to resume:
+                *   Log the intent to resend this chapter.
+                *   Call `stream_and_send_chapter` (from `app/services/websocket_service.py`) to send its content. This will require `stream_and_send_chapter` to be enhanced (see next point).
+                *   Example snippet (conceptual):
+                    ```python
+                    # Inside websocket_router.py, after state is loaded_state_from_storage
+                    if loaded_state_from_storage:
+                        # ... (existing logging and 'adventure_loaded' message) ...
+                        
+                        chapter_number_to_resume = loaded_state_from_storage.current_chapter_number - 1
+                        if chapter_number_to_resume > 0 and \
+                           chapter_number_to_resume <= len(loaded_state_from_storage.chapters):
+                            
+                            chapter_to_display = loaded_state_from_storage.chapters[chapter_number_to_resume - 1] # 0-indexed
+                            
+                            # Condition to check if this chapter needs to be re-sent (e.g., no response yet)
+                            if not chapter_to_display.response and chapter_to_display.chapter_type != ChapterType.CONCLUSION:
+                                logger.info(f"Resuming adventure: Re-sending content for Chapter {chapter_to_display.chapter_number}")
+                                # Prepare arguments for stream_and_send_chapter
+                                # chapter_content_data should be chapter_to_display.chapter_content.dict()
+                                # sampled_question_data should be chapter_to_display.question.dict() if it exists
+                                await stream_and_send_chapter(
+                                    websocket=websocket,
+                                    chapter_content_data=chapter_to_display.chapter_content.dict() if chapter_to_display.chapter_content else {'content': chapter_to_display.content, 'choices': []},
+                                    sampled_question_data=chapter_to_display.question.dict() if chapter_to_display.question else None,
+                                    state=loaded_state_from_storage,
+                                    is_resumption=True # New flag
+                                )
+                                connection_data["resumed_session_just_sent_chapter"] = True # Flag to handle initial client message
+                            else:
+                                logger.info(f"Chapter {chapter_to_display.chapter_number} already has a response or is conclusion. Waiting for client message.")
+                        # ...
+                    ```
+        4.  **Enhance `stream_and_send_chapter` in `app/services/websocket_service.py`:**
+            *   Add a new optional parameter: `is_resumption: bool = False`.
+            *   Add parameters for pre-fetched data: `chapter_content_data: Optional[Dict[str, Any]] = None`, `sampled_question_data: Optional[Dict[str, Any]] = None`.
+            *   If `is_resumption` is `True`:
+                *   The function must use `chapter_content_data` (which would be the `ChapterContent` of the chapter to resume, passed as a dict) and `sampled_question_data` (if any) directly.
+                *   It should **bypass** any new LLM calls for content generation or new question sampling.
+                *   Its primary role in this mode is to format the existing `content` and `choices` (from `chapter_content_data`) and `question` (from `sampled_question_data`) for streaming to the client.
+        5.  **Handle Initial Client Message Post-Resumption in `websocket_router.py`:**
+            *   In the main `while True:` message loop:
+                *   If `connection_data.get("resumed_session_just_sent_chapter")` is `True` and the incoming `choice_data` from the client is "start":
+                    *   Log that this initial "start" message is being ignored due to resumption.
+                    *   Set `connection_data["resumed_session_just_sent_chapter"] = False`.
+                    *   `continue` to the next iteration of the loop, effectively skipping processing for this specific "start" message.
+                *   Otherwise, process messages as normal.
+        6.  **Testing:** After these changes, thoroughly re-test Test Case 3.
 
-*   **[ ] Test Case 4: Complete Adventure**
+*   **[IN PROGRESS] Test Case 4: Complete Adventure**
     *   **Goal:** Verify the adventure is marked as complete in Supabase.
     *   **User Actions:**
         1.  Play through an entire adventure until the CONCLUSION chapter is finished.
@@ -405,24 +445,50 @@ This section outlines the manual testing steps to verify the Phase 2 Supabase in
 
 This plan provides a structured approach. 
 
-## Current Status
+## Current Status (As of 2025-05-19)
 
-**Phase 2 (Persistent Adventure State) is largely implemented, but a critical issue with adventure resumption (Test Case 3) persists.**
+**Phase 2 (Persistent Adventure State) is significantly advanced. Key infrastructure for persistence is in place, but a critical issue with the adventure resumption logic (Test Case 3) remains the primary blocker.**
 
-Key achievements in Phase 2:
-- Supabase project setup and library integration.
-- Secure environment variable configuration for API keys.
-- `adventures` table schema defined and migrated.
-- `StateStorageService` refactored to use Supabase for storing and retrieving adventure state.
-- Integration of state storage into WebSocket/API flows for initial save, progress updates, and completion marking.
-- Environment column added for data differentiation.
-- Several initial bugs related to schema interaction and state saving were resolved.
+**Key Achievements in Phase 2 (Relevant to Persistence/Resumption):**
+- Supabase project setup, library integration, and secure environment variable configuration completed.
+- `adventures` table schema defined and migrated, including `environment` column and recently added dedicated `client_uuid` column (`20250519080600_add_client_uuid_to_adventures.sql`).
+- `StateStorageService` (`app/services/state_storage_service.py`):
+    - Refactored to use Supabase.
+    - `store_state` updated to populate the dedicated `client_uuid` column.
+    - `get_active_adventure_id` updated to query using the dedicated `client_uuid` column, successfully finding existing adventures.
+- `AdventureStateManager` (`app/services/adventure_state_manager.py`):
+    - `reconstruct_state_from_storage` method fixed to correctly set its internal `self.state` with the loaded adventure state. This ensures the WebSocket router has access to the loaded state.
+- Integration of state storage into WebSocket/API flows for initial save, progress updates, and completion marking is largely in place.
 
-**Outstanding Issue:**
-- **Adventure Resumption Failure (Test Case 3):** The `get_active_adventure_id` method consistently fails to find existing incomplete adventures using the current JSONB path query for `client_uuid`, even when the `client_uuid` is confirmed to be correctly stored. This prevents users from resuming adventures and leads to the creation of duplicate adventure records.
+**Outstanding Issue & Current Focus:**
+- **Adventure Resumption Failure (Test Case 3):**
+    - **Current Behavior:** Although the server now correctly identifies and loads the previous adventure state upon a client's reconnection (thanks to the `client_uuid` column and `AdventureStateManager` fixes), it then incorrectly processes an initial message from the client (which appears to be `choice: "start"`). Instead of re-displaying the content of the chapter the user was on before disconnecting, the server generates and sends the *next* chapter's content.
+    - **Example:** If user was on Chapter 3 (awaiting choice), upon reconnect, Chapter 4's content is generated and sent, while UI might still show Chapter 3.
+    - **Root Cause:** The server-side WebSocket logic in `app/routers/websocket_router.py` does not yet proactively re-send the last incomplete chapter's state upon successful resumption. It reacts to the client's initial message (e.g., "start") by advancing the (correctly loaded) state.
 
-Next steps:
-1. **Resolve Test Case 3:** Implement the strategy of adding a dedicated `client_uuid` column to the `adventures` table and update the service logic accordingly.
-2. **Complete Phase 2 Testing:** Once resumption is fixed, re-verify all test cases in the "Phase 2 Testing Plan."
-3. **Proceed to Phase 3 (Telemetry):** After Phase 2 is fully validated.
-4. **Evaluate Phase 4 (User Authentication):** Based on product requirements.
+**Immediate Next Steps (To Resolve Test Case 3):**
+
+1.  **Modify Server-Side WebSocket Logic (`app/routers/websocket_router.py` and `app/services/websocket_service.py`):**
+    *   **Goal:** Implement logic for the server to proactively re-send the content of the *current incomplete chapter* to the client immediately after a successful state load on reconnection.
+    *   **Tasks:**
+        1.  **In `app/routers/websocket_router.py`:**
+            *   After `loaded_state_from_storage` is successfully obtained, determine the actual chapter data that the user was viewing before disconnection (e.g., `loaded_state_from_storage.chapters[loaded_state_from_storage.current_chapter_number - 2]`, ensuring bounds checking).
+            *   Verify this chapter is incomplete (e.g., `response` is `None`).
+            *   Call an enhanced `stream_and_send_chapter` function (from `app/services/websocket_service.py`) to send this specific chapter's existing content and choices.
+            *   Set a flag (e.g., `connection_data["resumed_session_just_sent_chapter"] = True`).
+        2.  **In `app/services/websocket_service.py` (enhance `stream_and_send_chapter`):**
+            *   Add new parameters: `is_resumption: bool = False`, `chapter_content_data: Optional[Dict[str, Any]] = None`, `sampled_question_data: Optional[Dict[str, Any]] = None`.
+            *   If `is_resumption` is `True`, the function must use `chapter_content_data` and `sampled_question_data` directly, bypassing LLM calls for new content/questions. It should format and stream this existing data.
+        3.  **In `app/routers/websocket_router.py` (main message loop):**
+            *   If `connection_data.get("resumed_session_just_sent_chapter")` is `True` and the first incoming message from the client has `choice: "start"`, ignore this message, log it, and reset the flag. This prevents the initial "start" from incorrectly advancing the just-resumed chapter.
+
+2.  **Thoroughly Re-Test Test Case 3:** After implementing the above, verify that resuming an adventure correctly displays the chapter the user was on, awaiting their input, and that no new/next chapter content is prematurely generated.
+
+3.  **Complete Remaining Phase 2 Testing:** Once Test Case 3 is definitively PASSED:
+    *   Test Case 4: Complete Adventure
+    *   Test Case 5: Summary Retrieval
+    *   Test Case 6: Multiple Incomplete Adventures (Optional)
+
+4.  **Proceed to Phase 3 (Telemetry):** After all Phase 2 functionality, including robust resumption, is fully validated.
+
+5.  **Evaluate Phase 4 (User Authentication):** Based on product requirements after Phase 3.

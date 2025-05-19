@@ -941,7 +941,8 @@ class AdventureStateManager:
                 logger.info(
                     "Successfully reconstructed AdventureState from stored data"
                 )
-                return reconstructed_state
+                self.state = reconstructed_state  # Set the internal state
+                return self.state  # Return the set state
             except Exception as e:
                 logger.error(
                     f"Error creating AdventureState from valid_state: {str(e)}"

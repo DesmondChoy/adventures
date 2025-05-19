@@ -89,19 +89,19 @@ class StateStorageService:
                 "lesson_topic": extracted_lesson_topic,  # Use the extracted/passed topic
                 "is_complete": is_complete,
                 "completed_chapter_count": completed_chapter_count,
-                # Note: client_uuid is already stored within state_data.metadata.client_uuid
-                # We don't need a separate column for it
+                "client_uuid": client_uuid,  # Add the extracted client_uuid here
                 "environment": os.getenv(
                     "APP_ENVIRONMENT", "unknown"
                 ),  # Add environment
             }
 
             if adventure_id:
-                # Prepare record for UPDATE - only include fields that change during the adventure
+                # Prepare record for UPDATE - include client_uuid as well
                 update_record = {
                     "state_data": state_data,
                     "is_complete": is_complete,
                     "completed_chapter_count": completed_chapter_count,
+                    "client_uuid": client_uuid,  # Add client_uuid to update_record
                     # updated_at is handled by the trigger
                 }
                 logger.info(f"Updating existing adventure with ID: {adventure_id}")
@@ -213,10 +213,10 @@ class StateStorageService:
             response = (
                 self.supabase.table("adventures")
                 .select("id, updated_at")
-                .eq("state_data->'metadata'->>'client_uuid'", client_uuid)
-                # .eq("is_complete", False)  # Test 2.1: Temporarily removed
-                # .order("updated_at", desc=True)  # Test 2.2: Temporarily removed
-                # .limit(1)  # Test 2.2: Temporarily removed
+                .eq("client_uuid", client_uuid)  # Query the new dedicated column
+                .eq("is_complete", False)  # Restore this filter
+                .order("updated_at", desc=True)  # Restore this ordering
+                .limit(1)  # Restore this limit
                 .execute()
             )
             # --- ADDED LOGGING ---
