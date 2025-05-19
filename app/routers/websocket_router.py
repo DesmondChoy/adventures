@@ -1,10 +1,14 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import logging
+from app.models.story import ChapterType  # Added import
 from app.services.adventure_state_manager import AdventureStateManager
 from app.services.state_storage_service import StateStorageService
+from app.services.websocket.stream_handler import (
+    stream_chapter_content,
+)  # Corrected import path
 from app.services.websocket_service import (
     process_choice,
-    stream_and_send_chapter,
+    # stream_and_send_chapter, # Now imported directly from stream_handler
     send_story_complete,
 )
 
@@ -119,14 +123,86 @@ async def story_websocket(
                         logger.info(
                             f"Loaded state indicates current chapter is {loaded_state_from_storage.current_chapter_number}"
                         )
-                        # TODO: Decide how to send the current chapter content upon resume.
-                        # await stream_and_send_chapter(
-                        #     websocket=websocket,
-                        #     chapter_content=None,
-                        #     sampled_question=None,
-                        #     state=loaded_state_from_storage,
-                        #     # send_only_current_chapter=True # This flag needs to be implemented in the service
-                        # )
+                        # --- Start: Proactively send resumed chapter content ---
+                        if loaded_state_from_storage.chapters:
+                            # current_chapter_number is the NEXT chapter to be generated.
+                            # So, the chapter the user was on is current_chapter_number - 1.
+                            chapter_number_to_resume_display = (
+                                loaded_state_from_storage.current_chapter_number - 1
+                            )
+
+                            if (
+                                chapter_number_to_resume_display > 0
+                                and chapter_number_to_resume_display
+                                <= len(loaded_state_from_storage.chapters)
+                            ):
+                                chapter_to_display_data = (
+                                    loaded_state_from_storage.chapters[
+                                        chapter_number_to_resume_display - 1
+                                    ]
+                                )  # 0-indexed list
+
+                                # Check if this chapter is incomplete (e.g., no response, not a conclusion)
+                                # Assuming ChapterData has a 'response' attribute that's None or not set if incomplete.
+                                # And ChapterData has 'chapter_type'.
+                                if (
+                                    chapter_to_display_data.response is None
+                                    and chapter_to_display_data.chapter_type
+                                    != ChapterType.CONCLUSION
+                                ):
+                                    logger.info(
+                                        f"Resuming adventure: Re-sending content for Chapter {chapter_to_display_data.chapter_number} (which is {chapter_number_to_resume_display})"
+                                    )
+
+                                    resumption_content_dict = None
+                                    if chapter_to_display_data.chapter_content:
+                                        resumption_content_dict = chapter_to_display_data.chapter_content.dict()
+                                    elif chapter_to_display_data.content:  # Fallback if chapter_content model isn't populated but raw content is
+                                        resumption_content_dict = {
+                                            "content": chapter_to_display_data.content,
+                                            "choices": [
+                                                choice.dict()
+                                                for choice in chapter_to_display_data.choices
+                                                or []
+                                            ],
+                                        }
+
+                                    resumption_question_dict = (
+                                        chapter_to_display_data.question  # Just pass the dict directly
+                                        if chapter_to_display_data.question
+                                        else None
+                                    )
+
+                                    if resumption_content_dict:
+                                        await stream_chapter_content(  # Use the direct import
+                                            websocket=websocket,
+                                            state=loaded_state_from_storage,
+                                            is_resumption=True,
+                                            resumption_chapter_content_dict=resumption_content_dict,
+                                            resumption_sampled_question_dict=resumption_question_dict,
+                                            resumption_chapter_number=chapter_to_display_data.chapter_number,  # Use the actual chapter number from ChapterData
+                                            resumption_chapter_type=chapter_to_display_data.chapter_type,
+                                        )
+                                        connection_data[
+                                            "resumed_session_just_sent_chapter"
+                                        ] = True
+                                    else:
+                                        logger.warning(
+                                            f"Could not prepare resumption_content_dict for chapter {chapter_to_display_data.chapter_number}. Cannot resend."
+                                        )
+                                else:
+                                    logger.info(
+                                        f"Chapter {chapter_to_display_data.chapter_number} (to resume) already has a response or is a conclusion. Waiting for client message."
+                                    )
+                            else:
+                                logger.warning(
+                                    f"Calculated chapter_number_to_resume_display ({chapter_number_to_resume_display}) is out of bounds for loaded chapters ({len(loaded_state_from_storage.chapters)})."
+                                )
+                        else:
+                            logger.warning(
+                                "Loaded state has no chapters, cannot determine chapter to resume."
+                            )
+                        # --- End: Proactively send resumed chapter content ---
                     else:
                         logger.error(
                             f"Failed to reconstruct state from storage for ID: {connection_data['adventure_id']}. Will create new adventure."
@@ -144,15 +220,46 @@ async def story_websocket(
 
         while True:
             data = await websocket.receive_json()
-            # logger.debug(f"Received data: {data}")
 
             # Extract message type, state and choice data
-            message_type = data.get("type", "process_choice")
-            validated_state = data.get("state")
-            choice_data = data.get("choice")
+            message_type = data.get("type", "process_choice")  # Not really used anymore
+            validated_state = data.get(
+                "state"
+            )  # This is the client's current view of the state, may not be used directly if server state is authoritative
+            choice_data = data.get(
+                "choice"
+            )  # This is the primary input from the client
+
+            # --- Start: Handle initial "start" message after resumption ---
+            if connection_data.get("resumed_session_just_sent_chapter"):
+                # Check if the client sent the typical "start" message upon connection
+                # The exact structure of 'choice_data' for a "start" needs to be confirmed.
+                # Assuming it's a simple string "start" or a dict like {"chosen_path": "start"}
+                is_initial_start_message = False
+                if isinstance(choice_data, str) and choice_data.lower() == "start":
+                    is_initial_start_message = True
+                elif (
+                    isinstance(choice_data, dict)
+                    and choice_data.get("chosen_path", "").lower() == "start"
+                ):
+                    is_initial_start_message = True
+
+                if is_initial_start_message:
+                    logger.info(
+                        "Ignoring initial 'start' message from client after successful chapter resumption."
+                    )
+                    connection_data["resumed_session_just_sent_chapter"] = (
+                        False  # Reset flag
+                    )
+                    # Client might send other info like 'state' along with 'start', but we primarily care about ignoring the 'start' action.
+                    # We expect the next message to be the actual choice for the resumed chapter.
+                    continue  # Wait for the next message
+            # --- End: Handle initial "start" message after resumption ---
+
+            # logger.debug(f"Received data: {data}") # Can be verbose
 
             # Debug logging for incoming data
-            logger.debug("\n=== DEBUG: WebSocket Message ===")
+            logger.debug("\n=== DEBUG: WebSocket Message (Post-Resumption Check) ===")
             logger.debug(f"Has state: {validated_state is not None}")
             if validated_state:
                 logger.debug(
@@ -304,12 +411,14 @@ async def story_websocket(
                     continue  # Continue processing messages instead of breaking
 
                 # Stream chapter content and send updates
-                await stream_and_send_chapter(
+                await stream_chapter_content(  # Corrected function name
                     websocket=websocket,
-                    chapter_content=chapter_content,
-                    sampled_question=sampled_question,
+                    # chapter_content=chapter_content, # This was for the old signature, new signature takes state and models
+                    # sampled_question=sampled_question, # This was for the old signature
                     state=state_manager.get_current_state(),
-                    # send_only_current_chapter=False # Flag removed
+                    generated_chapter_content_model=chapter_content,  # Pass the Pydantic model
+                    generated_sampled_question_dict=sampled_question,  # Pass the dict
+                    is_resumption=False,  # Explicitly False for new chapters
                 )
 
                 # After streaming the chapter, save the updated state to Supabase
