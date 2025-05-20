@@ -301,13 +301,13 @@ This section outlines the manual testing steps to verify the Phase 2 Supabase in
 
 ## Phase 3: Telemetry (Supabase Database) - *Deferred until Persistent State (including resume) is complete*
 
-- [ ] **1. Define Database Schema (`telemetry_events` table):**
-    *   [ ] Using Supabase CLI migrations, create a table named `telemetry_events`. This approach provides version control for database schema changes.
-    *   [ ] **Setup Steps:**
-        *   [ ] Create a new migration (`supabase migration new create_telemetry_events_table`)
-        *   [ ] Define the table schema in the generated SQL file
-        *   [ ] Apply the migration (`supabase migration up`)
-    *   [ ] **Define Columns:**
+- [x] **1. Define Database Schema (`telemetry_events` table):**
+    *   [x] Using Supabase CLI migrations, create a table named `telemetry_events`. This approach provides version control for database schema changes.
+    *   [x] **Setup Steps:**
+        *   [x] Create a new migration (`npx supabase migration new create_telemetry_events_table_manual` - manual approach due to Docker issue, then `npx supabase db push` to apply `20250520134659_create_telemetry_events_table_manual.sql`)
+        *   [x] Define the table schema in the generated SQL file (`20250520134659_create_telemetry_events_table_manual.sql` created and populated)
+        *   [x] Apply the migration (`npx supabase db push` executed successfully)
+    *   [x] **Define Columns:** (Ensured by migration `20250520134659_create_telemetry_events_table_manual.sql`)
         *   `id` (BIGSERIAL, Primary Key - using sequence for high insert rate)
         *   `event_name` (TEXT, Not Null) - e.g., 'adventure_started', 'chapter_viewed', 'choice_made', 'summary_viewed'.
         *   `adventure_id` (UUID, Nullable, Foreign Key -> `adventures.id` - *optional if event is not adventure-specific*)
