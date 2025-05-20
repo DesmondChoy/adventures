@@ -261,24 +261,9 @@ This section outlines the manual testing steps to verify the Phase 2 Supabase in
             *   It now correctly handles and ignores the initial "start" message from the client post-resumption, preventing premature chapter advancement.
             *   Resolved an `AttributeError: 'dict' object has no attribute 'dict'` that occurred when preparing data for `stream_chapter_content` during resumption (specifically with `chapter_to_display_data.question`).
             *   Resolved an `ImportError` for `ChapterChoice` by correcting it to `StoryChoice` in `app/services/websocket/stream_handler.py`.
-    *   **Result:** Adventure text and choice resumption now works correctly. The application re-sends the content of the chapter the user was on before disconnection, and no new content/image is generated until the user makes a choice for the resumed chapter.
-    *   **To-Do/Known Issue (Future Enhancement): Resuming Chapter Image Display**
-        *   **Current Behavior:** The specific image associated with a resumed chapter is currently not re-displayed. The logic in `stream_chapter_content` intentionally skips new image generation for resumed chapters to ensure speed and avoid re-processing.
-        *   **Goal:** Display the original image associated with the chapter when an adventure is resumed.
-        *   **Potential Solutions (to be evaluated and implemented later):**
-            1.  **Store Image Base64 in `ChapterData` (Medium Complexity):**
-                *   Add an optional field (e.g., `image_base64: Optional[str]`) to the `ChapterData` model in `app/models/story.py`.
-                *   When an image is generated for a chapter, store its base64 representation in this field within the `AdventureState`.
-                *   On resumption, retrieve this stored base64 string and send it to the client.
-                *   Considerations: Increases the size of `state_data` in Supabase. An optimization could be to only store the base64 for the most recent chapter's image to save space, at the cost of not having images for earlier chapters if navigating back.
-            2.  **Use Supabase Storage for Images (Higher Complexity but More Scalable):**
-                *   Add an optional field (e.g., `image_url: Optional[str]`) to the `ChapterData` model.
-                *   When an image is generated, upload the image file to a Supabase Storage bucket.
-                *   Store the public or signed URL of the image in the `image_url` field within `AdventureState`.
-                *   On resumption, send this URL to the client, which then loads the image via an `<img>` tag.
-                *   Considerations: More robust for handling many images and large files, better for long-term scalability, keeps `state_data` smaller. Requires setting up Supabase Storage and handling image uploads/URL management.
+    *   **Result (Updated 2025-05-20):** Adventure text and choice resumption now works correctly, including for the final CONCLUSION chapter (Chapter 10). The application re-sends the content of the chapter the user was on before disconnection (or sends `story_complete` if resuming at CONCLUSION). For chapters 1-9, no new content/image is generated until the user makes a choice for the resumed chapter. For Chapter 10 resumption, image generation is currently re-triggered by the `send_story_complete` flow (see "Future Enhancements & Observations" section for more details).
 
-*   **[ ] Test Case 4: Complete Adventure**
+*   **[x] Test Case 4: Complete Adventure (Passed 2025-05-20)**
     *   **Goal:** Verify the adventure is marked as complete in Supabase.
     *   **User Actions:**
         1.  Play through an entire adventure until the CONCLUSION chapter is finished.
@@ -290,7 +275,7 @@ This section outlines the manual testing steps to verify the Phase 2 Supabase in
         *   "Is the `is_complete` flag now set to `true` in the Supabase table for that adventure row?"
         *   "Did you see any errors during the final state save in the logs?"
 
-*   **[ ] Test Case 5: Summary Retrieval**
+*   **[x] Test Case 5: Summary Retrieval (Passed 2025-05-20)**
     *   **Goal:** Verify the summary page correctly loads the state from Supabase.
     *   **User Actions:**
         1.  After completing Test Case 4, the application should navigate to the summary page URL (e.g., `/adventure/summary?state_id=...`).
@@ -300,7 +285,7 @@ This section outlines the manual testing steps to verify the Phase 2 Supabase in
         *   "Did the summary page load successfully using the correct `adventure_id` in the URL?"
         *   "Did you see logs indicating the state was retrieved successfully for the summary API endpoint (e.g., 'Successfully retrieved state with ID: ...')?"
 
-*   **[ ] Test Case 6: Multiple Incomplete Adventures (Optional)**
+*   **[x] Test Case 6: Multiple Incomplete Adventures (Optional) (Passed 2025-05-20)**
     *   **Goal:** Verify the system correctly identifies and resumes the specific adventure requested.
     *   **User Actions:**
         1.  Start Adventure A (e.g., Story 1 / Lesson 1), complete 2 chapters, then disconnect (close tab).
@@ -384,31 +369,75 @@ This section outlines the manual testing steps to verify the Phase 2 Supabase in
 
 This plan provides a structured approach. 
 
-## Current Status (As of 2025-05-19)
+## Current Status (As of 2025-05-20)
 
-**Phase 2 (Persistent Adventure State) is significantly advanced. Key infrastructure for persistence is in place, but a critical issue with the adventure resumption logic (Test Case 3) remains the primary blocker.**
+**Phase 2 (Persistent Adventure State) is now complete and validated.** All planned test cases, including adventure creation, progress saving, resumption (including at Chapter 10/CONCLUSION), adventure completion marking, and summary retrieval, have passed. The system correctly handles state persistence and resumption using Supabase.
 
-**Key Achievements in Phase 2 (Relevant to Persistence/Resumption):**
+**Key Fixes and Achievements in Phase 2 (Relevant to Persistence/Resumption):**
 - Supabase project setup, library integration, and secure environment variable configuration completed.
-- `adventures` table schema defined and migrated, including `environment` column and recently added dedicated `client_uuid` column (`20250519080600_add_client_uuid_to_adventures.sql`).
+- `adventures` table schema defined and migrated, including `environment` and `client_uuid` columns.
 - `StateStorageService` (`app/services/state_storage_service.py`):
     - Refactored to use Supabase.
-    - `store_state` updated to populate the dedicated `client_uuid` column.
-    - `get_active_adventure_id` updated to query using the dedicated `client_uuid` column, successfully finding existing adventures.
+    - `store_state` method enhanced with an `explicit_is_complete` parameter for precise control over when an adventure is marked complete.
+    - `get_active_adventure_id` updated for correct querying.
 - `AdventureStateManager` (`app/services/adventure_state_manager.py`):
-    - `reconstruct_state_from_storage` method fixed to correctly set its internal `self.state` with the loaded adventure state. This ensures the WebSocket router has access to the loaded state.
-- Integration of state storage into WebSocket/API flows for initial save, progress updates, and completion marking is largely in place.
+    - `reconstruct_state_from_storage` method fixed.
+- WebSocket Router (`app/routers/websocket_router.py`):
+    - Logic updated to correctly save state with `explicit_is_complete=False` after CONCLUSION chapter content generation, allowing resumption.
+    - Logic added to handle client "start" messages appropriately when resuming at a completed CONCLUSION chapter (re-sends `story_complete`).
+- Choice Processor (`app/services/websocket/choice_processor.py`):
+    - `generate_conclusion_chapter_summary` updated to call `store_state` with `explicit_is_complete=True` when the summary is revealed.
+- Integration of state storage into WebSocket/API flows for initial save, progress updates, and completion marking is robust.
+- All Phase 2 test cases (1-6) have passed.
 
-**Outstanding Issue & Current Focus:**
-- With Test Case 3 (Adventure Resumption) now resolved, the current focus is to complete the remaining Phase 2 testing.
+**Immediate Next Steps:**
 
-**Immediate Next Steps (Post Test Case 3 Resolution):**
+1.  **Proceed to Phase 3 (Telemetry):** Define schema, integrate logging, and plan analytics.
+2.  **Evaluate Phase 4 (User Authentication):** Based on product requirements after Phase 3.
+3.  **Address Future Enhancements & Observations:** Review items noted for future consideration (e.g., image re-generation consistency on resume).
 
-1.  **Complete Remaining Phase 2 Testing:**
-    *   Test Case 4: Complete Adventure
-    *   Test Case 5: Summary Retrieval
-    *   Test Case 6: Multiple Incomplete Adventures (Optional)
 
-2.  **Proceed to Phase 3 (Telemetry):** After all Phase 2 functionality is fully validated.
+## Future Enhancements & Observations (Post-Phase 2)
 
-3.  **Evaluate Phase 4 (User Authentication):** Based on product requirements after Phase 3.
+### Image Handling on Chapter Resume
+
+#### Current Behaviors
+
+- **Chapter 10 (CONCLUSION):**
+    - When resuming at Chapter 10, the image is **re-generated on each refresh**. This is because the resumption flow uses `send_story_complete`, which always triggers image generation.
+    - This behavior has been observed and is considered acceptable. Some users find the consistent re-generation "strangely consistent."
+
+- **Chapters 1-9:**
+    - When resuming at chapters 1-9, the system uses `stream_chapter_content` with `is_resumption=True`.
+    - In this flow, **new image generation is bypassed** for speed and to avoid unnecessary processing.
+    - However, the original image for the resumed chapter is **not currently re-displayed** to the user.
+
+#### To-Do / Known Issue
+
+- **Resuming Chapter Image Display (Chapters 1-9):**
+    - **Goal:** When resuming an adventure at chapters 1-9, display the original image associated with that chapter.
+    - **Current Limitation:** The image is not re-displayed because image generation is skipped and the original image is not retrieved.
+
+#### Future Considerations
+
+- **Consistent Image Re-generation:**
+    - Consider extending the image re-generation logic (currently only for Chapter 10) to chapters 1-9 for a more dynamic and consistent user experience.
+    - This would involve modifying `stream_chapter_content` to optionally trigger image generation when `is_resumption=True`, and updating client-side handling.
+    - Estimated complexity: Low-to-medium, as it mainly involves adapting existing logic.
+
+#### Potential Solutions (for Chapters 1-9 Image Display)
+
+1. **Store Image Base64 in `ChapterData` (Medium Complexity)**
+    - Add an optional field (e.g., `image_base64: Optional[str]`) to the `ChapterData` model in `app/models/story.py`.
+    - When generating an image for a chapter, store its base64 representation in this field within the `AdventureState`.
+    - On resumption, retrieve this base64 string and send it to the client for display.
+    - *Considerations:* Increases the size of `state_data` in Supabase. To optimize, you could store only the most recent chapter's image, at the cost of not supporting images for earlier chapters if navigating back.
+
+2. **Use Supabase Storage for Images (Higher Complexity, More Scalable)**
+    - Add an optional field (e.g., `image_url: Optional[str]`) to the `ChapterData` model.
+    - When an image is generated, upload it to a Supabase Storage bucket.
+    - Store the public or signed URL in the `image_url` field within `AdventureState`.
+    - On resumption, send this URL to the client, which can then load the image via an `<img>` tag.
+    - *Considerations:* This approach is more scalable for many images and large files, keeps `state_data` smaller, but requires setting up Supabase Storage and managing image uploads/URLs.
+
+---

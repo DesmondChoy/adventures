@@ -33,7 +33,8 @@ class StateStorageService:
         state_data: Dict[str, Any],
         adventure_id: Optional[str] = None,
         user_id: Optional[str] = None,
-        lesson_topic: Optional[str] = None,  # Add lesson_topic parameter
+        lesson_topic: Optional[str] = None,
+        explicit_is_complete: Optional[bool] = None,  # New parameter
     ) -> str:
         """
         Store adventure state data in Supabase and return the unique ID.
@@ -76,10 +77,19 @@ class StateStorageService:
             chapters = state_data.get("chapters", [])
             completed_chapter_count = len(chapters)
 
-            # Check if the last chapter is a CONCLUSION or SUMMARY chapter
-            if completed_chapter_count > 0:
+            # Determine is_complete status
+            if explicit_is_complete is not None:
+                is_complete = explicit_is_complete
+                logger.info(f"Using explicit_is_complete value: {is_complete}")
+            elif completed_chapter_count > 0:
                 last_chapter_type = chapters[-1].get("chapter_type", "").lower()
                 is_complete = last_chapter_type in ["conclusion", "summary"]
+                logger.info(
+                    f"Derived is_complete based on last chapter type ({last_chapter_type}): {is_complete}"
+                )
+            else:
+                is_complete = False  # Default for new/empty adventures
+                logger.info(f"Defaulting is_complete to False for new/empty adventure.")
 
             # Prepare the record for insertion/update
             record = {

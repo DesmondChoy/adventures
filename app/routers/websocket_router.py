@@ -376,12 +376,41 @@ async def story_websocket(
                     )
 
                 # Ensure we have a valid state object after init or update
-                if state is None:
+                if (
+                    state is None
+                ):  # Note: 'state' here is the same as 'current_state' after this block
                     logger.error("State is None after initialization/update.")
                     await websocket.send_text(
                         "An error occurred. Please restart the adventure."
                     )
                     continue
+
+                current_state = state  # Ensure current_state is the definitive one for the checks below
+
+                # --- NEW: Handle "start" message when already at CONCLUSION chapter ---
+                if (
+                    current_state
+                    and current_state.chapters  # Ensure chapters list exists
+                    and len(current_state.chapters) == current_state.story_length
+                    and isinstance(choice_data, str)
+                    and choice_data.lower() == "start"
+                    and current_state.chapters[-1].chapter_type
+                    == ChapterType.CONCLUSION
+                ):
+                    logger.info(
+                        f"Resumed at CONCLUSION chapter (Chapter {len(current_state.chapters)} of {current_state.story_length}). Client sent 'start'. Re-sending story_complete."
+                    )
+                    await send_story_complete(
+                        websocket=websocket,
+                        state=current_state,
+                        connection_data=connection_data,
+                    )
+                    # Reset the flag if it was set during proactive chapter sending,
+                    # as we are now handling this "start" differently.
+                    if "resumed_session_just_sent_chapter" in connection_data:
+                        del connection_data["resumed_session_just_sent_chapter"]
+                    continue  # Wait for the actual next client message (e.g., reveal_summary)
+                # --- END NEW ---
 
                 # Process the choice and generate next chapter
                 (
@@ -403,10 +432,37 @@ async def story_websocket(
                 # If story is complete, send completion data but don't end the connection
                 # This allows processing the "reveal_summary" choice to generate Chapter 10 summary
                 if is_story_complete:
+                    # *** NEW: Save state before sending story_complete and continuing ***
+                    if connection_data["adventure_id"]:
+                        try:
+                            current_state_for_completion = (
+                                state_manager.get_current_state()
+                            )
+                            if current_state_for_completion:
+                                # Ensure is_complete is still false here, it's set to true
+                                # only when the summary is actually generated and saved.
+                                # The store_state service should handle the is_complete flag
+                                # based on the state's last chapter type if not explicitly passed.
+                                # For this save, we are just recording that Chapter 10 has been reached.
+                                await state_storage_service.store_state(
+                                    current_state_for_completion.dict(),
+                                    adventure_id=connection_data["adventure_id"],
+                                    user_id=None,
+                                    explicit_is_complete=False,  # Ensure not marked complete yet
+                                )
+                                logger.info(
+                                    f"Saved state after CONCLUSION chapter (Chapter {len(current_state_for_completion.chapters)}) generated (is_complete=False), before story_complete message. Adventure ID: {connection_data['adventure_id']}"
+                                )
+                        except Exception as e:
+                            logger.error(
+                                f"Error saving state before story_complete message: {e}"
+                            )
+                    # *** END NEW ***
+
                     await send_story_complete(
                         websocket=websocket,
-                        state=state_manager.get_current_state(),
-                        connection_data=connection_data,  # Pass connection data for persistence
+                        state=state_manager.get_current_state(),  # state_manager.get_current_state() should be the same as current_state_for_completion
+                        connection_data=connection_data,
                     )
                     continue  # Continue processing messages instead of breaking
 
@@ -431,9 +487,10 @@ async def story_websocket(
                                 current_state.dict(),
                                 adventure_id=connection_data["adventure_id"],
                                 user_id=None,  # No authenticated user yet
+                                # Default is_complete derivation is fine here
                             )
                             logger.info(
-                                f"Updated state in Supabase with ID: {connection_data['adventure_id']}"
+                                f"Updated state in Supabase with ID: {connection_data['adventure_id']} (after regular chapter stream)"
                             )
                     except Exception as e:
                         logger.error(f"Error updating state in Supabase: {e}")

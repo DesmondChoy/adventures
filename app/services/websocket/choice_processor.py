@@ -176,19 +176,24 @@ async def generate_conclusion_chapter_summary(
             )
 
             # Update the existing record with is_complete=True
+            # Update the existing record with is_complete=True
             state_id = await state_storage_service.store_state(
                 state.dict(),
                 adventure_id=adventure_id,
                 user_id=None,  # No authenticated user yet
+                explicit_is_complete=True,  # Mark as complete
             )
             logger.info(
-                f"Updated state with ID: {state_id} after generating CONCLUSION chapter summary"
+                f"Updated state with ID: {state_id} (is_complete=True) after generating CONCLUSION chapter summary"
             )
         else:
             # Create a new record if no adventure_id is available
-            state_id = await state_storage_service.store_state(state.dict())
+            state_id = await state_storage_service.store_state(
+                state.dict(),
+                explicit_is_complete=True,  # Mark as complete
+            )
             logger.info(
-                f"Stored new state with ID: {state_id} after generating CONCLUSION chapter summary"
+                f"Stored new state with ID: {state_id} (is_complete=True) after generating CONCLUSION chapter summary"
             )
 
         # Include the state_id in the response to the client
