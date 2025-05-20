@@ -4,6 +4,7 @@ import logging
 import re
 import json
 import asyncio
+from uuid import UUID
 
 from app.models.story import (
     ChapterType,
@@ -18,6 +19,7 @@ from app.services.chapter_manager import ChapterManager
 from app.services.state_storage_service import StateStorageService
 from app.services.llm import LLMService
 from app.services.llm.prompt_templates import CHARACTER_VISUAL_UPDATE_PROMPT
+from app.services.telemetry_service import TelemetryService
 
 from .content_generator import generate_chapter
 from .summary_generator import generate_summary_content, stream_summary_content
@@ -26,6 +28,7 @@ logger = logging.getLogger("story_app")
 chapter_manager = ChapterManager()
 state_storage_service = StateStorageService()
 llm_service = LLMService()
+telemetry_service = TelemetryService()
 
 
 async def handle_reveal_summary(
@@ -757,6 +760,42 @@ async def process_non_start_choice(
         await process_lesson_response(previous_chapter, choice_text, state, websocket)
     else:
         await process_story_response(previous_chapter, chosen_path, choice_text, state)
+
+    # Log choice_made event
+    try:
+        event_metadata = {
+            "chapter_number": previous_chapter.chapter_number,
+            "chapter_type": previous_chapter.chapter_type.value,
+            "choice_text": choice_text,
+            "story_category": story_category,
+            "lesson_topic": lesson_topic,
+            "client_uuid": connection_data.get("client_uuid")
+            if connection_data
+            else None,
+        }
+        if previous_chapter.chapter_type == ChapterType.STORY:
+            event_metadata["chosen_path"] = chosen_path
+        elif previous_chapter.chapter_type == ChapterType.LESSON and isinstance(
+            previous_chapter.response, LessonResponse
+        ):
+            event_metadata["is_correct"] = previous_chapter.response.is_correct
+
+        event_metadata = {k: v for k, v in event_metadata.items() if v is not None}
+
+        current_adventure_id = (
+            connection_data.get("adventure_id") if connection_data else None
+        )
+        await telemetry_service.log_event(
+            event_name="choice_made",
+            adventure_id=UUID(current_adventure_id) if current_adventure_id else None,
+            user_id=None,  # No authenticated user_id yet
+            metadata=event_metadata,
+        )
+        logger.info(
+            f"Logged 'choice_made' event for adventure ID: {current_adventure_id}, chapter: {previous_chapter.chapter_number}"
+        )
+    except Exception as tel_e:
+        logger.error(f"Error logging 'choice_made' event: {tel_e}")
 
     # Generate a chapter summary for the previous chapter
     await generate_chapter_summary(previous_chapter, state)

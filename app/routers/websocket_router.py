@@ -1,8 +1,10 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import logging
+from uuid import UUID
 from app.models.story import ChapterType  # Added import
 from app.services.adventure_state_manager import AdventureStateManager
 from app.services.state_storage_service import StateStorageService
+from app.services.telemetry_service import TelemetryService
 from app.services.websocket.stream_handler import (
     stream_chapter_content,
 )  # Corrected import path
@@ -45,6 +47,7 @@ async def story_websocket(
 
     state_manager = AdventureStateManager()
     state_storage_service = StateStorageService()
+    telemetry_service = TelemetryService()
 
     # Store connection-specific data
     connection_data = {
@@ -177,10 +180,15 @@ async def story_websocket(
                                         await stream_chapter_content(  # Use the direct import
                                             websocket=websocket,
                                             state=loaded_state_from_storage,
+                                            adventure_id=connection_data.get(
+                                                "adventure_id"
+                                            ),
+                                            story_category=story_category,  # Pass story_category
+                                            lesson_topic=lesson_topic,  # Pass lesson_topic
                                             is_resumption=True,
                                             resumption_chapter_content_dict=resumption_content_dict,
                                             resumption_sampled_question_dict=resumption_question_dict,
-                                            resumption_chapter_number=chapter_to_display_data.chapter_number,  # Use the actual chapter number from ChapterData
+                                            resumption_chapter_number=chapter_to_display_data.chapter_number,
                                             resumption_chapter_type=chapter_to_display_data.chapter_type,
                                         )
                                         connection_data[
@@ -348,6 +356,29 @@ async def story_websocket(
                             connection_data["adventure_id"] = adventure_id
                             logger.info(f"Stored new state with ID: {adventure_id}")
 
+                            # Log adventure_started event
+                            try:
+                                await telemetry_service.log_event(
+                                    event_name="adventure_started",
+                                    adventure_id=UUID(adventure_id)
+                                    if adventure_id
+                                    else None,
+                                    user_id=None,  # No authenticated user_id yet
+                                    metadata={
+                                        "story_category": story_category,
+                                        "lesson_topic": lesson_topic,
+                                        "difficulty": difficulty,
+                                        "client_uuid": client_uuid,
+                                    },
+                                )
+                                logger.info(
+                                    f"Logged 'adventure_started' event for adventure ID: {adventure_id}"
+                                )
+                            except Exception as tel_e:
+                                logger.error(
+                                    f"Error logging 'adventure_started' event: {tel_e}"
+                                )
+
                             # Send a message to the client with the adventure_id
                             await websocket.send_json(
                                 {
@@ -469,12 +500,13 @@ async def story_websocket(
                 # Stream chapter content and send updates
                 await stream_chapter_content(  # Corrected function name
                     websocket=websocket,
-                    # chapter_content=chapter_content, # This was for the old signature, new signature takes state and models
-                    # sampled_question=sampled_question, # This was for the old signature
                     state=state_manager.get_current_state(),
-                    generated_chapter_content_model=chapter_content,  # Pass the Pydantic model
-                    generated_sampled_question_dict=sampled_question,  # Pass the dict
-                    is_resumption=False,  # Explicitly False for new chapters
+                    adventure_id=connection_data.get("adventure_id"),
+                    story_category=story_category,  # Pass story_category
+                    lesson_topic=lesson_topic,  # Pass lesson_topic
+                    generated_chapter_content_model=chapter_content,
+                    generated_sampled_question_dict=sampled_question,
+                    is_resumption=False,
                 )
 
                 # After streaming the chapter, save the updated state to Supabase

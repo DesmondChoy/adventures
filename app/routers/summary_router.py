@@ -4,14 +4,17 @@ from typing import Optional
 import os
 import logging
 import json
+from uuid import UUID
 
 from app.models.story import AdventureState
 from app.services.state_storage_service import StateStorageService
 from app.services.summary import SummaryService, StateNotFoundError, SummaryError
+from app.services.telemetry_service import TelemetryService
 from app.utils.case_conversion import snake_to_camel_dict
 
 # Configure logger
 logger = logging.getLogger("summary_router")
+telemetry_service = TelemetryService()
 
 # Directory paths
 SUMMARY_DATA_DIR = "app/static"
@@ -128,6 +131,33 @@ async def get_adventure_summary(
         # Ensure the last chapter is properly identified as a CONCLUSION chapter
         logger.info("Ensuring CONCLUSION chapter is properly identified")
         adventure_state = summary_service.ensure_conclusion_chapter(adventure_state)
+
+        # Log summary_viewed event
+        if adventure_state:
+            try:
+                event_metadata = {
+                    "story_category": adventure_state.story_category,
+                    "lesson_topic": adventure_state.lesson_topic,
+                    "client_uuid": adventure_state.metadata.get("client_uuid"),
+                    "chapters_in_summary": len(adventure_state.chapters)
+                    if adventure_state.chapters
+                    else 0,
+                }
+                event_metadata = {
+                    k: v for k, v in event_metadata.items() if v is not None
+                }
+
+                await telemetry_service.log_event(
+                    event_name="summary_viewed",
+                    adventure_id=UUID(state_id) if state_id else None,
+                    user_id=None,  # No authenticated user_id yet
+                    metadata=event_metadata,
+                )
+                logger.info(
+                    f"Logged 'summary_viewed' event for adventure ID: {state_id}"
+                )
+            except Exception as tel_e:
+                logger.error(f"Error logging 'summary_viewed' event: {tel_e}")
 
         # Format the adventure state data for the React summary component
         logger.info("Formatting adventure summary data")

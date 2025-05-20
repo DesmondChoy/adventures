@@ -4,6 +4,7 @@ import asyncio
 import logging
 import re
 import os
+from uuid import UUID
 
 from app.models.story import (
     ChapterType,
@@ -14,6 +15,7 @@ from app.models.story import (
 
 from .content_generator import clean_chapter_content
 from .image_generator import start_image_generation_tasks, process_image_tasks
+from app.services.telemetry_service import TelemetryService
 
 # Constants for streaming optimization
 WORD_BATCH_SIZE = 1  # Reduced to stream word by word
@@ -21,11 +23,15 @@ WORD_DELAY = 0.02  # Delay between words
 PARAGRAPH_DELAY = 0.1  # Delay between paragraphs
 
 logger = logging.getLogger("story_app")
+telemetry_service = TelemetryService()
 
 
 async def stream_chapter_content(
     websocket: WebSocket,
     state: AdventureState,
+    adventure_id: Optional[str] = None,  # Added for telemetry
+    story_category: Optional[str] = None,  # Added for telemetry
+    lesson_topic: Optional[str] = None,  # Added for telemetry
     # For non-resumption:
     generated_chapter_content_model: Optional[ChapterContent] = None,
     generated_sampled_question_dict: Optional[Dict[str, Any]] = None,
@@ -233,6 +239,31 @@ async def stream_chapter_content(
             f"Image processing skipped for resumed chapter {current_chapter_number_to_send}."
         )
         # Optionally, send a message or ensure client handles no new image for resumed chapter
+
+    # Log chapter_viewed event
+    try:
+        event_metadata = {
+            "chapter_number": current_chapter_number_to_send,
+            "chapter_type": current_chapter_type_to_send.value,
+            "story_category": story_category,  # Use passed argument
+            "lesson_topic": lesson_topic,  # Use passed argument
+            "is_resumption": is_resumption,
+            "client_uuid": state.metadata.get("client_uuid"),
+        }
+        # Remove None values from metadata to keep it clean
+        event_metadata = {k: v for k, v in event_metadata.items() if v is not None}
+
+        await telemetry_service.log_event(
+            event_name="chapter_viewed",
+            adventure_id=UUID(adventure_id) if adventure_id else None,
+            user_id=None,  # No authenticated user_id yet
+            metadata=event_metadata,
+        )
+        logger.info(
+            f"Logged 'chapter_viewed' event for adventure ID: {adventure_id}, chapter: {current_chapter_number_to_send}"
+        )
+    except Exception as tel_e:
+        logger.error(f"Error logging 'chapter_viewed' event: {tel_e}")
 
 
 async def send_fallback_image(

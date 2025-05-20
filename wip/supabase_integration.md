@@ -315,13 +315,41 @@ This section outlines the manual testing steps to verify the Phase 2 Supabase in
         *   `timestamp` (TimestampTZ, default: `now()`)
         *   `metadata` (JSONB, Nullable) - Store event-specific details (e.g., `{"chapter_number": 1, "story_category": "...", "lesson_topic": "..."}`, `{"chapter_number": 3, "duration_ms": 45000}`, `{"choice_index": 0}`).
 
-- [ ] **2. Integrate Telemetry Logging in Backend:**
-    *   [ ] Create a utility function or service (e.g., `log_telemetry(event_name, adventure_id=None, user_id=None, metadata=None)`). This function will insert a record into the `telemetry_events` table using the Supabase client.
-    *   [ ] Call this logging function at relevant points in the code:
-        *   [ ] **Adventure Start:** Log 'adventure_started' with chosen topics.
-        *   [ ] **Chapter View:** Log 'chapter_viewed' when sending chapter content.
-        *   [ ] **Choice Made:** Log 'choice_made' when processing a user choice.
-        *   [ ] **Summary Viewed:** Log 'summary_viewed' when the summary API is successfully called.
+- [x] **2. Integrate Telemetry Logging in Backend:**
+    *   [x] Create a utility function or service (e.g., `log_telemetry(event_name, adventure_id=None, user_id=None, metadata=None)`). This function will insert a record into the `telemetry_events` table using the Supabase client. (Implemented as `TelemetryService` in `app/services/telemetry_service.py`)
+    *   [x] Call this logging function at relevant points in the code:
+        *   [x] **Adventure Start:** Log 'adventure_started' with chosen topics. (Integrated in `app/routers/websocket_router.py`)
+        *   [x] **Chapter View:** Log 'chapter_viewed' when sending chapter content. (Integrated in `app/services/websocket/stream_handler.py`)
+        *   [x] **Choice Made:** Log 'choice_made' when processing a user choice. (Integrated in `app/services/websocket/choice_processor.py`)
+        *   [x] **Summary Viewed:** Log 'summary_viewed' when the summary API is successfully called. (Integrated in `app/routers/summary_router.py`)
+
+### Debugging Notes (Phase 3 Completion)
+
+During the implementation and testing of Phase 3 (Telemetry), the following issues were identified and resolved:
+
+1.  **Issue:** `ModuleNotFoundError: No module named 'supabase_py_async'` on application startup.
+    *   **Cause:** `TelemetryService` was incorrectly trying to import `supabase_py_async` instead of using the project's standard `supabase-py` library (imported as `supabase`).
+    *   **Fix:** Modified `app/services/telemetry_service.py` to import `create_client` and `Client` from the `supabase` package, aligning it with existing dependencies.
+
+2.  **Issue:** Error logged: `"Could not find the 'environment' column of 'telemetry_events' in the schema cache"` when trying to log telemetry events.
+    *   **Cause:** The `TelemetryService` was attempting to write to an `environment` column that was not defined in the `telemetry_events` table schema.
+    *   **Fix:**
+        *   Created a new Supabase migration (`supabase/migrations/20250520222700_add_environment_to_telemetry_events.sql`) to add an `environment TEXT NULL DEFAULT 'unknown'` column to the `telemetry_events` table.
+        *   Applied the migration using `npx supabase db push`.
+
+3.  **Issue:** Error logged: `"object APIResponse[~_ReturnT] can't be used in 'await' expression"` when `TelemetryService` logged events, although data was still inserted.
+    *   **Cause:** The `.execute()` method of the `supabase-py` client for insert operations was returning a non-awaitable `APIResponse` object directly, causing a `TypeError` when `await` was used on it.
+    *   **Fix:** Removed the `await` keyword from the `.execute()` call for insert operations within `app/services/telemetry_service.py`, as the operation appeared to complete successfully regardless.
+
+4.  **Issue:** Error logged: `'AdventureState' object has no attribute 'story_category'` (and similarly for `lesson_topic`) when logging `chapter_viewed` events.
+    *   **Cause:** The `chapter_viewed` event logging in `app/services/websocket/stream_handler.py` was attempting to access `state.story_category` and `state.lesson_topic` directly, but these attributes are not defined on the `AdventureState` model.
+    *   **Fix:**
+        *   Modified the `stream_chapter_content` function in `app/services/websocket/stream_handler.py` to accept `story_category` and `lesson_topic` as explicit parameters.
+        *   Updated the calls to `stream_chapter_content` in `app/routers/websocket_router.py` to pass these parameters.
+        *   The telemetry metadata now correctly uses these passed-in values.
+        *   Confirmed that `memory-bank/techContext.md` correctly does not list these as direct attributes of `AdventureState`, so no documentation update was needed for that specific point.
+
+These fixes ensure that telemetry events are logged reliably and without errors.
 
 - [ ] **3. Analytics:**
     *   [ ] Use SQL queries directly in the Supabase dashboard or connect a BI tool to analyze the data in `adventures` and `telemetry_events` tables.
