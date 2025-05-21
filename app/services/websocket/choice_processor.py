@@ -4,6 +4,7 @@ import logging
 import re
 import json
 import asyncio
+import time  # Added import
 from uuid import UUID
 
 from app.models.story import (
@@ -761,6 +762,29 @@ async def process_non_start_choice(
     else:
         await process_story_response(previous_chapter, chosen_path, choice_text, state)
 
+    # Calculate event_duration_ms for 'choice_made'
+    calculated_duration_ms: Optional[int] = None
+    if connection_data and isinstance(connection_data, dict):
+        start_time_ms = connection_data.pop("current_chapter_start_time_ms", None)
+        if start_time_ms is not None:
+            current_time_ms = int(time.time() * 1000)
+            calculated_duration_ms = current_time_ms - start_time_ms
+            logger.info(
+                f"Calculated time spent on chapter {previous_chapter.chapter_number}: {calculated_duration_ms} ms"
+            )
+        else:
+            logger.warning(
+                f"Could not find 'current_chapter_start_time_ms' in connection_data for chapter {previous_chapter.chapter_number}. Duration will be null."
+            )
+    else:
+        logger.warning(
+            "'connection_data' not available or not a dict in choice_processor, cannot calculate duration."
+        )
+
+    calculated_duration_seconds: Optional[int] = None
+    if calculated_duration_ms is not None:
+        calculated_duration_seconds = round(calculated_duration_ms / 1000)
+
     # Log choice_made event
     try:
         event_metadata = {
@@ -790,9 +814,12 @@ async def process_non_start_choice(
             adventure_id=UUID(current_adventure_id) if current_adventure_id else None,
             user_id=None,  # No authenticated user_id yet
             metadata=event_metadata,
+            chapter_type=previous_chapter.chapter_type.value,
+            chapter_number=previous_chapter.chapter_number,
+            event_duration_seconds=calculated_duration_seconds,
         )
         logger.info(
-            f"Logged 'choice_made' event for adventure ID: {current_adventure_id}, chapter: {previous_chapter.chapter_number}"
+            f"Logged 'choice_made' event for adventure ID: {current_adventure_id}, chapter: {previous_chapter.chapter_number}, duration: {calculated_duration_seconds} s"
         )
     except Exception as tel_e:
         logger.error(f"Error logging 'choice_made' event: {tel_e}")

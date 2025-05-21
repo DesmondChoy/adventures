@@ -351,6 +351,159 @@ During the implementation and testing of Phase 3 (Telemetry), the following issu
 
 These fixes ensure that telemetry events are logged reliably and without errors.
 
+### Phase 3.1: Enhance `telemetry_events` Table and Logging
+
+- [x] **Goal:** Add dedicated columns for `chapter_type`, `chapter_number`, and `event_duration_seconds` (formerly `event_duration_ms`) to the `telemetry_events` table for improved queryability and analytics. Implement logging for these new columns. (Note: User has cleared existing telemetry data, so no backfilling is required).
+
+**Implementation Steps (Completed):**
+
+- [x] **1. Database Schema Migration (SQL):**
+    *   [x] **Action:** Create a new Supabase migration file (`supabase/migrations/20250521132807_add_detailed_telemetry_columns.sql`).
+    *   [x] **SQL Content:**
+        ```sql
+        -- Add chapter_type column
+        ALTER TABLE public.telemetry_events
+        ADD COLUMN chapter_type TEXT NULL;
+
+        COMMENT ON COLUMN public.telemetry_events.chapter_type IS 'The type of chapter the event relates to (e.g., story, lesson, reflect, conclusion, summary).';
+
+        -- Add chapter_number column
+        ALTER TABLE public.telemetry_events
+        ADD COLUMN chapter_number INTEGER NULL;
+
+        COMMENT ON COLUMN public.telemetry_events.chapter_number IS 'The specific chapter number within the adventure that this event pertains to.';
+
+        -- Add event_duration_seconds column (formerly event_duration_ms)
+        ALTER TABLE public.telemetry_events
+        ADD COLUMN event_duration_seconds INTEGER NULL;
+
+        COMMENT ON COLUMN public.telemetry_events.event_duration_seconds IS 'For events like choice_made, this can store the duration (in seconds) spent on the preceding chapter. For other events, it might be NULL or represent event processing time.';
+        ```
+    *   [x] **Apply Migration:** Run `npx supabase db push` in the terminal from the project root to apply the schema changes to your Supabase database.
+        *   A second migration (`supabase/migrations/20250521133918_change_duration_to_seconds.sql`) was created and applied to rename `event_duration_ms` to `event_duration_seconds` and update its comment.
+
+- [x] **2. Backend Code Updates for `chapter_type` and `chapter_number`:**
+    *   [x] **Target File:** `app/services/telemetry_service.py`
+        *   [x] **Action:** Modify the `TelemetryService.log_event` method.
+            *   Update the method signature to include:
+                ```python
+                async def log_event(
+                    self,
+                    event_name: str,
+                    adventure_id: Optional[UUID] = None,
+                    user_id: Optional[UUID] = None,
+                    metadata: Optional[Dict[str, Any]] = None,
+                    chapter_type: Optional[str] = None,       # New parameter
+                    chapter_number: Optional[int] = None,      # New parameter
+                    event_duration_seconds: Optional[int] = None # Changed from event_duration_ms
+                ):
+                ```
+            *   Update the `record` dictionary within `log_event` to include these new fields directly:
+                ```python
+                record = {
+                    # ... existing fields like event_name, adventure_id, user_id, timestamp, environment, metadata ...
+                    "chapter_type": chapter_type,
+                    "chapter_number": chapter_number,
+                    "event_duration_seconds": event_duration_seconds, # Changed from event_duration_ms
+                }
+                ```
+
+    *   [x] **Target File:** `app/services/websocket/choice_processor.py` (specifically in the `process_non_start_choice` function where `choice_made` events are logged)
+        *   [x] **Action:** When preparing to call `telemetry_service.log_event` for a `choice_made` event:
+            *   Pass `previous_chapter.chapter_type.value` as the `chapter_type` argument.
+            *   Pass `previous_chapter.chapter_number` as the `chapter_number` argument.
+        *   **Example Snippet (conceptual):**
+            ```python
+            await telemetry_service.log_event(
+                event_name="choice_made",
+                adventure_id=UUID(current_adventure_id) if current_adventure_id else None,
+                user_id=None,
+                metadata=event_metadata, # Ensure this metadata itself no longer needs to redundantly store chapter_type/number if they are top-level
+                chapter_type=previous_chapter.chapter_type.value,
+                chapter_number=previous_chapter.chapter_number,
+                event_duration_seconds=calculated_duration_seconds # Changed from event_duration_ms
+            )
+            ```
+
+    *   [x] **Target File:** `app/services/websocket/stream_handler.py` (specifically in the `stream_chapter_content` function where `chapter_viewed` events are logged)
+        *   [x] **Action:** When preparing to call `telemetry_service.log_event` for a `chapter_viewed` event:
+            *   Identify the current chapter being streamed (e.g., `current_chapter = state.chapters[-1]`).
+            *   Pass `current_chapter.chapter_type.value` as the `chapter_type` argument.
+            *   Pass `current_chapter.chapter_number` as the `chapter_number` argument.
+        *   **Note:** Ensure `story_category` and `lesson_topic` are also passed correctly if they are not already.
+
+    *   [x] **Target File:** `app/routers/websocket_router.py` (where `adventure_started` events are logged)
+        *   [x] **Action:** When logging `adventure_started`:
+            *   `chapter_type` and `chapter_number` will likely be `None` or not applicable for this event. Pass `None`.
+
+    *   [x] **Target File:** `app/routers/summary_router.py` (where `summary_viewed` events are logged)
+        *   [x] **Action:** When logging `summary_viewed`:
+            *   `chapter_type` could be set to the string `"summary"`.
+            *   `chapter_number` could be `None`.
+
+- [x] **3. Backend Code Updates for `event_duration_seconds` (Implementing Approach 1):**
+    *   [x] **Goal:** Log the time spent on a chapter. This duration will be logged with the `choice_made` event and will represent the time elapsed since the previous `chapter_viewed` event for that chapter.
+
+    *   [x] **Target File:** `app/services/telemetry_service.py` (if not already done in step 2)
+        *   [x] **Action:** Modify the `TelemetryService.log_event` method signature:
+            *   Change `event_duration_ms: Optional[int] = None` to `event_duration_seconds: Optional[int] = None`.
+            *   Update the `record` dictionary within `log_event` to include `event_duration_seconds` (key changed from `event_duration_ms`).
+
+    *   [x] **Target File:** `app/services/websocket/stream_handler.py` (function `stream_chapter_content`)
+        *   [x] **Action:** Store the start timestamp when a chapter's content begins streaming.
+            *   Import `time` at the top of the file: `import time`.
+            *   Within `stream_chapter_content`, before or alongside logging the `chapter_viewed` event, and after ensuring `connection_data` is available and is a dictionary:
+                ```python
+                # Assuming 'connection_data' is accessible and is a dict
+                if connection_data and isinstance(connection_data, dict):
+                    connection_data['current_chapter_start_time_ms'] = int(time.time() * 1000)
+                    logger.debug(f"Stored chapter start time for adventure_id {connection_data.get('adventure_id')}, chapter {state.chapters[-1].chapter_number if state.chapters else 'N/A'}")
+                else:
+                    logger.warning("'connection_data' not available or not a dict in stream_handler, cannot store chapter start time.")
+                ```
+                *(Ensure `connection_data` is properly passed to or accessible by `stream_chapter_content` if it's not already. This usually comes from the WebSocket connection scope or is passed through.)*
+
+    *   [x] **Target File:** `app/services/websocket/choice_processor.py` (function `process_non_start_choice`)
+        *   [x] **Action:** Calculate duration and pass it when logging the `choice_made` event.
+            *   Import `time` at the top of the file: `import time`.
+            *   Within `process_non_start_choice`, before calling `telemetry_service.log_event` for `choice_made`:
+                ```python
+                calculated_duration_ms: Optional[int] = None
+                if connection_data and isinstance(connection_data, dict):
+                    start_time_ms = connection_data.pop('current_chapter_start_time_ms', None)
+                    if start_time_ms is not None:
+                        current_time_ms = int(time.time() * 1000)
+                        calculated_duration_ms = current_time_ms - start_time_ms
+                        logger.info(f"Calculated time spent on chapter {previous_chapter.chapter_number}: {calculated_duration_ms} ms")
+                    else:
+                        logger.warning(f"Could not find 'current_chapter_start_time_ms' in connection_data for chapter {previous_chapter.chapter_number}. Duration will be null.")
+                else:
+                    logger.warning("'connection_data' not available or not a dict in choice_processor, cannot calculate duration.")
+
+                # ... then, when calling log_event for 'choice_made':
+                calculated_duration_seconds: Optional[int] = None
+                if calculated_duration_ms is not None:
+                    calculated_duration_seconds = round(calculated_duration_ms / 1000)
+
+                await telemetry_service.log_event(
+                    # ... other parameters like event_name, adventure_id, chapter_type, chapter_number ...
+                    event_duration_seconds=calculated_duration_seconds, # Pass the calculated duration in seconds
+                    metadata=event_metadata # Ensure metadata is still passed for other details
+                )
+                ```
+        *   **Important Note for the implementing assistant:** The `event_duration_seconds` logged with a `choice_made` event here represents the time spent on the *preceding chapter* (i.e., the time from when its content was sent until this choice was made), converted to seconds.
+
+- [x] **4. Testing:**
+    *   [x] After implementing these changes, thoroughly test the telemetry logging:
+        *   Start new adventures.
+        *   Progress through different chapter types (STORY, LESSON).
+        *   Verify in the Supabase `telemetry_events` table that:
+            *   The new columns (`chapter_type`, `chapter_number`, `event_duration_seconds`) are populated correctly for relevant events.
+            *   `event_duration_seconds` has plausible values (in seconds) for `choice_made` events.
+            *   Other events correctly have `NULL` or appropriate values for these new columns.
+
+**Completion Note (2025-05-21):** Phase 3.1 is complete. The `event_duration_ms` column was successfully renamed to `event_duration_seconds`, and all related backend code was updated to calculate and store this duration in seconds. Testing confirmed the correct population of new telemetry columns.
+
 - [ ] **3. Analytics:**
     *   [ ] Use SQL queries directly in the Supabase dashboard or connect a BI tool to analyze the data in `adventures` and `telemetry_events` tables.
     *   [ ] Define key metrics and create corresponding SQL queries (e.g., topic popularity, average adventure length, common drop-off points). Example Queries:
@@ -420,7 +573,7 @@ This plan provides a structured approach.
 
 **Immediate Next Steps:**
 
-1.  **Proceed to Phase 3 (Telemetry):** Define schema, integrate logging, and plan analytics.
+1.  **Proceed to Phase 3 (Telemetry):** Define schema, integrate logging, and plan analytics. *(Phase 3.1 completed 2025-05-21)*
 2.  **Evaluate Phase 4 (User Authentication):** Based on product requirements after Phase 3.
 3.  **Address Future Enhancements & Observations:** Review items noted for future consideration (e.g., image re-generation consistency on resume).
 

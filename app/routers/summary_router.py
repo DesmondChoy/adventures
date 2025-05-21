@@ -152,6 +152,8 @@ async def get_adventure_summary(
                     adventure_id=UUID(state_id) if state_id else None,
                     user_id=None,  # No authenticated user_id yet
                     metadata=event_metadata,
+                    chapter_type="summary",  # Added
+                    chapter_number=None,  # Added
                 )
                 logger.info(
                     f"Logged 'summary_viewed' event for adventure ID: {state_id}"

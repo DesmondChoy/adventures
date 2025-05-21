@@ -185,6 +185,7 @@ async def story_websocket(
                                             ),
                                             story_category=story_category,  # Pass story_category
                                             lesson_topic=lesson_topic,  # Pass lesson_topic
+                                            connection_data=connection_data,  # Added
                                             is_resumption=True,
                                             resumption_chapter_content_dict=resumption_content_dict,
                                             resumption_sampled_question_dict=resumption_question_dict,
@@ -370,6 +371,8 @@ async def story_websocket(
                                         "difficulty": difficulty,
                                         "client_uuid": client_uuid,
                                     },
+                                    chapter_type=None,
+                                    chapter_number=None,
                                 )
                                 logger.info(
                                     f"Logged 'adventure_started' event for adventure ID: {adventure_id}"
@@ -504,6 +507,7 @@ async def story_websocket(
                     adventure_id=connection_data.get("adventure_id"),
                     story_category=story_category,  # Pass story_category
                     lesson_topic=lesson_topic,  # Pass lesson_topic
+                    connection_data=connection_data,  # Added
                     generated_chapter_content_model=chapter_content,
                     generated_sampled_question_dict=sampled_question,
                     is_resumption=False,

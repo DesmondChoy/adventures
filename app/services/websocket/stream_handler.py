@@ -4,6 +4,7 @@ import asyncio
 import logging
 import re
 import os
+import time  # Added import
 from uuid import UUID
 
 from app.models.story import (
@@ -32,6 +33,7 @@ async def stream_chapter_content(
     adventure_id: Optional[str] = None,  # Added for telemetry
     story_category: Optional[str] = None,  # Added for telemetry
     lesson_topic: Optional[str] = None,  # Added for telemetry
+    connection_data: Optional[Dict[str, Any]] = None,  # Added for storing start time
     # For non-resumption:
     generated_chapter_content_model: Optional[ChapterContent] = None,
     generated_sampled_question_dict: Optional[Dict[str, Any]] = None,
@@ -258,12 +260,25 @@ async def stream_chapter_content(
             adventure_id=UUID(adventure_id) if adventure_id else None,
             user_id=None,  # No authenticated user_id yet
             metadata=event_metadata,
+            chapter_type=current_chapter_type_to_send.value,  # Added
+            chapter_number=current_chapter_number_to_send,  # Added
         )
         logger.info(
-            f"Logged 'chapter_viewed' event for adventure ID: {adventure_id}, chapter: {current_chapter_number_to_send}"
+            f"Logged 'chapter_viewed' event for adventure ID: {adventure_id}, chapter: {current_chapter_number_to_send}, type: {current_chapter_type_to_send.value}"
         )
     except Exception as tel_e:
         logger.error(f"Error logging 'chapter_viewed' event: {tel_e}")
+
+    # Store chapter start time for duration calculation
+    if connection_data and isinstance(connection_data, dict):
+        connection_data["current_chapter_start_time_ms"] = int(time.time() * 1000)
+        logger.debug(
+            f"Stored chapter start time for adventure_id {adventure_id}, chapter {current_chapter_number_to_send}"
+        )
+    else:
+        logger.warning(
+            f"'connection_data' not available or not a dict in stream_handler for adventure {adventure_id}, chapter {current_chapter_number_to_send}, cannot store chapter start time."
+        )
 
 
 async def send_fallback_image(

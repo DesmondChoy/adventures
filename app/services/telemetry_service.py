@@ -52,6 +52,9 @@ class TelemetryService:
         ] = None,  # Assuming user_id will be UUID if/when auth is implemented
         metadata: Optional[Dict[str, Any]] = None,
         app_environment: Optional[str] = None,
+        chapter_type: Optional[str] = None,
+        chapter_number: Optional[int] = None,
+        event_duration_seconds: Optional[int] = None,
     ) -> None:
         """
         Logs an event to the telemetry_events table.
@@ -75,6 +78,9 @@ class TelemetryService:
             "environment": app_environment
             if app_environment
             else os.getenv("APP_ENVIRONMENT", "unknown"),
+            "chapter_type": chapter_type,
+            "chapter_number": chapter_number,
+            "event_duration_seconds": event_duration_seconds,
             # timestamp is handled by Supabase default now()
         }
 
@@ -125,11 +131,15 @@ if __name__ == "__main__":
                     "value": 123,
                 },
                 app_environment="development_test",
+                chapter_type="story",
+                chapter_number=1,
+                event_duration_seconds=15,
             )
 
             await telemetry_service.log_event(
                 event_name="another_test_event",
                 metadata={"info": "No adventure ID for this one"},
+                chapter_type="lesson",
             )
 
             # Test with explicit None for adventure_id
@@ -137,6 +147,8 @@ if __name__ == "__main__":
                 event_name="none_adventure_id_test",
                 adventure_id=None,
                 metadata={"status": "testing None adventure_id"},
+                chapter_number=5,
+                event_duration_seconds=1,
             )
 
         except Exception as e:
