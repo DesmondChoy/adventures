@@ -74,6 +74,7 @@ class AdventureState:
     selected_theme: str
     selected_moral_teaching: str
     selected_plot_twist: str
+    protagonist_description: str # Base visual description of the protagonist
     
     # Summary chapter data
     chapter_summaries: List[str]  # Summaries for SUMMARY chapter
@@ -83,6 +84,7 @@ class AdventureState:
     # Tracking
     metadata: Dict[str, Any]  # Stores agency, challenge history, etc.
     chapters: List[ChapterData]
+    character_visuals: Dict[str, str] # Stores current visual descriptions for all characters
 ```
 
 ### ChapterType Enum
@@ -105,10 +107,10 @@ class ChapterType(str, Enum):
 
 ### WebSocket Service Structure
 - **Core Module** (`core.py`): Central coordination
-- **Choice Processor** (`choice_processor.py`): Handles user choices
+- **Choice Processor** (`choice_processor.py`): Handles user choices, triggers character visual updates (via `_update_character_visuals`).
 - **Content Generator** (`content_generator.py`): Creates chapter content
 - **Stream Handler** (`stream_handler.py`): Manages content streaming
-- **Image Generator** (`image_generator.py`): Handles image generation
+- **Image Generator** (`image_generator.py`): Handles image generation, incorporating synthesized prompts.
 - **Summary Generator** (`summary_generator.py`): Manages summary content
 
 ### LLM Integration
@@ -125,10 +127,18 @@ class ChapterType(str, Enum):
   * Paragraph formatting integration
 
 ### Image Generation
-- Asynchronous processing with `generate_image_async()`
-- 5 retries with exponential backoff
-- Base64 encoding for WebSocket transmission
-- Progressive enhancement (text first, images as available)
+- Implements a **two-step image prompt synthesis pattern**:
+  1. Generates a concise scene description from chapter content (`IMAGE_SCENE_PROMPT`).
+  2. Uses `ImageGenerationService.synthesize_image_prompt` with an LLM (Gemini Flash) and `IMAGE_SYNTHESIS_PROMPT` to combine the scene description, protagonist base look (`state.protagonist_description`), agency details, story sensory visuals, and evolved character visuals (`state.character_visuals`) into a final, rich prompt.
+- Asynchronous image generation (`generate_image_async()`) using the synthesized prompt.
+- 5 retries with exponential backoff.
+- Base64 encoding for WebSocket transmission.
+- Progressive enhancement (text first, images as available).
+
+### Adventure State Manager (`app/services/adventure_state_manager.py`)
+- Manages `AdventureState` updates.
+- Includes `update_character_visuals` method to intelligently merge new character visual information into `state.character_visuals`, preserving existing descriptions unless changes are detected.
+- Handles agency reference tracking (see Agency Implementation).
 
 ### Summary Service Architecture
 - **Modular Package** (`app/services/summary/`)

@@ -504,9 +504,9 @@ These fixes ensure that telemetry events are logged reliably and without errors.
 
 **Completion Note (2025-05-21):** Phase 3.1 is complete. The `event_duration_ms` column was successfully renamed to `event_duration_seconds`, and all related backend code was updated to calculate and store this duration in seconds. Testing confirmed the correct population of new telemetry columns.
 
-- [ ] **3. Analytics:**
-    *   [ ] Use SQL queries directly in the Supabase dashboard or connect a BI tool to analyze the data in `adventures` and `telemetry_events` tables.
-    *   [ ] Define key metrics and create corresponding SQL queries (e.g., topic popularity, average adventure length, common drop-off points). Example Queries:
+- [x] **3. Analytics:** *(Completed 2025-05-21, per user confirmation)*
+    *   [x] Use SQL queries directly in the Supabase dashboard or connect a BI tool to analyze the data in `adventures` and `telemetry_events` tables.
+    *   [x] Define key metrics and create corresponding SQL queries (e.g., topic popularity, average adventure length, common drop-off points). Example Queries:
         *   `SELECT story_category, COUNT(*) FROM adventures GROUP BY story_category ORDER BY COUNT(*) DESC;`
         *   `SELECT event_name, COUNT(*) FROM telemetry_events WHERE timestamp > now() - interval '7 days' GROUP BY event_name;`
         *   Analyze `metadata` JSONB fields for deeper insights.
