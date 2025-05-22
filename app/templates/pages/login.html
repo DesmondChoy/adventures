@@ -72,7 +72,7 @@
                     </p>
 
                     <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start mb-4">
-                        <button id="login-google" class="bg-red-500 text-white px-6 py-3 rounded-md hover:bg-red-600 transition btn-hover inline-block text-center">
+                        <button id="login-google" class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition btn-hover inline-block text-center">
                             Login with Google
                         </button>
                         <button id="continue-guest" class="bg-gray-600 text-white px-6 py-3 rounded-md hover:bg-gray-700 transition btn-hover inline-block text-center">
@@ -375,15 +375,16 @@
         });
 
         // Supabase Client Initialization and Auth Logic
-        const SUPABASE_URL = '{{ supabase_url_env }}'; // Will be replaced by FastAPI if served via Jinja
-        const SUPABASE_ANON_KEY = '{{ supabase_anon_key_env }}'; // Will be replaced by FastAPI if served via Jinja
+        const SUPABASE_URL = '{{ supabase_url }}'; 
+        const SUPABASE_ANON_KEY = '{{ supabase_anon_key }}'; 
         
         let supabase;
         try {
-            if (!SUPABASE_URL || SUPABASE_URL.startsWith('{{')) {
+            // Check if the placeholders have been replaced by comparing to their literal string value
+            if (!SUPABASE_URL || SUPABASE_URL === '{{ supabase_url }}') {
                 console.warn('Supabase URL not configured. Using placeholder. Ensure this page is served via FastAPI with context or configure manually.');
             }
-            if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.startsWith('{{')) {
+            if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === '{{ supabase_anon_key }}') {
                 console.warn('Supabase Anon Key not configured. Using placeholder. Ensure this page is served via FastAPI with context or configure manually.');
             }
             supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

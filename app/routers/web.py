@@ -64,15 +64,15 @@ def get_session_context(request: Request) -> dict:
     }
 
 
-@router.get("/adventure")
-async def adventure(request: Request):
-    """Render the adventure page with story and lesson choices."""
+@router.get("/select")
+async def select_adventure(request: Request):
+    """Render the adventure selection page with story and lesson choices."""
     context = get_session_context(request)
 
     try:
         logger.info(
-            "Loading adventure page",
-            extra={**context, "path": "/adventure", "method": "GET"},
+            "Loading adventure selection page",
+            extra={**context, "path": "/select", "method": "GET"},
         )
 
         story_data = load_story_data()
@@ -82,7 +82,7 @@ async def adventure(request: Request):
         story_categories = story_data  # story_data already contains the categories
 
         logger.info(
-            "Preparing adventure page data",
+            "Preparing adventure selection page data",
             extra={
                 **context,
                 "available_categories": list(story_categories.keys()),
@@ -119,8 +119,8 @@ async def adventure(request: Request):
         )
     except Exception as e:
         logger.error(
-            "Error rendering adventure page",
-            extra={**context, "path": "/adventure", "method": "GET", "error": str(e)},
+            "Error rendering adventure selection page",
+            extra={**context, "path": "/select", "method": "GET", "error": str(e)},
         )
         raise
 
@@ -129,14 +129,21 @@ async def adventure(request: Request):
 async def root(request: Request):
     """Serve the landing page."""
     context = get_session_context(request)
-
     try:
         logger.info(
             "Loading landing page", extra={**context, "path": "/", "method": "GET"}
         )
-
-        # Serve the landing page from static files
-        return FileResponse("app/static/landing/index.html")
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
+        return templates.TemplateResponse(
+            "pages/login.html",  # Serve the new login page from templates
+            {
+                "request": request,
+                "supabase_url": supabase_url,
+                "supabase_anon_key": supabase_anon_key,
+                **context,
+            },
+        )
     except Exception as e:
         logger.error(
             "Error rendering landing page",

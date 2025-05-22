@@ -524,22 +524,22 @@ This phase implements optional user authentication using Supabase Auth, allowing
 **Implementation Steps:**
 
 **0. Create Basic Landing/Login Page (Cline - Act Mode)**
-    *   [ ] **0.1. New HTML File:** Create `app/templates/pages/login.html`.
+    *   [x] **0.1. New HTML File:** Create `app/templates/pages/login.html`. (Used existing `app/static/landing/index.html` and moved to `app/templates/pages/login.html`, then adapted).
         *   This page will serve as the initial entry point for users.
-    *   [ ] **0.2. New FastAPI Route:**
+    *   [x] **0.2. New FastAPI Route:**
         *   Modify `app/routers/web.py`.
         *   Create a route to serve `login.html` at `/`.
         *   Update the existing route for `app/templates/pages/index.html` (the carousel page) to serve it at `/select`.
-    *   [ ] **0.3. Basic Structure for `login.html`:**
+    *   [x] **0.3. Basic Structure for `login.html`:**
         *   Include a title (e.g., "Welcome to Learning Odyssey").
         *   Add a "Login with Google" button.
         *   Add a "Continue as Guest" button.
-        *   Minimal styling, to be enhanced later during a full landing page overhaul.
-    *   [ ] **0.4. Ensure Supabase JS Client is available on `login.html`:**
-        *   The page should include or extend a base template that initializes the Supabase JS client (similar to how `base.html` does for the current `index.html`).
+        *   Minimal styling, to be enhanced later during a full landing page overhaul. (Button colors adjusted based on feedback).
+    *   [x] **0.4. Ensure Supabase JS Client is available on `login.html`:**
+        *   The page should include or extend a base template that initializes the Supabase JS client (similar to how `base.html` does for the current `index.html`). (Supabase client init script added directly to `login.html` and configured to use Jinja variables for keys).
 
-**1. Configure Supabase Auth (User Task - Requires Supabase Dashboard & Google Cloud Console Access)**
-    *   [ ] **1.1. Enable Google Provider:**
+**1. Configure Supabase Auth (User Task - Requires Supabase Dashboard & Google Cloud Console Access)** *(User confirmed completed 2025-05-22)*
+    *   [x] **1.1. Enable Google Provider:**
         *   In the Supabase project dashboard (Authentication -> Providers), enable "Google".
         *   This requires setting up OAuth 2.0 credentials in Google Cloud Console:
             *   Create/use a Google Cloud Project.
@@ -549,9 +549,9 @@ This phase implements optional user authentication using Supabase Auth, allowing
                 *   **Authorized JavaScript origins:** Add your app's URLs (e.g., `http://localhost:8000`, production URL).
                 *   **Authorized redirect URIs:** Add the redirect URI provided by Supabase (e.g., `https://<your-supabase-project-ref>.supabase.co/auth/v1/callback`).
             *   Copy the generated Client ID and Client Secret into the Supabase Google provider settings.
-    *   [ ] **1.2. Enable Anonymous Sign-ins:**
+    *   [x] **1.2. Enable Anonymous Sign-ins:**
         *   In the Supabase project dashboard (Authentication -> Providers or Settings), enable "Anonymous sign-ins".
-    *   [ ] **1.3. Obtain JWT Signing Secret (or JWKS URL):**
+    *   [x] **1.3. Obtain JWT Signing Secret (or JWKS URL):**
         *   In the Supabase project dashboard (Project Settings -> API -> JWT Settings), find the JWT signing secret or the JWKS URI. This will be needed for backend JWT verification. Store this securely (e.g., as `SUPABASE_JWT_SECRET` in `.env` and Railway).
 
 **2. Implement Frontend Logic (Cline - Act Mode)**
