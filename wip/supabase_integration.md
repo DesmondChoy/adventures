@@ -623,39 +623,41 @@ Work on implementing the frontend logic for user authentication (Step 2) has inv
         *   Warning: "Supabase URL or Anon Key was not properly rendered by Jinja in login.html, or they are empty."
         *   Error: "Supabase client instance (loginPageSupabaseClient) is null. Login buttons will not function."
     *   The login buttons are still not working.
-    *   The `[DEBUG base.html]` logs (from the simplified `base.html` debug script) are **still not appearing** in the console.
-    *   The "Could not initialize authentication" alert from `login.html` is likely gone, replaced by the console warning/error above if the `alert` for "Authentication configuration is missing..." in `login.html` is not hit first.
+    *   The `[DEBUG base.html]` logs (from the simplified `base.html` debug script) were **initially not appearing** in the console, indicating a caching issue.
+    *   The "Could not initialize authentication" alert from `login.html` was occurring.
 
-**Detailed Next Steps (Troubleshooting Focus):**
+**Debugging Steps and Resolutions (2025-05-22 Evening):**
 
-1.  **Confirm Rendered Values in `login.html` (Again):**
-    *   The immediate priority is to understand why the updated script in `login.html` logs "Supabase URL or Anon Key was not properly rendered by Jinja... or they are empty."
-    *   **Action:** User to "View Page Source" for `http://127.0.0.1:8000/` (after server restart and browser hard refresh/incognito).
-    *   **Check:** Specifically look at these lines in the source:
-        ```html
-        const LOGIN_PAGE_SUPABASE_URL = '...'; 
-        const LOGIN_PAGE_SUPABASE_ANON_KEY = '...';
-        ```
-        What are the exact string values rendered there by Jinja? Are they the actual credentials, empty strings, or the literal `{{ supabase_url }}` placeholders? This will clarify if the warning from `login.html` is accurate.
+1.  **Verified Jinja Rendering to `login.html`:**
+    *   User confirmed via "View Page Source" that `LOGIN_PAGE_SUPABASE_URL` and `LOGIN_PAGE_SUPABASE_ANON_KEY` in `login.html` were correctly rendered with actual credential values by Jinja.
 
-2.  **If `login.html` shows empty/placeholder values in source:**
-    *   This would contradict the Python logs. The issue would then be a deep problem with Jinja context not reaching `login.html` despite being passed by `web.py`.
-    *   **Possible Action:** Temporarily simplify `login.html` to not extend any base templates and pass the context directly to it, to isolate if template inheritance is the issue.
+2.  **Diagnosed Flawed JS Condition in `login.html`:**
+    *   Added granular `console.log` statements to the `if` condition in `login.html`'s script.
+    *   **Finding:** The condition `LOGIN_PAGE_SUPABASE_URL !== '{{ supabase_url }}'` (and similarly for the key) was evaluating to `false` because `LOGIN_PAGE_SUPABASE_URL` held the *actual URL*, not the literal placeholder string. This incorrectly caused the overall condition to fail.
+    *   **Fix (Applied 2025-05-22):** Corrected the `if` condition in `login.html` to `if (LOGIN_PAGE_SUPABASE_URL && LOGIN_PAGE_SUPABASE_URL !== '' && LOGIN_PAGE_SUPABASE_ANON_KEY && LOGIN_PAGE_SUPABASE_ANON_KEY !== '')`.
+    *   **Result:** `loginPageSupabaseClient` in `login.html` now initializes successfully. "Login with Google" button became functional. "Continue as Guest" initially led to an infinite redirect loop.
 
-3.  **If `login.html` shows correct values in source:**
-    *   This means the JavaScript condition `if (LOGIN_PAGE_SUPABASE_URL && LOGIN_PAGE_SUPABASE_URL !== '{{ supabase_url }}' && ...)` in `login.html` is being evaluated in an unexpected way.
-    *   **Possible Action:** Add more granular `console.log`s within this `if` condition in `login.html` to see the value of each part of the boolean expression.
+3.  **Addressed `base.html` Caching/Loading and Client Initialization:**
+    *   **Action 1:** Added a unique "cache-breaker" `console.log` line to `app/templates/base.html`.
+    *   **User Verification:** Confirmed the new cache-breaker log and other `[DEBUG base.html]` logs (showing correct Jinja-rendered URL/Key) appeared in the console when `login.html` (which redirects to `/select`, which uses `base.html`) was loaded. This indicated `base.html` was now loading its latest script.
+    *   **Action 2 (Applied 2025-05-22):** Uncommented and refined the Supabase client initialization logic within `app/templates/base.html`. This script now attempts to create a Supabase client instance using the Jinja-provided URL/Key and assign it to the global `window.supabase`.
+    *   **Result:** The "Continue as Guest" button on `login.html` no longer causes an infinite redirect loop. Users can sign in anonymously and are correctly redirected to `/select`, which now appears to function correctly with the session.
 
-4.  **Address `base.html` Caching/Loading:**
-    *   The fact that `[DEBUG base.html]` logs are *still* not appearing is a major concern for the functionality of other pages (like `/select`) that will rely on a global Supabase client initialized in `base.html`.
-    *   **Possible Actions:**
-        *   Try renaming `app/templates/base.html` to `app/templates/base_old.html`, create a new `base.html` and paste the simplified debug script into it. This can sometimes break very stubborn caches tied to a filename.
-        *   Consider adding a cache-busting query parameter to script includes if possible with Jinja (more complex).
-        *   As a last resort for debugging, create a new, minimal FastAPI route that *only* serves `base.html` (or its content directly) to see if it can be loaded fresh.
+**Current Status (End of 2025-05-22):**
+*   The foundational Supabase JavaScript client initialization issues on both `login.html` (local client) and `base.html` (global client for other pages like `/select`) are **resolved**.
+*   Both "Login with Google" and "Continue as Guest" functionalities on `login.html` appear to be working, redirecting to `/select` without an infinite loop.
+*   This completes the initial troubleshooting and unblocks further work on Step 2.3.
 
-5.  **Once `login.html` is confirmed to receive Jinja variables correctly AND `base.html` loads its latest version:**
-    *   Uncomment the Supabase client initialization logic in `base.html` (the version that correctly uses `window.supabase.createClient` and assigns the instance to `window.supabase`).
-    *   Ensure `login.html` either uses the global `window.supabase` client from `base.html` (preferable for consistency) or that its own local client initialization works without conflicting. The current `login.html` script attempts its own initialization. For consistency, it might be better if all pages rely on one global instance set up in `base.html`. This would require `base.html` to be fixed first.
+**Next Steps (Proceeding with Phase 4, Step 2.3):**
+
+The following tasks from Step 2.3 ("Auth Handling on Carousel Page (`/select`)") are now the focus:
+
+1.  **On page load for `/select`, use `window.supabase.auth.getSession()` to retrieve the current session.**
+    *   If no active session (or token is invalid/expired), redirect the user back to `/` (login page).
+2.  **If a session exists, extract the `access_token` (JWT).**
+3.  **Modify `WebSocketManager` (or equivalent script for `/select`) to pass this JWT when establishing the WebSocket connection.** (e.g., as a query parameter: `ws://.../ws/story/.../?token=JWT_HERE`).
+4.  **Implement a logout button/mechanism on `/select` that calls `window.supabase.auth.signOut()` and then redirects to `/`.**
+5.  **Update UI on `/select` to display user status (e.g., "Logged in as user@example.com" or "Playing as Guest") and the logout button.**
 
 This detailed logging should help us understand if the issue is server-side template rendering/caching or client-side script execution and caching.
 

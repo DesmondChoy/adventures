@@ -385,8 +385,20 @@
             // Check if URL and Key are actually provided and not placeholders
             // Note: Jinja replaces template variables (e.g., the double curly brace syntax) so if they are still present as such, it means they were not in context.
             // An empty string means they were in context but empty, or default('') was used.
-            if (LOGIN_PAGE_SUPABASE_URL && LOGIN_PAGE_SUPABASE_URL !== '{{ supabase_url }}' && LOGIN_PAGE_SUPABASE_URL !== '' &&
-                LOGIN_PAGE_SUPABASE_ANON_KEY && LOGIN_PAGE_SUPABASE_ANON_KEY !== '{{ supabase_anon_key }}' && LOGIN_PAGE_SUPABASE_ANON_KEY !== '') {
+            
+            // ---- START DEBUG LOGS ----
+            console.log("[Login Script Debug] Raw LOGIN_PAGE_SUPABASE_URL:", `'${LOGIN_PAGE_SUPABASE_URL}'`);
+            console.log("[Login Script Debug] Raw LOGIN_PAGE_SUPABASE_ANON_KEY:", `'${LOGIN_PAGE_SUPABASE_ANON_KEY}'`);
+            console.log("[Login Script Debug] Condition Part 1 (URL exists and not empty):", LOGIN_PAGE_SUPABASE_URL && LOGIN_PAGE_SUPABASE_URL !== '');
+            console.log("[Login Script Debug] Condition Part 2 (URL not placeholder '{{ supabase_url }}'):", LOGIN_PAGE_SUPABASE_URL !== '{{ supabase_url }}');
+            console.log("[Login Script Debug] Condition Part 3 (Key exists and not empty):", LOGIN_PAGE_SUPABASE_ANON_KEY && LOGIN_PAGE_SUPABASE_ANON_KEY !== '');
+            console.log("[Login Script Debug] Condition Part 4 (Key not placeholder '{{ supabase_anon_key }}'):", LOGIN_PAGE_SUPABASE_ANON_KEY !== '{{ supabase_anon_key }}');
+            console.log("[Login Script Debug] Combined URL check (URL && URL !== '{{ supabase_url }}' && URL !== ''):", LOGIN_PAGE_SUPABASE_URL && LOGIN_PAGE_SUPABASE_URL !== '{{ supabase_url }}' && LOGIN_PAGE_SUPABASE_URL !== '');
+            console.log("[Login Script Debug] Combined Key check (Key && Key !== '{{ supabase_anon_key }}' && Key !== ''):", LOGIN_PAGE_SUPABASE_ANON_KEY && LOGIN_PAGE_SUPABASE_ANON_KEY !== '{{ supabase_anon_key }}' && LOGIN_PAGE_SUPABASE_ANON_KEY !== '');
+            // ---- END DEBUG LOGS ----
+
+            // Corrected condition: Check if URL and Key are truthy (not empty, null, or undefined)
+            if (LOGIN_PAGE_SUPABASE_URL && LOGIN_PAGE_SUPABASE_URL !== '' && LOGIN_PAGE_SUPABASE_ANON_KEY && LOGIN_PAGE_SUPABASE_ANON_KEY !== '') {
                 try {
                     loginPageSupabaseClient = window.supabase.createClient(LOGIN_PAGE_SUPABASE_URL, LOGIN_PAGE_SUPABASE_ANON_KEY);
                     console.log("Supabase client initialized successfully in login.html.");
@@ -395,11 +407,10 @@
                     alert("Could not initialize authentication (client creation failed). Please try again later.");
                 }
             } else {
-                console.warn('Supabase URL or Anon Key was not properly rendered by Jinja in login.html, or they are empty.');
-                // The alert below is a bit strong if this is just a transient issue before base.html's global client is ready.
-                // However, login.html needs its own client to function if base.html fails or isn't used as the primary provider.
-                // For now, keeping an alert to indicate login page specific init failure.
-                alert("Authentication configuration is missing on the login page. Please contact support.");
+                // This block should ideally not be hit if Jinja renders the values correctly and they are not empty.
+                // The debug logs above will show the exact values if this else block is reached.
+                console.warn('Supabase URL or Anon Key is missing or empty. LOGIN_PAGE_SUPABASE_URL:', `'${LOGIN_PAGE_SUPABASE_URL}'`, 'LOGIN_PAGE_SUPABASE_ANON_KEY:', `'${LOGIN_PAGE_SUPABASE_ANON_KEY}'`);
+                alert("Authentication configuration is missing or invalid on the login page. Please contact support.");
             }
         } else {
             console.error('Supabase JavaScript library (window.supabase) not loaded correctly before login.html script.');

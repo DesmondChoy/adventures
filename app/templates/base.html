@@ -22,6 +22,7 @@
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+      console.log("[DEBUG base.html] CACHE_BREAKER_LOG_20250522_233000"); // New unique log
       // Attempt 1: Directly log what Jinja renders
       console.log("[DEBUG base.html] Raw Jinja supabase_url: '{{ supabase_url }}'");
       console.log("[DEBUG base.html] Raw Jinja supabase_anon_key: '{{ supabase_anon_key }}'");
@@ -33,37 +34,47 @@
       console.log("[DEBUG base.html] SUPABASE_URL_FROM_JINJA_TEST:", SUPABASE_URL_FROM_JINJA_TEST);
       console.log("[DEBUG base.html] SUPABASE_ANON_KEY_FROM_JINJA_TEST:", SUPABASE_ANON_KEY_FROM_JINJA_TEST);
 
-      // For now, we'll comment out the rest of the Supabase client initialization
-      // to see if the above values render correctly first.
-      /*
-      const SUPABASE_URL_JINJA = '{{ supabase_url | default('') }}'; // Keep for reference if needed
-      const SUPABASE_ANON_KEY_JINJA = '{{ supabase_anon_key | default('') }}'; // Keep for reference if needed
+      // Supabase client initialization logic.
+      // The variables SUPABASE_URL_FROM_JINJA_TEST and SUPABASE_ANON_KEY_FROM_JINJA_TEST are already defined above.
 
       if (SUPABASE_URL_FROM_JINJA_TEST && SUPABASE_URL_FROM_JINJA_TEST !== 'JINJA_URL_MISSING' &&
           SUPABASE_ANON_KEY_FROM_JINJA_TEST && SUPABASE_ANON_KEY_FROM_JINJA_TEST !== 'JINJA_KEY_MISSING' &&
           window.supabase && typeof window.supabase.createClient === 'function') {
         try {
+          // Create the client instance. Note: window.supabase from CDN is the library, not an instance yet.
           const clientInstance = window.supabase.createClient(SUPABASE_URL_FROM_JINJA_TEST, SUPABASE_ANON_KEY_FROM_JINJA_TEST);
-          console.log("Supabase client instance created successfully in base.html.");
-          window.supabase = clientInstance;
-          console.log("Supabase client instance assigned to global 'window.supabase'.");
+          console.log("[DEBUG base.html] Supabase client instance created successfully.");
+          
+          // Assign the created instance to window.supabase to make it globally accessible.
+          // This overwrites the library reference with the client instance.
+          window.supabase = clientInstance; 
+          console.log("[DEBUG base.html] Supabase client INSTANCE assigned to global 'window.supabase'.");
+
         } catch (error) {
-          console.error("Error initializing Supabase client instance:", error);
-          window.supabase = null; 
+          console.error("[DEBUG base.html] Error initializing Supabase client instance:", error);
+          window.supabase = null; // Ensure it's null if initialization fails
         }
       } else {
+        // Log reasons if initialization is skipped
         if (!(window.supabase && typeof window.supabase.createClient === 'function')) {
-            console.warn("Supabase library (window.supabase) from CDN not loaded correctly or createClient is not a function.");
+            console.warn("[DEBUG base.html] Supabase library (window.supabase) from CDN not loaded correctly or createClient is not a function.");
         }
         if (!SUPABASE_URL_FROM_JINJA_TEST || SUPABASE_URL_FROM_JINJA_TEST === 'JINJA_URL_MISSING') {
-            console.warn("Supabase URL not provided or is empty (detected by JINJA_URL_MISSING). Client instance not initialized.");
+            console.warn("[DEBUG base.html] Supabase URL not provided by Jinja. Client not initialized.");
         }
         if (!SUPABASE_ANON_KEY_FROM_JINJA_TEST || SUPABASE_ANON_KEY_FROM_JINJA_TEST === 'JINJA_KEY_MISSING') {
-            console.warn("Supabase Anon Key not provided or is empty (detected by JINJA_KEY_MISSING). Client instance not initialized.");
+            console.warn("[DEBUG base.html] Supabase Anon Key not provided by Jinja. Client not initialized.");
         }
-        window.supabase = null;
+        // If we reach here, it means the client was not initialized, so ensure window.supabase is null.
+        // However, be cautious if window.supabase was already an initialized client from another script (e.g. login.html's specific client).
+        // For a truly global client from base.html, this path means base.html failed to set it up.
+        if (typeof window.supabase?.auth === 'undefined') { // Check if it's not already an initialized client
+            window.supabase = null;
+            console.log("[DEBUG base.html] window.supabase set to null as initialization prerequisites not met.");
+        } else {
+            console.log("[DEBUG base.html] Initialization prerequisites not met, but window.supabase appears to be an already initialized client. Leaving as is.");
+        }
       }
-      */
     </script>
     {% endblock %}
 </body>
