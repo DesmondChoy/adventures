@@ -566,7 +566,7 @@ This phase implements optional user authentication using Supabase Auth, allowing
                 *   If `event === 'SIGNED_OUT'`:
                     *   (User is on login page, perhaps show a "Logged out" message or simply ensure login buttons are active).
             *   Display a warning message for anonymous users (e.g., "As a guest, your adventure progress is tied to this browser session.").
-    *   [ ] **2.3. Auth Handling on Carousel Page (`/select` - `app/templates/pages/index.html` & `app/templates/components/scripts.html`):**
+    *   [x] **2.3. Auth Handling on Carousel Page (`/select` - `app/templates/pages/index.html` & `app/templates/components/scripts.html`):** (Verified existing implementation covers requirements as of 2025-05-22)
         *   On page load, use `supabase.auth.getSession()` to retrieve the current session.
         *   If no active session (or token is invalid/expired), redirect user back to `/` (login page).
         *   If a session exists, extract the `access_token` (JWT).
