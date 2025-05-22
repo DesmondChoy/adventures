@@ -555,8 +555,8 @@ This phase implements optional user authentication using Supabase Auth, allowing
         *   In the Supabase project dashboard (Project Settings -> API -> JWT Settings), find the JWT signing secret or the JWKS URI. This will be needed for backend JWT verification. Store this securely (e.g., as `SUPABASE_JWT_SECRET` in `.env` and Railway).
 
 **2. Implement Frontend Logic (Cline - Act Mode)**
-    *   [ ] **2.1. Authentication UI on `login.html`:** (Covered by step 0.3)
-    *   [ ] **2.2. Supabase JS Client Auth Logic on `login.html`:**
+    *   [x] **2.1. Authentication UI on `login.html`:** (Effectively completed as part of Step 0.3. UI elements for login buttons are present.)
+    *   [x] **2.2. Supabase JS Client Auth Logic on `login.html`:** (Core logic implemented and functional after client initialization fixes on 2025-05-22. Includes button listeners for `signInWithOAuth` and `signInAnonymously`, and an `onAuthStateChange` handler for redirects. Guest warning display is also present.)
         *   In a script tag within `login.html` or an included JS file:
             *   Attach event listener to "Login with Google" button to call `supabase.auth.signInWithOAuth({ provider: 'google' })`.
             *   Attach event listener to "Continue as Guest" button to call `supabase.auth.signInAnonymously()`.
