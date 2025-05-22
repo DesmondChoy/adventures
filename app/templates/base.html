@@ -22,25 +22,48 @@
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-      // Initialize Supabase client using variables passed from backend
-      const SUPABASE_URL = '{{ supabase_url | default('') }}'; // Use Jinja variable, provide default
-      const SUPABASE_ANON_KEY = '{{ supabase_anon_key | default('') }}'; // Use Jinja variable, provide default
+      // Attempt 1: Directly log what Jinja renders
+      console.log("[DEBUG base.html] Raw Jinja supabase_url: '{{ supabase_url }}'");
+      console.log("[DEBUG base.html] Raw Jinja supabase_anon_key: '{{ supabase_anon_key }}'");
+
+      // Attempt 2: Assign to const and log, with default filter
+      const SUPABASE_URL_FROM_JINJA_TEST = '{{ supabase_url | default("JINJA_URL_MISSING") }}';
+      const SUPABASE_ANON_KEY_FROM_JINJA_TEST = '{{ supabase_anon_key | default("JINJA_KEY_MISSING") }}';
       
-      let supabase = null; // Initialize as null
-      if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+      console.log("[DEBUG base.html] SUPABASE_URL_FROM_JINJA_TEST:", SUPABASE_URL_FROM_JINJA_TEST);
+      console.log("[DEBUG base.html] SUPABASE_ANON_KEY_FROM_JINJA_TEST:", SUPABASE_ANON_KEY_FROM_JINJA_TEST);
+
+      // For now, we'll comment out the rest of the Supabase client initialization
+      // to see if the above values render correctly first.
+      /*
+      const SUPABASE_URL_JINJA = '{{ supabase_url | default('') }}'; // Keep for reference if needed
+      const SUPABASE_ANON_KEY_JINJA = '{{ supabase_anon_key | default('') }}'; // Keep for reference if needed
+
+      if (SUPABASE_URL_FROM_JINJA_TEST && SUPABASE_URL_FROM_JINJA_TEST !== 'JINJA_URL_MISSING' &&
+          SUPABASE_ANON_KEY_FROM_JINJA_TEST && SUPABASE_ANON_KEY_FROM_JINJA_TEST !== 'JINJA_KEY_MISSING' &&
+          window.supabase && typeof window.supabase.createClient === 'function') {
         try {
-          supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-          console.log("Supabase client initialized.");
+          const clientInstance = window.supabase.createClient(SUPABASE_URL_FROM_JINJA_TEST, SUPABASE_ANON_KEY_FROM_JINJA_TEST);
+          console.log("Supabase client instance created successfully in base.html.");
+          window.supabase = clientInstance;
+          console.log("Supabase client instance assigned to global 'window.supabase'.");
         } catch (error) {
-          console.error("Error initializing Supabase client:", error);
+          console.error("Error initializing Supabase client instance:", error);
+          window.supabase = null; 
         }
       } else {
-        console.warn("Supabase URL or Anon Key not provided. Supabase client not initialized.");
+        if (!(window.supabase && typeof window.supabase.createClient === 'function')) {
+            console.warn("Supabase library (window.supabase) from CDN not loaded correctly or createClient is not a function.");
+        }
+        if (!SUPABASE_URL_FROM_JINJA_TEST || SUPABASE_URL_FROM_JINJA_TEST === 'JINJA_URL_MISSING') {
+            console.warn("Supabase URL not provided or is empty (detected by JINJA_URL_MISSING). Client instance not initialized.");
+        }
+        if (!SUPABASE_ANON_KEY_FROM_JINJA_TEST || SUPABASE_ANON_KEY_FROM_JINJA_TEST === 'JINJA_KEY_MISSING') {
+            console.warn("Supabase Anon Key not provided or is empty (detected by JINJA_KEY_MISSING). Client instance not initialized.");
+        }
+        window.supabase = null;
       }
-      
-      // You can now use the 'supabase' variable elsewhere in your frontend JS
-      // Make sure subsequent scripts that need 'supabase' are loaded after this block
-      // or access it appropriately (e.g., window.supabase = supabase;)
+      */
     </script>
     {% endblock %}
 </body>

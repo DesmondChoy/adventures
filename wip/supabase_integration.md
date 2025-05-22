@@ -574,6 +574,91 @@ This phase implements optional user authentication using Supabase Auth, allowing
         *   Implement a logout button/mechanism that calls `supabase.auth.signOut()` and redirects to `/`.
         *   Update UI to display user status (e.g., "Logged in as user@example.com" or "Playing as Guest") and the logout button.
 
+### Debugging Log and Current Status (Phase 4 Frontend - Step 2 as of 2025-05-22 PM)
+
+Work on implementing the frontend logic for user authentication (Step 2) has involved significant debugging. Here's a summary:
+
+**Initial Problem Encountered:**
+*   Buttons on the landing page (`/`, served by `app/templates/pages/login.html`) were unresponsive.
+*   The browser console initially showed:
+    *   Warnings: "Supabase URL not configured. Using placeholder..."
+    *   Warnings: "Supabase Anon Key not configured. Using placeholder..."
+    *   Error: "TypeError: Cannot read properties of undefined (reading 'createClient')"
+    *   This indicated issues with Supabase client initialization, likely due to missing credentials in the JavaScript.
+
+**Investigation and Actions Taken:**
+
+1.  **Server-Side Verification (`.env`, `app/main.py`, `app/routers/web.py`):**
+    *   User confirmed `.env` file has correct `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+    *   Confirmed `load_dotenv()` is called at the start of `app/main.py`.
+    *   Added debug logging to `app/routers/web.py` for the `/` and `/select` routes.
+    *   **Result:** Python server logs clearly showed that `os.getenv()` was correctly retrieving the Supabase URL and Key, and these non-empty values were being passed into the Jinja template context for `pages/login.html` and `pages/index.html`.
+
+2.  **Client-Side Investigation - `app/templates/pages/login.html`:**
+    *   **Initial Analysis:** The "View Page Source" for `/` revealed that Jinja *was* correctly rendering the actual Supabase URL and Key into the script block within `login.html` (this was from an older version of the script in `login.html` that had hardcoded values, which was misleading initially, but later confirmed Jinja was working for `{{ supabase_url }}`).
+    *   **Identified Issues in `login.html` script:**
+        1.  Flawed `if` conditions for checking if URL/Key were placeholders were incorrectly triggering console warnings.
+        2.  The Supabase client initialization `supabase = supabase.createClient(...)` was using a locally declared, uninitialized `supabase` variable instead of the global `window.supabase` (the Supabase library object from the CDN). This was causing the "TypeError" and the "Could not initialize authentication" alert.
+    *   **Server-Side Fix:** A `jinja2.exceptions.TemplateSyntaxError: unexpected '.'` occurred due to a JavaScript comment in `login.html` containing `{{...}}`. This was fixed by rephrasing the comment.
+    *   **Client-Side Fix:** The script in `login.html` was updated (on 2025-05-22) to:
+        *   Correctly use `window.supabase.createClient(...)` for initialization.
+        *   Store the client instance in `loginPageSupabaseClient`.
+        *   Update subsequent auth calls (button listeners, `onAuthStateChange`) to use `loginPageSupabaseClient`.
+        *   Refine the checks for whether Jinja rendered the URL/Key.
+
+### Not implemented yet
+
+3.  **Client-Side Investigation - `app/templates/base.html` (Caching Issue):**
+    *   **Hypothesis:** The initial errors and warnings might also be related to `base.html` (which `login.html` extends) not having the Supabase credentials or its script failing, or the browser serving a cached version of `base.html`.
+    *   **Action:** The script in `base.html` was simplified to *only* contain `console.log` statements to print the raw and default-filtered values of `{{ supabase_url }}` and `{{ supabase_anon_key }}`, with all other Supabase client initialization logic commented out.
+    *   **User Verification:** User confirmed the `base.html` file on disk contains this simplified debug script.
+    *   **Result:** Despite server restarts, hard refreshes, and Incognito mode, the browser console **does not show these new `[DEBUG base.html]...` log lines.** It continues to show the old warnings and errors (from a previous state of `base.html`'s script) with their original line numbers.
+    *   **Conclusion:** This strongly indicates the browser is not loading the current version of `base.html`.
+
+**Current Status (after `login.html` script update):**
+*   The server starts without the `TemplateSyntaxError`.
+*   When loading the landing page (`/`):
+    *   The Python server logs confirm correct Supabase URL/Key are fetched and sent to the template context.
+    *   The browser console now shows (from the updated `login.html` script):
+        *   Warning: "Supabase URL or Anon Key was not properly rendered by Jinja in login.html, or they are empty."
+        *   Error: "Supabase client instance (loginPageSupabaseClient) is null. Login buttons will not function."
+    *   The login buttons are still not working.
+    *   The `[DEBUG base.html]` logs (from the simplified `base.html` debug script) are **still not appearing** in the console.
+    *   The "Could not initialize authentication" alert from `login.html` is likely gone, replaced by the console warning/error above if the `alert` for "Authentication configuration is missing..." in `login.html` is not hit first.
+
+**Detailed Next Steps (Troubleshooting Focus):**
+
+1.  **Confirm Rendered Values in `login.html` (Again):**
+    *   The immediate priority is to understand why the updated script in `login.html` logs "Supabase URL or Anon Key was not properly rendered by Jinja... or they are empty."
+    *   **Action:** User to "View Page Source" for `http://127.0.0.1:8000/` (after server restart and browser hard refresh/incognito).
+    *   **Check:** Specifically look at these lines in the source:
+        ```html
+        const LOGIN_PAGE_SUPABASE_URL = '...'; 
+        const LOGIN_PAGE_SUPABASE_ANON_KEY = '...';
+        ```
+        What are the exact string values rendered there by Jinja? Are they the actual credentials, empty strings, or the literal `{{ supabase_url }}` placeholders? This will clarify if the warning from `login.html` is accurate.
+
+2.  **If `login.html` shows empty/placeholder values in source:**
+    *   This would contradict the Python logs. The issue would then be a deep problem with Jinja context not reaching `login.html` despite being passed by `web.py`.
+    *   **Possible Action:** Temporarily simplify `login.html` to not extend any base templates and pass the context directly to it, to isolate if template inheritance is the issue.
+
+3.  **If `login.html` shows correct values in source:**
+    *   This means the JavaScript condition `if (LOGIN_PAGE_SUPABASE_URL && LOGIN_PAGE_SUPABASE_URL !== '{{ supabase_url }}' && ...)` in `login.html` is being evaluated in an unexpected way.
+    *   **Possible Action:** Add more granular `console.log`s within this `if` condition in `login.html` to see the value of each part of the boolean expression.
+
+4.  **Address `base.html` Caching/Loading:**
+    *   The fact that `[DEBUG base.html]` logs are *still* not appearing is a major concern for the functionality of other pages (like `/select`) that will rely on a global Supabase client initialized in `base.html`.
+    *   **Possible Actions:**
+        *   Try renaming `app/templates/base.html` to `app/templates/base_old.html`, create a new `base.html` and paste the simplified debug script into it. This can sometimes break very stubborn caches tied to a filename.
+        *   Consider adding a cache-busting query parameter to script includes if possible with Jinja (more complex).
+        *   As a last resort for debugging, create a new, minimal FastAPI route that *only* serves `base.html` (or its content directly) to see if it can be loaded fresh.
+
+5.  **Once `login.html` is confirmed to receive Jinja variables correctly AND `base.html` loads its latest version:**
+    *   Uncomment the Supabase client initialization logic in `base.html` (the version that correctly uses `window.supabase.createClient` and assigns the instance to `window.supabase`).
+    *   Ensure `login.html` either uses the global `window.supabase` client from `base.html` (preferable for consistency) or that its own local client initialization works without conflicting. The current `login.html` script attempts its own initialization. For consistency, it might be better if all pages rely on one global instance set up in `base.html`. This would require `base.html` to be fixed first.
+
+This detailed logging should help us understand if the issue is server-side template rendering/caching or client-side script execution and caching.
+
 **3. Implement Backend Logic (Cline - Act Mode)**
     *   [ ] **3.1. Add `PyJWT` to `requirements.txt`:**
         *   And run `pip install -r requirements.txt`.

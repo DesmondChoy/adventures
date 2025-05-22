@@ -1,5 +1,109 @@
 <script>
     // Main script
+
+    const authManager = {
+        session: null,
+        accessToken: null,
+        user: null,
+
+        async initialize() {
+            if (!window.supabase) {
+                console.error("Supabase client (window.supabase) not available. Auth cannot be initialized.");
+                showError("Authentication service is unavailable. Please try again later.");
+                const storyCategoryScreen = document.getElementById('storyCategoryScreen');
+                if (storyCategoryScreen) {
+                     storyCategoryScreen.innerHTML = '<p class="text-red-500 text-center p-8 text-lg">Critical Error: Authentication service did not load. Please refresh or contact support.</p>';
+                }
+                const lessonTopicScreen = document.getElementById('lessonTopicScreen');
+                if (lessonTopicScreen) lessonTopicScreen.classList.add('hidden');
+                const storyContainer = document.getElementById('storyContainer');
+                if (storyContainer) storyContainer.classList.add('hidden');
+                hideLoader();
+                return false; 
+            }
+
+            try {
+                const { data, error } = await window.supabase.auth.getSession();
+                if (error) {
+                    console.error("Error getting session:", error.message);
+                    window.location.href = '/'; 
+                    return false;
+                }
+                if (!data.session) {
+                    console.log("No active session, redirecting to login.");
+                    window.location.href = '/'; 
+                    return false;
+                }
+                
+                this.session = data.session;
+                this.accessToken = data.session.access_token;
+                this.user = data.session.user;
+                console.log("Session retrieved on /select:", this.session);
+                this.updateUserStatusUI();
+
+                window.supabase.auth.onAuthStateChange((event, session) => {
+                    console.log('Auth event on /select page:', event, session);
+                    if (event === 'SIGNED_OUT') {
+                        authManager.clearSessionAndRedirect();
+                    } else if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+                        this.session = session;
+                        this.accessToken = session ? session.access_token : null;
+                        this.user = session ? session.user : null;
+                        this.updateUserStatusUI();
+                    }
+                });
+                return true; 
+            } catch (e) {
+                console.error("Exception during auth initialization:", e);
+                showError("An error occurred during authentication setup.");
+                window.location.href = '/'; 
+                return false;
+            }
+        },
+
+        updateUserStatusUI() {
+            const userStatusEl = document.getElementById('user-status');
+            const logoutButton = document.getElementById('logout-button');
+            if (userStatusEl && logoutButton) {
+                if (this.user) {
+                    let displayName = "Guest";
+                    if (this.user.is_anonymous === false && this.user.email) {
+                        displayName = this.user.email;
+                    } else if (this.user.is_anonymous === true && this.user.id) {
+                        displayName = `Guest (${this.user.id.substring(0,8)}...)`;
+                    }
+                    userStatusEl.textContent = `Logged in as: ${displayName}`;
+                    logoutButton.classList.remove('hidden');
+                } else {
+                    userStatusEl.textContent = 'Not logged in.';
+                    logoutButton.classList.add('hidden');
+                }
+            }
+        },
+
+        async handleLogout() {
+            if (!window.supabase) {
+                console.error("Supabase client not available for logout.");
+                return;
+            }
+            showLoader();
+            const { error } = await window.supabase.auth.signOut();
+            if (error) {
+                console.error('Error logging out:', error);
+                alert('Error logging out: ' + error.message);
+                hideLoader();
+            }
+            // onAuthStateChange (event === 'SIGNED_OUT') handles redirect.
+        },
+        
+        clearSessionAndRedirect() {
+            this.session = null;
+            this.accessToken = null;
+            this.user = null;
+            console.log("Session cleared, redirecting to login page.");
+            window.location.href = '/';
+        }
+    };
     
     // State and WebSocket Management
     class AdventureStateManager {
@@ -71,10 +175,15 @@
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const storyCategory = document.getElementById('storyCategory').value;
             const lessonTopic = document.getElementById('lessonTopic').value;
-            const clientUuid = this.stateManager.getClientUuid();
+            const clientUuid = this.stateManager.getClientUuid(); // Keep client_uuid for now
             
-            // Include client UUID as query parameter for user identification
-            return `${protocol}//${window.location.host}/ws/story/${storyCategory}/${lessonTopic}?client_uuid=${clientUuid}`;
+            let url = `${protocol}//${window.location.host}/ws/story/${storyCategory}/${lessonTopic}?client_uuid=${clientUuid}`;
+            
+            if (authManager.accessToken) {
+                url += `&token=${authManager.accessToken}`;
+                console.log("Connecting WebSocket with JWT token.");
+            }
+            return url;
         }
         
         setAdventureId(id) {
@@ -648,33 +757,80 @@ function startAdventure() {
     });
 
     // On page load, check if we're continuing a story
-    window.onload = function() {
-        const savedState = stateManager.loadState();
+    // window.onload = function() { // OLD CODE - REMOVE/REPLACE
+    // ... existing onload logic ...
+    // }; // OLD CODE - REMOVE/REPLACE
 
+    window.addEventListener('DOMContentLoaded', async () => {
+        if (!window.supabase) {
+            console.error("CRITICAL: Supabase client (window.supabase) not found on DOMContentLoaded.");
+            showError("Application cannot start: Auth service failed to load.");
+            const storyCategoryScreen = document.getElementById('storyCategoryScreen');
+            if (storyCategoryScreen) {
+                storyCategoryScreen.innerHTML = '<p class="text-red-500 text-center p-8 text-lg">Application Error: Core authentication service failed. Please refresh or contact support.</p>';
+            }
+            hideLoader();
+            return;
+        }
+
+        const authInitialized = await authManager.initialize();
+        if (!authInitialized) {
+            console.log("Authentication not initialized or redirecting. Halting further page script execution.");
+            return; 
+        }
+
+        const logoutButton = document.getElementById('logout-button');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', () => authManager.handleLogout());
+        } else {
+            console.warn("Logout button not found on the page. Ensure it's added to the HTML.");
+        }
+
+        const savedState = stateManager.loadState();
         if (savedState?.chapters?.length > 0 && savedState.storyCategory && savedState.lessonTopic) {
-            showLoader();
+            console.log("Resuming existing adventure.");
+            showLoader(); 
             updateProgress(savedState.chapters.length + 1, savedState.story_length);
             
-            // Add hidden classes to trigger transitions
             document.getElementById('storyCategoryScreen').classList.add('hidden');
             document.getElementById('lessonTopicScreen').classList.add('hidden');
             document.getElementById('introText').classList.add('hidden');
-            
-            // Remove hidden class to trigger transition
             document.getElementById('storyContainer').classList.remove('hidden');
 
-            // Restore selections
             selectedCategory = savedState.storyCategory;
             selectedLessonTopic = savedState.lessonTopic;
-            document.getElementById('storyCategory').value = selectedCategory;
-            document.getElementById('lessonTopic').value = selectedLessonTopic;
+            
+            const storyCatEl = document.getElementById('storyCategory');
+            const lessonTopicEl = document.getElementById('lessonTopic');
+            if (storyCatEl) storyCatEl.value = selectedCategory;
+            if (lessonTopicEl) lessonTopicEl.value = selectedLessonTopic;
 
-            initWebSocket();
+            initWebSocket(); 
         } else {
-            manageState('reset'); // Clear any partial state
-            hideLoader();
+            console.log("Starting new adventure selection.");
+            manageState('reset'); 
+            hideLoader(); 
+            
+            if (typeof Carousel !== 'undefined' && typeof setupCarouselKeyboardNavigation !== 'undefined') {
+                if (document.getElementById('categoryCarousel') && typeof totalCategories !== 'undefined') {
+                    window.categoryCarousel = new Carousel({
+                        elementId: 'categoryCarousel',
+                        itemCount: totalCategories, 
+                        dataAttribute: 'category',
+                        inputId: 'storyCategory',
+                        onSelect: (categoryId) => {
+                            selectedCategory = categoryId;
+                        }
+                    });
+                    setupCarouselKeyboardNavigation([window.categoryCarousel]);
+                } else {
+                     console.warn("Category carousel element or totalCategories not found. Carousel UI may not function.");
+                }
+            } else {
+                console.warn("Carousel class or setupCarouselKeyboardNavigation not defined. Carousel UI may not function.");
+            }
         }
-    };
+    });
 
     // Clean up WebSocket when leaving the page
     window.onbeforeunload = function() {

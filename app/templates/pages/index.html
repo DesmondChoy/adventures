@@ -3,15 +3,47 @@
 {% block title %}Interactive Story Adventure{% endblock %}
 
 {% block styles %}
+{{ super() }} {# Includes styles from main_layout.html if any, or just renders nothing if main_layout doesn't define this block #}
 <style>
     .btn-hover:hover {
         transform: translateY(-2px);
         transition: all 0.2s;
     }
+    #auth-status-container {
+        padding: 0.5rem 1rem; 
+        text-align: right; 
+        background-color: #f7fafc; /* Tailwind gray-100 */
+        border-bottom: 1px solid #e2e8f0; /* Tailwind gray-300 */
+        margin-bottom: 1rem;
+    }
+    #user-status {
+        font-size: 0.875rem; /* Tailwind text-sm */
+        color: #4a5568; /* Tailwind gray-700 */
+    }
+    #logout-button { 
+        margin-left: 1rem; 
+        padding: 0.25rem 0.75rem; 
+        background-color: #ef4444; /* Tailwind red-500 */
+        color: white; 
+        border-radius: 0.375rem; /* Tailwind rounded-md */
+        cursor: pointer; 
+        font-size: 0.875rem; /* Tailwind text-sm */
+    }
+    #logout-button:hover { 
+        background-color: #dc2626; /* Tailwind red-600 */
+    }
+    #logout-button.hidden { 
+        display: none; 
+    }
 </style>
 {% endblock %}
 
 {% block page_content %}
+    <div id="auth-status-container">
+        <span id="user-status">Loading user status...</span>
+        <button id="logout-button" class="hidden">Logout</button>
+    </div>
+
     <!-- Screen 1: Story Category Selection -->
     {% include "components/category_carousel.html" %}
 

@@ -104,9 +104,12 @@ async def select_adventure(request: Request):
         # Get Supabase environment variables
         supabase_url = os.getenv("SUPABASE_URL")
         supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
+        logger.info(
+            f"For /select route: SUPABASE_URL from env: '{supabase_url}', SUPABASE_ANON_KEY from env: '{supabase_anon_key}'"
+        )  # DEBUG LOG
 
         return templates.TemplateResponse(
-            "index.html",
+            "pages/index.html",  # Corrected path to use the index.html within 'pages'
             {
                 "request": request,
                 "story_categories": story_categories,  # This now contains the complete category data
@@ -135,6 +138,9 @@ async def root(request: Request):
         )
         supabase_url = os.getenv("SUPABASE_URL")
         supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
+        logger.info(
+            f"For / route: SUPABASE_URL from env: '{supabase_url}', SUPABASE_ANON_KEY from env: '{supabase_anon_key}'"
+        )  # DEBUG LOG
         return templates.TemplateResponse(
             "pages/login.html",  # Serve the new login page from templates
             {

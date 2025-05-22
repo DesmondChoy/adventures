@@ -374,80 +374,100 @@
             });
         });
 
-        // Supabase Client Initialization and Auth Logic
-        const SUPABASE_URL = '{{ supabase_url }}'; 
-        const SUPABASE_ANON_KEY = '{{ supabase_anon_key }}'; 
+        // Supabase Client Initialization and Auth Logic for login.html
+        const LOGIN_PAGE_SUPABASE_URL = '{{ supabase_url }}'; 
+        const LOGIN_PAGE_SUPABASE_ANON_KEY = '{{ supabase_anon_key }}'; 
         
-        let supabase;
-        try {
-            // Check if the placeholders have been replaced by comparing to their literal string value
-            if (!SUPABASE_URL || SUPABASE_URL === '{{ supabase_url }}') {
-                console.warn('Supabase URL not configured. Using placeholder. Ensure this page is served via FastAPI with context or configure manually.');
+        let loginPageSupabaseClient = null; 
+
+        // Check if the Supabase library itself has loaded (it's included earlier in this file)
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+            // Check if URL and Key are actually provided and not placeholders
+            // Note: Jinja replaces template variables (e.g., the double curly brace syntax) so if they are still present as such, it means they were not in context.
+            // An empty string means they were in context but empty, or default('') was used.
+            if (LOGIN_PAGE_SUPABASE_URL && LOGIN_PAGE_SUPABASE_URL !== '{{ supabase_url }}' && LOGIN_PAGE_SUPABASE_URL !== '' &&
+                LOGIN_PAGE_SUPABASE_ANON_KEY && LOGIN_PAGE_SUPABASE_ANON_KEY !== '{{ supabase_anon_key }}' && LOGIN_PAGE_SUPABASE_ANON_KEY !== '') {
+                try {
+                    loginPageSupabaseClient = window.supabase.createClient(LOGIN_PAGE_SUPABASE_URL, LOGIN_PAGE_SUPABASE_ANON_KEY);
+                    console.log("Supabase client initialized successfully in login.html.");
+                } catch (error) {
+                    console.error("Error initializing Supabase client in login.html:", error);
+                    alert("Could not initialize authentication (client creation failed). Please try again later.");
+                }
+            } else {
+                console.warn('Supabase URL or Anon Key was not properly rendered by Jinja in login.html, or they are empty.');
+                // The alert below is a bit strong if this is just a transient issue before base.html's global client is ready.
+                // However, login.html needs its own client to function if base.html fails or isn't used as the primary provider.
+                // For now, keeping an alert to indicate login page specific init failure.
+                alert("Authentication configuration is missing on the login page. Please contact support.");
             }
-            if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === '{{ supabase_anon_key }}') {
-                console.warn('Supabase Anon Key not configured. Using placeholder. Ensure this page is served via FastAPI with context or configure manually.');
-            }
-            supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } catch (error) {
-            console.error("Error initializing Supabase client:", error);
-            alert("Could not initialize authentication. Please try again later.");
+        } else {
+            console.error('Supabase JavaScript library (window.supabase) not loaded correctly before login.html script.');
+            alert("Critical error: Authentication library failed to load. Please try again later.");
         }
 
-
-        if (supabase) {
+        if (loginPageSupabaseClient) {
             const googleLoginButton = document.getElementById('login-google');
             const guestLoginButton = document.getElementById('continue-guest');
             const guestWarning = document.getElementById('guest-warning');
 
-            googleLoginButton.addEventListener('click', async () => {
-                guestWarning.classList.add('hidden');
-                const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-                if (error) {
-                    console.error('Error logging in with Google:', error);
-                    alert('Error logging in with Google: ' + error.message);
-                }
-            });
+            if (googleLoginButton) {
+                googleLoginButton.addEventListener('click', async () => {
+                    if (guestWarning) guestWarning.classList.add('hidden');
+                    const { error } = await loginPageSupabaseClient.auth.signInWithOAuth({ provider: 'google' });
+                    if (error) {
+                        console.error('Error logging in with Google:', error);
+                        alert('Error logging in with Google: ' + error.message);
+                    }
+                });
+            }
 
-            guestLoginButton.addEventListener('click', async () => {
-                const { data, error } = await supabase.auth.signInAnonymously();
-                if (error) {
-                    console.error('Error signing in anonymously:', error);
-                    alert('Error signing in anonymously: ' + error.message);
-                } else {
-                    // User is signed in anonymously, onAuthStateChange will handle redirect
-                    guestWarning.classList.remove('hidden');
-                }
-            });
+            if (guestLoginButton) {
+                guestLoginButton.addEventListener('click', async () => {
+                    const { data, error } = await loginPageSupabaseClient.auth.signInAnonymously();
+                    if (error) {
+                        console.error('Error signing in anonymously:', error);
+                        alert('Error signing in anonymously: ' + error.message);
+                    } else {
+                        if (guestWarning) guestWarning.classList.remove('hidden');
+                        // onAuthStateChange will handle redirect
+                    }
+                });
+            }
 
-            supabase.auth.onAuthStateChange((event, session) => {
-                console.log('Auth event:', event, session);
+            loginPageSupabaseClient.auth.onAuthStateChange((event, session) => {
+                console.log('Auth event on login.html:', event, session);
                 if (event === 'SIGNED_IN') {
-                    // Redirect to the adventure selection page
                     window.location.href = '/select';
                 } else if (event === 'SIGNED_OUT') {
-                    // User is signed out, ensure they are on the login page
-                    // If they are on /select or other protected page, they should be redirected here by server/client logic
-                    guestWarning.classList.add('hidden');
+                    if (guestWarning) guestWarning.classList.add('hidden');
                 }
             });
 
-            // Check initial session state on load
-            async function checkSession() {
-                const { data, error } = await supabase.auth.getSession();
+            // Check initial session state on load for this page
+            async function checkLoginPageSession() {
+                const { data, error } = await loginPageSupabaseClient.auth.getSession();
                 if (error) {
-                    console.error("Error getting session:", error.message);
+                    console.error("Error getting session on login page:", error.message);
                     return;
                 }
                 if (data.session) {
-                    console.log("User already signed in, redirecting to /select");
+                    console.log("User already signed in (login page check), redirecting to /select");
                     window.location.href = '/select';
                 } else {
-                    console.log("No active session found.");
+                    console.log("No active session found (login page check).");
                 }
             }
-            checkSession();
+            checkLoginPageSession();
+        } else {
+            console.error("Supabase client instance (loginPageSupabaseClient) is null. Login buttons will not function.");
+            // Optionally disable buttons or show a more permanent error message on the page
+            const googleLoginButton = document.getElementById('login-google');
+            const guestLoginButton = document.getElementById('continue-guest');
+            if(googleLoginButton) googleLoginButton.disabled = true;
+            if(guestLoginButton) guestLoginButton.disabled = true;
+            // You could also inject an error message into the DOM here.
         }
-
     </script>
 </body>
 </html>
