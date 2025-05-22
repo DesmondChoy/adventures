@@ -511,32 +511,164 @@ These fixes ensure that telemetry events are logged reliably and without errors.
         *   `SELECT event_name, COUNT(*) FROM telemetry_events WHERE timestamp > now() - interval '7 days' GROUP BY event_name;`
         *   Analyze `metadata` JSONB fields for deeper insights.
 
-## Phase 4: Optional User Authentication (Supabase Auth) - *Deferred until Persistent State (including resume) is complete*
+## Phase 4: Optional User Authentication (Supabase Auth) - Detailed Plan
 
-- [ ] **1. Configure Supabase Auth:**
-    *   [ ] Enable the Google provider in the Supabase project dashboard (requires setting up OAuth credentials in Google Cloud Console).
-    *   [ ] Enable Anonymous sign-ins in the Supabase dashboard settings.
+This phase implements optional user authentication using Supabase Auth, allowing users to sign in with Google or continue as an anonymous (Supabase-managed) guest.
 
-- [ ] **2. Implement Frontend Logic:**
-    *   [ ] Add UI elements for "Login with Google" and "Continue as Guest".
-    *   [ ] Use the Supabase JS client library:
-        *   [ ] Implement `supabase.auth.signInWithOAuth({ provider: 'google' })` for Google login button.
-        *   [ ] Implement `supabase.auth.signInAnonymously()` for guest access button.
-    *   [ ] Implement logic to listen for authentication state changes (`onAuthStateChange`) to update the UI (e.g., show user email, hide login buttons) and get the `user_id` and session token.
-    *   [ ] Display the warning message for anonymous users.
-    *   [ ] Ensure the user's auth token (JWT) is sent with requests to the backend (e.g., in the `Authorization: Bearer <token>` header for API calls, potentially passed via WebSocket connection parameters).
+**Key Decisions Made:**
+*   **Login Page:** A new dedicated login page will be created at the root path (`/`).
+*   **Carousel Page Path:** The existing adventure selection (carousel) page will move to `/select`.
+*   **JWT Handling:** Session management and JWT persistence across pages will rely on the Supabase JS client library's default behavior using browser localStorage.
+*   **Foreign Key Behavior:** When a user is deleted from `auth.users`, the `user_id` in the `adventures` and `telemetry_events` tables will be `SET NULL`.
 
-- [ ] **3. Implement Backend Logic:**
-    *   [ ] Add middleware or dependency injection in FastAPI to verify the JWT sent from the frontend and extract the `user_id`. (Libraries like `AuthX` or custom dependencies using `PyJWT` and Supabase public key can work).
-    *   [ ] Pass the validated `user_id` to the `StateStorageService` and telemetry logging functions when available.
-    *   [ ] Update database interactions (`adventures`, `telemetry_events`) to store the `user_id`.
+**Implementation Steps:**
 
-- [ ] **4. Update Database Schema/RLS:**
-    *   [ ] Using Supabase CLI migrations, update the database schema and implement RLS policies:
-        *   [ ] Create a new migration (`supabase migration new add_auth_foreign_keys_and_rls`)
-        *   [ ] Define the SQL to add foreign key constraints linking `user_id` columns in `adventures` and `telemetry_events` to the `auth.users` table
-        *   [ ] Define the SQL to implement Row Level Security (RLS) policies (e.g., `CREATE POLICY "Users can manage their own adventures." ON adventures FOR ALL USING (auth.uid() = user_id);`)
-        *   [ ] Apply the migration (`supabase migration up`)
+**0. Create Basic Landing/Login Page (Cline - Act Mode)**
+    *   [ ] **0.1. New HTML File:** Create `app/templates/pages/login.html`.
+        *   This page will serve as the initial entry point for users.
+    *   [ ] **0.2. New FastAPI Route:**
+        *   Modify `app/routers/web.py`.
+        *   Create a route to serve `login.html` at `/`.
+        *   Update the existing route for `app/templates/pages/index.html` (the carousel page) to serve it at `/select`.
+    *   [ ] **0.3. Basic Structure for `login.html`:**
+        *   Include a title (e.g., "Welcome to Learning Odyssey").
+        *   Add a "Login with Google" button.
+        *   Add a "Continue as Guest" button.
+        *   Minimal styling, to be enhanced later during a full landing page overhaul.
+    *   [ ] **0.4. Ensure Supabase JS Client is available on `login.html`:**
+        *   The page should include or extend a base template that initializes the Supabase JS client (similar to how `base.html` does for the current `index.html`).
+
+**1. Configure Supabase Auth (User Task - Requires Supabase Dashboard & Google Cloud Console Access)**
+    *   [ ] **1.1. Enable Google Provider:**
+        *   In the Supabase project dashboard (Authentication -> Providers), enable "Google".
+        *   This requires setting up OAuth 2.0 credentials in Google Cloud Console:
+            *   Create/use a Google Cloud Project.
+            *   Enable necessary APIs (e.g., Google Identity Platform).
+            *   Configure the OAuth Consent Screen.
+            *   Create OAuth 2.0 Client ID credentials (Application type: Web application).
+                *   **Authorized JavaScript origins:** Add your app's URLs (e.g., `http://localhost:8000`, production URL).
+                *   **Authorized redirect URIs:** Add the redirect URI provided by Supabase (e.g., `https://<your-supabase-project-ref>.supabase.co/auth/v1/callback`).
+            *   Copy the generated Client ID and Client Secret into the Supabase Google provider settings.
+    *   [ ] **1.2. Enable Anonymous Sign-ins:**
+        *   In the Supabase project dashboard (Authentication -> Providers or Settings), enable "Anonymous sign-ins".
+    *   [ ] **1.3. Obtain JWT Signing Secret (or JWKS URL):**
+        *   In the Supabase project dashboard (Project Settings -> API -> JWT Settings), find the JWT signing secret or the JWKS URI. This will be needed for backend JWT verification. Store this securely (e.g., as `SUPABASE_JWT_SECRET` in `.env` and Railway).
+
+**2. Implement Frontend Logic (Cline - Act Mode)**
+    *   [ ] **2.1. Authentication UI on `login.html`:** (Covered by step 0.3)
+    *   [ ] **2.2. Supabase JS Client Auth Logic on `login.html`:**
+        *   In a script tag within `login.html` or an included JS file:
+            *   Attach event listener to "Login with Google" button to call `supabase.auth.signInWithOAuth({ provider: 'google' })`.
+            *   Attach event listener to "Continue as Guest" button to call `supabase.auth.signInAnonymously()`.
+            *   Implement `supabase.auth.onAuthStateChange((event, session) => { ... })`:
+                *   If `event === 'SIGNED_IN'`:
+                    *   Redirect the user to `/select` (the carousel page).
+                *   If `event === 'SIGNED_OUT'`:
+                    *   (User is on login page, perhaps show a "Logged out" message or simply ensure login buttons are active).
+            *   Display a warning message for anonymous users (e.g., "As a guest, your adventure progress is tied to this browser session.").
+    *   [ ] **2.3. Auth Handling on Carousel Page (`/select` - `app/templates/pages/index.html` & `app/templates/components/scripts.html`):**
+        *   On page load, use `supabase.auth.getSession()` to retrieve the current session.
+        *   If no active session (or token is invalid/expired), redirect user back to `/` (login page).
+        *   If a session exists, extract the `access_token` (JWT).
+        *   Modify `WebSocketManager` (or equivalent script) to pass this JWT when establishing the WebSocket connection (e.g., as a query parameter: `ws://.../ws/story/.../?token=JWT_HERE`).
+        *   Implement a logout button/mechanism that calls `supabase.auth.signOut()` and redirects to `/`.
+        *   Update UI to display user status (e.g., "Logged in as user@example.com" or "Playing as Guest") and the logout button.
+
+**3. Implement Backend Logic (Cline - Act Mode)**
+    *   [ ] **3.1. Add `PyJWT` to `requirements.txt`:**
+        *   And run `pip install -r requirements.txt`.
+    *   [ ] **3.2. Create JWT Verification Dependency:**
+        *   Create `app/auth/dependencies.py`.
+        *   Implement a FastAPI dependency `get_current_user_id_optional(token: Optional[str] = Query(None)) -> Optional[UUID]:`
+            *   If `token` is provided:
+                *   Verify the JWT using `PyJWT` and the `SUPABASE_JWT_SECRET` (or JWKS).
+                *   If valid, extract and return the `user_id` (from `sub` claim, cast to UUID).
+                *   If invalid, log a warning and return `None` (or raise HTTPException if auth becomes mandatory for some routes later).
+            *   If no `token`, return `None`.
+    *   [ ] **3.3. Integrate Auth into WebSocket Router (`app/routers/websocket_router.py`):**
+        *   Update the WebSocket endpoint (`@router.websocket("/ws/story/{story_category}/{lesson_topic}")`) to accept the `token` as an optional query parameter.
+        *   In the connection logic, call `get_current_user_id_optional(token)` to get the `user_id`.
+        *   Store this `user_id` (which can be `None`) in the `connection_data` dictionary (e.g., `connection_data["user_id"] = user_id`).
+    *   [ ] **3.4. Pass `user_id` to Services:**
+        *   **`StateStorageService` (`app/services/state_storage_service.py`):**
+            *   Ensure `store_state` method correctly uses the `user_id` passed to it (already an optional param).
+            *   Modify `get_active_adventure_id(client_uuid: str, user_id: Optional[UUID] = None)`:
+                *   Prioritize querying by `user_id` if provided.
+                *   If `user_id` is `None`, fall back to querying by `client_uuid` (from `state_data->'metadata'->>'client_uuid'`) for non-authenticated users or legacy data.
+        *   **`TelemetryService` (`app/services/telemetry_service.py`):**
+            *   Ensure `log_event` method correctly uses the `user_id` passed to it (already an optional param).
+        *   **Update Callers:** Modify `websocket_router.py` to pass `connection_data.get("user_id")` to these service methods.
+    *   [ ] **3.5. Update Database Interactions in Services:**
+        *   `StateStorageService.store_state`: When preparing the `record` for Supabase, include the `user_id` if it's not `None`.
+        *   `TelemetryService.log_event`: When preparing the `record` for Supabase, include the `user_id` if it's not `None`.
+
+**4. Update Database Schema/RLS (Cline - Act Mode)**
+    *   [ ] **4.1. Create Supabase Migration:**
+        *   Run `npx supabase migration new add_auth_fks_and_rls` (or similar name).
+        *   In the generated SQL file, add:
+            ```sql
+            -- Link adventures.user_id to auth.users
+            ALTER TABLE public.adventures
+            ADD CONSTRAINT fk_adventures_auth_users FOREIGN KEY (user_id)
+            REFERENCES auth.users (id) ON DELETE SET NULL;
+
+            COMMENT ON COLUMN public.adventures.user_id IS 'Links to the authenticated user in auth.users table. SET NULL on user deletion.';
+
+            -- Link telemetry_events.user_id to auth.users
+            ALTER TABLE public.telemetry_events
+            ADD CONSTRAINT fk_telemetry_events_auth_users FOREIGN KEY (user_id)
+            REFERENCES auth.users (id) ON DELETE SET NULL;
+
+            COMMENT ON COLUMN public.telemetry_events.user_id IS 'Links to the authenticated user in auth.users table. SET NULL on user deletion.';
+
+            -- Ensure RLS is enabled on telemetry_events (already enabled on adventures)
+            ALTER TABLE public.telemetry_events ENABLE ROW LEVEL SECURITY;
+
+            -- RLS Policies for 'adventures' table
+            -- Drop old service key policy if it was too broad
+            -- Example: DROP POLICY IF EXISTS "Allow backend access via service key" ON public.adventures;
+
+            -- Allow service_role full access (bypasses other RLS)
+            CREATE POLICY "Adventures service_role full access" ON public.adventures
+            FOR ALL USING (true) WITH CHECK (true); -- Or specify TO service_role if preferred
+
+            CREATE POLICY "Users can select their own or guest adventures" ON public.adventures
+            FOR SELECT USING (auth.uid() = user_id OR user_id IS NULL);
+
+            CREATE POLICY "Users can insert adventures for themselves or as guest" ON public.adventures
+            FOR INSERT WITH CHECK (auth.uid() = user_id OR user_id IS NULL); -- For anonymous Supabase users, auth.uid() is their anon ID
+
+            CREATE POLICY "Users can update their own adventures" ON public.adventures
+            FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+            
+            CREATE POLICY "Users can delete their own adventures" ON public.adventures
+            FOR DELETE USING (auth.uid() = user_id);
+
+            -- RLS Policies for 'telemetry_events' table
+            -- Allow service_role full access
+            CREATE POLICY "Telemetry service_role full access" ON public.telemetry_events
+            FOR ALL USING (true) WITH CHECK (true); -- Or specify TO service_role
+
+            CREATE POLICY "Users can insert their own telemetry" ON public.telemetry_events
+            FOR INSERT WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+            
+            -- Generally, select/update/delete on telemetry might be restricted or admin-only
+            CREATE POLICY "Users can select their own telemetry" ON public.telemetry_events
+            FOR SELECT USING (auth.uid() = user_id OR user_id IS NULL);
+            ```
+    *   [ ] **4.2. Apply Migration:**
+        *   Run `npx supabase db push`.
+
+**5. Testing (User & Cline - Collaborative)**
+    *   [ ] Test Google Login flow.
+    *   [ ] Test "Continue as Guest" (Supabase anonymous sign-in) flow.
+    *   [ ] Verify `user_id` is populated in `adventures` and `telemetry_events` for authenticated and Supabase anonymous users.
+    *   [ ] Verify `user_id` is `NULL` for adventures/telemetry created by truly unauthenticated flows (if any remain possible, or for legacy data).
+    *   [ ] Test adventure resumption for Google users.
+    *   [ ] Test adventure resumption for Supabase anonymous users.
+    *   [ ] Test RLS policies (e.g., ensure one user cannot access another's data if they tried to manipulate client-side calls, though our app flow doesn't directly allow this).
+    *   [ ] Test logout functionality (redirects to `/`, session cleared).
+    *   [ ] Test behavior if user tries to access `/select` without being logged in (should redirect to `/`).
 
 ## Considerations & Next Steps
 
