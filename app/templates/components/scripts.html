@@ -172,17 +172,25 @@
         }
 
         getWebSocketUrl() {
+            console.log('[FrontendWS Log 1.2] getWebSocketUrl called.');
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const storyCategory = document.getElementById('storyCategory').value;
             const lessonTopic = document.getElementById('lessonTopic').value;
             const clientUuid = this.stateManager.getClientUuid(); // Keep client_uuid for now
             
-            let url = `${protocol}//${window.location.host}/ws/story/${storyCategory}/${lessonTopic}?client_uuid=${clientUuid}`;
+            const encodedStoryCategory = encodeURIComponent(storyCategory);
+            const encodedLessonTopic = encodeURIComponent(lessonTopic);
+            const encodedClientUuid = encodeURIComponent(clientUuid);
+
+            let url = `${protocol}//${window.location.host}/ws/story/${encodedStoryCategory}/${encodedLessonTopic}?client_uuid=${encodedClientUuid}`;
             
             if (authManager.accessToken) {
-                url += `&token=${authManager.accessToken}`;
-                console.log("Connecting WebSocket with JWT token.");
+                console.log('[FrontendWS Log 4] Token will be appended to URL.');
+                url += `&token=${encodeURIComponent(authManager.accessToken)}`;
+            } else {
+                console.warn('[FrontendWS Log 5] No token found, proceeding without token for WebSocket.');
             }
+            console.log('[FrontendWS Log 6] Final WebSocket URL:', url);
             return url;
         }
         
@@ -224,15 +232,14 @@
             await new Promise(resolve => setTimeout(resolve, delay));
 
             const websocketUrl = this.getWebSocketUrl();
-            console.log("[WebSocketManager.reconnect] Attempting to connect to WebSocket URL:", websocketUrl); // ADDED LOG
+            console.log("[WebSocketManager.reconnect] Attempting to connect to WebSocket URL:", websocketUrl); 
             try {
                 this.connection = new WebSocket(websocketUrl);
-                console.log("[WebSocketManager.reconnect] WebSocket object created:", this.connection); // ADDED LOG
+                console.log("[WebSocketManager.reconnect] WebSocket object created:", this.connection); 
                 this.setupConnectionHandlers();
                 this.reconnectAttempts++;
             } catch (e) {
-                console.error("[WebSocketManager.reconnect] Error creating WebSocket:", e); // ADDED ERROR LOG
-                // Potentially hide loader or show error to user if reconnect fails critically
+                console.error("[WebSocketManager.reconnect] Error creating WebSocket:", e); 
                 hideLoader();
             }
         }
@@ -241,7 +248,7 @@
             const savedState = this.stateManager.loadState();
 
             this.connection.onopen = () => {
-                console.log('WebSocket reconnected, restoring state...');
+                console.log('[FrontendWS Log 9] WebSocket connection opened.');
                 // Don't hide loader here - wait for server to send hide_loader message
                 this.reconnectAttempts = 0; // Reset counter on successful connection
                 
@@ -269,6 +276,7 @@
             };
 
             this.connection.onclose = (event) => {
+                console.log(`[FrontendWS Log 11] WebSocket connection closed. Code: ${event.code}, Reason: ${event.reason}, Clean: ${event.wasClean}`);
                 hideLoader();
                 if (!event.wasClean) {
                     console.error('WebSocket connection died');
@@ -277,7 +285,7 @@
             };
 
             this.connection.onerror = (error) => {
-                console.error('WebSocket Error:', error);
+                console.error('[FrontendWS Log 10] WebSocket Error: ', error);
                 hideLoader();
             };
 
@@ -340,6 +348,7 @@
     }
 
 function startAdventure() {
+    console.log('[FrontendWS Log 0] startAdventure called. Category:', selectedCategory, 'Topic:', selectedLessonTopic);
     // Validate both inputs
     if (!selectedCategory) {
         showError('Please select a story category to continue');
@@ -365,6 +374,7 @@ function startAdventure() {
 
     // Start the adventure
     showLoader();
+    console.log('[FrontendWS Log 1] Before calling initWebSocket() in startAdventure.');
     initWebSocket();
 }
 
@@ -445,15 +455,23 @@ function startAdventure() {
 
     function initWebSocket() {
         showLoader();
-        const websocketUrl = wsManager.getWebSocketUrl();
-        console.log("[initWebSocket] Attempting to connect to WebSocket URL:", websocketUrl); // ADDED LOG
+        console.log('[FrontendWS Log 1.1] initWebSocket called.');
+        if (!authManager || !authManager.accessToken) {
+            console.warn('[FrontendWS Log 2] In initWebSocket: AuthManager or AccessToken is missing initially.');
+        } else {
+            console.log('[FrontendWS Log 3] In initWebSocket: AccessToken found initially:', authManager.accessToken ? 'Exists' : 'MISSING');
+        }
+
+        const websocketUrl = wsManager.getWebSocketUrl(); 
+
         try {
+            console.log('[FrontendWS Log 7] About to call "new WebSocket()" in initWebSocket.');
             storyWebSocket = new WebSocket(websocketUrl);
-            console.log("[initWebSocket] WebSocket object created:", storyWebSocket); // ADDED LOG
+            console.log("[FrontendWS Log 8] WebSocket object created:", storyWebSocket); 
             wsManager.connection = storyWebSocket;
-            wsManager.setupConnectionHandlers();
+            wsManager.setupConnectionHandlers(); // This will set onopen, onclose, onerror, onmessage
         } catch (e) {
-            console.error("[initWebSocket] Error creating WebSocket:", e); // ADDED ERROR LOG
+            console.error("[FrontendWS Log 12] CRITICAL ERROR instantiating WebSocket:", e); 
             hideLoader(); // Hide loader if WebSocket creation fails
         }
 

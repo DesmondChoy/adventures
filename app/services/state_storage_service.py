@@ -1,7 +1,8 @@
-import uuid
+import uuid  # Keep for adventure_id generation if needed, and for UUID type hint
 from datetime import datetime, timedelta
 import logging
 from typing import Dict, Any, Optional
+from uuid import UUID  # Import UUID for type hinting user_id
 import os
 import json
 from supabase import create_client, Client
@@ -204,46 +205,87 @@ class StateStorageService:
             logger.error(f"Error retrieving state from Supabase: {str(e)}")
             return None
 
-    async def get_active_adventure_id(self, client_uuid: str) -> Optional[str]:
+    async def get_active_adventure_id(
+        self, client_uuid: Optional[str] = None, user_id: Optional[UUID] = None
+    ) -> Optional[str]:
         """
-        Find an active (incomplete) adventure for the given client UUID.
+        Find an active (incomplete) adventure.
+        Prioritizes user_id if provided, otherwise uses client_uuid.
 
         Args:
-            client_uuid: The client's UUID stored in localStorage
+            client_uuid: Optional client's UUID.
+            user_id: Optional user's UUID from authentication.
 
         Returns:
-            Optional[str]: The adventure ID if found, None otherwise
+            Optional[str]: The adventure ID if found, None otherwise.
         """
-        try:
-            logger.info(f"Looking for active adventure for client UUID: {client_uuid}")
-
-            # Query Supabase for incomplete adventures with matching client_uuid in the metadata
-            # We need to use the JSON path syntax to query inside the JSONB field
-            # Order by updated_at DESC to get the most recently updated one
-            response = (
-                self.supabase.table("adventures")
-                .select("id, updated_at")
-                .eq("client_uuid", client_uuid)  # Query the new dedicated column
-                .eq("is_complete", False)  # Restore this filter
-                .order("updated_at", desc=True)  # Restore this ordering
-                .limit(1)  # Restore this limit
-                .execute()
+        if not user_id and not client_uuid:
+            logger.warning(
+                "get_active_adventure_id called without user_id or client_uuid."
             )
-            # --- ADDED LOGGING ---
-            logger.debug(f"Raw response from get_active_adventure_id query: {response}")
-            # --- END ADDED LOGGING ---
-
-            # Check if any active adventure was found
-            if response.data and len(response.data) > 0:
-                adventure_id = response.data[0]["id"]
-                logger.info(f"Found active adventure with ID: {adventure_id}")
-                return adventure_id
-
-            logger.info(f"No active adventure found for client UUID: {client_uuid}")
             return None
 
+        try:
+            query = (
+                self.supabase.table("adventures")
+                .select("id, updated_at")
+                .eq("is_complete", False)
+                .order("updated_at", desc=True)
+                .limit(1)
+            )
+
+            adventure_id_found = None
+
+            if user_id:
+                logger.info(f"Looking for active adventure for user_id: {user_id}")
+                response_user = query.eq(
+                    "user_id", str(user_id)
+                ).execute()  # Ensure user_id is string for query, REMOVED await
+                logger.debug(
+                    f"Raw response from get_active_adventure_id query (user_id: {user_id}): {response_user}"
+                )
+                if response_user.data and len(response_user.data) > 0:
+                    adventure_id_found = response_user.data[0]["id"]
+                    logger.info(
+                        f"Found active adventure with ID: {adventure_id_found} for user_id: {user_id}"
+                    )
+                    return adventure_id_found
+                else:
+                    logger.info(f"No active adventure found for user_id: {user_id}")
+
+            # If not found by user_id (or user_id was not provided) and client_uuid is available, try client_uuid
+            if not adventure_id_found and client_uuid:
+                logger.info(
+                    f"Looking for active adventure for client_uuid: {client_uuid} (user_id search failed or user_id not provided)"
+                )
+                response_client = query.eq(
+                    "client_uuid", client_uuid
+                ).execute()  # Query the dedicated client_uuid column, REMOVED await
+                logger.debug(
+                    f"Raw response from get_active_adventure_id query (client_uuid: {client_uuid}): {response_client}"
+                )
+                if response_client.data and len(response_client.data) > 0:
+                    adventure_id_found = response_client.data[0]["id"]
+                    logger.info(
+                        f"Found active adventure with ID: {adventure_id_found} for client_uuid: {client_uuid}"
+                    )
+                    return adventure_id_found
+                else:
+                    logger.info(
+                        f"No active adventure found for client_uuid: {client_uuid}"
+                    )
+
+            if not adventure_id_found:
+                logger.info(
+                    f"No active adventure found for user_id: {user_id} or client_uuid: {client_uuid}"
+                )
+
+            return None  # Explicitly return None if no adventure is found by either identifier
+
         except Exception as e:
-            logger.error(f"Error finding active adventure: {str(e)}")
+            logger.error(
+                f"Error finding active adventure (user_id: {user_id}, client_uuid: {client_uuid}): {str(e)}"
+            )
             return None
 
     async def cleanup_expired(self) -> int:

@@ -191,28 +191,44 @@ This phase implements optional user authentication using Supabase Auth, allowing
         *   Ran `npx supabase db push` to apply the migration.
 
 **5. Testing (User & Cline - Collaborative)**
-    *   **Debugging Log & Current Status (As of 2025-05-23 PM):**
-        *   **Problem:** `user_id` in public tables (e.g., `adventures`) does not match the Supabase Auth User ID. Backend logs for JWT processing (e.g., "Authenticated user via JWT...") are not appearing.
-        *   **Observations:**
-            *   Three different UUIDs identified during initial testing:
-                1. Public table `user_id` (e.g., `baa8...`).
-                2. Correct Supabase Auth User ID in `auth.users` (e.g., `e627...`).
-                3. A `learning_odyssey_user_uuid` in browser console (likely `client_uuid`, e.g., `db4e...`).
-            *   Frontend confirmed to be constructing WebSocket URL with `&token=` parameter containing a JWT after:
-                *   `SUPABASE_JWT_SECRET` in `.env` was quoted and backend restarted.
-                *   Frontend logging was added to `scripts.html` to display the WebSocket URL and wrap `new WebSocket()` in `try...catch`.
-            *   The `new WebSocket()` call in frontend JavaScript does not throw an immediate error, and a WebSocket object is created successfully on the client side.
-            *   Initial check of browser Network tab (WS filter) did not show the WebSocket connection, prompting frontend script changes.
-        *   **Debugging Done (as of 2025-05-23 PM):**
-            *   Ensured `SUPABASE_JWT_SECRET` is quoted in `.env` and backend restarted.
-            *   Added diagnostic logging to `app/templates/components/scripts.html` for WebSocket URL construction and instantiation.
-        *   **Immediate Next Steps (Troubleshooting Backend JWT Handling - when debugging resumes):**
-            1.  **Re-verify Backend Logs & Network Tab (Post Frontend Logging):**
-                *   User to perform Google Login.
-                *   User to check browser's Network tab (filtered for WS/WebSockets) to see if a WebSocket connection attempt now appears. If yes, note its status (e.g., 101 Switching Protocols, or an error).
-                *   User to check Python backend terminal logs very carefully for *any* logs from `app/routers/websocket_router.py` (especially initial connection logs like "WebSocket attempting connection..." or "WebSocket connection established...").
-            2.  **If Backend Still Shows No JWT Processing Logs (even if a WS connection is seen in Network tab and initial router logs appear):**
-                *   The next step would be to add even earlier logging in `app/routers/websocket_router.py` (right at the start of the `story_websocket` function, before `await websocket.accept()`) to inspect `websocket.scope.get('query_string')` and the raw `token` parameter as FastAPI receives it. This will help determine if FastAPI is correctly parsing the `token` from the query string for WebSocket connections.
+    *   **Debugging Log & Current Status (Updated 2025-05-23 Evening):**
+        *   **Initial Problem:** `user_id` in public tables (e.g., `adventures`) did not match the Supabase Auth User ID. Backend logs for JWT processing were not appearing.
+        *   **Debugging Steps & Findings:**
+            *   **Frontend Logging (`app/templates/components/scripts.html`):**
+                *   Added detailed `console.log` statements around WebSocket URL construction and instantiation.
+                *   **Result (2025-05-23 PM Test 1):** Initially, no WebSocket connection attempt was visible in the browser's Network Tab, and no relevant backend logs appeared. This indicated a frontend issue preventing the WebSocket call.
+                *   **Corrective Action (Frontend):** Updated `scripts.html` with more robust logging and ensured `encodeURIComponent` for token in URL. (Applied via `write_to_file` after `replace_in_file` issues).
+                *   **Result (2025-05-23 PM Test 2 - After Frontend Script Update):**
+                    *   **Browser Console:** Showed all `[FrontendWS Log ...]` messages, confirming `authManager.accessToken` was present, WebSocket URL was correctly formed with the token, `new WebSocket()` was called, and the `onopen` event fired.
+                    *   **Browser Network Tab:** Showed a successful WebSocket connection (Status `101 Switching Protocols`).
+                    *   **Conclusion:** Frontend is correctly sending the JWT via the WebSocket URL.
+            *   **Backend Logging (`app/routers/websocket_router.py`):**
+                *   Modified `story_websocket` signature to accept `token: Optional[str] = Query(None)` and added `Query` import.
+                *   Added `print()` statements at the very beginning of `story_websocket` (before `await websocket.accept()`) to log `websocket.scope.get('query_string')` and the parsed `token` parameter.
+                *   **Result (2025-05-23 PM Test 2 - After Backend Script Update & Restart):**
+                    *   Backend diagnostic prints confirmed:
+                        *   `--- RAW WEBSOCKET SCOPE QUERY STRING: client_uuid=...&token=eyJhbGciOi... ---` (Full query string with token visible)
+                        *   `--- FASTAPI PARSED token PARAMETER (before accept): eyJhbGciOi... ---` (Full JWT visible, confirming FastAPI parsed it)
+                    *   Standard Uvicorn/FastAPI logs showed the WebSocket connection being accepted with the full URL including the token.
+                    *   However, **no logs from the subsequent JWT decoding block** (e.g., "Attempting to decode JWT", "Authenticated user via JWT") appeared in the backend terminal.
+        *   **Current Diagnosis (Updated 2025-05-23 Late Evening):**
+            *   The frontend correctly sends the JWT.
+            *   The WebSocket connection is established successfully.
+            *   FastAPI correctly parses the `token` from the query string.
+            *   The JWT decoding logic in `websocket_router.py` now executes successfully, extracting the `user_id` (as a UUID object) and storing it in `connection_data`.
+            *   The `TypeError` related to `get_active_adventure_id`'s signature was resolved by correcting the method definition in `state_storage_service.py`.
+            *   The `await` issue with Supabase `execute()` calls in `get_active_adventure_id` was resolved by removing the unnecessary `await`.
+            *   **New Problem:** A `TypeError: Object of type UUID is not JSON serializable` occurs when `state_storage_service.store_state` attempts to save data to Supabase, because the `user_id` (a UUID object) is not being converted to a string before JSON serialization by the Supabase client.
+        *   **Immediate Next Steps (Fix UUID Serialization & Test Storage):**
+            1.  **Modify `app/services/state_storage_service.py`:**
+                *   In the `store_state` method, ensure that `user_id` is converted to `str(user_id)` before being included in the `record` dictionary that is passed to the Supabase client for insertion or update.
+            2.  User to apply this change and restart the backend server.
+            3.  User to perform the Google Login and adventure start test again.
+            4.  **Verify:**
+                *   The `TypeError: Object of type UUID is not JSON serializable` is gone.
+                *   A new adventure is created and its state is successfully stored in the Supabase `adventures` table.
+                *   The `user_id` column in the new `adventures` record in Supabase is populated with the correct UUID string.
+                *   Play through a few chapters to ensure subsequent state saves also work correctly with the `user_id`.
     *   [ ] Test Google Login flow.
     *   [ ] Test "Continue as Guest" (Supabase anonymous sign-in) flow.
     *   [ ] Verify `user_id` is populated correctly in `adventures` and `telemetry_events` for authenticated users and Supabase anonymous users.
