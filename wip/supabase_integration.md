@@ -229,7 +229,7 @@ This phase implements optional user authentication using Supabase Auth, allowing
                 *   A new adventure is created and its state is successfully stored in the Supabase `adventures` table.
                 *   The `user_id` column in the new `adventures` record in Supabase is populated with the correct UUID string.
                 *   Play through a few chapters to ensure subsequent state saves also work correctly with the `user_id`.
-    *   [ ] Test Google Login flow.
+    *   [x] Test Google Login flow.
     *   [ ] Test "Continue as Guest" (Supabase anonymous sign-in) flow.
     *   [ ] Verify `user_id` is populated correctly in `adventures` and `telemetry_events` for authenticated users and Supabase anonymous users.
     *   [ ] Verify `user_id` is `NULL` for any adventures/telemetry created by truly unauthenticated flows (if any remain, or for legacy data).

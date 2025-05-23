@@ -33,7 +33,7 @@ class StateStorageService:
         self,
         state_data: Dict[str, Any],
         adventure_id: Optional[str] = None,
-        user_id: Optional[str] = None,
+        user_id: Optional[UUID] = None,  # Changed type hint to Optional[UUID]
         lesson_topic: Optional[str] = None,
         explicit_is_complete: Optional[bool] = None,  # New parameter
     ) -> str:
@@ -45,12 +45,14 @@ class StateStorageService:
         Args:
             state_data: The complete adventure state data
             adventure_id: Optional ID of an existing adventure to update
-            user_id: Optional user ID for authenticated users
+            user_id: Optional user ID (as UUID object) for authenticated users
 
         Returns:
             str: The UUID of the stored adventure
         """
         try:
+            user_id_for_db = str(user_id) if user_id is not None else None
+
             # Extract key fields for dedicated columns
             story_category = None
             # Use passed lesson_topic if available, otherwise try extracting from metadata
@@ -94,7 +96,7 @@ class StateStorageService:
 
             # Prepare the record for insertion/update
             record = {
-                "user_id": user_id,
+                "user_id": user_id_for_db,  # Use stringified user_id
                 "state_data": state_data,  # Supabase will handle JSON serialization
                 "story_category": story_category,
                 "lesson_topic": extracted_lesson_topic,  # Use the extracted/passed topic
@@ -109,6 +111,7 @@ class StateStorageService:
             if adventure_id:
                 # Prepare record for UPDATE - include client_uuid as well
                 update_record = {
+                    "user_id": user_id_for_db,  # Add stringified user_id
                     "state_data": state_data,
                     "is_complete": is_complete,
                     "completed_chapter_count": completed_chapter_count,

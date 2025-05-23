@@ -812,7 +812,7 @@ async def process_non_start_choice(
         await telemetry_service.log_event(
             event_name="choice_made",
             adventure_id=UUID(current_adventure_id) if current_adventure_id else None,
-            user_id=None,  # No authenticated user_id yet
+            user_id=connection_data.get("user_id") if connection_data else None,
             metadata=event_metadata,
             chapter_type=previous_chapter.chapter_type.value,
             chapter_number=previous_chapter.chapter_number,

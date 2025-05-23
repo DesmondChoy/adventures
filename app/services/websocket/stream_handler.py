@@ -258,7 +258,7 @@ async def stream_chapter_content(
         await telemetry_service.log_event(
             event_name="chapter_viewed",
             adventure_id=UUID(adventure_id) if adventure_id else None,
-            user_id=None,  # No authenticated user_id yet
+            user_id=connection_data.get("user_id") if connection_data else None,
             metadata=event_metadata,
             chapter_type=current_chapter_type_to_send.value,  # Added
             chapter_number=current_chapter_number_to_send,  # Added

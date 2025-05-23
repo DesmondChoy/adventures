@@ -29,15 +29,6 @@ async def story_websocket(
     difficulty: Optional[str] = Query(None),
     token: Optional[str] = Query(None),
 ):
-    # --- START DIAGNOSTIC PRINTS ---
-    raw_query_string = websocket.scope.get("query_string", b"").decode("utf-8")
-    print(f"--- RAW WEBSOCKET SCOPE QUERY STRING: {raw_query_string} ---")
-    print(f"--- FASTAPI PARSED token PARAMETER (before accept): {token} ---")
-    print(
-        f"--- FASTAPI PARSED client_uuid PARAMETER (before accept): {client_uuid} ---"
-    )
-    # --- END DIAGNOSTIC PRINTS ---
-
     await websocket.accept()
     logger.info(
         f"WebSocket attempting connection with client_uuid: {client_uuid}"
@@ -56,71 +47,42 @@ async def story_websocket(
         "user_id": None,
     }
 
-    # --- START JWT PROCESSING BLOCK ---
-    print(
-        f"--- [WS ROUTER DEBUG] Before 'if token:' check. Token value is present: {token is not None and token != ''} ---"
-    )
+    # JWT Processing Block
     if token:
-        print(
-            f"--- [WS ROUTER DEBUG] Inside 'if token:'. Token identified. Length: {len(token)} ---"
-        )
         supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
-        print(
-            f"--- [WS ROUTER DEBUG] SUPABASE_JWT_SECRET from os.getenv: {'Exists' if supabase_jwt_secret else 'MISSING/EMPTY'}. Length: {len(supabase_jwt_secret) if supabase_jwt_secret else 0} ---"
-        )
-
-        if not supabase_jwt_secret:
-            print(
-                "--- [WS ROUTER DEBUG] SUPABASE_JWT_SECRET is missing or empty. Cannot decode JWT. ---"
-            )
-        else:
+        if supabase_jwt_secret:
             try:
-                print(
-                    f"--- [WS ROUTER DEBUG] Entering JWT decoding try block. Token (first 30 chars): {token[:30]} ---"
-                )
                 payload = jwt.decode(
                     token,
                     supabase_jwt_secret,
                     algorithms=["HS256"],
                     audience="authenticated",
                 )
-                print(
-                    f"--- [WS ROUTER DEBUG] JWT decoded successfully. Payload: {payload} ---"
-                )
                 user_id_from_token_str = payload.get("sub")
-
                 if user_id_from_token_str:
-                    print(
-                        f"--- [WS ROUTER DEBUG] 'sub' claim (user_id) found: {user_id_from_token_str} ---"
-                    )
                     connection_data["user_id"] = UUID(user_id_from_token_str)
-                    print(
-                        f"--- [WS ROUTER DEBUG] Stored user_id in connection_data: {connection_data['user_id']} ---"
+                    logger.debug(
+                        f"Authenticated user via JWT: {connection_data['user_id']}"
                     )
                 else:
-                    print(
-                        "--- [WS ROUTER DEBUG] JWT decoded but 'sub' (user_id) claim is missing from payload. ---"
-                    )
+                    logger.warning("JWT decoded but 'sub' (user_id) claim is missing.")
             except jwt.ExpiredSignatureError:
-                print("--- [WS ROUTER DEBUG] JWT ExpiredSignatureError ---")
+                logger.warning("JWT ExpiredSignatureError")
             except jwt.InvalidTokenError as e:
-                print(f"--- [WS ROUTER DEBUG] JWT InvalidTokenError: {e} ---")
+                logger.warning(f"JWT InvalidTokenError: {e}")
             except Exception as e:
-                print(
-                    f"--- [WS ROUTER DEBUG] An unexpected error occurred during JWT decoding: {e} ---"
-                )
+                logger.error(f"An unexpected error occurred during JWT decoding: {e}")
+        else:
+            logger.error("SUPABASE_JWT_SECRET is missing or empty. Cannot decode JWT.")
     else:
-        print(
-            "--- [WS ROUTER DEBUG] Token is None or empty, skipping JWT processing. ---"
-        )
-    # --- END JWT PROCESSING BLOCK ---
+        logger.debug("No token provided, skipping JWT processing.")
 
     try:
         active_adventure_id = None
         # Check for existing active adventure
         if connection_data.get("user_id"):
-            print(
-                f"--- [WS ROUTER DEBUG] Checking for active adventure using user_id: {connection_data['user_id']} ---"
+            logger.debug(
+                f"Checking for active adventure using user_id: {connection_data['user_id']}"
             )
             try:
                 active_adventure_id = (
@@ -129,24 +91,21 @@ async def story_websocket(
                     )
                 )
                 if active_adventure_id:
-                    print(
-                        f"--- [WS ROUTER DEBUG] Found active adventure {active_adventure_id} for user_id {connection_data['user_id']} ---"
+                    logger.debug(
+                        f"Found active adventure {active_adventure_id} for user_id {connection_data['user_id']}"
                     )
                 else:
-                    print(
-                        f"--- [WS ROUTER DEBUG] No active adventure found for user_id {connection_data['user_id']}. Will check client_uuid if present. ---"
+                    logger.debug(
+                        f"No active adventure found for user_id {connection_data['user_id']}. Will check client_uuid if present."
                     )
             except Exception as e:
                 logger.error(
                     f"Error checking active adventure by user_id {connection_data['user_id']}: {e}"
                 )
-                print(
-                    f"--- [WS ROUTER DEBUG] Exception during active adventure check by user_id: {e} ---"
-                )
 
         if not active_adventure_id and client_uuid:
-            print(
-                f"--- [WS ROUTER DEBUG] Checking for active adventure using client_uuid: {client_uuid} (user_id lookup failed or no user_id) ---"
+            logger.debug(
+                f"Checking for active adventure using client_uuid: {client_uuid} (user_id lookup failed or no user_id)"
             )
             try:
                 active_adventure_id = (
@@ -155,19 +114,16 @@ async def story_websocket(
                     )
                 )
                 if active_adventure_id:
-                    print(
-                        f"--- [WS ROUTER DEBUG] Found active adventure {active_adventure_id} for client_uuid {client_uuid} ---"
+                    logger.debug(
+                        f"Found active adventure {active_adventure_id} for client_uuid {client_uuid}"
                     )
                 else:
-                    print(
-                        f"--- [WS ROUTER DEBUG] No active adventure found for client_uuid {client_uuid} either. ---"
+                    logger.debug(
+                        f"No active adventure found for client_uuid {client_uuid} either."
                     )
             except Exception as e:
                 logger.error(
                     f"Error checking active adventure by client_uuid {client_uuid}: {e}"
-                )
-                print(
-                    f"--- [WS ROUTER DEBUG] Exception during active adventure check by client_uuid: {e} ---"
                 )
 
         if active_adventure_id:
@@ -500,9 +456,6 @@ async def story_websocket(
                             logger.error(
                                 f"Error saving state before story_complete message: {e}"
                             )
-                            print(
-                                f"--- [WS ROUTER DEBUG] Error saving state before story_complete: {e} ---"
-                            )
                     await send_story_complete(
                         websocket=websocket,
                         state=state_manager.get_current_state(),
@@ -536,9 +489,6 @@ async def story_websocket(
                             )
                     except Exception as e:
                         logger.error(f"Error updating state in Supabase: {e}")
-                        print(
-                            f"--- [WS ROUTER DEBUG] Error updating state in Supabase: {e} ---"
-                        )
             except Exception as e:
                 logger.error(f"Error generating chapter: {e}")
                 await websocket.send_text(
@@ -551,7 +501,6 @@ async def story_websocket(
         Exception
     ) as e:  # Catch any other unexpected errors during setup or main loop
         logger.error(f"Unexpected error in WebSocket handler: {e}", exc_info=True)
-        print(f"--- [WS ROUTER DEBUG] UNEXPECTED GLOBAL ERROR: {e} ---")
         try:
             await websocket.close(code=1011)  # Internal Server Error
         except Exception:
