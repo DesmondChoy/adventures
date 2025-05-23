@@ -223,9 +223,18 @@
             const delay = this.calculateBackoff();
             await new Promise(resolve => setTimeout(resolve, delay));
 
-            this.connection = new WebSocket(this.getWebSocketUrl());
-            this.setupConnectionHandlers();
-            this.reconnectAttempts++;
+            const websocketUrl = this.getWebSocketUrl();
+            console.log("[WebSocketManager.reconnect] Attempting to connect to WebSocket URL:", websocketUrl); // ADDED LOG
+            try {
+                this.connection = new WebSocket(websocketUrl);
+                console.log("[WebSocketManager.reconnect] WebSocket object created:", this.connection); // ADDED LOG
+                this.setupConnectionHandlers();
+                this.reconnectAttempts++;
+            } catch (e) {
+                console.error("[WebSocketManager.reconnect] Error creating WebSocket:", e); // ADDED ERROR LOG
+                // Potentially hide loader or show error to user if reconnect fails critically
+                hideLoader();
+            }
         }
 
         setupConnectionHandlers() {
@@ -436,9 +445,17 @@ function startAdventure() {
 
     function initWebSocket() {
         showLoader();
-        storyWebSocket = new WebSocket(wsManager.getWebSocketUrl());
-        wsManager.connection = storyWebSocket;
-        wsManager.setupConnectionHandlers();
+        const websocketUrl = wsManager.getWebSocketUrl();
+        console.log("[initWebSocket] Attempting to connect to WebSocket URL:", websocketUrl); // ADDED LOG
+        try {
+            storyWebSocket = new WebSocket(websocketUrl);
+            console.log("[initWebSocket] WebSocket object created:", storyWebSocket); // ADDED LOG
+            wsManager.connection = storyWebSocket;
+            wsManager.setupConnectionHandlers();
+        } catch (e) {
+            console.error("[initWebSocket] Error creating WebSocket:", e); // ADDED ERROR LOG
+            hideLoader(); // Hide loader if WebSocket creation fails
+        }
 
         // Initialize with a new state or restore existing
         const savedState = stateManager.loadState();

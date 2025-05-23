@@ -130,10 +130,13 @@ This phase implements optional user authentication using Supabase Auth, allowing
         *   `TelemetryService.log_event`: Verified that `user_id` (as `Optional[UUID]`) is included in the record if not `None`.
         *   (These were largely covered by changes and verifications in step 3.4)
 
-**4. Update Database Schema/RLS (Cline - Act Mode)**
-    *   [ ] **4.1. Create Supabase Migration:**
-        *   Run `npx supabase migration new add_auth_fks_and_rls` (or similar name).
-        *   In the generated SQL file, add:
+**4. Update Database Schema/RLS (Cline - Act Mode)** (Completed 2025-05-23)
+    *   [x] **4.1. Create Supabase Migration:** (Completed 2025-05-23)
+        *   User ran `npx supabase migration new add_auth_fks_and_rls` creating `supabase/migrations/20250523114023_add_auth_fks_and_rls.sql`.
+        *   Populated the migration file with SQL to:
+            *   Add foreign key constraints from `adventures.user_id` and `telemetry_events.user_id` to `auth.users(id)` with `ON DELETE SET NULL`.
+            *   Enable RLS on `telemetry_events`.
+            *   Define RLS policies for `adventures` (select, insert, update for own/guest) and `telemetry_events` (insert for own/guest).
             ```sql
             -- Link adventures.user_id to auth.users
             ALTER TABLE public.adventures
@@ -184,10 +187,32 @@ This phase implements optional user authentication using Supabase Auth, allowing
             -- CREATE POLICY "Users can select their own telemetry" ON public.telemetry_events
             -- FOR SELECT USING (auth.uid() = user_id OR user_id IS NULL);
             ```
-    *   [ ] **4.2. Apply Migration:**
-        *   Run `npx supabase db push`.
+    *   [x] **4.2. Apply Migration:** (Completed 2025-05-23)
+        *   Ran `npx supabase db push` to apply the migration.
 
 **5. Testing (User & Cline - Collaborative)**
+    *   **Debugging Log & Current Status (As of 2025-05-23 PM):**
+        *   **Problem:** `user_id` in public tables (e.g., `adventures`) does not match the Supabase Auth User ID. Backend logs for JWT processing (e.g., "Authenticated user via JWT...") are not appearing.
+        *   **Observations:**
+            *   Three different UUIDs identified during initial testing:
+                1. Public table `user_id` (e.g., `baa8...`).
+                2. Correct Supabase Auth User ID in `auth.users` (e.g., `e627...`).
+                3. A `learning_odyssey_user_uuid` in browser console (likely `client_uuid`, e.g., `db4e...`).
+            *   Frontend confirmed to be constructing WebSocket URL with `&token=` parameter containing a JWT after:
+                *   `SUPABASE_JWT_SECRET` in `.env` was quoted and backend restarted.
+                *   Frontend logging was added to `scripts.html` to display the WebSocket URL and wrap `new WebSocket()` in `try...catch`.
+            *   The `new WebSocket()` call in frontend JavaScript does not throw an immediate error, and a WebSocket object is created successfully on the client side.
+            *   Initial check of browser Network tab (WS filter) did not show the WebSocket connection, prompting frontend script changes.
+        *   **Debugging Done (as of 2025-05-23 PM):**
+            *   Ensured `SUPABASE_JWT_SECRET` is quoted in `.env` and backend restarted.
+            *   Added diagnostic logging to `app/templates/components/scripts.html` for WebSocket URL construction and instantiation.
+        *   **Immediate Next Steps (Troubleshooting Backend JWT Handling - when debugging resumes):**
+            1.  **Re-verify Backend Logs & Network Tab (Post Frontend Logging):**
+                *   User to perform Google Login.
+                *   User to check browser's Network tab (filtered for WS/WebSockets) to see if a WebSocket connection attempt now appears. If yes, note its status (e.g., 101 Switching Protocols, or an error).
+                *   User to check Python backend terminal logs very carefully for *any* logs from `app/routers/websocket_router.py` (especially initial connection logs like "WebSocket attempting connection..." or "WebSocket connection established...").
+            2.  **If Backend Still Shows No JWT Processing Logs (even if a WS connection is seen in Network tab and initial router logs appear):**
+                *   The next step would be to add even earlier logging in `app/routers/websocket_router.py` (right at the start of the `story_websocket` function, before `await websocket.accept()`) to inspect `websocket.scope.get('query_string')` and the raw `token` parameter as FastAPI receives it. This will help determine if FastAPI is correctly parsing the `token` from the query string for WebSocket connections.
     *   [ ] Test Google Login flow.
     *   [ ] Test "Continue as Guest" (Supabase anonymous sign-in) flow.
     *   [ ] Verify `user_id` is populated correctly in `adventures` and `telemetry_events` for authenticated users and Supabase anonymous users.

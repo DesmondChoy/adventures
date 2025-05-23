@@ -1,46 +1,31 @@
-# Learning Odyssey: Where Adventure Ignites Lifelong Learning
+# Learning Odyssey
 
-**Learning Odyssey is revolutionizing education by merging the immersive power of AI-driven storytelling with deeply personalized learning.** We create uniquely engaging experiences for children that traditional methods can't match, tackling the critical challenge of student disengagement and fostering a genuine love for knowledge through compelling narrative arcs and reflective learning.
+This app aims to promote learning and curiosity by weaving together educational content and engaging narratives. 
 
-🚀 **[Try it live!](https://learning-odyssey.up.railway.app/)** (Note: Link might be from previous state, verify if still active)
+🚀 **[Try it live](https://learning-odyssey.up.railway.app/)**
 
-## Your Epic Journey Starts Here: How It Works
 
-Imagine an education that feels like your favorite adventure game, complete with rising action, pivotal choices, and a satisfying resolution. That's Learning Odyssey.
+## How It Works
 
-1.  **Launch Your Quest:** Choose a captivating story world – from mystical forests to ancient mountains – and select an educational topic you're curious about, like the wonders of the human body or the secrets of farm animals.
-2.  **Define Your Destiny:** Early in your adventure, you'll make a pivotal **Agency** choice. Will you wield a unique magical artifact, gain a loyal fantastical companion, master an extraordinary skill, or step into a heroic role? This choice becomes your signature, evolving with you and unlocking new possibilities as your story unfolds.
-3.  **Shape Your Story:** Your decisions are the compass guiding your narrative. Every choice you make, every challenge you overcome, directly influences the path ahead as the **plot deepens, leading to unique turning points, a thrilling climax, and a satisfying conclusion** to your unique tale.
-4.  **Learn Without Limits:** Educational concepts are seamlessly woven into the fabric of your adventure. Characters you meet will spark your curiosity, and challenges will test your knowledge in fun, interactive ways. The journey includes **dedicated REFLECT chapters, prompting deeper thought** on what you've learned.
-5.  **See Your World Come Alive:** AI-generated images bring characters, breathtaking scenes, and your evolving Agency to life with stunning, consistent visuals that adapt to your story.
-6.  **Adventure on Your Terms:** Life is an adventure too! Pause your quest at any time and resume your learning journey whenever you're ready, with all your progress saved.
-7.  **Save Your Saga & Track Your Triumphs:** With optional user accounts (Google or Guest), you can securely save your unique adventures and pick up right where you left off. Never lose your progress on an epic quest!
-8.  **Celebrate Your Achievements:** Conclude your epic journey with a personalized adventure summary, recapping your unique story, choices, and the knowledge you've gained.
+1. **Educational Journey**
+   - Choose your story genre and lesson topic
+   - Every adventure is unique and choices (story paths or correct/incorrect answers) affects the narrative
+   - Characters in the story encourage curiosity and learning
+   - Make a pivotal agency choice in the first chapter that evolves throughout your journey
+   - Story Object Method seamlessly integrates educational content into the narrative flow
+   - Visual representations through AI-generated images enhance the experience
+   - Complete your journey with a personalized adventure summary and learning report
 
-## Why Learning Odyssey? The Difference We Make.
+2. **Technical Innovation**
+   - LLM-powered dynamic storytelling with agency system and AI-generated images
+   - Real-time WebSocket communication with robust error recovery
+   - Provider-agnostic AI integration supporting GPT-4o/Gemini for text and Imagen for images
+   - Advanced narrative techniques (Story Object Method, phase-specific guidance)
+   - Comprehensive state tracking with client-side persistence
+   - Progressive chapter summaries for complete adventure recaps
 
-Learning Odyssey isn't just another educational app; it's a thoughtfully engineered platform designed for impact:
+## Architecture Overview
 
-*   **Deep Engagement Through Agency & Narrative:** We combat passive learning by empowering users. Children actively shape their narrative – experiencing a story that builds suspense and resolves meaningfully – fostering ownership and sustained interest.
-*   **Scalable, Dynamic, Personalized Content:** Our advanced AI narrative engine ensures that **virtually no two adventures are ever the same.** By dynamically generating story paths, character interactions, and visual elements based on user choices and their evolving Agency, we deliver unparalleled personalization and replayability at scale – a true breakthrough in interactive learning.
-*   **True Integration of Learning & Play:** We solve the core challenge of making learning 'invisible' and fun. Education is an intrinsic, exciting part of the adventure, not a separate chore. Our **carefully crafted narrative arcs, complete with rising action, climactic moments, and thoughtful resolutions, are designed to mirror compelling real-world storytelling,** ensuring learning is both engaging and memorable. This is further enhanced by opportunities for guided reflection on new knowledge.
-*   **Addressing a Critical Market Need:** Designed to tackle the engagement gap in traditional education, Learning Odyssey offers a solution for parents and educators seeking effective, captivating learning tools for the digital age.
-
-## Key Features: Powering the Adventure
-
-*   **Hyper-Personalized Adventures:** At its heart, Learning Odyssey crafts a unique journey for every child. The combination of AI-driven narratives, dynamic branching choices, and the evolving Agency system means each playthrough is a distinct and personal experience, complete with its own plot developments.
-*   **Immersive AI Storytelling:** Dynamic narratives, powered by advanced AI, adapt in real-time to user choices. Experience a story that **builds suspense, presents meaningful turning points, and resolves in a fulfilling way,** creating a deeply engaging and replayable experience.
-*   **Interactive Challenges & Meaningful Choices:** The "Agency" system and narrative branches ensure that decisions have tangible consequences, influencing the story's direction and fostering critical thinking through a well-paced plot.
-*   **Dynamic & Evolving Visuals:** State-of-the-art AI image generation provides a rich visual tapestry for the adventure, with characters and scenes maintaining consistency and evolving with the narrative.
-*   **Reflective Learning Chapters:** Dedicated "REFLECT" chapters go beyond simple quizzes, encouraging users to think critically about the educational content they've encountered, deepening comprehension and retention.
-*   **Save & Resume Your Quests:** Our robust platform (powered by Supabase) offers the convenience of saving your progress. Optional user accounts (Google or Guest) make it easy to return to your adventures anytime, anywhere, demonstrating a production-ready experience.
-*   **Comprehensive Adventure Recap:** A detailed summary chapter reinforces learning by allowing users to reflect on their entire narrative arc, from initial choices to the final resolution, and review their educational achievements.
-
-## Technical Snapshot: Engineered for Innovation
-
-The robust and scalable architecture of Learning Odyssey is designed for growth and continuous improvement. A Python/FastAPI backend ensures efficient AI integration and real-time responsiveness via WebSockets, supporting sophisticated narrative structures and learning flows. Supabase provides a flexible and secure cloud-based foundation for user data, persistent adventures, and telemetry. This modern stack allows for rapid iteration and the seamless incorporation of emerging AI capabilities.
-
-### Architecture Overview
 ```mermaid
 graph TD
     Client[Web Client] <--> WSR[WebSocket Router]
@@ -58,7 +43,7 @@ graph TD
     ASM <--> AS[AdventureState]
     ASM <--> CM[Chapter Manager]
     CM <--> LLM[LLM Service]
-    CM <--> DB[(Supabase DB)] %% Updated from (Database)
+    CM <--> DB[(Database)]
     IG <--> IMG[Image Generation Service]
     CM <--> SL[Story Loader]
     SL <--> SF[(Story Files)]
@@ -72,7 +57,7 @@ graph TD
     SGEN <--> AS
 
     subgraph Client Side
-        LP[localStorage/Supabase Auth] <--> CSM[Client Auth/State Manager] %% Updated
+        LP[localStorage] <--> CSM[Client State Manager]
         CSM <--> Client
     end
 
@@ -120,83 +105,101 @@ graph TD
     end
 ```
 
-## Recent Enhancements: Continual Evolution
+## Tech Stack
 
-Learning Odyssey is a living project, constantly evolving to deliver a richer experience:
+- **Backend**: FastAPI, Python 3.x with WebSocket communication
+- **AI Integration**: GPT-4o/Gemini for text and Imagen for image generation
+- **Frontend**: 
+  - **HTML/CSS/JS**: Modular template system with component-based architecture
+  - **React**: Summary Chapter implementation with educational recap
+  - **Progressive Enhancement**: Word-by-word streaming, asynchronous image loading
 
-*   **Production-Ready User Experience:** Implemented persistent adventures and optional user accounts (Google/Guest), offering users the convenience to save and track their unique journeys.
-*   **Improved Visual Consistency:** Characters and agency elements now maintain more consistent and evolving visual appearances throughout your adventure.
-*   **Refined Narrative & Learning Flow:** Enhancements to ensure a compelling story arc with integrated reflective learning opportunities.
-*   **Robust State Management & Telemetry:** Significant backend work ensures your adventure state is handled reliably, and enhanced telemetry helps us understand user engagement to further refine the product.
+## Setup
 
-## Setup (For Developers)
-
-1.  Clone the repository.
-2.  Create and activate a virtual environment:
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # Linux/Mac
-    # or
-    .\venv\Scripts\activate  # Windows
-    ```
-3.  Install dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
-4.  Create a `.env` file with required environment variables:
-    ```env
-    # API key for LLM and image generation (both use the same key with Google)
-    GOOGLE_API_KEY=your_google_key
-    # Or alternatively use OpenAI for LLM (image generation still requires Google)
-    OPENAI_API_KEY=your_openai_key
-
-    # Supabase credentials (obtain from your Supabase project)
-    SUPABASE_URL=your_supabase_url
-    SUPABASE_ANON_KEY=your_supabase_anon_key
-    SUPABASE_SERVICE_KEY=your_supabase_service_key
-    SUPABASE_JWT_SECRET=your_supabase_jwt_secret 
-    # Ensure this JWT secret matches the one in your Supabase project settings (Auth > JWT Settings)
-    ```
-5.  Apply Supabase database migrations (if you're setting up the DB for the first time):
-    ```bash
-    npx supabase login
-    npx supabase link --project-ref your-project-ref
-    npx supabase db push
-    ```
-6.  Run the application:
-    ```bash
-    uvicorn app.main:app --reload
-    ```
+1. Clone the repository
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Linux/Mac
+   # or
+   .\venv\Scripts\activate  # Windows
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Create a `.env` file with required environment variables:
+   ```
+   # API key for LLM and image generation (both use the same key with Google)
+   GOOGLE_API_KEY=your_google_key
+   # Or alternatively use OpenAI for LLM (image generation still requires Google)
+   OPENAI_API_KEY=your_openai_key
+   ```
+5. Run the application:
+   ```bash
+   uvicorn app.main:app --reload
+   ```
 
 ## Project Structure
 
 The project is organized into several key components:
 
-*   **Backend (`app/`)**: Contains the FastAPI application, including:
-    *   `models/`: Data structures like `AdventureState`.
-    *   `routers/`: API and WebSocket endpoint definitions.
-    *   `services/`: Core logic for LLMs, state management, content generation, Supabase interaction, etc.
-    *   `static/`: Frontend assets (CSS, JS, images), including the React summary app.
-    *   `templates/`: Jinja2 HTML templates.
-*   **Content Sources (`app/data/`)**:
-    *   `lessons/`: CSV files for educational content.
-    *   `stories/`: YAML files defining story categories and narrative elements.
-*   **Supabase (`supabase/`)**: Database migration files.
-*   **Tests (`tests/`)**: Automated tests and simulation scripts.
-*   **WIP & Memory Bank (`wip/`, `memory-bank/`)**: Documents for ongoing work and project knowledge.
+### Backend Components
+- **Core Application**: Entry point, database configuration, and initialization
+- **Models**: State management and data models
+- **Routers**: Web and WebSocket routing
+- **Services**: WebSocket components, LLM integration, state management, content generation
+
+### Frontend Components
+- **Templates**: Modular HTML structure with layouts, pages, and components
+- **Static Assets**: CSS, JavaScript, and images
+- **React Summary App**: Interactive summary experience
+
+### Content Sources
+- **Lesson Data**: CSV files containing educational content
+- **Story Data**: YAML files defining story categories and narrative elements
+
+## Key Features
+
+### Chapter Types and Flow
+- **STORY Chapters**: Narrative with choices, first chapter includes agency choice
+- **LESSON Chapters**: Educational content with narrative wrapper
+- **REFLECT Chapters**: Follow-up to LESSON chapters to test understanding
+- **CONCLUSION Chapter**: Final chapter with story resolution
+- **SUMMARY Chapter**: Recap with chapter summaries and learning report
+
+### Agency System
+- First chapter choice from four categories (items, companions, roles, abilities)
+- Agency evolves throughout the adventure
+- Agency has meaningful resolution in conclusion
+
+### Content Generation
+- **Chapter Summaries**: Narrative events and character development
+- **Image Scenes**: Visually striking moments from each chapter
+- **Paragraph Formatting**: Intelligent formatting for improved readability
+
+## Recent Enhancements
+
+- Refactored WebSocket services into modular components
+- Implemented a modular template system with reusable UI components
+- Enhanced image generation with protagonist visual consistency
+- Improved character visual tracking and evolution
+- Enhanced error handling and logging throughout the application
+- Optimized paragraph formatting for better readability
+- Implemented modern UI enhancements across all devices
 
 ## Testing
 
-The project includes a testing framework to ensure reliability:
+The project includes a comprehensive testing framework:
 
-*   **Simulation Framework**: End-to-end testing of adventure generation.
-*   **Test Coverage**: Includes chapter sequences, state transitions, and summary generation.
-*   **Running Tests**:
-    ```bash
-    # Example: Run the complete adventure simulation
-    python tests/simulations/generate_all_chapters.py
-    ```
+- **Simulation Framework**: End-to-end testing of adventure generation
+- **Test Coverage**: Chapter sequences, state transitions, summary generation
+- **Running Tests**: 
+  ```bash
+  # Run the complete simulation
+  python tests/simulations/generate_all_chapters.py
+  ```
 
-## Technical Considerations
+## Technical Constraints
 
-Learning Odyssey's dynamic nature requires sequential chapter generation, as each chapter builds upon previous events and choices. The narrative is generated in real-time, following a structured arc designed for engagement. To manage this, the platform uses robust WebSocket communication, client-side and server-side (Supabase) state persistence, and graceful degradation to ensure a smooth learning journey. This thoughtful engineering ensures a reliable and engaging platform ready for future growth.
+Learning Odyssey requires sequential chapter generation as each chapter builds upon previous events and choices. The narrative must be generated in real-time with no ability to pre-cache future content. To address these challenges, we've implemented client-side state persistence, robust connection management with exponential backoff, and graceful degradation with fallbacks to ensure the educational journey continues even when certain components encounter issues.
