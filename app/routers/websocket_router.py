@@ -1,6 +1,9 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 import logging
+import os  # Added for JWT secret
+from typing import Optional  # Added for token type hint
 from uuid import UUID
+import jwt  # Added for JWT decoding
 from app.models.story import ChapterType  # Added import
 from app.services.adventure_state_manager import AdventureStateManager
 from app.services.state_storage_service import StateStorageService
@@ -25,6 +28,7 @@ async def story_websocket(
     lesson_topic: str,
     client_uuid: str = None,
     difficulty: str = None,
+    token: Optional[str] = Query(None),  # Added token parameter
 ):
     """Handle WebSocket connection for story streaming.
 
@@ -40,8 +44,48 @@ async def story_websocket(
     logger.info(f"WebSocket attempting connection with client_uuid: {client_uuid}")
     # --- END ADDED LOGGING ---
     logger.info(
-        f"WebSocket connection established for story category: {story_category}, lesson topic: {lesson_topic}, client_uuid: {client_uuid}, difficulty: {difficulty}"
+        f"WebSocket connection established for story category: {story_category}, lesson topic: {lesson_topic}, client_uuid: {client_uuid}, difficulty: {difficulty}, token: {'present' if token else 'absent'}"
     )
+
+    # --- JWT User ID Extraction ---
+    user_id: Optional[UUID] = None
+    if token:
+        supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+        if supabase_jwt_secret:
+            try:
+                # Supabase typically uses HS256 for its JWTs signed with the JWT secret
+                decoded_token = jwt.decode(
+                    token, supabase_jwt_secret, algorithms=["HS256"]
+                )
+                user_id_str = decoded_token.get("sub")
+                if user_id_str:
+                    user_id = UUID(user_id_str)
+                    logger.info(
+                        f"Authenticated user via JWT: {user_id} for client_uuid: {client_uuid}"
+                    )
+                else:
+                    logger.warning(
+                        f"JWT valid but 'sub' claim missing for client_uuid: {client_uuid}."
+                    )
+            except jwt.ExpiredSignatureError:
+                logger.warning(f"JWT token has expired for client_uuid: {client_uuid}.")
+            except jwt.InvalidTokenError as e:
+                logger.warning(f"Invalid JWT token for client_uuid: {client_uuid}: {e}")
+            except (
+                Exception
+            ) as e:  # Catch potential UUID conversion error or other unexpected issues
+                logger.error(
+                    f"Error processing JWT for client_uuid: {client_uuid}: {e}"
+                )
+        else:
+            logger.warning(
+                f"SUPABASE_JWT_SECRET not configured. Cannot verify JWT for client_uuid: {client_uuid}."
+            )
+    else:
+        logger.info(
+            f"No JWT token provided for client_uuid: {client_uuid}. Proceeding as anonymous/guest."
+        )
+    # --- END JWT User ID Extraction ---
 
     # TODO: Implement difficulty toggle in UI to allow users to select difficulty level
 
@@ -53,6 +97,7 @@ async def story_websocket(
     connection_data = {
         "adventure_id": None,  # Will be set when we create or load an adventure
         "client_uuid": client_uuid,
+        "user_id": user_id,  # Added user_id from JWT
     }
 
     try:
@@ -61,7 +106,12 @@ async def story_websocket(
             try:
                 # Look for an active (incomplete) adventure for this client
                 active_adventure_id = (
-                    await state_storage_service.get_active_adventure_id(client_uuid)
+                    await state_storage_service.get_active_adventure_id(
+                        client_uuid=client_uuid,  # Pass client_uuid
+                        user_id=connection_data.get(
+                            "user_id"
+                        ),  # Pass user_id from connection_data
+                    )
                 )
 
                 if active_adventure_id:
@@ -349,7 +399,9 @@ async def story_websocket(
                         try:
                             adventure_id = await state_storage_service.store_state(
                                 state.dict(),
-                                user_id=None,  # No authenticated user yet
+                                user_id=connection_data.get(
+                                    "user_id"
+                                ),  # Pass user_id from connection_data
                                 lesson_topic=lesson_topic,  # Pass lesson topic directly
                             )
 
@@ -364,7 +416,9 @@ async def story_websocket(
                                     adventure_id=UUID(adventure_id)
                                     if adventure_id
                                     else None,
-                                    user_id=None,  # No authenticated user_id yet
+                                    user_id=connection_data.get(
+                                        "user_id"
+                                    ),  # Pass user_id from connection_data
                                     metadata={
                                         "story_category": story_category,
                                         "lesson_topic": lesson_topic,
@@ -481,7 +535,9 @@ async def story_websocket(
                                 await state_storage_service.store_state(
                                     current_state_for_completion.dict(),
                                     adventure_id=connection_data["adventure_id"],
-                                    user_id=None,
+                                    user_id=connection_data.get(
+                                        "user_id"
+                                    ),  # Pass user_id from connection_data
                                     explicit_is_complete=False,  # Ensure not marked complete yet
                                 )
                                 logger.info(
@@ -522,7 +578,9 @@ async def story_websocket(
                             await state_storage_service.store_state(
                                 current_state.dict(),
                                 adventure_id=connection_data["adventure_id"],
-                                user_id=None,  # No authenticated user yet
+                                user_id=connection_data.get(
+                                    "user_id"
+                                ),  # Pass user_id from connection_data
                                 # Default is_complete derivation is fine here
                             )
                             logger.info(

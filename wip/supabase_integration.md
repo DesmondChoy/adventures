@@ -105,47 +105,30 @@ This phase implements optional user authentication using Supabase Auth, allowing
 **Next Steps for Phase 4:**
 
 **3. Implement Backend Logic (Cline - Act Mode)**
-    *   [ ] **3.1. Add `PyJWT` to `requirements.txt`:**
-        *   And run `pip install -r requirements.txt`. (Likely `PyJWT[crypto]`)
-    *   [ ] **3.2. Create JWT Verification Dependency:**
-        *   Create `app/auth/dependencies.py`.
-        *   Implement a FastAPI dependency `get_current_user_id_optional(token: Optional[str] = Query(None), supabase_jwt_secret: str = Depends(get_supabase_jwt_secret_from_env)) -> Optional[UUID]:`
-            *   (Helper `get_supabase_jwt_secret_from_env` would fetch `os.getenv("SUPABASE_JWT_SECRET")`).
-            *   If `token` is provided:
-                *   Verify the JWT using `PyJWT` and the `supabase_jwt_secret`.
-                *   If valid, extract and return the `user_id` (from `sub` claim, cast to UUID).
-                *   If invalid (e.g., expired, signature error), log a warning and return `None`.
-            *   If no `token`, return `None`.
-    *   [ ] **3.3. Integrate Auth into WebSocket Router (`app/routers/websocket_router.py`):**
-        *   Update the WebSocket endpoint (`@router.websocket("/ws/story/{story_category}/{lesson_topic}")`) to accept `token: Optional[str] = Query(None)`.
-        *   In the connection logic, use the dependency (or similar logic) to get `user_id` from the token.
-            ```python
-            # Conceptual example within websocket endpoint
-            # supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
-            # user_id: Optional[UUID] = None
-            # if token and supabase_jwt_secret:
-            #     try:
-            #         decoded_token = jwt.decode(token, supabase_jwt_secret, algorithms=["HS256"])
-            #         user_id = UUID(decoded_token.get("sub"))
-            #     except jwt.ExpiredSignatureError:
-            #         logger.warning("JWT token has expired.")
-            #     except jwt.InvalidTokenError as e:
-            #         logger.warning(f"Invalid JWT token: {e}")
-            # connection_data["user_id"] = user_id
-            ```
-        *   Store this `user_id` (which can be `None`) in the `connection_data` dictionary.
-    *   [ ] **3.4. Pass `user_id` to Services:**
+    *   [x] **3.1. Add `PyJWT` to `requirements.txt`:** (Completed 2025-05-23)
+        *   `PyJWT[crypto]==2.10.1` added to `requirements.txt`.
+        *   User confirmed `pip install -r requirements.txt` run successfully.
+    *   [x] **3.2. Create JWT Verification Dependency:** (Completed 2025-05-23)
+        *   Created `app/auth/dependencies.py`.
+        *   Implemented `get_current_user_id_optional` FastAPI dependency with helper for JWT secret.
+            *   Verifies JWT using `PyJWT`, extracts `user_id` from `sub` claim.
+            *   Handles missing token, missing secret, expired token, invalid token, and missing `sub` claim.
+    *   [x] **3.3. Integrate Auth into WebSocket Router (`app/routers/websocket_router.py`):** (Completed 2025-05-23)
+        *   Updated WebSocket endpoint (`@router.websocket("/ws/story/{story_category}/{lesson_topic}")`) to accept `token: Optional[str] = Query(None)`.
+        *   Added logic within the WebSocket connection handler to decode the JWT (if present) using `PyJWT` and `SUPABASE_JWT_SECRET` to get `user_id`.
+        *   Stored this `user_id` (which can be `None`) in the `connection_data` dictionary.
+    *   [x] **3.4. Pass `user_id` to Services:** (Completed 2025-05-23)
         *   **`StateStorageService` (`app/services/state_storage_service.py`):**
-            *   Ensure `store_state` method correctly uses the `user_id` passed to it (already an optional param).
-            *   Modify `get_active_adventure_id(client_uuid: Optional[str] = None, user_id: Optional[UUID] = None)`:
-                *   Update logic to prioritize querying by `user_id` if provided and valid.
-                *   If `user_id` is `None` or query by `user_id` yields no active adventure, fall back to querying by `client_uuid` (from `state_data->'metadata'->>'client_uuid'`) for guest users or legacy data. Ensure `client_uuid` is also optional or handled gracefully if not always present for authenticated users.
+            *   Ensured `store_state` method correctly uses the `user_id` (changed param type to `Optional[UUID]`, added `user_id` to `update_record`).
+            *   Modified `get_active_adventure_id` signature to `(client_uuid: Optional[str] = None, user_id: Optional[UUID] = None)`.
+                *   Updated logic to prioritize querying by `user_id` if provided, falling back to `client_uuid`.
         *   **`TelemetryService` (`app/services/telemetry_service.py`):**
-            *   Ensure `log_event` method correctly uses the `user_id` passed to it (already an optional param).
-        *   **Update Callers:** Modify `websocket_router.py` (and any other relevant callers) to pass `connection_data.get("user_id")` to these service methods.
-    *   [ ] **3.5. Update Database Interactions in Services:**
-        *   `StateStorageService.store_state`: When preparing the `record` for Supabase, include the `user_id` if it's not `None`.
-        *   `TelemetryService.log_event`: When preparing the `record` for Supabase, include the `user_id` if it's not `None`.
+            *   Verified `log_event` method already correctly accepts `user_id: Optional[UUID]` and uses it.
+        *   **Update Callers:** Modified `websocket_router.py` to pass `connection_data.get("user_id")` to `store_state`, `get_active_adventure_id`, and `log_event` calls.
+    *   [x] **3.5. Update Database Interactions in Services:** (Completed 2025-05-23)
+        *   `StateStorageService.store_state`: Verified that `user_id` (as `Optional[UUID]`) is included in the record for both insert and update operations if not `None`.
+        *   `TelemetryService.log_event`: Verified that `user_id` (as `Optional[UUID]`) is included in the record if not `None`.
+        *   (These were largely covered by changes and verifications in step 3.4)
 
 **4. Update Database Schema/RLS (Cline - Act Mode)**
     *   [ ] **4.1. Create Supabase Migration:**
