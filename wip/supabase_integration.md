@@ -191,44 +191,27 @@ This phase implements optional user authentication using Supabase Auth, allowing
         *   Ran `npx supabase db push` to apply the migration.
 
 **5. Testing (User & Cline - Collaborative)**
-    *   **Debugging Log & Current Status (Updated 2025-05-23 Evening):**
-        *   **Initial Problem:** `user_id` in public tables (e.g., `adventures`) did not match the Supabase Auth User ID. Backend logs for JWT processing were not appearing.
-        *   **Debugging Steps & Findings:**
-            *   **Frontend Logging (`app/templates/components/scripts.html`):**
-                *   Added detailed `console.log` statements around WebSocket URL construction and instantiation.
-                *   **Result (2025-05-23 PM Test 1):** Initially, no WebSocket connection attempt was visible in the browser's Network Tab, and no relevant backend logs appeared. This indicated a frontend issue preventing the WebSocket call.
-                *   **Corrective Action (Frontend):** Updated `scripts.html` with more robust logging and ensured `encodeURIComponent` for token in URL. (Applied via `write_to_file` after `replace_in_file` issues).
-                *   **Result (2025-05-23 PM Test 2 - After Frontend Script Update):**
-                    *   **Browser Console:** Showed all `[FrontendWS Log ...]` messages, confirming `authManager.accessToken` was present, WebSocket URL was correctly formed with the token, `new WebSocket()` was called, and the `onopen` event fired.
-                    *   **Browser Network Tab:** Showed a successful WebSocket connection (Status `101 Switching Protocols`).
-                    *   **Conclusion:** Frontend is correctly sending the JWT via the WebSocket URL.
-            *   **Backend Logging (`app/routers/websocket_router.py`):**
-                *   Modified `story_websocket` signature to accept `token: Optional[str] = Query(None)` and added `Query` import.
-                *   Added `print()` statements at the very beginning of `story_websocket` (before `await websocket.accept()`) to log `websocket.scope.get('query_string')` and the parsed `token` parameter.
-                *   **Result (2025-05-23 PM Test 2 - After Backend Script Update & Restart):**
-                    *   Backend diagnostic prints confirmed:
-                        *   `--- RAW WEBSOCKET SCOPE QUERY STRING: client_uuid=...&token=eyJhbGciOi... ---` (Full query string with token visible)
-                        *   `--- FASTAPI PARSED token PARAMETER (before accept): eyJhbGciOi... ---` (Full JWT visible, confirming FastAPI parsed it)
-                    *   Standard Uvicorn/FastAPI logs showed the WebSocket connection being accepted with the full URL including the token.
-                    *   However, **no logs from the subsequent JWT decoding block** (e.g., "Attempting to decode JWT", "Authenticated user via JWT") appeared in the backend terminal.
-        *   **Current Diagnosis (Updated 2025-05-23 Late Evening):**
-            *   The frontend correctly sends the JWT.
-            *   The WebSocket connection is established successfully.
-            *   FastAPI correctly parses the `token` from the query string.
-            *   The JWT decoding logic in `websocket_router.py` now executes successfully, extracting the `user_id` (as a UUID object) and storing it in `connection_data`.
-            *   The `TypeError` related to `get_active_adventure_id`'s signature was resolved by correcting the method definition in `state_storage_service.py`.
-            *   The `await` issue with Supabase `execute()` calls in `get_active_adventure_id` was resolved by removing the unnecessary `await`.
-            *   **New Problem:** A `TypeError: Object of type UUID is not JSON serializable` occurs when `state_storage_service.store_state` attempts to save data to Supabase, because the `user_id` (a UUID object) is not being converted to a string before JSON serialization by the Supabase client.
-        *   **Immediate Next Steps (Fix UUID Serialization & Test Storage):**
-            1.  **Modify `app/services/state_storage_service.py`:**
-                *   In the `store_state` method, ensure that `user_id` is converted to `str(user_id)` before being included in the `record` dictionary that is passed to the Supabase client for insertion or update.
-            2.  User to apply this change and restart the backend server.
-            3.  User to perform the Google Login and adventure start test again.
-            4.  **Verify:**
-                *   The `TypeError: Object of type UUID is not JSON serializable` is gone.
-                *   A new adventure is created and its state is successfully stored in the Supabase `adventures` table.
-                *   The `user_id` column in the new `adventures` record in Supabase is populated with the correct UUID string.
-                *   Play through a few chapters to ensure subsequent state saves also work correctly with the `user_id`.
+    *   **Debugging Log & Resolution Status (As of 2025-05-24):**
+        *   **Initial Problems & Debugging:**
+            *   Initial tests revealed issues with JWT not being passed/processed correctly by the backend, leading to missing `user_id` in `connection_data`. This was traced to frontend WebSocket URL construction and backend parsing/logging.
+            *   Subsequent fixes to frontend (`scripts.html`) and backend (`websocket_router.py` including adding temporary `print` statements) ensured the JWT was correctly sent, received, and parsed, and the `user_id` (as a UUID object) was extracted.
+        *   **Resolved: `TypeError: Object of type UUID is not JSON serializable`**
+            *   This error occurred in `state_storage_service.store_state` when attempting to save `user_id` (a UUID object) to Supabase.
+            *   **Solution:** Modified `app/services/state_storage_service.py` to explicitly convert the `user_id` to a string (`str(user_id)`) before including it in the data payload for Supabase database operations.
+            *   **Verification:** Google Login testing confirmed this resolved the `TypeError`, and `user_id` is correctly stored as a string in the `adventures` table.
+        *   **Resolved: `NULL` `user_id` in `telemetry_events` Table**
+            *   After the initial `adventure_started` event, subsequent telemetry events (e.g., `choice_made`, `chapter_viewed`) were logging `NULL` for `user_id`.
+            *   **Solution:**
+                *   Updated `app/services/websocket/choice_processor.py` (for `choice_made` events) to correctly pass the `user_id` (obtained from `connection_data`) to `telemetry_service.log_event`.
+                *   Updated `app/services/websocket/stream_handler.py` (for `chapter_viewed` events) to correctly pass the `user_id` (obtained from `connection_data`) to `telemetry_service.log_event`.
+            *   **Verification:** Google Login testing confirmed that `user_id` is now correctly populated for all relevant telemetry events in the `telemetry_events` table.
+        *   **Resolved: Temporary Debug Logs Removed**
+            *   Verbose `print()` statements added to `app/routers/websocket_router.py` for debugging JWT and query parameter parsing have been removed, and standard logging practices are now used.
+        *   **Verified: Google Login Flow and `user_id` Propagation**
+            *   The Google Login flow is functional.
+            *   `user_id` is correctly extracted from the JWT.
+            *   `user_id` is correctly stored as a string in the `adventures` table.
+            *   `user_id` is correctly stored as a string in the `telemetry_events` table for all relevant events.
     *   [x] Test Google Login flow.
     *   [ ] Test "Continue as Guest" (Supabase anonymous sign-in) flow.
     *   [ ] Verify `user_id` is populated correctly in `adventures` and `telemetry_events` for authenticated users and Supabase anonymous users.

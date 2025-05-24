@@ -1,13 +1,21 @@
 # Active Context
 
-## Current Focus: Advancing Core Functionality & User Experience (As of 2025-05-21)
+## Current Focus: Supabase User Authentication & General Enhancements (As of 2025-05-24)
 
-Following the successful completion and validation of Supabase Phase 2 (Persistent Adventure State) and Phase 3 (Telemetry, including Analytics), and the core implementation of the Visual Consistency Epic (improving protagonist and NPC visual tracking and image generation), the project is now focused on several key areas to further enhance functionality, robustness, and user experience.
+Following the successful completion of Supabase Phase 2 (Persistent Adventure State) and Phase 3 (Telemetry), and significant progress on Phase 4 (User Authentication), the project is now focused on completing Phase 4 testing and addressing other key enhancements.
 
 ### Recently Completed Milestones
-*   **Supabase Integration:**
-    *   Phase 2 (Persistent Adventure State): Successfully implemented and tested, enabling adventure persistence and resumption. All test cases passed (as of 2025-05-20).
-    *   Phase 3 (Telemetry): Database schema defined, backend logging integrated, detailed telemetry columns added, and analytics capabilities established (completed 2025-05-21).
+*   **Supabase Integration - Phase 4 (User Authentication - Google Flow):**
+    *   **Backend Logic:** Implemented JWT verification in `websocket_router.py` using `PyJWT`.
+    *   **User ID Propagation:** Ensured `user_id` (extracted from JWT) is correctly passed to `StateStorageService` and `TelemetryService`.
+    *   **Database Interaction Fixes:**
+        *   Resolved `TypeError: Object of type UUID is not JSON serializable` in `StateStorageService` by converting `user_id` to a string before database operations.
+        *   Fixed `NULL` `user_id` issue in `telemetry_events` table for `choice_made` and `chapter_viewed` events by ensuring correct `user_id` passing in `choice_processor.py` and `stream_handler.py`.
+    *   **Database Schema & RLS:** Added foreign key constraints for `user_id` in `adventures` and `telemetry_events` tables, and defined initial RLS policies. Migration applied successfully.
+    *   **Debug Log Cleanup:** Removed temporary `print()` statements from `websocket_router.py`, converting to standard logging.
+    *   **Google Login Flow Testing:** Successfully tested the Google login flow, verifying `user_id` is correctly populated in `adventures` and `telemetry_events` tables.
+*   **Supabase Integration - Phase 3 (Telemetry):** Fully completed and validated (as of 2025-05-21). This includes schema definition, backend logging integration, detailed telemetry columns, and analytics capabilities.
+*   **Supabase Integration - Phase 2 (Persistent Adventure State):** Fully completed and validated (as of 2025-05-20). Adventures are persistent, and resumption is functional.
 *   **Visual Consistency Epic (Core Implementation):**
     *   Implemented two-step image prompt synthesis for protagonist visual stability.
     *   Established a system for tracking and updating visual descriptions for all characters (protagonist and NPCs) across chapters (`state.character_visuals`).
@@ -18,9 +26,17 @@ Following the successful completion and validation of Supabase Phase 2 (Persiste
 
 ### Immediate Next Steps & Priorities
 
-1.  **Evaluate Phase 4: User Authentication (Supabase Auth)**
-    *   **Goal:** Determine feasibility and plan for implementing optional user authentication (Google/Anonymous) using Supabase.
-    *   **Considerations:** Frontend/backend logic, database schema changes (linking `user_id` in `adventures` and `telemetry_events` tables), RLS policies.
+1.  **Complete Phase 4 Testing: User Authentication (Supabase Auth)**
+    *   **Goal:** Finalize testing for all aspects of Supabase user authentication.
+    *   **Tasks:**
+        *   Test "Continue as Guest" (Supabase anonymous sign-in) flow.
+        *   Verify `user_id` is populated correctly in `adventures` and `telemetry_events` for Supabase anonymous users.
+        *   Verify `user_id` is `NULL` for any adventures/telemetry created by truly unauthenticated flows (if any remain, or for legacy data).
+        *   Test adventure resumption for Google users (ensure `get_active_adventure_id` works with `user_id`).
+        *   Test adventure resumption for Supabase anonymous users.
+        *   Test RLS policies from client-side perspective (e.g., using Supabase JS client with user's token, try to access/modify data not permitted by policies).
+        *   Test logout functionality (redirects to `/`, session cleared, subsequent attempts to access protected routes fail or redirect).
+        *   Test behavior if user tries to access `/select` without being logged in (should redirect to `/`).
 
 2.  **Implement Resuming Chapter Image Display (Chapters 1-9)**
     *   **Goal:** Address the known issue where the original image for chapters 1-9 is not re-displayed when an adventure is resumed.

@@ -11,6 +11,8 @@
   * Implements an upsert mechanism in `store_state` (update if `adventure_id` exists, insert otherwise).
   * Extracts key fields (`story_category`, `lesson_topic`, `is_complete`, `completed_chapter_count`, `environment`) into dedicated columns for querying, while storing the full state in `state_data`.
   * Enables persistent adventure state across sessions and server restarts.
+  * Handles `user_id` (from authenticated users) by converting it to a string before database operations to prevent serialization errors.
+  * Prioritizes `user_id` over `client_uuid` for retrieving active adventures if `user_id` is available.
   ```python
   # Example Initialization in StateStorageService
   class StateStorageService:
@@ -22,8 +24,9 @@
           self.supabase: Client = create_client(supabase_url, supabase_key)
           logger.info("Initialized StateStorageService with Supabase client")
 
-      async def store_state(self, state_data: Dict[str, Any], adventure_id: Optional[str] = None, ...) -> str:
-          # ... prepares record ...
+      async def store_state(self, state_data: Dict[str, Any], adventure_id: Optional[str] = None, user_id: Optional[UUID] = None, ...) -> str:
+          user_id_for_db = str(user_id) if user_id is not None else None
+          # ... prepares record including user_id_for_db ...
           if adventure_id:
               # ... update logic using self.supabase.table("adventures").update()...
           else:
@@ -34,12 +37,42 @@
           # ... logic using self.supabase.table("adventures").select("state_data")...
           # ... returns state_data ...
 
-      async def get_active_adventure_id(self, client_uuid: str) -> Optional[str]:
-          # ... logic using self.supabase.table("adventures").select("id")...
+      async def get_active_adventure_id(self, client_uuid: Optional[str] = None, user_id: Optional[UUID] = None) -> Optional[str]:
+          # ... logic prioritizes user_id (converted to str for query) then client_uuid ...
           # ... returns adventure_id or None ...
   ```
 
-### 2. Case Sensitivity Handling Pattern
+### 2. WebSocket JWT Authentication and User Identification Pattern
+- **Mechanism:**
+  * User authentication (e.g., Google Sign-In) is handled on the frontend, yielding a JWT from Supabase Auth.
+  * The JWT is passed as a query parameter (`token`) when establishing the WebSocket connection (`/ws/story/{story_category}/{lesson_topic}?token=...`).
+  * **Backend Validation (`app/routers/websocket_router.py`):**
+    * The `story_websocket` endpoint receives the `token`.
+    * If a token is present, it's decoded and validated using `PyJWT` and the `SUPABASE_JWT_SECRET` environment variable.
+    * The `sub` claim from the JWT payload is extracted as the `user_id`.
+    * This `user_id` (as a `UUID` object) is stored in a `connection_data` dictionary associated with the WebSocket session.
+- **Usage:**
+  * The `user_id` from `connection_data` is used by services like `StateStorageService` (for associating adventures with users) and `TelemetryService` (for logging user-specific events).
+  * This allows linking game state and telemetry data to authenticated users.
+- **Error Handling:** Includes checks for missing tokens, missing JWT secret, expired tokens, and invalid tokens.
+  ```python
+  # Simplified example from websocket_router.py
+  async def story_websocket(websocket: WebSocket, token: Optional[str] = Query(None)):
+      connection_data = {"user_id": None}
+      if token:
+          supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+          if supabase_jwt_secret:
+              try:
+                  payload = jwt.decode(token, supabase_jwt_secret, algorithms=["HS256"], audience="authenticated")
+                  user_id_from_token_str = payload.get("sub")
+                  if user_id_from_token_str:
+                      connection_data["user_id"] = UUID(user_id_from_token_str)
+              except Exception as e:
+                  logger.warning(f"JWT processing error: {e}")
+      # ... rest of WebSocket logic using connection_data["user_id"] ...
+  ```
+
+### 3. Case Sensitivity Handling Pattern
 - **AdventureStateManager** (`app/services/adventure_state_manager.py`)
   * Converts uppercase chapter types to lowercase during state reconstruction
   * Ensures compatibility between stored state and AdventureState model

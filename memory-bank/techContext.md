@@ -8,6 +8,13 @@
   * Structured logging system
   * Middleware stack for request tracking
   * State management and synchronization
+- **Authentication & Authorization**
+  * `PyJWT[crypto]` library for JWT decoding.
+  * Supabase Auth for user management (Google & Anonymous providers).
+  * JWTs passed via WebSocket query parameters (`token`).
+  * Backend validation of JWTs using `SUPABASE_JWT_SECRET`.
+  * Row-Level Security (RLS) policies in Supabase for data access control.
+  * `app/auth/dependencies.py` for FastAPI JWT verification dependency (though primarily WebSocket auth is used for core adventure flow).
 
 ### AI Integration
 - **Provider-Agnostic Implementation**
@@ -17,6 +24,7 @@
     ```
     GOOGLE_API_KEY=your_google_key  # Used for both LLM and image generation
     OPENAI_API_KEY=your_openai_key  # Optional alternative for LLM only
+    SUPABASE_JWT_SECRET=your_supabase_jwt_secret # For backend JWT validation
     ```
 
 ### Frontend
@@ -57,7 +65,11 @@
 
 ### StateStorageService
 - **Implementation:** `app/services/state_storage_service.py`
-- **Description:** Provides persistent storage for `AdventureState` using a Supabase backend. Handles state creation, retrieval, updates (upsert), and retrieval of active adventures for resumption. See `memory-bank/systemPatterns.md` for the Supabase Persistence Pattern details.
+- **Description:** Provides persistent storage for `AdventureState` using a Supabase backend. Handles state creation, retrieval, updates (upsert), and retrieval of active adventures for resumption. `user_id` (if present) is converted to a string before database operations to prevent serialization errors. See `memory-bank/systemPatterns.md` for the Supabase Persistence Pattern details.
+
+### TelemetryService
+- **Implementation:** `app/services/telemetry_service.py`
+- **Description:** Logs telemetry events to a Supabase backend. `user_id` (if present) is converted to a string before database operations.
 
 ### AdventureState
 ```python

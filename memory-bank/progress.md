@@ -2,6 +2,19 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-05-24: Supabase Integration - Phase 4 (User Authentication) - Key Fixes & Google Flow Verification
+- **Backend Logic & JWT Handling:**
+    - Implemented JWT verification in `app/routers/websocket_router.py` using `PyJWT` for secure token processing.
+    - Ensured `user_id` (extracted from JWT `sub` claim) is correctly converted to a UUID object and stored in `connection_data`.
+    - Removed temporary debug `print()` statements from `websocket_router.py`, transitioning to standard logging.
+- **Database Interaction Fixes:**
+    - Resolved `TypeError: Object of type UUID is not JSON serializable` in `app/services/state_storage_service.py` by ensuring `user_id` is converted to a string before database insertion/update in the `store_state` method.
+    - Corrected `NULL` `user_id` issue in the `telemetry_events` table for `choice_made` and `chapter_viewed` events. This involved updating `app/services/websocket/choice_processor.py` and `app/services/websocket/stream_handler.py` to correctly pass the `user_id` from `connection_data` to the `TelemetryService`.
+- **Google Login Flow Testing:**
+    - Successfully tested the Google Login flow.
+    - Verified that `user_id` is correctly populated as a string in both the `adventures` table (via `StateStorageService`) and the `telemetry_events` table (for `adventure_started`, `chapter_viewed`, and `choice_made` events).
+- **Documentation:** Updated `wip/supabase_integration.md` to reflect these fixes and the successful test of the Google Login flow.
+
 ### 2025-05-21: Supabase Integration - Phase 3 (Telemetry) Fully Completed
 - **Telemetry Schema & Logging:** Defined `telemetry_events` table, integrated backend logging for key events (`adventure_started`, `chapter_viewed`, `choice_made`, `summary_viewed`) using `TelemetryService`. (as per `wip/supabase_integration.md`)
 - **Detailed Telemetry Columns:** Enhanced `telemetry_events` with `chapter_type`, `chapter_number`, `event_duration_seconds`, and `environment` columns. Updated backend code to populate these. (as per `wip/supabase_integration.md`)
