@@ -1,0 +1,130 @@
+/* Resume Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent background */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Ensure it's on top */
+}
+
+.modal-content {
+    background-color: var(--background-color, #fff); /* Use theme variable or default */
+    color: var(--text-color, #333); /* Use theme variable or default */
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 500px; /* Max width for larger screens */
+    text-align: center;
+    font-family: var(--font-family-sans-serif, sans-serif); /* Use theme variable */
+    border: 1px solid var(--border-color, #ddd);
+}
+
+.modal-header {
+    font-family: var(--font-family-display, var(--font-family-sans-serif, sans-serif)); /* Use theme variable */
+    color: var(--primary-color, #007bff); /* Use theme variable or default */
+    font-size: 1.8em;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.modal-content p {
+    font-size: 1.1em;
+    line-height: 1.6;
+    margin-bottom: 10px;
+}
+
+.adventure-details {
+    text-align: left;
+    margin-top: 20px;
+    margin-bottom: 25px;
+    padding: 15px;
+    background-color: var(--secondary-background-color, #f9f9f9); /* Slightly different background */
+    border-radius: 8px;
+    border: 1px solid var(--border-color-light, #eee);
+}
+
+.adventure-details p {
+    font-size: 1em;
+    margin-bottom: 8px;
+}
+
+.adventure-details strong {
+    color: var(--primary-color-dark, #0056b3); /* Use theme variable or default */
+}
+
+.modal-actions {
+    margin-top: 25px;
+    display: flex;
+    justify-content: space-around; /* Spreads buttons out */
+    gap: 15px; /* Adds space between buttons if they wrap */
+}
+
+/* Using existing button styles from components.css if possible,
+   but ensuring they adapt well within the modal */
+.modal-actions .button {
+    padding: 12px 20px;
+    font-size: 1em;
+    min-width: 150px; /* Ensure buttons have a decent width */
+    transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+}
+
+.modal-actions .primary-button {
+    background-color: var(--primary-button-background, var(--primary-color, #007bff));
+    color: var(--primary-button-text, #fff);
+    border: none;
+}
+
+.modal-actions .primary-button:hover {
+    background-color: var(--primary-button-hover-background, var(--primary-color-dark, #0056b3));
+    transform: translateY(-1px);
+}
+
+.modal-actions .secondary-button {
+    background-color: var(--secondary-button-background, #6c757d);
+    color: var(--secondary-button-text, #fff);
+    border: none;
+}
+
+.modal-actions .secondary-button:hover {
+    background-color: var(--secondary-button-hover-background, #545b62);
+    transform: translateY(-1px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .modal-content {
+        padding: 20px;
+        width: 95%;
+    }
+
+    .modal-header {
+        font-size: 1.6em;
+    }
+
+    .modal-content p {
+        font-size: 1em;
+    }
+
+    .adventure-details {
+        padding: 10px;
+    }
+
+    .modal-actions {
+        flex-direction: column; /* Stack buttons vertically on small screens */
+    }
+
+    .modal-actions .button {
+        width: 100%; /* Make buttons full width */
+        margin-bottom: 10px; /* Add space between stacked buttons */
+    }
+
+    .modal-actions .button:last-child {
+        margin-bottom: 0;
+    }
+}

@@ -28,13 +28,16 @@ async def story_websocket(
     client_uuid: Optional[str] = Query(None),
     difficulty: Optional[str] = Query(None),
     token: Optional[str] = Query(None),
+    resume_adventure_id: Optional[str] = Query(
+        None
+    ),  # New parameter for specific resumption
 ):
     await websocket.accept()
     logger.info(
-        f"WebSocket attempting connection with client_uuid: {client_uuid}"
-    )  # Existing log
+        f"WebSocket attempting connection with client_uuid: {client_uuid}, resume_adventure_id: {resume_adventure_id}"
+    )
     logger.info(
-        f"WebSocket connection established for story category: {story_category}, lesson topic: {lesson_topic}, client_uuid: {client_uuid}, difficulty: {difficulty}"
+        f"WebSocket connection established for story category: {story_category}, lesson topic: {lesson_topic}, client_uuid: {client_uuid}, difficulty: {difficulty}, resume_adventure_id: {resume_adventure_id}"
     )
 
     state_manager = AdventureStateManager()
@@ -78,184 +81,265 @@ async def story_websocket(
         logger.debug("No token provided, skipping JWT processing.")
 
     try:
-        active_adventure_id = None
-        # Check for existing active adventure
-        if connection_data.get("user_id"):
-            logger.debug(
-                f"Checking for active adventure using user_id: {connection_data['user_id']}"
-            )
-            try:
-                active_adventure_id = (
-                    await state_storage_service.get_active_adventure_id(
-                        user_id=connection_data["user_id"]
-                    )
-                )
-                if active_adventure_id:
-                    logger.debug(
-                        f"Found active adventure {active_adventure_id} for user_id {connection_data['user_id']}"
-                    )
-                else:
-                    logger.debug(
-                        f"No active adventure found for user_id {connection_data['user_id']}. Will check client_uuid if present."
-                    )
-            except Exception as e:
-                logger.error(
-                    f"Error checking active adventure by user_id {connection_data['user_id']}: {e}"
-                )
-
-        if not active_adventure_id and client_uuid:
-            logger.debug(
-                f"Checking for active adventure using client_uuid: {client_uuid} (user_id lookup failed or no user_id)"
-            )
-            try:
-                active_adventure_id = (
-                    await state_storage_service.get_active_adventure_id(
-                        client_uuid=client_uuid
-                    )
-                )
-                if active_adventure_id:
-                    logger.debug(
-                        f"Found active adventure {active_adventure_id} for client_uuid {client_uuid}"
-                    )
-                else:
-                    logger.debug(
-                        f"No active adventure found for client_uuid {client_uuid} either."
-                    )
-            except Exception as e:
-                logger.error(
-                    f"Error checking active adventure by client_uuid {client_uuid}: {e}"
-                )
-
-        if active_adventure_id:
-            connection_data["adventure_id"] = active_adventure_id
-            await websocket.send_json(
-                {
-                    "type": "adventure_status",
-                    "status": "existing",
-                    "adventure_id": active_adventure_id,
-                }
-            )
-        else:
-            logger.info(
-                f"No active adventure found for user_id {connection_data.get('user_id')} or client_uuid {client_uuid}"
-            )
-            await websocket.send_json({"type": "adventure_status", "status": "new"})
-
         loaded_state_from_storage = None
-        if connection_data["adventure_id"]:
+
+        if resume_adventure_id:
+            logger.info(
+                f"Attempting to resume specific adventure_id: {resume_adventure_id}"
+            )
+            connection_data["adventure_id"] = resume_adventure_id
             try:
                 stored_state = await state_storage_service.get_state(
-                    connection_data["adventure_id"]
+                    resume_adventure_id
                 )
                 if stored_state:
-                    logger.info(
-                        f"Attempting to reconstruct state from storage for ID: {connection_data['adventure_id']}"
-                    )
-                    loaded_state_from_storage = (
-                        await state_manager.reconstruct_state_from_storage(stored_state)
-                    )
-                    if loaded_state_from_storage:
+                    # TODO: Add user_id validation here. Ensure token's user_id matches stored_state's user_id if both exist.
+                    # For now, RLS policies are the primary guard.
+                    current_user_id = connection_data.get("user_id")
+                    adventure_owner_id_str = stored_state.get("metadata", {}).get(
+                        "user_id"
+                    )  # Assuming user_id is in metadata or top level of state_data
+                    if (
+                        not adventure_owner_id_str and "user_id" in stored_state
+                    ):  # Check top level if not in metadata
+                        adventure_owner_id_str = stored_state.get("user_id")
+
+                    can_load = False
+                    if adventure_owner_id_str is None:  # Guest adventure
+                        can_load = True
+                        logger.info(f"Resuming guest adventure {resume_adventure_id}.")
+                    elif current_user_id and adventure_owner_id_str == str(
+                        current_user_id
+                    ):
+                        can_load = True
                         logger.info(
-                            "Successfully reconstructed and set state from storage upon connection."
+                            f"User {current_user_id} confirmed owner of adventure {resume_adventure_id}."
                         )
-                        await websocket.send_json(
-                            {
-                                "type": "adventure_loaded",
-                                "adventure_id": connection_data["adventure_id"],
-                                "current_chapter": loaded_state_from_storage.current_chapter_number,
-                                "total_chapters": loaded_state_from_storage.story_length,
-                            }
-                        )
-                        logger.info(
-                            f"Loaded state indicates current chapter is {loaded_state_from_storage.current_chapter_number}"
-                        )
-                        if loaded_state_from_storage.chapters:
-                            chapter_number_to_resume_display = (
-                                loaded_state_from_storage.current_chapter_number - 1
-                            )
-                            if (
-                                chapter_number_to_resume_display > 0
-                                and chapter_number_to_resume_display
-                                <= len(loaded_state_from_storage.chapters)
-                            ):
-                                chapter_to_display_data = (
-                                    loaded_state_from_storage.chapters[
-                                        chapter_number_to_resume_display - 1
-                                    ]
-                                )
-                                if (
-                                    chapter_to_display_data.response is None
-                                    and chapter_to_display_data.chapter_type
-                                    != ChapterType.CONCLUSION
-                                ):
-                                    logger.info(
-                                        f"Resuming adventure: Re-sending content for Chapter {chapter_to_display_data.chapter_number} (which is {chapter_number_to_resume_display})"
-                                    )
-                                    resumption_content_dict = None
-                                    if chapter_to_display_data.chapter_content:
-                                        resumption_content_dict = chapter_to_display_data.chapter_content.dict()
-                                    elif chapter_to_display_data.content:
-                                        resumption_content_dict = {
-                                            "content": chapter_to_display_data.content,
-                                            "choices": [
-                                                choice.dict()
-                                                for choice in chapter_to_display_data.choices
-                                                or []
-                                            ],
-                                        }
-                                    resumption_question_dict = (
-                                        chapter_to_display_data.question
-                                        if chapter_to_display_data.question
-                                        else None
-                                    )
-                                    if resumption_content_dict:
-                                        await stream_chapter_content(
-                                            websocket=websocket,
-                                            state=loaded_state_from_storage,
-                                            adventure_id=connection_data.get(
-                                                "adventure_id"
-                                            ),
-                                            story_category=story_category,
-                                            lesson_topic=lesson_topic,
-                                            connection_data=connection_data,
-                                            is_resumption=True,
-                                            resumption_chapter_content_dict=resumption_content_dict,
-                                            resumption_sampled_question_dict=resumption_question_dict,
-                                            resumption_chapter_number=chapter_to_display_data.chapter_number,
-                                            resumption_chapter_type=chapter_to_display_data.chapter_type,
-                                        )
-                                        connection_data[
-                                            "resumed_session_just_sent_chapter"
-                                        ] = True
-                                    else:
-                                        logger.warning(
-                                            f"Could not prepare resumption_content_dict for chapter {chapter_to_display_data.chapter_number}. Cannot resend."
-                                        )
-                                else:
-                                    logger.info(
-                                        f"Chapter {chapter_to_display_data.chapter_number} (to resume) already has a response or is a conclusion. Waiting for client message."
-                                    )
-                            else:
-                                logger.warning(
-                                    f"Calculated chapter_number_to_resume_display ({chapter_number_to_resume_display}) is out of bounds for loaded chapters ({len(loaded_state_from_storage.chapters)})."
-                                )
-                        else:
-                            logger.warning(
-                                "Loaded state has no chapters, cannot determine chapter to resume."
-                            )
                     else:
-                        logger.error(
-                            f"Failed to reconstruct state from storage for ID: {connection_data['adventure_id']}. Will create new adventure."
+                        logger.warning(
+                            f"User {current_user_id} is not the owner of adventure {resume_adventure_id} (owner: {adventure_owner_id_str}). Denying direct load via ID."
                         )
-                        connection_data["adventure_id"] = None
+                        # This case should ideally be prevented by RLS or frontend not allowing this.
+                        # If it happens, treat as if no adventure found.
+                        connection_data["adventure_id"] = None  # Clear it
+                        # Fall through to normal "find active or new" logic
+
+                    if can_load:
+                        logger.info(
+                            f"Reconstructing state from storage for specific ID: {resume_adventure_id}"
+                        )
+                        loaded_state_from_storage = (
+                            await state_manager.reconstruct_state_from_storage(
+                                stored_state
+                            )
+                        )
+                        if loaded_state_from_storage:
+                            logger.info(
+                                "Successfully reconstructed state for specific resumption."
+                            )
+                            # Story category and lesson topic might differ from URL if resuming specific ID
+                            # Update them from the loaded state for consistency in subsequent calls
+                            story_category = loaded_state_from_storage.story_category
+                            lesson_topic = loaded_state_from_storage.lesson_topic
+                            logger.info(
+                                f"Updated story_category to '{story_category}' and lesson_topic to '{lesson_topic}' from resumed state."
+                            )
+                        else:
+                            logger.error(
+                                f"Failed to reconstruct state for specific ID: {resume_adventure_id}. Treating as new."
+                            )
+                            connection_data["adventure_id"] = (
+                                None  # Clear it to allow new adventure creation
+                            )
+                    # If can_load is false, loaded_state_from_storage remains None, will proceed to find/create new.
                 else:
                     logger.warning(
-                        f"No state found in storage for supposedly active ID: {connection_data['adventure_id']}. Will create new adventure."
+                        f"No state found in storage for specific resume_adventure_id: {resume_adventure_id}. Will try to find active or create new."
+                    )
+                    connection_data["adventure_id"] = None  # Clear it
+            except Exception as e:
+                logger.error(
+                    f"Error loading state for specific resume_adventure_id {resume_adventure_id}: {e}"
+                )
+                connection_data["adventure_id"] = None  # Clear it
+
+        if (
+            not loaded_state_from_storage
+        ):  # If not resuming specific or specific resumption failed
+            active_adventure_id = None
+            # Check for existing active adventure (original logic)
+            if connection_data.get("user_id"):
+                logger.debug(
+                    f"Checking for active adventure using user_id: {connection_data['user_id']}"
+                )
+                try:
+                    active_adventure_id = (
+                        await state_storage_service.get_active_adventure_id(
+                            user_id=connection_data["user_id"]
+                        )
+                    )
+                    if active_adventure_id:
+                        logger.debug(
+                            f"Found active adventure {active_adventure_id} for user_id {connection_data['user_id']}"
+                        )
+                    else:
+                        logger.debug(
+                            f"No active adventure found for user_id {connection_data['user_id']}. Will check client_uuid if present."
+                        )
+                except Exception as e:
+                    logger.error(
+                        f"Error checking active adventure by user_id {connection_data['user_id']}: {e}"
+                    )
+
+            if not active_adventure_id and client_uuid:
+                logger.debug(
+                    f"Checking for active adventure using client_uuid: {client_uuid} (user_id lookup failed or no user_id)"
+                )
+                try:
+                    active_adventure_id = (
+                        await state_storage_service.get_active_adventure_id(
+                            client_uuid=client_uuid
+                        )
+                    )
+                    if active_adventure_id:
+                        logger.debug(
+                            f"Found active adventure {active_adventure_id} for client_uuid {client_uuid}"
+                        )
+                    else:
+                        logger.debug(
+                            f"No active adventure found for client_uuid {client_uuid} either."
+                        )
+                except Exception as e:
+                    logger.error(
+                        f"Error checking active adventure by client_uuid {client_uuid}: {e}"
+                    )
+
+            if active_adventure_id:
+                connection_data["adventure_id"] = active_adventure_id
+                # Attempt to load this active adventure's state
+                try:
+                    stored_state = await state_storage_service.get_state(
+                        active_adventure_id
+                    )
+                    if stored_state:
+                        logger.info(
+                            f"Reconstructing state from storage for active ID: {active_adventure_id}"
+                        )
+                        loaded_state_from_storage = (
+                            await state_manager.reconstruct_state_from_storage(
+                                stored_state
+                            )
+                        )
+                        if loaded_state_from_storage:
+                            logger.info(
+                                "Successfully reconstructed state for active adventure."
+                            )
+                            story_category = loaded_state_from_storage.story_category
+                            lesson_topic = loaded_state_from_storage.lesson_topic
+                        else:
+                            logger.error(
+                                f"Failed to reconstruct state for active ID: {active_adventure_id}. Will create new."
+                            )
+                            connection_data["adventure_id"] = None
+                    else:
+                        logger.warning(
+                            f"No state found for active ID: {active_adventure_id}. Will create new."
+                        )
+                        connection_data["adventure_id"] = None
+                except Exception as e:
+                    logger.error(
+                        f"Error loading state for active adventure {active_adventure_id}: {e}"
                     )
                     connection_data["adventure_id"] = None
-            except Exception as e:
-                logger.error(f"Error loading state from storage upon connection: {e}")
-                connection_data["adventure_id"] = None
+            else:  # No active_adventure_id found by any means
+                logger.info(
+                    f"No active adventure found for user_id {connection_data.get('user_id')} or client_uuid {client_uuid}. A new adventure will be created on first client message."
+                )
+
+        # Send status based on whether an adventure was loaded (either specific or active)
+        if loaded_state_from_storage and connection_data["adventure_id"]:
+            await websocket.send_json(
+                {
+                    "type": "adventure_loaded",  # Changed from adventure_status for clarity
+                    "status": "existing_loaded",  # More specific status
+                    "adventure_id": connection_data["adventure_id"],
+                    "current_chapter": loaded_state_from_storage.current_chapter_number,
+                    "total_chapters": loaded_state_from_storage.story_length,
+                }
+            )
+            logger.info(
+                f"Loaded state indicates current chapter is {loaded_state_from_storage.current_chapter_number}"
+            )
+            # Resend last chapter content if needed (existing logic)
+            if loaded_state_from_storage.chapters:
+                chapter_number_to_resume_display = (
+                    loaded_state_from_storage.current_chapter_number - 1
+                )
+                if (
+                    0
+                    < chapter_number_to_resume_display
+                    <= len(loaded_state_from_storage.chapters)
+                ):
+                    chapter_to_display_data = loaded_state_from_storage.chapters[
+                        chapter_number_to_resume_display - 1
+                    ]
+                    if (
+                        chapter_to_display_data.response is None
+                        and chapter_to_display_data.chapter_type
+                        != ChapterType.CONCLUSION
+                    ):
+                        logger.info(
+                            f"Resuming adventure: Re-sending content for Chapter {chapter_to_display_data.chapter_number}"
+                        )
+                        resumption_content_dict = (
+                            chapter_to_display_data.chapter_content.dict()
+                            if chapter_to_display_data.chapter_content
+                            else {
+                                "content": chapter_to_display_data.content,
+                                "choices": [
+                                    c.dict()
+                                    for c in chapter_to_display_data.choices or []
+                                ],
+                            }
+                        )
+                        resumption_question_dict = (
+                            chapter_to_display_data.question
+                            if chapter_to_display_data.question
+                            else None
+                        )
+                        if resumption_content_dict:
+                            await stream_chapter_content(
+                                websocket=websocket,
+                                state=loaded_state_from_storage,
+                                adventure_id=connection_data.get("adventure_id"),
+                                story_category=story_category,
+                                lesson_topic=lesson_topic,
+                                connection_data=connection_data,
+                                is_resumption=True,
+                                resumption_chapter_content_dict=resumption_content_dict,
+                                resumption_sampled_question_dict=resumption_question_dict,
+                                resumption_chapter_number=chapter_to_display_data.chapter_number,
+                                resumption_chapter_type=chapter_to_display_data.chapter_type,
+                            )
+                            connection_data["resumed_session_just_sent_chapter"] = True
+                        else:
+                            logger.warning(
+                                f"Could not prepare resumption_content_dict for chapter {chapter_to_display_data.chapter_number}."
+                            )
+                    else:
+                        logger.info(
+                            f"Chapter {chapter_to_display_data.chapter_number} (to resume) already has a response or is a conclusion."
+                        )
+                else:
+                    logger.warning(
+                        f"Calculated chapter_number_to_resume_display ({chapter_number_to_resume_display}) is out of bounds."
+                    )
+            else:
+                logger.warning(
+                    "Loaded state has no chapters, cannot determine chapter to resume."
+                )
+        else:  # No adventure loaded, will be new
+            await websocket.send_json({"type": "adventure_status", "status": "new"})
 
         while True:
             data = await websocket.receive_json()

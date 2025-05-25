@@ -1,12 +1,16 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 import pandas as pd
 import logging
 import uuid
 import os
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from uuid import UUID as UUID_type  # To avoid conflict with uuid.uuid4()
 from app.data.story_loader import StoryLoader
+from app.services.state_storage_service import StateStorageService
+from app.auth.dependencies import get_current_user_id_optional, get_current_user_id
+
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -201,3 +205,92 @@ async def story_page(request: Request, chapter: int):
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# --- New API Endpoints for Phase 4.1 ---
+
+
+@router.get("/api/user/current-adventure", response_model=Optional[Dict[str, Any]])
+async def get_user_current_adventure_api(
+    request: Request,
+    user_id: Optional[UUID_type] = Depends(get_current_user_id_optional),
+    state_storage_service: StateStorageService = Depends(
+        StateStorageService
+    ),  # Dependency inject service
+):
+    """
+    API endpoint to get the current user's single incomplete adventure.
+    Returns adventure details if found, otherwise null.
+    The token for authentication is expected as a query parameter by get_current_user_id_optional.
+    """
+    context = get_session_context(request)  # For logging
+    if not user_id:
+        logger.info(
+            "Attempt to get current adventure for unauthenticated user.", extra=context
+        )
+        return {
+            "adventure": None
+        }  # Or simply: return None, if response_model handles it.
+
+    try:
+        logger.info(f"Fetching current adventure for user {user_id}", extra=context)
+        adventure_details = await state_storage_service.get_user_current_adventure(
+            user_id
+        )
+        if adventure_details:
+            return {"adventure": adventure_details}
+        return {"adventure": None}
+    except Exception as e:
+        logger.error(
+            f"Error fetching current adventure for user {user_id}: {str(e)}",
+            extra={**context, "error": str(e)},
+            exc_info=True,
+        )
+        # Depending on desired behavior, could return 500 or a specific error structure
+        raise HTTPException(status_code=500, detail="Error fetching current adventure.")
+
+
+@router.post("/api/adventure/{adventure_id}/abandon", status_code=200)
+async def abandon_adventure_api(
+    request: Request,
+    adventure_id: str,
+    user_id: UUID_type = Depends(get_current_user_id),  # Requires authentication
+    state_storage_service: StateStorageService = Depends(StateStorageService),
+):
+    """
+    API endpoint to mark an adventure as abandoned.
+    Requires user to be authenticated.
+    """
+    context = get_session_context(request)  # For logging
+    logger.info(
+        f"User {user_id} attempting to abandon adventure {adventure_id}", extra=context
+    )
+    try:
+        success = await state_storage_service.abandon_adventure(adventure_id, user_id)
+        if success:
+            logger.info(
+                f"Adventure {adventure_id} successfully abandoned by user {user_id}",
+                extra=context,
+            )
+            # Return a 200 OK response, possibly with a confirmation message
+            return {"message": "Adventure successfully abandoned."}
+        else:
+            logger.warning(
+                f"Failed to abandon adventure {adventure_id} for user {user_id}. "
+                f"It might not exist, not belong to the user, or already be complete.",
+                extra=context,
+            )
+            # Adventure not found, or not owned by user, or already complete
+            raise HTTPException(
+                status_code=404,
+                detail="Adventure not found or cannot be abandoned by this user.",
+            )
+    except HTTPException:  # Re-raise HTTPExceptions
+        raise
+    except Exception as e:
+        logger.error(
+            f"Error abandoning adventure {adventure_id} for user {user_id}: {str(e)}",
+            extra={**context, "error": str(e)},
+            exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail="Error abandoning adventure.")

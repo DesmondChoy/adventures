@@ -169,14 +169,20 @@
             this.baseDelay = 1000; // 1 second
             this.maxDelay = 30000; // 30 seconds
             this.adventureId = null; // Store adventure_id for persistence
+            this.adventureIdToResume = null; // For resuming specific adventure from modal
         }
 
         getWebSocketUrl() {
             console.log('[FrontendWS Log 1.2] getWebSocketUrl called.');
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const storyCategory = document.getElementById('storyCategory').value;
-            const lessonTopic = document.getElementById('lessonTopic').value;
-            const clientUuid = this.stateManager.getClientUuid(); // Keep client_uuid for now
+            const storyCategoryEl = document.getElementById('storyCategory');
+            const lessonTopicEl = document.getElementById('lessonTopic');
+            
+            // These might not be available if resuming directly via adventureIdToResume
+            const storyCategory = storyCategoryEl ? storyCategoryEl.value : 'unknown';
+            const lessonTopic = lessonTopicEl ? lessonTopicEl.value : 'unknown';
+            
+            const clientUuid = this.stateManager.getClientUuid(); 
             
             const encodedStoryCategory = encodeURIComponent(storyCategory);
             const encodedLessonTopic = encodeURIComponent(lessonTopic);
@@ -190,6 +196,14 @@
             } else {
                 console.warn('[FrontendWS Log 5] No token found, proceeding without token for WebSocket.');
             }
+
+            // If resuming a specific adventure, add its ID to the URL
+            // The backend will prioritize this over category/topic for loading state.
+            if (this.adventureIdToResume) {
+                url += `&resume_adventure_id=${encodeURIComponent(this.adventureIdToResume)}`;
+                console.log(`[FrontendWS Log 5.1] Appending resume_adventure_id: ${this.adventureIdToResume}`);
+            }
+
             console.log('[FrontendWS Log 6] Final WebSocket URL:', url);
             return url;
         }
@@ -249,24 +263,37 @@
 
             this.connection.onopen = () => {
                 console.log('[FrontendWS Log 9] WebSocket connection opened.');
-                // Don't hide loader here - wait for server to send hide_loader message
-                this.reconnectAttempts = 0; // Reset counter on successful connection
-                
-                if (savedState) {
-                    // First restore the UI state
+                this.reconnectAttempts = 0;
+
+                if (this.adventureIdToResume) {
+                    console.log(`[FrontendWS] Resuming specific adventure ID: ${this.adventureIdToResume}. Sending resume request.`);
+                    // Server will load state based on this ID. No need to send client-side state.
+                    // The backend WebSocket handler needs to be updated to look for `resume_adventure_id`
+                    // in the query params and use it to load state via StateStorageService.get_state().
+                    // For now, we'll send a specific message type.
+                    // OR, the backend can pick up resume_adventure_id from the URL query params directly.
+                    // Let's assume backend handles resume_adventure_id from URL for now.
+                    // We still need to send a 'start' or 'resume' signal.
+                    this.connection.send(JSON.stringify({
+                        choice: 'resume_specific_adventure', // A new choice type for clarity
+                        adventure_id_to_resume: this.adventureIdToResume 
+                        // state: null // No client state needed if server loads by ID
+                    }));
+                    // Clear it after sending so normal flow resumes if connection drops and reconnects
+                    // this.adventureIdToResume = null; // Reconsider this, might be needed for reconnects
+                } else if (savedState) {
                     const currentChapter = savedState.chapters.length;
                     updateProgress(currentChapter + 1, savedState.story_length);
-                    
-                    // Send both state and initial choice to server
                     this.connection.send(JSON.stringify({
                         state: savedState,
-                        choice: 'start'  // Initial choice to trigger state processing
+                        choice: 'start'
                     }));
                 } else {
-                    // For new adventures, send initial state
+                    const storyCategoryEl = document.getElementById('storyCategory');
+                    const lessonTopicEl = document.getElementById('lessonTopic');
                     const initialState = manageState('initialize', {
-                        storyCategory: document.getElementById('storyCategory').value,
-                        lessonTopic: document.getElementById('lessonTopic').value
+                        storyCategory: storyCategoryEl ? storyCategoryEl.value : '',
+                        lessonTopic: lessonTopicEl ? lessonTopicEl.value : ''
                     });
                     this.connection.send(JSON.stringify({
                         state: initialState,
@@ -811,7 +838,7 @@ function startAdventure() {
         const authInitialized = await authManager.initialize();
         if (!authInitialized) {
             console.log("Authentication not initialized or redirecting. Halting further page script execution.");
-            return; 
+            return;
         }
 
         const logoutButton = document.getElementById('logout-button');
@@ -821,48 +848,66 @@ function startAdventure() {
             console.warn("Logout button not found on the page. Ensure it's added to the HTML.");
         }
 
-        const savedState = stateManager.loadState();
-        if (savedState?.chapters?.length > 0 && savedState.storyCategory && savedState.lessonTopic) {
-            console.log("Resuming existing adventure.");
-            showLoader(); 
-            updateProgress(savedState.chapters.length + 1, savedState.story_length);
-            
+        const urlParams = new URLSearchParams(window.location.search);
+        const adventureIdToResumeFromQuery = urlParams.get('resume_adventure_id');
+
+        if (adventureIdToResumeFromQuery) {
+            console.log(`Resuming specific adventure ID from query param: ${adventureIdToResumeFromQuery}`);
+            wsManager.adventureIdToResume = adventureIdToResumeFromQuery;
+            stateManager.clearState(); // Clear any local state to ensure fresh load from server
+
+            showLoader();
+            // Setup UI for adventure in progress
             document.getElementById('storyCategoryScreen').classList.add('hidden');
             document.getElementById('lessonTopicScreen').classList.add('hidden');
             document.getElementById('introText').classList.add('hidden');
             document.getElementById('storyContainer').classList.remove('hidden');
-
-            selectedCategory = savedState.storyCategory;
-            selectedLessonTopic = savedState.lessonTopic;
-            
-            const storyCatEl = document.getElementById('storyCategory');
-            const lessonTopicEl = document.getElementById('lessonTopic');
-            if (storyCatEl) storyCatEl.value = selectedCategory;
-            if (lessonTopicEl) lessonTopicEl.value = selectedLessonTopic;
-
-            initWebSocket(); 
+            // Note: selectedCategory and selectedLessonTopic will be set by server state
+            initWebSocket();
         } else {
-            console.log("Starting new adventure selection.");
-            manageState('reset'); 
-            hideLoader(); 
-            
-            if (typeof Carousel !== 'undefined' && typeof setupCarouselKeyboardNavigation !== 'undefined') {
-                if (document.getElementById('categoryCarousel') && typeof totalCategories !== 'undefined') {
-                    window.categoryCarousel = new Carousel({
-                        elementId: 'categoryCarousel',
-                        itemCount: totalCategories, 
-                        dataAttribute: 'category',
-                        inputId: 'storyCategory',
-                        onSelect: (categoryId) => {
-                            selectedCategory = categoryId;
-                        }
-                    });
-                    setupCarouselKeyboardNavigation([window.categoryCarousel]);
-                } else {
-                     console.warn("Category carousel element or totalCategories not found. Carousel UI may not function.");
-                }
+            const savedState = stateManager.loadState();
+            if (savedState?.chapters?.length > 0 && savedState.storyCategory && savedState.lessonTopic) {
+                console.log("Resuming existing adventure from localStorage.");
+                showLoader();
+                updateProgress(savedState.chapters.length + 1, savedState.story_length);
+                
+                document.getElementById('storyCategoryScreen').classList.add('hidden');
+                document.getElementById('lessonTopicScreen').classList.add('hidden');
+                document.getElementById('introText').classList.add('hidden');
+                document.getElementById('storyContainer').classList.remove('hidden');
+
+                selectedCategory = savedState.storyCategory;
+                selectedLessonTopic = savedState.lessonTopic;
+                
+                const storyCatEl = document.getElementById('storyCategory');
+                const lessonTopicEl = document.getElementById('lessonTopic');
+                if (storyCatEl) storyCatEl.value = selectedCategory;
+                if (lessonTopicEl) lessonTopicEl.value = selectedLessonTopic;
+
+                initWebSocket();
             } else {
-                console.warn("Carousel class or setupCarouselKeyboardNavigation not defined. Carousel UI may not function.");
+                console.log("Starting new adventure selection (no resume ID or localStorage state).");
+                manageState('reset');
+                hideLoader();
+                
+                if (typeof Carousel !== 'undefined' && typeof setupCarouselKeyboardNavigation !== 'undefined') {
+                    if (document.getElementById('categoryCarousel') && typeof totalCategories !== 'undefined') {
+                        window.categoryCarousel = new Carousel({
+                            elementId: 'categoryCarousel',
+                            itemCount: totalCategories,
+                            dataAttribute: 'category',
+                            inputId: 'storyCategory',
+                            onSelect: (categoryId) => {
+                                selectedCategory = categoryId;
+                            }
+                        });
+                        setupCarouselKeyboardNavigation([window.categoryCarousel]);
+                    } else {
+                         console.warn("Category carousel element or totalCategories not found. Carousel UI may not function.");
+                    }
+                } else {
+                    console.warn("Carousel class or setupCarouselKeyboardNavigation not defined. Carousel UI may not function.");
+                }
             }
         }
     });

@@ -354,6 +354,8 @@
         </div>
     </footer>
 
+    {% include 'components/resume_modal.html' %}
+
     <script>
         // Smooth scrolling for anchor links
         document.addEventListener('DOMContentLoaded', function() {
@@ -446,12 +448,149 @@
                 });
             }
 
+            // --- Resume Modal Logic ---
+            const resumeModal = document.getElementById('resumeModal');
+            const modalAdventureName = document.getElementById('modalAdventureName');
+            const modalLessonTopic = document.getElementById('modalLessonTopic');
+            const modalProgress = document.getElementById('modalProgress');
+            const modalLastPlayed = document.getElementById('modalLastPlayed');
+            const continueAdventureBtn = document.getElementById('continueAdventureBtn');
+            const startFreshBtn = document.getElementById('startFreshBtn');
+            let currentAdventureForModal = null;
+
+            function formatTimeAgo(dateString) {
+                if (!dateString) return 'Unknown';
+                const date = new Date(dateString);
+                const now = new Date();
+                const seconds = Math.round((now - date) / 1000);
+                const minutes = Math.round(seconds / 60);
+                const hours = Math.round(minutes / 60);
+                const days = Math.round(hours / 24);
+
+                if (seconds < 60) return `${seconds} seconds ago`;
+                if (minutes < 60) return `${minutes} minutes ago`;
+                if (hours < 24) return `${hours} hours ago`;
+                return `${days} days ago`;
+            }
+
+            async function showResumeModal(adventureData) {
+                currentAdventureForModal = adventureData;
+                if (!resumeModal || !modalAdventureName || !modalLessonTopic || !modalProgress || !modalLastPlayed) {
+                    console.error("Modal elements not found!");
+                    redirectToSelectPage(); // Fallback if modal elements are missing
+                    return;
+                }
+                modalAdventureName.textContent = adventureData.story_category || 'N/A';
+                modalLessonTopic.textContent = adventureData.lesson_topic || 'N/A';
+                
+                let progressText = `Chapter ${adventureData.current_chapter || 0}`;
+                if (adventureData.total_chapters) {
+                    progressText += ` out of ${adventureData.total_chapters}`;
+                }
+                modalProgress.textContent = progressText;
+                modalLastPlayed.textContent = formatTimeAgo(adventureData.last_updated);
+                
+                resumeModal.style.display = 'flex';
+            }
+
+            function hideResumeModal() {
+                if (resumeModal) resumeModal.style.display = 'none';
+                currentAdventureForModal = null;
+            }
+
+            function redirectToSelectPage(resumeAdventureId = null) {
+                let url = '/select';
+                if (resumeAdventureId) {
+                    url += `?resume_adventure_id=${resumeAdventureId}`;
+                }
+                window.location.href = url;
+            }
+
+            if (continueAdventureBtn) {
+                continueAdventureBtn.addEventListener('click', () => {
+                    if (currentAdventureForModal && currentAdventureForModal.adventure_id) {
+                        console.log('Continuing adventure:', currentAdventureForModal.adventure_id);
+                        // The actual resumption will be handled on the /select page based on query param or session storage
+                        redirectToSelectPage(currentAdventureForModal.adventure_id);
+                    }
+                    hideResumeModal();
+                });
+            }
+
+            if (startFreshBtn) {
+                startFreshBtn.addEventListener('click', async () => {
+                    if (currentAdventureForModal && currentAdventureForModal.adventure_id) {
+                        console.log('Starting fresh, abandoning adventure:', currentAdventureForModal.adventure_id);
+                        try {
+                            const token = (await loginPageSupabaseClient.auth.getSession())?.data.session?.access_token;
+                            if (!token) {
+                                alert("Authentication token not found. Cannot abandon adventure.");
+                                hideResumeModal();
+                                return;
+                            }
+                            const response = await fetch(`/api/adventure/${currentAdventureForModal.adventure_id}/abandon`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            });
+                            if (!response.ok) {
+                                const errorData = await response.json();
+                                throw new Error(errorData.detail || `Failed to abandon adventure (status ${response.status})`);
+                            }
+                            console.log('Adventure abandoned successfully.');
+                        } catch (error) {
+                            console.error('Error abandoning adventure:', error);
+                            alert(`Could not abandon previous adventure: ${error.message}. Proceeding to new selection.`);
+                        }
+                    }
+                    hideResumeModal();
+                    redirectToSelectPage();
+                });
+            }
+
+            async function handleSignIn() {
+                // Fetch current adventure state
+                try {
+                    const token = (await loginPageSupabaseClient.auth.getSession())?.data.session?.access_token;
+                    if (!token) {
+                        // This might happen if onAuthStateChange fires before session is fully available for API calls.
+                        // Or if user is truly unauthenticated (should not happen if event is SIGNED_IN)
+                        console.warn("No access token available immediately after sign-in for API call. Redirecting to /select directly.");
+                        redirectToSelectPage();
+                        return;
+                    }
+
+                    const response = await fetch('/api/user/current-adventure', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    if (!response.ok) {
+                        console.error('Failed to fetch current adventure status:', response.status, await response.text());
+                        redirectToSelectPage(); // Fallback
+                        return;
+                    }
+                    const data = await response.json();
+                    if (data && data.adventure) {
+                        showResumeModal(data.adventure);
+                    } else {
+                        redirectToSelectPage();
+                    }
+                } catch (error) {
+                    console.error('Error fetching current adventure:', error);
+                    redirectToSelectPage(); // Fallback
+                }
+            }
+
             loginPageSupabaseClient.auth.onAuthStateChange((event, session) => {
                 console.log('Auth event on login.html:', event, session);
                 if (event === 'SIGNED_IN') {
-                    window.location.href = '/select';
+                    // Instead of immediate redirect, call handleSignIn
+                    handleSignIn();
                 } else if (event === 'SIGNED_OUT') {
                     if (guestWarning) guestWarning.classList.add('hidden');
+                    hideResumeModal(); // Ensure modal is hidden on sign out
                 }
             });
 

@@ -56,3 +56,27 @@ async def get_current_user_id_optional(
     except Exception as e:
         logger.error(f"An unexpected error occurred during JWT decoding: {e}")
         return None
+
+
+async def get_current_user_id(
+    user_id: Optional[UUID] = Depends(get_current_user_id_optional),
+) -> UUID:
+    """
+    FastAPI dependency that requires a valid JWT and returns the user ID.
+    If the token is missing, invalid, or the user_id cannot be extracted,
+    it raises an HTTPException.
+    """
+    if user_id is None:
+        from fastapi import (
+            HTTPException,
+        )  # Local import to avoid circular dependency if this file grows
+
+        logger.warning(
+            "User authentication required, but token was invalid or missing."
+        )
+        raise HTTPException(
+            status_code=401,
+            detail="Not authenticated or token is invalid.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user_id

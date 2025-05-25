@@ -138,6 +138,19 @@ class StateStorageService:
                 )
                 return adventure_id
             else:
+                # This is a new adventure. If a user_id is provided, abandon their old incomplete adventure.
+                if user_id:
+                    abandon_success = await self._abandon_existing_incomplete_adventure(
+                        user_id
+                    )
+                    if not abandon_success:
+                        # Log a warning but proceed with creating the new adventure.
+                        # The alternative would be to raise an error and prevent new adventure creation,
+                        # but that might be a worse UX if abandoning fails for some reason.
+                        logger.warning(
+                            f"Proceeding to create new adventure for user {user_id} despite failure to abandon previous one."
+                        )
+
                 # Insert new record
                 # --- ADDED LOGGING ---
                 logger.debug(
@@ -291,33 +304,226 @@ class StateStorageService:
             )
             return None
 
-    async def cleanup_expired(self) -> int:
+    async def get_user_current_adventure(
+        self, user_id: UUID
+    ) -> Optional[Dict[str, Any]]:
         """
-        Remove adventures older than the expiration period (1 hour).
+        Get the user's single incomplete adventure with essential info for the resume modal.
+
+        Args:
+            user_id: The UUID of the user.
 
         Returns:
-            int: Number of expired records deleted
+            Optional[Dict[str, Any]]: A dictionary containing adventure details if an
+                                     incomplete adventure is found, otherwise None.
+                                     The dictionary includes: adventure_id, story_category,
+                                     lesson_topic, current_chapter (completed_chapter_count),
+                                     total_chapters (from state_data.story_length),
+                                     and last_updated (updated_at).
         """
         try:
-            # Calculate the expiration timestamp (1 hour ago)
-            expiration_time = datetime.now() - timedelta(hours=1)
-
-            # Delete expired records from Supabase
+            logger.info(f"Fetching current adventure for user_id: {user_id}")
             response = (
                 self.supabase.table("adventures")
-                .delete()
-                .lt("created_at", expiration_time.isoformat())
+                .select(
+                    "id, story_category, lesson_topic, completed_chapter_count, updated_at, state_data"
+                )
+                .eq("user_id", str(user_id))
+                .eq("is_complete", False)
+                .order("updated_at", desc=True)
+                .limit(1)
+                .maybe_single()
                 .execute()
             )
 
-            # Count the number of deleted records
-            deleted_count = len(response.data) if response.data else 0
+            if not response.data:
+                logger.info(
+                    f"No active incomplete adventure found for user_id: {user_id}"
+                )
+                return None
 
-            if deleted_count > 0:
-                logger.info(f"Cleaned up {deleted_count} expired states")
+            adventure_data = response.data
+            story_length = adventure_data.get("state_data", {}).get("story_length")
 
-            return deleted_count
+            # Ensure current_chapter is at least 1 if chapters exist, or 0 if new
+            current_chapter = adventure_data.get("completed_chapter_count", 0)
+            if current_chapter > 0:
+                # If chapters are completed, current_chapter for display is usually +1
+                # However, for "Chapter X out of Y", completed_chapter_count is fine.
+                # If modal shows "Chapter 3 of 10", it means 3 chapters are done.
+                pass  # Using completed_chapter_count directly for "Chapter X"
+
+            modal_info = {
+                "adventure_id": adventure_data["id"],
+                "story_category": adventure_data["story_category"],
+                "lesson_topic": adventure_data["lesson_topic"],
+                "current_chapter": current_chapter,
+                "total_chapters": story_length,  # Can be None if not in state_data
+                "last_updated": adventure_data["updated_at"],
+            }
+            logger.info(f"Found current adventure for user_id {user_id}: {modal_info}")
+            return modal_info
 
         except Exception as e:
-            logger.error(f"Error cleaning up expired states: {str(e)}")
+            logger.error(
+                f"Error fetching current adventure for user_id {user_id}: {str(e)}"
+            )
+            return None
+
+    async def abandon_adventure(self, adventure_id: str, user_id: UUID) -> bool:
+        """
+        Mark an adventure as abandoned (is_complete = True).
+        Optionally, a 'completion_reason' could be set if the schema supports it.
+
+        Args:
+            adventure_id: The ID of the adventure to abandon.
+            user_id: The UUID of the user who owns the adventure.
+
+        Returns:
+            bool: True if the adventure was successfully marked as abandoned, False otherwise.
+        """
+        try:
+            logger.info(
+                f"User {user_id} attempting to abandon adventure {adventure_id}"
+            )
+            # Consider adding a 'completion_reason' field to the table in a future migration
+            # update_payload = {"is_complete": True, "completion_reason": "abandoned_by_user"}
+            update_payload = {"is_complete": True}
+
+            response = (
+                self.supabase.table("adventures")
+                .update(update_payload)
+                .eq("id", adventure_id)
+                .eq("user_id", str(user_id))  # Ensure user owns the adventure
+                .eq("is_complete", False)  # Only abandon incomplete adventures
+                .execute()
+            )
+
+            if response.data and len(response.data) > 0:
+                logger.info(
+                    f"Adventure {adventure_id} successfully abandoned by user {user_id}."
+                )
+                return True
+            else:
+                # This could happen if the adventure doesn't exist, user doesn't own it, or it's already complete.
+                logger.warning(
+                    f"Failed to abandon adventure {adventure_id} for user {user_id}. "
+                    f"Adventure may not exist, not belong to user, or already be complete. Response: {response}"
+                )
+                return False
+        except Exception as e:
+            logger.error(
+                f"Error abandoning adventure {adventure_id} for user {user_id}: {str(e)}"
+            )
+            return False
+
+    async def cleanup_expired_adventures(self) -> int:
+        """
+        Mark adventures older than 30 days as complete (is_complete = True).
+        This replaces the previous `cleanup_expired` which deleted records.
+        Optionally, a 'completion_reason' could be set.
+
+        Returns:
+            int: Number of expired records marked as complete.
+        """
+        try:
+            expiration_time = datetime.now() - timedelta(days=30)
+            logger.info(
+                f"Cleaning up adventures not updated since {expiration_time.isoformat()}"
+            )
+
+            # Consider adding a 'completion_reason' field to the table in a future migration
+            # update_payload = {"is_complete": True, "completion_reason": "expired_30_days"}
+            update_payload = {"is_complete": True}
+
+            response = (
+                self.supabase.table("adventures")
+                .update(update_payload)
+                .lt("updated_at", expiration_time.isoformat())
+                .eq("is_complete", False)  # Only target incomplete adventures
+                .execute()
+            )
+
+            updated_count = len(response.data) if response.data else 0
+
+            if updated_count > 0:
+                logger.info(f"Marked {updated_count} expired adventures as complete.")
+            else:
+                logger.info("No expired adventures found to mark as complete.")
+            return updated_count
+
+        except Exception as e:
+            logger.error(
+                f"Error cleaning up expired adventures by marking as complete: {str(e)}"
+            )
             return 0
+
+    async def cleanup_expired(self) -> int:
+        """
+        DEPRECATED: This method previously deleted adventures older than 1 hour.
+        It is replaced by `cleanup_expired_adventures` which marks them as complete after 30 days.
+        Keeping the method signature for now to avoid breaking calls if any, but it will do nothing.
+        Consider removing this method in a future refactor.
+
+        Returns:
+            int: Always 0.
+        """
+        logger.warning(
+            "DEPRECATED: `cleanup_expired` was called. This method no longer deletes records. Use `cleanup_expired_adventures`."
+        )
+        return 0
+        # Original logic (now deprecated):
+        # try:
+        #     # Calculate the expiration timestamp (1 hour ago)
+        #     expiration_time = datetime.now() - timedelta(hours=1)
+        #
+        #     # Delete expired records from Supabase
+        #     response = (
+        #         self.supabase.table("adventures")
+        #         .delete()
+        #         .lt("created_at", expiration_time.isoformat())
+        #         .execute()
+        #     )
+        #
+        #     # Count the number of deleted records
+        #     deleted_count = len(response.data) if response.data else 0
+        #
+        #     if deleted_count > 0:
+        #         logger.info(f"Cleaned up {deleted_count} expired states")
+        #
+        #     return deleted_count
+        #
+        # except Exception as e:
+        #     logger.error(f"Error cleaning up expired states: {str(e)}")
+        #     return 0
+
+    async def _abandon_existing_incomplete_adventure(self, user_id: UUID) -> bool:
+        """
+        Internal helper to find and abandon a user's existing incomplete adventure.
+        """
+        logger.info(
+            f"Checking for existing incomplete adventure for user {user_id} to abandon."
+        )
+        current_adventure_details = await self.get_user_current_adventure(user_id)
+        if current_adventure_details and current_adventure_details.get("adventure_id"):
+            adventure_to_abandon_id = current_adventure_details["adventure_id"]
+            logger.info(
+                f"Found existing incomplete adventure {adventure_to_abandon_id} for user {user_id}. Attempting to abandon."
+            )
+            abandoned_successfully = await self.abandon_adventure(
+                adventure_to_abandon_id, user_id
+            )
+            if abandoned_successfully:
+                logger.info(
+                    f"Successfully abandoned previous adventure {adventure_to_abandon_id} for user {user_id}."
+                )
+                return True
+            else:
+                logger.warning(
+                    f"Failed to abandon previous adventure {adventure_to_abandon_id} for user {user_id}."
+                )
+                return False
+        logger.info(
+            f"No existing incomplete adventure found for user {user_id} to abandon."
+        )
+        return True  # No adventure to abandon, so proceed.
