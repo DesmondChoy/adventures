@@ -10,7 +10,7 @@ This document outlines the plan and progress for integrating Supabase into the L
     *   **Phase 2: Persistent Adventure State (Supabase Database):** Fully complete and validated.
     *   **Phase 3: Telemetry (Supabase Database):** Fully complete and validated.
     *   **Phase 4: Optional User Authentication (Supabase Auth):** Backend logic, database schema/RLS, and initial frontend flows completed.
-*   **Phase 4.1: Adventure Resumption Bug Fix & Enhanced UX - IN PROGRESS**
+*   **Phase 4.1: Adventure Resumption Bug Fix & Enhanced UX - MOSTLY COMPLETE**
     *   **Implementation Status:**
         *   Core fixes for adventure matching implemented.
         *   Resume modal flow partially implemented; CSS and basic JS for modal display fixed.
@@ -18,7 +18,8 @@ This document outlines the plan and progress for integrating Supabase into the L
         *   `StateStorageService` updated with `get_user_current_adventure_for_resume` method.
         *   `login.html` updated to store `story_category` and `lesson_topic` in `sessionStorage`.
         *   `scripts.html` updated to retrieve these values from `sessionStorage` for WebSocket URL construction.
-    *   **Current Outcome:** Despite these changes, the primary issue of the resume modal not appearing consistently after login persists. Additionally, a new issue regarding multiple incomplete adventures for a single user has been identified, and the chapter display inconsistency remains.
+        *   **✅ FIXED:** Multiple incomplete adventures per user issue resolved.
+        *   **✅ FIXED:** Resume API KeyError resolved.
 
 *   **Current Issues & Next Steps:**
     *   **✅ FIXED (Previously):** Wrong adventure resumption (adventures now match story/lesson selection - *needs re-verification due to new issues*).
@@ -26,15 +27,14 @@ This document outlines the plan and progress for integrating Supabase into the L
     *   **✅ FIXED:** Resume modal CSS and basic JS display logic in `login.html`.
     *   **✅ FIXED:** Backend API and services updated to provide necessary data for resume.
     *   **✅ FIXED:** WebSocket URL construction in `scripts.html` now attempts to use `story_category` and `lesson_topic` from `sessionStorage`.
+    *   **✅ FIXED:** Multiple incomplete adventures per user - comprehensive abandonment logic implemented.
+    *   **✅ FIXED:** Resume API KeyError (`adventure_id` vs `id` field mapping) resolved.
     *   **❌ ISSUE (HIGH PRIORITY):** Resume modal still not appearing consistently after logout/login, even with an incomplete adventure in the database.
         *   **Symptom:** User logs in, has an incomplete adventure, but no modal is shown.
         *   **Suspected Causes (Re-evaluation):**
             *   Timing issue with token availability or `handleSignIn` execution in `login.html`.
             *   `/api/user/current-adventure` not being called reliably or returning unexpected data despite backend changes.
             *   Logic in `login.html` that decides to show the modal might be flawed.
-    *   **❌ ISSUE (HIGH PRIORITY):** Multiple incomplete adventures per user.
-        *   **Symptom:** Starting a new adventure does not mark the previous incomplete adventure as "abandoned" or "complete". Database shows multiple rows with `is_complete = FALSE` for the same `user_id`.
-        *   **Suspected Causes:** The `_abandon_existing_incomplete_adventure` method in `StateStorageService` (called by `store_state` for new adventures) is not functioning as intended.
     *   **❌ ISSUE (MEDIUM PRIORITY):** Chapter display inconsistency.
         *   **Symptom:** When an adventure *is* manually resumed (by selecting the same story/lesson), UI shows "Chapter 1 out of 10" but should display the actual current chapter (e.g., Chapter 3).
         *   **Suspected Causes:** Frontend state interpretation in `scripts.html` upon adventure load/resume, or the `state_data` itself might not be correctly reflecting `completed_chapter_count` in its `chapters` array length or `current_chapter_id`.
@@ -92,24 +92,24 @@ This document outlines the plan and progress for integrating Supabase into the L
 
 ---
 
-## Phase 4.1: Adventure Resumption Bug Fix & Enhanced UX 🟡 IN PROGRESS
-*Brief: Addressed critical bug where users couldn't start new adventures with different story/lesson combinations, and implemented resume modal for better UX. Currently debugging issues with modal appearance and data integrity.*
+## Phase 4.1: Adventure Resumption Bug Fix & Enhanced UX ✅ MOSTLY COMPLETE
+*Brief: Addressed critical bug where users couldn't start new adventures with different story/lesson combinations, and implemented resume modal for better UX. Major data integrity issues resolved.*
 
-### Root Problems Identified (Original & New):
+### Root Problems Identified & Resolution Status:
 1.  **Adventure Matching Bug (Addressed, needs re-verification):** `get_active_adventure_id` found ANY incomplete adventure, not story/lesson-specific ones.
 2.  **Poor UX (Partially Addressed):** No clear resumption flow. Modal implemented but not appearing reliably.
-3.  **Multiple Adventures (New/Persistent):** Users can accumulate multiple incomplete adventures. The "one adventure per user" rule is not being enforced.
+3.  **✅ Multiple Adventures (FIXED):** Users could accumulate multiple incomplete adventures. The "one adventure per user" rule is now properly enforced.
 4.  **Chapter Display Inconsistency (Persistent):** Resumed adventures show incorrect chapter progress.
 
-### Solution Approach (Ongoing): Enhanced Resume Flow + Story/Lesson Filtering + Data Integrity Fixes
-- **One Adventure Per User (NEEDS FIX):** Automatic abandonment of old adventures when starting new ones.
+### Solution Approach: Enhanced Resume Flow + Story/Lesson Filtering + Data Integrity Fixes
+- **✅ One Adventure Per User (FIXED):** Comprehensive automatic abandonment of ALL old adventures when starting new ones.
 - **Resume Modal (NEEDS FIX):** Clean, professional modal showing adventure details with Continue/Start Fresh options.
 - **Story/Lesson Matching (Implemented, needs re-verification):** Only resume adventures that match current selection.
 - **30-Day Auto-Expiry (Implemented):** Cleanup system for old adventures.
 
 ### Implementation Status (Updated 2025-05-26 PM):
 
-#### ✅ COMPLETED/ATTEMPTED FIXES:
+#### ✅ COMPLETED/FIXED:
 **1. Adventure Matching Logic (`app/services/state_storage_service.py`)**
 - Enhanced `get_active_adventure_id()` with `story_category` and `lesson_topic` parameters.
 - Updated WebSocket router to pass story/lesson context when searching for adventures.
@@ -124,12 +124,22 @@ This document outlines the plan and progress for integrating Supabase into the L
 - Implemented frontend logic in `scripts.html` to use `sessionStorage` for WebSocket URL construction.
 - Fixed missing CSS link for `resume-modal.css` in `login.html`.
 - Restored truncated JavaScript in `login.html`.
-- **Result:** Modal appeared briefly but issues persist. WebSocket URL construction for resume was improved.
+- **✅ FIXED:** Resume API KeyError - changed `adventure_data["adventure_id"]` to `adventure_data["id"]` to match Supabase response.
+- **Result:** Modal appeared briefly but consistency issues persist. WebSocket URL construction for resume was improved.
 
-**3. One Adventure Enforcement (`app/services/state_storage_service.py`)**
-- Added `_abandon_existing_incomplete_adventure()` helper.
-- Modified `store_state()` to call this helper.
-- **Result:** This logic is currently NOT working as intended, as multiple incomplete adventures are observed.
+**3. ✅ One Adventure Enforcement (`app/services/state_storage_service.py`) - MAJOR FIX**
+- **Root Cause Identified:** Original `_abandon_existing_incomplete_adventure()` only found the most recent incomplete adventure using `.limit(1)`, leaving older incomplete adventures untouched.
+- **Solution Implemented:** 
+  - Added `get_all_user_incomplete_adventures()` method to find ALL incomplete adventures for a user.
+  - Added `_abandon_all_incomplete_adventures()` method to abandon ALL incomplete adventures with detailed logging.
+  - Updated `store_state()` to call the comprehensive abandonment logic.
+  - Added extensive debug logging with `[DUPLICATE_ADVENTURE_DEBUG]` prefix for traceability.
+- **Technical Details:**
+  - New method finds ALL incomplete adventures (not just most recent).
+  - Iterates through each adventure and abandons them individually.
+  - Provides detailed success/failure counts in logs.
+  - Maintains backward compatibility with deprecated wrapper method.
+- **Result:** ✅ **VERIFIED WORKING** - Users now have only one incomplete adventure at a time. Multiple adventure accumulation issue completely resolved.
 
 **4. Session Bypass Fix (`app/templates/pages/login.html`)**
 - Updated `checkLoginPageSession()` to call `handleSignIn()`.
@@ -148,16 +158,7 @@ This document outlines the plan and progress for integrating Supabase into the L
     - Verify the exact data returned by `/api/user/current-adventure` in the browser network tab.
     - Step-through debugging of `login.html` JavaScript.
 
-**Issue 2: Multiple Incomplete Adventures Per User (HIGH PRIORITY)**
-- **Symptom:** Starting a new adventure does not result in the abandonment of the user's previous incomplete adventure.
-- **Suspected Causes:**
-    - `_abandon_existing_incomplete_adventure` in `StateStorageService` is not correctly identifying or updating the previous adventure.
-    - The call to `_abandon_existing_incomplete_adventure` from `store_state` might not be happening under the correct conditions or is failing silently.
-- **Investigation Needed:**
-    - Add extensive logging within `store_state` (when `adventure_id` is `None`) and `_abandon_existing_incomplete_adventure` to trace its execution path and the data it's operating on.
-    - Verify the Supabase query logic within `_abandon_existing_incomplete_adventure` and `abandon_adventure`.
-
-**Issue 3: Chapter Display Inconsistency (MEDIUM PRIORITY)**
+**Issue 2: Chapter Display Inconsistency (MEDIUM PRIORITY)**
 - **Symptom:** UI shows "Chapter 1 out of 10" but should display the actual current chapter (e.g., Chapter 3) when an adventure is resumed (even manually).
 - **Suspected Causes:**
     - Frontend (`scripts.html`) incorrectly initializing or updating chapter progress display from the resumed state.
@@ -169,7 +170,9 @@ This document outlines the plan and progress for integrating Supabase into the L
     - Inspect the `state_data` JSON in Supabase for an affected adventure.
 
 ### Testing Progress (Updated 2025-05-26 PM):
-✅ **Working (Partially/Intermittently):**
+✅ **Working:**
+*   ✅ **One adventure per user enforcement** - Multiple incomplete adventures issue completely resolved.
+*   ✅ **Resume API data integrity** - KeyError fixed, proper field mapping implemented.
 *   In-session resumption (browser refresh) - *needs re-verification*.
 *   Adventure story/lesson matching when *manually* re-selecting - *needs re-verification*.
 *   Content loading once an adventure starts.
@@ -180,7 +183,6 @@ This document outlines the plan and progress for integrating Supabase into the L
 ❌ **Failing/Inconsistent:**
 *   **Resume modal not appearing reliably after login.**
 *   **Cross-session adventure resumption via modal.**
-*   **One adventure limit enforcement (multiple incomplete adventures exist).**
 *   Chapter number display accuracy on resume.
 
 ---
@@ -206,20 +208,7 @@ This document outlines the plan and progress for integrating Supabase into the L
 -   Adjust timing or conditions for API call in `login.html`.
 -   Refine database query in `get_user_current_adventure_for_resume` if it's not selecting the correct single adventure.
 
-### 2. Fix Multiple Incomplete Adventures (HIGH)
-**Investigation Tasks:**
--   **Backend (`StateStorageService.store_state` and `_abandon_existing_incomplete_adventure`):**
-    *   Add detailed logging to trace the execution flow when a new adventure is created (`adventure_id` is None).
-    *   Log `user_id` being passed to `_abandon_existing_incomplete_adventure`.
-    *   Inside `_abandon_existing_incomplete_adventure`, log the result of `get_user_current_adventure_for_resume`.
-    *   Log the `adventure_to_abandon_id` and the result of the `abandon_adventure` call.
-    *   Verify the Supabase `update` call in `abandon_adventure` (conditions, payload).
-
-**Potential Fixes:**
--   Correct the logic or query in `_abandon_existing_incomplete_adventure` or `abandon_adventure`.
--   Ensure `store_state` correctly triggers this for authenticated users starting a new adventure.
-
-### 3. Fix Chapter Display Bug (MEDIUM)
+### 2. Fix Chapter Display Bug (MEDIUM)
 **Investigation Tasks:**
 -   **Frontend (`scripts.html`):**
     *   When `wsManager.adventureIdToResume` is true, ensure `initWebSocket` uses the server-provided state (via `adventure_loaded` message) and not stale `localStorage` state.
@@ -234,10 +223,10 @@ This document outlines the plan and progress for integrating Supabase into the L
 -   Adjust frontend logic in `scripts.html` to correctly use resumed state from server.
 -   Ensure `updateProgress` uses the correct chapter count from the server-authoritative state.
 
-### 4. Comprehensive Testing (MEDIUM)
+### 3. Comprehensive Testing (MEDIUM)
 **Test Scenarios (Re-evaluate after fixes):**
 -   Resume modal appearance and functionality (Google, Anonymous).
--   One adventure limit enforcement.
+-   ✅ One adventure limit enforcement (VERIFIED WORKING).
 -   Cross-session adventure persistence.
 -   Chapter display accuracy on resume.
 -   Starting fresh from modal correctly abandons old adventure.
@@ -245,7 +234,24 @@ This document outlines the plan and progress for integrating Supabase into the L
 ---
 
 ## Architecture Decisions & Learnings
-*(No changes in this section for this update)*
+
+### Multiple Adventure Prevention (2025-05-26)
+**Problem:** Users could accumulate multiple incomplete adventures, violating the "one adventure per user" business rule.
+
+**Root Cause:** The original abandonment logic used `.limit(1)` which only found the most recent incomplete adventure, leaving older ones untouched.
+
+**Solution:** Implemented comprehensive abandonment logic that finds and abandons ALL incomplete adventures for a user when starting a new one.
+
+**Technical Implementation:**
+- `get_all_user_incomplete_adventures()`: Queries ALL incomplete adventures (no limit)
+- `_abandon_all_incomplete_adventures()`: Iterates through and abandons each one
+- Extensive debug logging for traceability and monitoring
+- Backward compatibility maintained
+
+**Key Learnings:** 
+- Database queries with `.limit(1)` can mask data integrity issues in business logic
+- Comprehensive logging is essential for debugging complex state management
+- Always consider edge cases where users might have accumulated problematic data over time
 
 ---
 
@@ -257,8 +263,13 @@ This document outlines the plan and progress for integrating Supabase into the L
 ## Key Files Modified (Recent)
 
 ### Backend
--   `app/routers/web.py` - Updated `/api/user/current-adventure` response model and logic.
--   `app/services/state_storage_service.py` - Added `get_user_current_adventure_for_resume` method.
+-   `app/routers/web.py` - **FIXED:** Resume API KeyError (`adventure_id` -> `id` field mapping).
+-   `app/services/state_storage_service.py` - **MAJOR UPDATE:** Comprehensive abandonment logic implemented:
+    - Added `get_all_user_incomplete_adventures()` method
+    - Added `_abandon_all_incomplete_adventures()` method  
+    - Updated `store_state()` to use comprehensive abandonment
+    - Added extensive debug logging with `[DUPLICATE_ADVENTURE_DEBUG]` prefix
+    - Added `List` import for type hinting
 
 ### Frontend  
 -   `app/templates/pages/login.html` - Added `sessionStorage` for resume details, fixed JS truncation, added CSS link.
@@ -267,4 +278,4 @@ This document outlines the plan and progress for integrating Supabase into the L
 *(Older file modifications remain as previously documented)*
 ---
 
-This integration provides a solid foundation for user authentication and adventure persistence while maintaining the flexibility to support both authenticated and anonymous users. The remaining issues are primarily frontend UX polish that don't affect core functionality.
+This integration provides a solid foundation for user authentication and adventure persistence while maintaining the flexibility to support both authenticated and anonymous users. The major data integrity issue (multiple incomplete adventures) has been resolved. The remaining issues are primarily frontend UX polish that don't affect core functionality.

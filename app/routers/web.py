@@ -283,7 +283,9 @@ async def get_user_current_adventure_api(
                 )
 
             adventure_details = AdventureResumeDetails(
-                adventure_id=adventure_data["adventure_id"],
+                adventure_id=adventure_data[
+                    "id"
+                ],  # FIXED: Changed from "adventure_id" to "id"
                 story_category=adventure_data["story_category"],
                 lesson_topic=adventure_data["lesson_topic"],
                 current_chapter=current_chapter_num,  # Needs to be calculated or retrieved

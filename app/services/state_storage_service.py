@@ -1,7 +1,7 @@
 import uuid  # Keep for adventure_id generation if needed, and for UUID type hint
 from datetime import datetime, timedelta
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from uuid import UUID  # Import UUID for type hinting user_id
 import os
 import json
@@ -52,6 +52,11 @@ class StateStorageService:
         """
         try:
             user_id_for_db = str(user_id) if user_id is not None else None
+
+            # DEBUG LOGGING - Entry point
+            logger.info(
+                f"[DUPLICATE_ADVENTURE_DEBUG] store_state: Called with adventure_id={adventure_id}, user_id={user_id}, user_id_for_db={user_id_for_db}"
+            )
 
             # Extract key fields for dedicated columns
             story_category = None
@@ -109,6 +114,11 @@ class StateStorageService:
             }
 
             if adventure_id:
+                # DEBUG LOGGING - Update path
+                logger.info(
+                    f"[DUPLICATE_ADVENTURE_DEBUG] store_state: Taking UPDATE path for adventure_id={adventure_id}"
+                )
+
                 # Prepare record for UPDATE - include client_uuid as well
                 update_record = {
                     "user_id": user_id_for_db,  # Add stringified user_id
@@ -138,25 +148,41 @@ class StateStorageService:
                 )
                 return adventure_id
             else:
-                # This is a new adventure. If a user_id is provided, abandon their old incomplete adventure.
+                # DEBUG LOGGING - New adventure path
+                logger.info(
+                    f"[DUPLICATE_ADVENTURE_DEBUG] store_state: Taking NEW ADVENTURE path. user_id={user_id}, user_id_for_db={user_id_for_db}"
+                )
+
+                # This is a new adventure. If a user_id is provided, abandon ALL their old incomplete adventures.
                 if user_id:
-                    abandon_success = await self._abandon_existing_incomplete_adventure(
+                    logger.info(
+                        f"[DUPLICATE_ADVENTURE_DEBUG] store_state: user_id provided, calling _abandon_all_incomplete_adventures for user {user_id}"
+                    )
+                    abandon_success = await self._abandon_all_incomplete_adventures(
                         user_id
+                    )
+                    logger.info(
+                        f"[DUPLICATE_ADVENTURE_DEBUG] store_state: _abandon_all_incomplete_adventures returned {abandon_success}"
                     )
                     if not abandon_success:
                         # Log a warning but proceed with creating the new adventure.
                         # The alternative would be to raise an error and prevent new adventure creation,
                         # but that might be a worse UX if abandoning fails for some reason.
                         logger.warning(
-                            f"Proceeding to create new adventure for user {user_id} despite failure to abandon previous one."
+                            f"[DUPLICATE_ADVENTURE_DEBUG] store_state: Proceeding to create new adventure for user {user_id} despite failure to abandon previous ones."
                         )
+                else:
+                    logger.info(
+                        f"[DUPLICATE_ADVENTURE_DEBUG] store_state: No user_id provided, skipping abandonment logic"
+                    )
 
                 # Insert new record
-                # --- ADDED LOGGING ---
+                logger.info(
+                    f"[DUPLICATE_ADVENTURE_DEBUG] store_state: About to insert new adventure record for user_id={user_id_for_db}"
+                )
                 logger.debug(
                     f"Attempting to insert new adventure record. State data being inserted (metadata check): {state_data.get('metadata', 'METADATA_KEY_MISSING')}"
                 )
-                # --- END ADDED LOGGING ---
                 response = self.supabase.table("adventures").insert(record).execute()
 
                 # Extract the ID from the response
@@ -169,7 +195,9 @@ class StateStorageService:
                     )
 
                 adventure_id = response.data[0]["id"]
-                logger.info(f"Stored new adventure with ID: {adventure_id}")
+                logger.info(
+                    f"[DUPLICATE_ADVENTURE_DEBUG] store_state: Successfully stored new adventure with ID: {adventure_id}"
+                )
                 logger.info(
                     f"Stored state with {completed_chapter_count} chapters and {len(state_data.get('chapter_summaries', []))} summaries"
                 )
@@ -177,7 +205,9 @@ class StateStorageService:
                 return adventure_id
 
         except Exception as e:
-            logger.error(f"Error storing state in Supabase: {str(e)}")
+            logger.error(
+                f"[DUPLICATE_ADVENTURE_DEBUG] store_state: Error storing state in Supabase: {str(e)}"
+            )
             raise
 
     async def get_state(self, state_id: str) -> Optional[Dict[str, Any]]:
@@ -360,7 +390,9 @@ class StateStorageService:
                                      completed_chapter_count, updated_at, and state_data.
         """
         try:
-            logger.info(f"Fetching current adventure for resume for user_id: {user_id}")
+            logger.info(
+                f"[DUPLICATE_ADVENTURE_DEBUG] get_user_current_adventure_for_resume: Called for user_id: {user_id}"
+            )
             response = (
                 self.supabase.table("adventures")
                 .select(
@@ -374,9 +406,13 @@ class StateStorageService:
                 .execute()
             )
 
+            logger.info(
+                f"[DUPLICATE_ADVENTURE_DEBUG] get_user_current_adventure_for_resume: Supabase response: {response}"
+            )
+
             if not response.data:
                 logger.info(
-                    f"No active incomplete adventure found for resume for user_id: {user_id}"
+                    f"[DUPLICATE_ADVENTURE_DEBUG] get_user_current_adventure_for_resume: No active incomplete adventure found for user_id: {user_id}"
                 )
                 return None
 
@@ -385,15 +421,55 @@ class StateStorageService:
             # It will calculate current_chapter and total_chapters based on this data.
             # Key change: Return the full adventure_data dict as fetched.
             logger.info(
-                f"Found current adventure for resume for user_id {user_id}: {adventure_data['id']}"
+                f"[DUPLICATE_ADVENTURE_DEBUG] get_user_current_adventure_for_resume: Found current adventure for user_id {user_id}: {adventure_data['id']}"
             )
             return adventure_data  # Return the raw dict
 
         except Exception as e:
             logger.error(
-                f"Error fetching current adventure for resume for user_id {user_id}: {str(e)}"
+                f"[DUPLICATE_ADVENTURE_DEBUG] get_user_current_adventure_for_resume: Error fetching current adventure for user_id {user_id}: {str(e)}"
             )
             return None
+
+    async def get_all_user_incomplete_adventures(
+        self, user_id: UUID
+    ) -> List[Dict[str, Any]]:
+        """
+        Get ALL incomplete adventures for a user (not just the most recent one).
+        Used for comprehensive abandonment logic.
+
+        Args:
+            user_id: The UUID of the user.
+
+        Returns:
+            List[Dict[str, Any]]: List of all incomplete adventures for the user.
+        """
+        try:
+            logger.info(
+                f"[DUPLICATE_ADVENTURE_DEBUG] get_all_user_incomplete_adventures: Called for user_id: {user_id}"
+            )
+            response = (
+                self.supabase.table("adventures")
+                .select(
+                    "id, story_category, lesson_topic, completed_chapter_count, updated_at"
+                )
+                .eq("user_id", str(user_id))
+                .eq("is_complete", False)
+                .order("updated_at", desc=True)
+                .execute()
+            )
+
+            logger.info(
+                f"[DUPLICATE_ADVENTURE_DEBUG] get_all_user_incomplete_adventures: Found {len(response.data) if response.data else 0} incomplete adventures for user_id: {user_id}"
+            )
+
+            return response.data if response.data else []
+
+        except Exception as e:
+            logger.error(
+                f"[DUPLICATE_ADVENTURE_DEBUG] get_all_user_incomplete_adventures: Error fetching incomplete adventures for user_id {user_id}: {str(e)}"
+            )
+            return []
 
     async def abandon_adventure(self, adventure_id: str, user_id: UUID) -> bool:
         """
@@ -409,11 +485,15 @@ class StateStorageService:
         """
         try:
             logger.info(
-                f"User {user_id} attempting to abandon adventure {adventure_id}"
+                f"[DUPLICATE_ADVENTURE_DEBUG] abandon_adventure: User {user_id} attempting to abandon adventure {adventure_id}"
             )
             # Consider adding a 'completion_reason' field to the table in a future migration
             # update_payload = {"is_complete": True, "completion_reason": "abandoned_by_user"}
             update_payload = {"is_complete": True}
+
+            logger.info(
+                f"[DUPLICATE_ADVENTURE_DEBUG] abandon_adventure: About to execute Supabase update with payload: {update_payload}"
+            )
 
             response = (
                 self.supabase.table("adventures")
@@ -424,21 +504,25 @@ class StateStorageService:
                 .execute()
             )
 
+            logger.info(
+                f"[DUPLICATE_ADVENTURE_DEBUG] abandon_adventure: Supabase response: {response}"
+            )
+
             if response.data and len(response.data) > 0:
                 logger.info(
-                    f"Adventure {adventure_id} successfully abandoned by user {user_id}."
+                    f"[DUPLICATE_ADVENTURE_DEBUG] abandon_adventure: Adventure {adventure_id} successfully abandoned by user {user_id}."
                 )
                 return True
             else:
                 # This could happen if the adventure doesn't exist, user doesn't own it, or it's already complete.
                 logger.warning(
-                    f"Failed to abandon adventure {adventure_id} for user {user_id}. "
+                    f"[DUPLICATE_ADVENTURE_DEBUG] abandon_adventure: Failed to abandon adventure {adventure_id} for user {user_id}. "
                     f"Adventure may not exist, not belong to user, or already be complete. Response: {response}"
                 )
                 return False
         except Exception as e:
             logger.error(
-                f"Error abandoning adventure {adventure_id} for user {user_id}: {str(e)}"
+                f"[DUPLICATE_ADVENTURE_DEBUG] abandon_adventure: Error abandoning adventure {adventure_id} for user {user_id}: {str(e)}"
             )
             return False
 
@@ -497,61 +581,64 @@ class StateStorageService:
             "DEPRECATED: `cleanup_expired` was called. This method no longer deletes records. Use `cleanup_expired_adventures`."
         )
         return 0
-        # Original logic (now deprecated):
-        # try:
-        #     # Calculate the expiration timestamp (1 hour ago)
-        #     expiration_time = datetime.now() - timedelta(hours=1)
-        #
-        #     # Delete expired records from Supabase
-        #     response = (
-        #         self.supabase.table("adventures")
-        #         .delete()
-        #         .lt("created_at", expiration_time.isoformat())
-        #         .execute()
-        #     )
-        #
-        #     # Count the number of deleted records
-        #     deleted_count = len(response.data) if response.data else 0
-        #
-        #     if deleted_count > 0:
-        #         logger.info(f"Cleaned up {deleted_count} expired states")
-        #
-        #     return deleted_count
-        #
-        # except Exception as e:
-        #     logger.error(f"Error cleaning up expired states: {str(e)}")
-        #     return 0
+
+    async def _abandon_all_incomplete_adventures(self, user_id: UUID) -> bool:
+        """
+        Internal helper to find and abandon ALL of a user's existing incomplete adventures.
+        This replaces the old single-adventure abandonment logic.
+        """
+        logger.info(
+            f"[DUPLICATE_ADVENTURE_DEBUG] _abandon_all_incomplete_adventures: Checking for ALL incomplete adventures for user {user_id} to abandon."
+        )
+
+        # Get ALL incomplete adventures for this user
+        incomplete_adventures = await self.get_all_user_incomplete_adventures(user_id)
+
+        logger.info(
+            f"[DUPLICATE_ADVENTURE_DEBUG] _abandon_all_incomplete_adventures: Found {len(incomplete_adventures)} incomplete adventures for user {user_id}"
+        )
+
+        if not incomplete_adventures:
+            logger.info(
+                f"[DUPLICATE_ADVENTURE_DEBUG] _abandon_all_incomplete_adventures: No incomplete adventures found for user {user_id} to abandon."
+            )
+            return True  # No adventures to abandon, so proceed.
+
+        # Abandon each incomplete adventure
+        abandoned_count = 0
+        failed_count = 0
+
+        for adventure in incomplete_adventures:
+            adventure_id = adventure["id"]
+            logger.info(
+                f"[DUPLICATE_ADVENTURE_DEBUG] _abandon_all_incomplete_adventures: Attempting to abandon adventure {adventure_id} for user {user_id}"
+            )
+
+            abandoned_successfully = await self.abandon_adventure(adventure_id, user_id)
+            if abandoned_successfully:
+                abandoned_count += 1
+                logger.info(
+                    f"[DUPLICATE_ADVENTURE_DEBUG] _abandon_all_incomplete_adventures: Successfully abandoned adventure {adventure_id} for user {user_id}"
+                )
+            else:
+                failed_count += 1
+                logger.warning(
+                    f"[DUPLICATE_ADVENTURE_DEBUG] _abandon_all_incomplete_adventures: Failed to abandon adventure {adventure_id} for user {user_id}"
+                )
+
+        logger.info(
+            f"[DUPLICATE_ADVENTURE_DEBUG] _abandon_all_incomplete_adventures: Summary for user {user_id}: {abandoned_count} abandoned, {failed_count} failed"
+        )
+
+        # Return True if we abandoned at least some adventures, or if there were none to abandon
+        return failed_count == 0
 
     async def _abandon_existing_incomplete_adventure(self, user_id: UUID) -> bool:
         """
-        Internal helper to find and abandon a user's existing incomplete adventure.
+        DEPRECATED: Internal helper to find and abandon a user's existing incomplete adventure.
+        This method is kept for compatibility but now calls the comprehensive abandonment logic.
         """
         logger.info(
-            f"Checking for existing incomplete adventure for user {user_id} to abandon."
+            f"[DUPLICATE_ADVENTURE_DEBUG] _abandon_existing_incomplete_adventure: DEPRECATED method called, redirecting to _abandon_all_incomplete_adventures for user {user_id}"
         )
-        # Use the new method that returns the full data needed by other parts of the system
-        current_adventure_details = await self.get_user_current_adventure_for_resume(
-            user_id
-        )
-        if current_adventure_details and current_adventure_details.get("adventure_id"):
-            adventure_to_abandon_id = current_adventure_details["adventure_id"]
-            logger.info(
-                f"Found existing incomplete adventure {adventure_to_abandon_id} for user {user_id}. Attempting to abandon."
-            )
-            abandoned_successfully = await self.abandon_adventure(
-                adventure_to_abandon_id, user_id
-            )
-            if abandoned_successfully:
-                logger.info(
-                    f"Successfully abandoned previous adventure {adventure_to_abandon_id} for user {user_id}."
-                )
-                return True
-            else:
-                logger.warning(
-                    f"Failed to abandon previous adventure {adventure_to_abandon_id} for user {user_id}."
-                )
-                return False
-        logger.info(
-            f"No existing incomplete adventure found for user {user_id} to abandon."
-        )
-        return True  # No adventure to abandon, so proceed.
+        return await self._abandon_all_incomplete_adventures(user_id)
