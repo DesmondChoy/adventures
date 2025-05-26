@@ -28,11 +28,21 @@
     ```
 
 ### Frontend
+- **Modular JavaScript Architecture**
+  * ES6 modules for clean dependency management (`app/static/js/`)
+  * `authManager.js`: Supabase authentication, session management, and user status UI updates
+  * `adventureStateManager.js`: localStorage operations for adventure state persistence
+  * `webSocketManager.js`: WebSocket connections, reconnection logic, and message handling
+  * `stateManager.js`: Adventure state operations and state transitions
+  * `uiManager.js`: DOM manipulation, UI updates, story content rendering, and user interface functions
+  * `main.js`: Main entry point, coordinates all modules, and handles application initialization
+
 - **State Management**
   ```javascript
-  // app/templates/index.html
-  class AdventureStateManager {
+  // app/static/js/adventureStateManager.js
+  export class AdventureStateManager {
       STORAGE_KEY = 'adventure_state';
+      CLIENT_UUID_KEY = 'learning_odyssey_user_uuid';
       // Uses localStorage for persistence
       // Maintains complete chapter history
   }
@@ -40,8 +50,8 @@
 
 - **Connection Management**
   ```javascript
-  // app/templates/index.html
-  class WebSocketManager {
+  // app/static/js/webSocketManager.js
+  export class WebSocketManager {
       reconnectAttempts = 0;
       maxReconnectAttempts = 5;
       
@@ -54,6 +64,7 @@
 - **Template Structure**
   * Modular organization with component separation
   * Inheritance-based template system
+  * `components/scripts.html`: Module loading and configuration bridge between server-side data and client-side modules
 
 - **UI Components**
   * Modular CSS organization (`app/static/css/`)

@@ -1,10 +1,45 @@
 # Active Context
 
-## Current Focus: Supabase User Authentication & General Enhancements (As of 2025-05-24)
+## Current Focus: Supabase User Authentication & General Enhancements (As of 2025-05-26)
 
 Following the successful completion of Supabase Phase 2 (Persistent Adventure State) and Phase 3 (Telemetry), and significant progress on Phase 4 (User Authentication), the project is now focused on completing Phase 4 testing and addressing other key enhancements.
 
 ### Recently Completed Milestones
+*   **Carousel Functionality Fix (2025-05-26):**
+    *   **Goal:** Restore carousel functionality that was broken after the JavaScript refactoring.
+    *   **Problem:** The carousel screen where users select adventure and lesson topics was not working - clicking arrows did not rotate the carousel images.
+    *   **Root Cause:** ES6 module refactoring broke carousel initialization due to missing imports, configuration overwrite, and incorrect module loading order.
+    *   **Tasks Completed:**
+        *   Fixed module loading order in `app/templates/components/scripts.html` to load `carousel-manager.js` before `main.js`.
+        *   Added proper ES6 imports for `Carousel` and `setupCarouselKeyboardNavigation` in `main.js` and `uiManager.js`.
+        *   Fixed configuration preservation by preventing `window.appConfig` overwrite in `main.js`.
+        *   Added ES6 exports to `carousel-manager.js` while maintaining global availability for onclick handlers.
+        *   Enhanced error handling and fallback initialization.
+    *   **Affected Files:**
+        *   `app/templates/components/scripts.html` (modified)
+        *   `app/static/js/main.js` (modified)
+        *   `app/static/js/uiManager.js` (modified)
+        *   `app/static/js/carousel-manager.js` (modified)
+    *   **Result:** Carousel arrows now work correctly in both directions, allowing users to browse adventure categories and lesson topics.
+
+*   **Client-Side JavaScript Refactoring (2025-05-26):**
+    *   **Goal:** Improve modularity, maintainability, and testability of frontend JavaScript.
+    *   **Tasks Completed:**
+        *   Refactored the monolithic inline script in `app/templates/components/scripts.html` into multiple ES6 modules within `app/static/js/`.
+        *   Created modular JavaScript files: `authManager.js`, `adventureStateManager.js`, `webSocketManager.js`, `stateManager.js`, `uiManager.js`, and `main.js`.
+        *   Updated `app/templates/components/scripts.html` to load these modules and pass initial configuration data via `window.appConfig`.
+        *   Established clear responsibilities for each module (authentication, local state management, WebSocket communication, UI updates, main application logic).
+        *   Implemented ES6 module system with clean import/export dependencies.
+    *   **Affected Files:**
+        *   `app/templates/components/scripts.html` (modified)
+        *   `app/static/js/authManager.js` (created)
+        *   `app/static/js/adventureStateManager.js` (created)
+        *   `app/static/js/webSocketManager.js` (created)
+        *   `app/static/js/stateManager.js` (created)
+        *   `app/static/js/uiManager.js` (created)
+        *   `app/static/js/main.js` (created)
+    *   **Benefits:** Significantly improved code organization, maintainability, and testability of the frontend JavaScript. Reduced global namespace pollution and established clear module boundaries.
+
 *   **Supabase Integration - Phase 4 (User Authentication - Google Flow):**
     *   **Backend Logic:** Implemented JWT verification in `websocket_router.py` using `PyJWT`.
     *   **User ID Propagation:** Ensured `user_id` (extracted from JWT) is correctly passed to `StateStorageService` and `TelemetryService`.

@@ -84,7 +84,7 @@
       logger.debug(f"Converted chapter_type to lowercase: {chapter['chapter_type']}")
   ```
 
-### 3. Modular Summary Service Pattern
+### 4. Modular Summary Service Pattern
 - **Package Structure** (`app/services/summary/`)
   * Organized by responsibility with clear component separation
   * Proper package exports through `__init__.py`
@@ -110,7 +110,7 @@
       # Use injected summary_service
   ```
 
-### 4. Format Example Pattern for LLM Prompts
+### 5. Format Example Pattern for LLM Prompts
 - **Structure and Examples**
   * Providing both incorrect and correct examples in prompts
   * Showing the incorrect example first to highlight what to avoid
@@ -119,7 +119,7 @@
   * Explicitly instructing the LLM to use exact section headers
   * Example implementation in `SUMMARY_CHAPTER_PROMPT` for title and summary extraction
 
-### 5. Mobile-Optimized Scrolling Pattern
+### 6. Mobile-Optimized Scrolling Pattern
 - **Fixed Height with Dynamic Content**
   * Using fixed container heights with scrollable content areas
   * Explicit height containers with proper overflow handling
@@ -133,7 +133,7 @@
   * Wider scrollbars for better touch interaction
   * Visual indicators (fade effects) to show scrollable content
 
-### 6. Backend-Frontend Naming Convention Pattern
+### 7. Backend-Frontend Naming Convention Pattern
 - **Centralized Case Conversion** (`app/utils/case_conversion.py`)
   * Utility functions for converting between snake_case and camelCase
   * Recursive handling of nested dictionaries and lists
@@ -170,7 +170,7 @@
       return result
   ```
 
-### 7. Modular Template Structure Pattern
+### 8. Modular Template Structure Pattern
 - **Template Hierarchy** (`app/templates/`)
   * `layouts/main_layout.html`: Base layout template that extends `base.html`
   * `pages/index.html`: Page-specific template that extends the layout
@@ -185,7 +185,30 @@
   * Simplified testing and debugging of individual components
   * Reduced duplication through component reuse
 
-### 8. Paragraph Formatting Pattern
+### 9. Modular JavaScript Architecture Pattern
+- **ES6 Module Structure** (`app/static/js/`)
+  * `authManager.js`: Handles Supabase authentication, session management, and user status UI updates
+  * `adventureStateManager.js`: Manages localStorage operations for adventure state persistence and client UUID generation
+  * `webSocketManager.js`: Handles WebSocket connections, reconnection logic, URL construction, and message handling setup
+  * `stateManager.js`: Manages adventure state operations, state transitions, and state manipulation functions
+  * `uiManager.js`: Consolidates all DOM manipulation, UI updates, story content rendering, choice display, and user interface functions
+  * `main.js`: Serves as the main entry point, coordinates all modules, handles application initialization, and manages global state
+
+- **Configuration Bridge** (`app/templates/components/scripts.html`)
+  * Sets up `window.appConfig` with server-side Jinja2 data (totalCategories, totalLessonTopics)
+  * Loads the main JavaScript application module using `<script type="module">`
+  * Exposes necessary functions globally for template onclick handlers
+  * Minimal inline JavaScript focused on module loading and configuration
+
+- **Benefits**
+  * Clean dependency management through ES6 import/export
+  * Improved testability with isolated, focused modules
+  * Enhanced maintainability through separation of concerns
+  * Reduced global namespace pollution
+  * Clear module boundaries and responsibilities
+  * Easier debugging and development with focused files
+
+### 10. Paragraph Formatting Pattern
 - **Regeneration-First Approach**
   * Detects text that needs paragraph formatting based on length and structure
   * Makes up to 3 new requests with the original prompt to get properly formatted text
@@ -198,7 +221,7 @@
   * Streams text normally if properly formatted
   * Optimizes for different LLM providers
 
-### 9. Story Simulation Pattern
+### 11. Story Simulation Pattern
 - **Standardized Logging**
   * Consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`)
   * Source tracking for debugging
@@ -211,7 +234,7 @@
   * Graceful degradation when services are unavailable
   * Comprehensive logging of error states and recovery attempts
 
-### 10. Dual-Purpose Content Generation
+### 12. Dual-Purpose Content Generation
 - **Chapter Summaries** (`generate_chapter_summary()`)
   * Focus on narrative events and character development
   * 70-100 words covering key events and educational content
@@ -224,7 +247,7 @@
   * This description serves as a primary input to the two-step image prompt synthesis process.
   * Describes specific dramatic action or emotional peak, focusing purely on visual elements of the immediate scene.
 
-### 11. Dynamic Narrative Handling Pattern (CRITICAL)
+### 13. Dynamic Narrative Handling Pattern (CRITICAL)
 - **Principle:** Narrative content (story text, character names, specific events) is generated dynamically by LLMs and is inherently variable. It MUST NOT be hardcoded into application logic or tests.
 - **Strategies:**
   * **Rely on Structure:** Base logic and validation on the defined structure of the `AdventureState`, `ChapterData`, and expected `ChapterType`. Check for the presence and type of data, not its specific content.
@@ -233,7 +256,7 @@
   * **LLM-Based Extraction:** If specific details *must* be extracted from narrative text (e.g., character visuals), use robust LLM-based extraction prompts designed for this purpose. Store the extracted information in structured fields within the state (e.g., `state.character_visuals`), rather than re-parsing the text later. Avoid brittle regex for narrative content.
 - **Goal:** Ensure the application is robust and functions correctly regardless of the specific text generated by the LLM in any given playthrough.
 
-### 12. Character Visual Evolution Pattern
+### 14. Character Visual Evolution Pattern
 - **State Management (`AdventureState.character_visuals`):**
   * A dictionary `state.character_visuals` stores the current visual descriptions for all significant characters (protagonist and NPCs), keyed by character name.
   * Initialized with the protagonist's base description (`state.protagonist_description`).
@@ -250,7 +273,7 @@
   * Detailed logging tracks new, updated, and unchanged character visuals.
 - **Goal:** Maintain consistent and evolving character appearances throughout the adventure, reflecting narrative developments in their visual descriptions for use in image generation.
 
-### 13. Two-Step Image Prompt Synthesis Pattern
+### 15. Two-Step Image Prompt Synthesis Pattern
 - **Overview:** A multi-step process to create rich, context-aware prompts for the image generation model (Imagen), enhancing visual consistency and relevance.
 - **Step 1: Gather Core Visual Inputs:**
   * **Image Scene Description:** A concise (~50 words) description of the chapter's most visually striking moment, generated by an LLM call using `IMAGE_SCENE_PROMPT` and the chapter content. This focuses purely on the immediate scene's action and visual elements.

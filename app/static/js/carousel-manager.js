@@ -242,3 +242,10 @@ function setupCarouselKeyboardNavigation(carousels) {
     }
   });
 }
+
+// Export for ES6 modules
+export { Carousel, setupCarouselKeyboardNavigation };
+
+// Also make available globally for onclick handlers
+window.Carousel = Carousel;
+window.setupCarouselKeyboardNavigation = setupCarouselKeyboardNavigation;

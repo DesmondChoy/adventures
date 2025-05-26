@@ -2,6 +2,34 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-05-26: Carousel Functionality Fix
+- **Goal:** Restore carousel functionality that was broken after the JavaScript refactoring.
+- **Problem:** The carousel screen where users select adventure and lesson topics was not working - clicking arrows did not rotate the carousel images.
+- **Root Cause:** ES6 module refactoring broke carousel initialization due to missing imports, configuration overwrite, and incorrect module loading order.
+- **Tasks Completed:**
+    - Fixed module loading order in `app/templates/components/scripts.html` to load `carousel-manager.js` before `main.js`.
+    - Added proper ES6 imports for `Carousel` and `setupCarouselKeyboardNavigation` in `main.js` and `uiManager.js`.
+    - Fixed configuration preservation by preventing `window.appConfig` overwrite in `main.js`.
+    - Added ES6 exports to `carousel-manager.js` while maintaining global availability for onclick handlers.
+    - Enhanced error handling and fallback initialization.
+- **Affected Files:**
+    - `app/templates/components/scripts.html` (modified)
+    - `app/static/js/main.js` (modified)
+    - `app/static/js/uiManager.js` (modified)
+    - `app/static/js/carousel-manager.js` (modified)
+- **Result:** Carousel arrows now work correctly in both directions, allowing users to browse adventure categories and lesson topics.
+
+### 2025-05-26: Client-Side JavaScript Refactoring for Modularity
+- **Goal:** Improve modularity, maintainability, and testability of frontend JavaScript.
+- **Tasks Completed:**
+    - Successfully refactored the inline JavaScript in `app/templates/components/scripts.html` into a modular ES6 structure.
+    - Created new modules in `app/static/js/`: `authManager.js`, `adventureStateManager.js`, `webSocketManager.js`, `stateManager.js`, `uiManager.js`, and `main.js`.
+    - Each module now handles a specific concern (authentication, local state, WebSocket communication, UI updates, application entry point).
+    - `scripts.html` has been updated to load these modules and provide initial configuration via `window.appConfig`.
+    - Implemented ES6 module system with clean import/export dependencies.
+    - Established clear responsibilities for each module with proper separation of concerns.
+- **Benefits:** This change significantly improves code organization, maintainability, and testability of the frontend JavaScript. Reduced global namespace pollution and established clear module boundaries.
+
 ### 2025-05-24: Supabase Integration - Phase 4 (User Authentication) - Key Fixes & Google Flow Verification
 - **Backend Logic & JWT Handling:**
     - Implemented JWT verification in `app/routers/websocket_router.py` using `PyJWT` for secure token processing.
@@ -216,6 +244,7 @@
 - Responsive design for both desktop and mobile
 - **Supabase Integration:** Persistent state (Phase 2) and Telemetry (Phase 3) are now fully implemented and validated.
 - **Visual Consistency:** Core mechanisms for protagonist and NPC visual consistency and evolution are implemented, including improved prompt generation and character visual tracking.
+- **Modular Frontend:** ES6 module-based JavaScript architecture for improved maintainability and testability.
 
 ### Recent Enhancements
 - (Many items previously listed here are now part of the completed Supabase or Visual Consistency epics above)
