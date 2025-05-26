@@ -714,42 +714,19 @@ export async function handleMessage(event) {
                 window.appState.wsManager.setAdventureId(data.adventure_id);
                 console.log(`Received adventure_id: ${data.adventure_id} from server`);
             }
-             // If adventure_loaded, update selectedCategory and selectedLessonTopic from server state
-            if (data.type === 'adventure_loaded' && data.state) {
-                selectedCategory = data.state.story_category || selectedCategory;
-                selectedLessonTopic = data.state.lesson_topic || selectedLessonTopic;
-                console.log(`[FrontendWS] Adventure loaded. Category: ${selectedCategory}, Topic: ${selectedLessonTopic}`);
+            
+            // If adventure_loaded, update progress display with server data
+            if (data.type === 'adventure_loaded') {
+                console.log(`[CHAPTER DISPLAY DEBUG] Adventure loaded message received:`, data);
                 
-                // CRITICAL FIX: Update progress display with correct chapter information from server
-                let currentChapterNumberForDisplay = 1;
-                let totalChaptersForDisplay = data.state.story_length || 10; // Default to 10 if not set
-
-                if (typeof data.state.current_chapter_index === 'number' && data.state.current_chapter_index >= 0) {
-                    // current_chapter_index is 0-based index of the chapter being loaded or just completed.
-                    // So, for display, it's index + 1.
-                    currentChapterNumberForDisplay = data.state.current_chapter_index + 1;
-                    console.log(`[CHAPTER DISPLAY DEBUG] Using current_chapter_index: ${data.state.current_chapter_index} -> Display: ${currentChapterNumberForDisplay}`);
-                } else if (data.state.chapters && Array.isArray(data.state.chapters)) {
-                    // Fallback if current_chapter_index is not available (e.g. older state structures)
-                    // This assumes 'chapters' contains all *completed* chapters before the current one.
-                    // If 'adventure_loaded' means the *next* chapter is about to be streamed, then length + 1 is correct.
-                    // If 'adventure_loaded' means the *current* chapter's data is loaded (e.g. resuming), then length is correct if chapters includes current.
-                    // Given the bug, let's assume 'chapters' are completed ones, so current is length + 1.
-                    currentChapterNumberForDisplay = data.state.chapters.length + 1;
-                    console.log(`[CHAPTER DISPLAY DEBUG] Fallback: Using chapters.length: ${data.state.chapters.length} -> Display: ${currentChapterNumberForDisplay}`);
-                } else {
-                    console.warn(`[CHAPTER DISPLAY DEBUG] No current_chapter_index or chapters array found in server state. Defaulting current chapter to 1. State:`, data.state);
-                }
+                // Use the data that the server actually sends: current_chapter and total_chapters
+                const currentChapterFromServer = data.current_chapter || 1;
+                const totalChaptersFromServer = data.total_chapters || 10;
                 
-                console.log(`[CHAPTER DISPLAY DEBUG] Updating progress: Chapter ${currentChapterNumberForDisplay} of ${totalChaptersForDisplay}`);
-                console.log(`[CHAPTER DISPLAY DEBUG] Server state story_length: ${data.state.story_length}`);
-                updateProgress(currentChapterNumberForDisplay, totalChaptersForDisplay);
+                console.log(`[CHAPTER DISPLAY DEBUG] Server sent current_chapter: ${currentChapterFromServer}, total_chapters: ${totalChaptersFromServer}`);
+                console.log(`[CHAPTER DISPLAY DEBUG] Updating progress display to: Chapter ${currentChapterFromServer} of ${totalChaptersFromServer}`);
                 
-                // Update hidden inputs if they exist (they might not on direct resume)
-                const storyCatEl = document.getElementById('storyCategory');
-                const lessonTopicEl = document.getElementById('lessonTopic');
-                if (storyCatEl) storyCatEl.value = selectedCategory;
-                if (lessonTopicEl) lessonTopicEl.value = selectedLessonTopic;
+                updateProgress(currentChapterFromServer, totalChaptersFromServer);
             }
             // Don't hide loader here - wait for hide_loader message
         } else {

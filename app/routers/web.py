@@ -83,6 +83,33 @@ def get_session_context(request: Request) -> dict:
     }
 
 
+def calculate_display_chapter_number(state_data: dict) -> int:
+    """
+    Calculate the correct chapter number to display to the user.
+    This matches the logic used in the WebSocket router.
+    """
+    if not state_data or not isinstance(state_data, dict):
+        return 1
+
+    chapters = state_data.get("chapters", [])
+    if not isinstance(chapters, list) or len(chapters) == 0:
+        return 1
+
+    # Default to next chapter number (internal tracking)
+    display_chapter_number = len(chapters) + 1
+
+    # Check if the last chapter has no response (will be re-sent)
+    last_chapter = chapters[-1] if chapters else None
+    if last_chapter and isinstance(last_chapter, dict):
+        # If the last chapter has no response, user will see this chapter
+        if last_chapter.get("response") is None:
+            chapter_number = last_chapter.get("chapter_number")
+            if chapter_number:
+                display_chapter_number = chapter_number
+
+    return display_chapter_number
+
+
 @router.get("/select")
 async def select_adventure(request: Request):
     """Render the adventure selection page with story and lesson choices."""
@@ -317,34 +344,12 @@ async def get_user_current_adventure_api(
                 extra=context,
             )
 
-            # Calculate current_chapter. If state_data is None or chapters is missing, default to 0 or 1.
-            current_chapter_num = 1  # Default to chapter 1
+            # Calculate current_chapter for display using the new function
             state_data = adventure_data.get("state_data")
-
-            if state_data and isinstance(state_data, dict):
-                chapters = state_data.get("chapters", [])
-                logger.info(
-                    f"[RESUME API DEBUG] State data chapters count: {len(chapters) if isinstance(chapters, list) else 'Not a list'}",
-                    extra=context,
-                )
-                if isinstance(chapters, list):
-                    current_chapter_num = len(chapters) + 1
-                    logger.info(
-                        f"[RESUME API DEBUG] Calculated current chapter from state_data: {current_chapter_num}",
-                        extra=context,
-                    )
-            elif adventure_data.get("completed_chapter_count") is not None:
-                # Fallback to completed_chapter_count
-                current_chapter_num = (
-                    adventure_data.get("completed_chapter_count", 0) + 1
-                )
-                logger.info(
-                    f"[RESUME API DEBUG] Calculated current chapter from completed_chapter_count: {current_chapter_num}",
-                    extra=context,
-                )
+            current_chapter_num = calculate_display_chapter_number(state_data)
 
             logger.info(
-                f"[RESUME API DEBUG] Final current chapter number: {current_chapter_num}",
+                f"[RESUME API DEBUG] Calculated display chapter number: {current_chapter_num}",
                 extra=context,
             )
 
@@ -489,16 +494,14 @@ async def get_active_adventure_by_client_uuid_api(
                 extra=context,
             )
 
-            current_chapter_num = 1  # Default to chapter 1
+            # Calculate current_chapter for display using the new function
             state_data = adventure_data.get("state_data")
-            if state_data and isinstance(state_data, dict):
-                chapters = state_data.get("chapters", [])
-                if isinstance(chapters, list):
-                    current_chapter_num = len(chapters) + 1
-            elif adventure_data.get("completed_chapter_count") is not None:
-                current_chapter_num = (
-                    adventure_data.get("completed_chapter_count", 0) + 1
-                )
+            current_chapter_num = calculate_display_chapter_number(state_data)
+
+            logger.info(
+                f"[RESUME_MODAL_GUEST_DEBUG] Calculated display chapter number for client_uuid {client_uuid}: {current_chapter_num}",
+                extra=context,
+            )
 
             adventure_id = adventure_data.get("id")
             story_category = adventure_data.get("story_category")

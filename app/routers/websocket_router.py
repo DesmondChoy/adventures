@@ -270,17 +270,41 @@ async def story_websocket(
 
         # Send status based on whether an adventure was loaded (either specific or active)
         if loaded_state_from_storage and connection_data["adventure_id"]:
+            # Determine the correct chapter number to display to the user
+            display_chapter_number = loaded_state_from_storage.current_chapter_number
+
+            # Check if we'll be re-sending a chapter for resumption
+            if loaded_state_from_storage.chapters:
+                chapter_number_to_resume_display = (
+                    loaded_state_from_storage.current_chapter_number - 1
+                )
+                if (
+                    0
+                    < chapter_number_to_resume_display
+                    <= len(loaded_state_from_storage.chapters)
+                ):
+                    chapter_to_display_data = loaded_state_from_storage.chapters[
+                        chapter_number_to_resume_display - 1
+                    ]
+                    if (
+                        chapter_to_display_data.response is None
+                        and chapter_to_display_data.chapter_type
+                        != ChapterType.CONCLUSION
+                    ):
+                        # We'll be re-sending this chapter, so user will see this chapter number
+                        display_chapter_number = chapter_to_display_data.chapter_number
+
             await websocket.send_json(
                 {
                     "type": "adventure_loaded",  # Changed from adventure_status for clarity
                     "status": "existing_loaded",  # More specific status
                     "adventure_id": connection_data["adventure_id"],
-                    "current_chapter": loaded_state_from_storage.current_chapter_number,
+                    "current_chapter": display_chapter_number,
                     "total_chapters": loaded_state_from_storage.story_length,
                 }
             )
             logger.info(
-                f"Loaded state indicates current chapter is {loaded_state_from_storage.current_chapter_number}"
+                f"Loaded state indicates current chapter is {loaded_state_from_storage.current_chapter_number}, displaying chapter {display_chapter_number} to user"
             )
             # Resend last chapter content if needed (existing logic)
             if loaded_state_from_storage.chapters:
