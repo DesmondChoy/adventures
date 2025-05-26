@@ -602,8 +602,9 @@
                     return;
                 }
                 if (data.session) {
-                    console.log("User already signed in (login page check), redirecting to /select");
-                    window.location.href = '/select';
+                    console.log("User already signed in (login page check), checking for existing adventure...");
+                    // Don't redirect immediately - check for existing adventure first
+                    await handleSignIn();
                 } else {
                     console.log("No active session found (login page check).");
                 }

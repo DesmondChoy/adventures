@@ -139,8 +139,12 @@ async def story_websocket(
                             )
                             # Story category and lesson topic might differ from URL if resuming specific ID
                             # Update them from the loaded state for consistency in subsequent calls
-                            story_category = loaded_state_from_storage.story_category
-                            lesson_topic = loaded_state_from_storage.lesson_topic
+                            story_category = loaded_state_from_storage.metadata.get(
+                                "story_category", story_category
+                            )
+                            lesson_topic = loaded_state_from_storage.metadata.get(
+                                "lesson_topic", lesson_topic
+                            )
                             logger.info(
                                 f"Updated story_category to '{story_category}' and lesson_topic to '{lesson_topic}' from resumed state."
                             )
@@ -175,7 +179,9 @@ async def story_websocket(
                 try:
                     active_adventure_id = (
                         await state_storage_service.get_active_adventure_id(
-                            user_id=connection_data["user_id"]
+                            user_id=connection_data["user_id"],
+                            story_category=story_category,
+                            lesson_topic=lesson_topic,
                         )
                     )
                     if active_adventure_id:
@@ -198,7 +204,9 @@ async def story_websocket(
                 try:
                     active_adventure_id = (
                         await state_storage_service.get_active_adventure_id(
-                            client_uuid=client_uuid
+                            client_uuid=client_uuid,
+                            story_category=story_category,
+                            lesson_topic=lesson_topic,
                         )
                     )
                     if active_adventure_id:
@@ -234,8 +242,12 @@ async def story_websocket(
                             logger.info(
                                 "Successfully reconstructed state for active adventure."
                             )
-                            story_category = loaded_state_from_storage.story_category
-                            lesson_topic = loaded_state_from_storage.lesson_topic
+                            story_category = loaded_state_from_storage.metadata.get(
+                                "story_category", story_category
+                            )
+                            lesson_topic = loaded_state_from_storage.metadata.get(
+                                "lesson_topic", lesson_topic
+                            )
                         else:
                             logger.error(
                                 f"Failed to reconstruct state for active ID: {active_adventure_id}. Will create new."

@@ -136,8 +136,8 @@ async def get_adventure_summary(
         if adventure_state:
             try:
                 event_metadata = {
-                    "story_category": adventure_state.story_category,
-                    "lesson_topic": adventure_state.lesson_topic,
+                    "story_category": adventure_state.metadata.get("story_category"),
+                    "lesson_topic": adventure_state.metadata.get("lesson_topic"),
                     "client_uuid": adventure_state.metadata.get("client_uuid"),
                     "chapters_in_summary": len(adventure_state.chapters)
                     if adventure_state.chapters

@@ -222,15 +222,21 @@ class StateStorageService:
             return None
 
     async def get_active_adventure_id(
-        self, client_uuid: Optional[str] = None, user_id: Optional[UUID] = None
+        self,
+        client_uuid: Optional[str] = None,
+        user_id: Optional[UUID] = None,
+        story_category: Optional[str] = None,
+        lesson_topic: Optional[str] = None,
     ) -> Optional[str]:
         """
-        Find an active (incomplete) adventure.
+        Find an active (incomplete) adventure that matches the specified story and lesson.
         Prioritizes user_id if provided, otherwise uses client_uuid.
 
         Args:
             client_uuid: Optional client's UUID.
             user_id: Optional user's UUID from authentication.
+            story_category: Optional story category to match.
+            lesson_topic: Optional lesson topic to match.
 
         Returns:
             Optional[str]: The adventure ID if found, None otherwise.
@@ -242,53 +248,69 @@ class StateStorageService:
             return None
 
         try:
+            # Build base query
             query = (
                 self.supabase.table("adventures")
-                .select("id, updated_at")
+                .select("id, updated_at, story_category, lesson_topic")
                 .eq("is_complete", False)
                 .order("updated_at", desc=True)
                 .limit(1)
             )
 
+            # Add story/lesson filters if provided
+            if story_category:
+                query = query.eq("story_category", story_category)
+            if lesson_topic:
+                query = query.eq("lesson_topic", lesson_topic)
+
             adventure_id_found = None
 
             if user_id:
-                logger.info(f"Looking for active adventure for user_id: {user_id}")
-                response_user = query.eq(
-                    "user_id", str(user_id)
-                ).execute()  # Ensure user_id is string for query, REMOVED await
+                logger.info(
+                    f"Looking for active adventure for user_id: {user_id}"
+                    f"{f', story: {story_category}' if story_category else ''}"
+                    f"{f', lesson: {lesson_topic}' if lesson_topic else ''}"
+                )
+                response_user = query.eq("user_id", str(user_id)).execute()
                 logger.debug(
                     f"Raw response from get_active_adventure_id query (user_id: {user_id}): {response_user}"
                 )
                 if response_user.data and len(response_user.data) > 0:
                     adventure_id_found = response_user.data[0]["id"]
                     logger.info(
-                        f"Found active adventure with ID: {adventure_id_found} for user_id: {user_id}"
+                        f"Found matching active adventure with ID: {adventure_id_found} for user_id: {user_id}"
                     )
                     return adventure_id_found
                 else:
-                    logger.info(f"No active adventure found for user_id: {user_id}")
+                    logger.info(
+                        f"No matching active adventure found for user_id: {user_id}"
+                        f"{f' with story: {story_category}' if story_category else ''}"
+                        f"{f' and lesson: {lesson_topic}' if lesson_topic else ''}"
+                    )
 
             # If not found by user_id (or user_id was not provided) and client_uuid is available, try client_uuid
             if not adventure_id_found and client_uuid:
                 logger.info(
-                    f"Looking for active adventure for client_uuid: {client_uuid} (user_id search failed or user_id not provided)"
+                    f"Looking for active adventure for client_uuid: {client_uuid}"
+                    f"{f', story: {story_category}' if story_category else ''}"
+                    f"{f', lesson: {lesson_topic}' if lesson_topic else ''}"
+                    f" (user_id search failed or user_id not provided)"
                 )
-                response_client = query.eq(
-                    "client_uuid", client_uuid
-                ).execute()  # Query the dedicated client_uuid column, REMOVED await
+                response_client = query.eq("client_uuid", client_uuid).execute()
                 logger.debug(
                     f"Raw response from get_active_adventure_id query (client_uuid: {client_uuid}): {response_client}"
                 )
                 if response_client.data and len(response_client.data) > 0:
                     adventure_id_found = response_client.data[0]["id"]
                     logger.info(
-                        f"Found active adventure with ID: {adventure_id_found} for client_uuid: {client_uuid}"
+                        f"Found matching active adventure with ID: {adventure_id_found} for client_uuid: {client_uuid}"
                     )
                     return adventure_id_found
                 else:
                     logger.info(
-                        f"No active adventure found for client_uuid: {client_uuid}"
+                        f"No matching active adventure found for client_uuid: {client_uuid}"
+                        f"{f' with story: {story_category}' if story_category else ''}"
+                        f"{f' and lesson: {lesson_topic}' if lesson_topic else ''}"
                     )
 
             if not adventure_id_found:
