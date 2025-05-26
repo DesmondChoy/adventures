@@ -36,7 +36,6 @@ export function showError(message) {
 
 // --- Loader Functions ---
 export function showLoader() {
-    console.log('Showing loader...');
     const overlay = document.getElementById('loaderOverlay');
     if (!overlay) {
         console.error('Loader overlay element not found!');
@@ -50,12 +49,10 @@ export function showLoader() {
     // Use setTimeout to ensure the transition works
     setTimeout(() => {
         overlay.classList.add('active');
-        console.log('Loader activated');
     }, 0);
 }
 
 export function hideLoader() {
-    console.log('Hiding loader...');
     const overlay = document.getElementById('loaderOverlay');
     if (!overlay) {
         console.error('Loader overlay element not found!');
@@ -67,7 +64,6 @@ export function hideLoader() {
     // Wait for transition to complete before hiding
     setTimeout(() => {
         overlay.classList.add('hidden');
-        console.log('Loader hidden');
     }, 300);
 }
 
@@ -115,16 +111,6 @@ export function goToLessonTopicScreen() {
 }
 
 export async function startAdventure() {
-    console.log('[FrontendWS Log 0] startAdventure called. Category:', selectedCategory, 'Topic:', selectedLessonTopic);
-    
-    // DEBUGGING: Log current selections
-    console.log('[CONFLICT DEBUG] startAdventure called with:');
-    console.log('[CONFLICT DEBUG] - selectedCategory:', selectedCategory);
-    console.log('[CONFLICT DEBUG] - selectedLessonTopic:', selectedLessonTopic);
-    console.log('[CONFLICT DEBUG] - Global state category/topic:', 
-        document.getElementById('storyCategory')?.value, 
-        document.getElementById('lessonTopic')?.value);
-    
     // Validate both inputs
     if (!selectedCategory) {
         showError('Please select a story category to continue');
@@ -143,13 +129,6 @@ export async function startAdventure() {
     let currentActiveAdventureForConflictCheck = null;
     let fetchErrorOccurred = false;
 
-    // DEBUGGING: Log auth state
-    console.log('[CONFLICT DEBUG] Auth state:');
-    console.log('[CONFLICT DEBUG] - authManager:', !!authManager);
-    console.log('[CONFLICT DEBUG] - authManager.accessToken:', !!authManager?.accessToken);
-    console.log('[CONFLICT DEBUG] - authManager.user:', authManager?.user);
-    console.log('[CONFLICT DEBUG] - isAnonymous:', isAnonymous);
-
     // Step 1: Determine if there's a current active adventure for the logged-in user/guest
     if (authManager && (authManager.accessToken || isAnonymous)) {
         let endpoint;
@@ -159,51 +138,32 @@ export async function startAdventure() {
             const clientUUID = localStorage.getItem('learning_odyssey_user_uuid');
             if (clientUUID) {
                 endpoint = `/api/adventure/active_by_client_uuid/${clientUUID}`;
-                console.log('[Conflict Check - Guest] Checking for active adventure via client_uuid:', clientUUID);
-            } else {
-                console.log('[Conflict Check - Guest] No client_uuid in localStorage, cannot check for active adventure.');
             }
         } else { // Google authenticated user
             endpoint = '/api/user/current-adventure';
             headers['Authorization'] = `Bearer ${authManager.accessToken}`;
-            console.log('[Conflict Check - Google] Checking for active adventure via user_id.');
         }
 
         if (endpoint) {
-            console.log('[CONFLICT DEBUG] Making API call to:', endpoint);
-            console.log('[CONFLICT DEBUG] API headers:', headers);
             try {
                 const response = await fetch(endpoint, { method: 'GET', headers: headers });
-                console.log('[CONFLICT DEBUG] API response status:', response.status);
-                console.log('[CONFLICT DEBUG] API response ok:', response.ok);
                 
                 if (response.ok) {
                     const adventureData = await response.json();
-                    console.log('[CONFLICT DEBUG] API response data:', adventureData);
                     
                     if (adventureData && adventureData.adventure) {
                         currentActiveAdventureForConflictCheck = adventureData.adventure;
-                        console.log('[CONFLICT DEBUG] Found active/resumable adventure:', currentActiveAdventureForConflictCheck);
-                        console.log('[CONFLICT DEBUG] Active adventure story_category:', currentActiveAdventureForConflictCheck.story_category);
-                        console.log('[CONFLICT DEBUG] Active adventure lesson_topic:', currentActiveAdventureForConflictCheck.lesson_topic);
-                    } else {
-                        console.log('[CONFLICT DEBUG] No active adventure found from API for current user/guest.');
-                        console.log('[CONFLICT DEBUG] adventureData structure:', adventureData);
                     }
                 } else {
                     const errorText = await response.text();
-                    console.error('[CONFLICT DEBUG] API call to find active adventure failed:', response.status, errorText);
+                    console.error('API call to find active adventure failed:', response.status, errorText);
                     fetchErrorOccurred = true;
                 }
             } catch (error) {
-                console.error('[CONFLICT DEBUG] Error fetching active adventure:', error);
+                console.error('Error fetching active adventure:', error);
                 fetchErrorOccurred = true;
             }
-        } else {
-            console.log('[CONFLICT DEBUG] No endpoint determined - skipping API call');
         }
-    } else {
-        console.log('[Conflict Check] User not logged in or authManager not available. No conflict check needed.');
     }
 
     if (fetchErrorOccurred) {
@@ -217,32 +177,17 @@ export async function startAdventure() {
         const activeStory = currentActiveAdventureForConflictCheck.story_category;
         const activeLesson = currentActiveAdventureForConflictCheck.lesson_topic;
 
-        console.log('[CONFLICT DEBUG] Performing conflict comparison:');
-        console.log('[CONFLICT DEBUG] - Active adventure story:', `"${activeStory}"`);
-        console.log('[CONFLICT DEBUG] - Selected story:', `"${selectedCategory}"`);
-        console.log('[CONFLICT DEBUG] - Active adventure lesson:', `"${activeLesson}"`);
-        console.log('[CONFLICT DEBUG] - Selected lesson:', `"${selectedLessonTopic}"`);
-        console.log('[CONFLICT DEBUG] - Story match:', activeStory === selectedCategory);
-        console.log('[CONFLICT DEBUG] - Lesson match:', activeLesson === selectedLessonTopic);
-
         if (activeStory !== selectedCategory || activeLesson !== selectedLessonTopic) {
-            console.log('[CONFLICT DEBUG] CONFLICT DETECTED: Active adventure details do not match new selection.');
-            console.log('[CONFLICT DEBUG] About to show conflict modal...');
-            
             // Hide loader before showing modal so user can interact with it
             hideLoader();
             
             try {
-                console.log('[CONFLICT DEBUG] Calling showConflictConfirmationModal...');
                 const userConfirmedAbandonment = await showConflictConfirmationModal(
                     currentActiveAdventureForConflictCheck,
                     { story_category: selectedCategory, lesson_topic: selectedLessonTopic }
                 );
                 
-                console.log('[CONFLICT DEBUG] Conflict modal returned:', userConfirmedAbandonment);
-
                 if (userConfirmedAbandonment) {
-                    console.log('[CONFLICT DEBUG] User confirmed abandonment.');
                     showLoader(); // Show loader again for API calls
                     
                     cleanUrlResumeParam(); 
@@ -257,34 +202,29 @@ export async function startAdventure() {
                                 headers: { 'Authorization': `Bearer ${authManager.accessToken}` }
                             });
                             if (!abandonResponse.ok) {
-                                 console.error('[Conflict Check - Google] Failed to abandon active adventure via API.');
+                                 console.error('Failed to abandon active adventure via API.');
                                  showError('Could not abandon previous adventure. Please try again.');
                                  hideLoader(); return;
                             }
-                            console.log('[Conflict Check - Google] Active adventure abandoned successfully via API.');
                         } catch (error) {
-                            console.error('[Conflict Check - Google] Error abandoning adventure via API:', error);
+                            console.error('Error abandoning adventure via API:', error);
                             showError('Error abandoning previous adventure.');
                             hideLoader(); return;
                         }
                     } else if (isAnonymous) { // Guest User
-                        console.log('[Conflict Check - Guest] Abandonment confirmed. Backend store_state will handle old adventure for this client_uuid when new one starts.');
                         // No explicit API call for guest abandonment here.
                     }
                 } else { // User cancelled conflict modal
-                    console.log('[CONFLICT DEBUG] User cancelled abandonment. Not starting new adventure.');
                     hideLoader(); 
                     return; 
                 }
             } catch (error) {
-                console.error('[CONFLICT DEBUG] Error with conflict modal:', error);
-                console.error('[CONFLICT DEBUG] Error stack:', error.stack);
+                console.error('Error with conflict modal:', error);
                 showError('Error processing conflict resolution.');
                 hideLoader();
                 return;
             }
         } else { // No conflict, selections match the active adventure
-            console.log('[CONFLICT DEBUG] NO CONFLICT: New selection matches active adventure. Will attempt to resume.');
             if (window.appState?.wsManager) {
                  window.appState.wsManager.adventureIdToResume = currentActiveAdventureForConflictCheck.adventure_id;
             }
@@ -292,12 +232,10 @@ export async function startAdventure() {
             if (url.searchParams.get('resume_adventure_id') !== String(currentActiveAdventureForConflictCheck.adventure_id)) {
                 url.searchParams.set('resume_adventure_id', currentActiveAdventureForConflictCheck.adventure_id);
                 window.history.replaceState({}, document.title, url.toString());
-                console.log('[CONFLICT DEBUG] resume_adventure_id set/updated in URL for matching active adventure.');
             }
         }
     } else {
         // No current active adventure found. Proceed to start fresh.
-        console.log('[CONFLICT DEBUG] No active adventure to conflict with. Proceeding to start new.');
         cleanUrlResumeParam(); 
         if (window.appState?.wsManager) {
             window.appState.wsManager.adventureIdToResume = null;
@@ -319,7 +257,6 @@ export async function startAdventure() {
 
     // Start the adventure
     showLoader();
-    console.log('[FrontendWS Log 1] Before calling initWebSocket() in startAdventure.');
     const { initWebSocket } = await import('./main.js');
     initWebSocket();
 }
@@ -375,14 +312,12 @@ export function appendStoryText(text) {
     // If this is the first chunk of a paragraph and it starts with a quotation mark
     // make sure we preserve it properly
     if (streamBuffer === '' && decodedText.trim().startsWith('"')) {
-        console.log('Detected dialogue at paragraph start - ensuring proper formatting');
         // Ensure the quotation mark is preserved
         textToAdd = decodedText;
     }
 
     // Check if we're starting a new paragraph after a double newline
     if (streamBuffer.endsWith('\n\n') && decodedText.trim().startsWith('"')) {
-        console.log('Detected dialogue at new paragraph - ensuring proper formatting');
         // Ensure the quotation mark is preserved for new paragraphs
         textToAdd = decodedText;
     }
@@ -712,19 +647,13 @@ export async function handleMessage(event) {
             // Store the adventure_id for persistence
             if (data.adventure_id && window.appState?.wsManager) {
                 window.appState.wsManager.setAdventureId(data.adventure_id);
-                console.log(`Received adventure_id: ${data.adventure_id} from server`);
             }
             
             // If adventure_loaded, update progress display with server data
             if (data.type === 'adventure_loaded') {
-                console.log(`[CHAPTER DISPLAY DEBUG] Adventure loaded message received:`, data);
-                
                 // Use the data that the server actually sends: current_chapter and total_chapters
                 const currentChapterFromServer = data.current_chapter || 1;
                 const totalChaptersFromServer = data.total_chapters || 10;
-                
-                console.log(`[CHAPTER DISPLAY DEBUG] Server sent current_chapter: ${currentChapterFromServer}, total_chapters: ${totalChaptersFromServer}`);
-                console.log(`[CHAPTER DISPLAY DEBUG] Updating progress display to: Chapter ${currentChapterFromServer} of ${totalChaptersFromServer}`);
                 
                 updateProgress(currentChapterFromServer, totalChaptersFromServer);
             }
@@ -845,22 +774,15 @@ function cleanUrlResumeParam() {
     if (url.searchParams.has('resume_adventure_id')) {
         url.searchParams.delete('resume_adventure_id');
         window.history.replaceState({}, document.title, url.toString());
-        console.log('[Conflict Check] resume_adventure_id removed from URL.');
     }
 }
 
 // --- Conflict Confirmation Modal Functions ---
 function showConflictConfirmationModal(currentAdventure, newSelection) {
-    console.log('[CONFLICT DEBUG] showConflictConfirmationModal called with:', currentAdventure, newSelection);
-    
     return new Promise((resolve) => {
-        console.log('[CONFLICT DEBUG] Creating promise for modal...');
-        
         const modal = document.getElementById('conflictModal');
-        console.log('[CONFLICT DEBUG] Modal element found:', !!modal);
-        
         if (!modal) {
-            console.error('[CONFLICT DEBUG] Conflict modal element not found!');
+            console.error('Conflict modal element not found!');
             resolve(false); // Fallback to prevent blocking
             return;
         }
@@ -874,17 +796,8 @@ function showConflictConfirmationModal(currentAdventure, newSelection) {
         const abandonBtn = document.getElementById('abandonAndStartBtn');
         const cancelBtn = document.getElementById('cancelConflictBtn');
 
-        console.log('[CONFLICT DEBUG] Modal elements found:');
-        console.log('[CONFLICT DEBUG] - currentAdventureNameEl:', !!currentAdventureNameEl);
-        console.log('[CONFLICT DEBUG] - currentLessonTopicEl:', !!currentLessonTopicEl);
-        console.log('[CONFLICT DEBUG] - currentProgressEl:', !!currentProgressEl);
-        console.log('[CONFLICT DEBUG] - newAdventureNameEl:', !!newAdventureNameEl);
-        console.log('[CONFLICT DEBUG] - newLessonTopicEl:', !!newLessonTopicEl);
-        console.log('[CONFLICT DEBUG] - abandonBtn:', !!abandonBtn);
-        console.log('[CONFLICT DEBUG] - cancelBtn:', !!cancelBtn);
-
         if (!abandonBtn || !cancelBtn) {
-            console.error('[CONFLICT DEBUG] Required modal button elements not found!');
+            console.error('Required modal button elements not found!');
             resolve(false);
             return;
         }
@@ -896,36 +809,28 @@ function showConflictConfirmationModal(currentAdventure, newSelection) {
         if (newAdventureNameEl) newAdventureNameEl.textContent = newSelection.story_category;
         if (newLessonTopicEl) newLessonTopicEl.textContent = newSelection.lesson_topic;
 
-        console.log('[CONFLICT DEBUG] Modal data populated, showing modal...');
         modal.style.display = 'flex';
-        console.log('[CONFLICT DEBUG] Modal display set to flex');
 
         // Store handlers to remove them later
         const handleAbandon = () => {
-            console.log('[CONFLICT DEBUG] Abandon button clicked!');
             cleanup();
             resolve(true);
         };
 
         const handleCancel = () => {
-            console.log('[CONFLICT DEBUG] Cancel button clicked!');
             cleanup();
             resolve(false);
         };
         
         const cleanup = () => {
-            console.log('[CONFLICT DEBUG] Cleaning up modal...');
             modal.style.display = 'none';
             // Remove event listeners to prevent multiple bindings if modal is reused
             abandonBtn.removeEventListener('click', handleAbandon);
             cancelBtn.removeEventListener('click', handleCancel);
         };
 
-        console.log('[CONFLICT DEBUG] Adding event listeners to buttons...');
         // Add event listeners, ensuring they are only added once or are removable
         abandonBtn.addEventListener('click', handleAbandon, { once: true });
         cancelBtn.addEventListener('click', handleCancel, { once: true });
-        
-        console.log('[CONFLICT DEBUG] Event listeners added, modal should be visible now');
     });
 }

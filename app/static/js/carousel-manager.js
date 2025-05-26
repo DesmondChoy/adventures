@@ -63,8 +63,6 @@ class Carousel {
       
       // Add event listeners
       this.setupEventListeners();
-      
-      console.log(`Carousel "${this.elementId}" initialized with ${this.itemCount} items`);
     } catch (error) {
       console.error(`Error during carousel initialization:`, error);
     }

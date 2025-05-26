@@ -39,7 +39,6 @@ export class AdventureStateManager {
                 this.generateFallbackUuid();
                 
             localStorage.setItem(this.CLIENT_UUID_KEY, uuid);
-            console.log('Generated new client UUID for persistence');
         }
     }
     

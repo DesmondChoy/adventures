@@ -19,7 +19,6 @@ export class WebSocketManager {
     }
 
     getWebSocketUrl() {
-        console.log('[FrontendWS Log 1.2] getWebSocketUrl called.');
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         
         let storyCategory = 'unknown';
@@ -28,7 +27,6 @@ export class WebSocketManager {
         if (this.adventureIdToResume) {
             storyCategory = sessionStorage.getItem('resume_story_category') || 'unknown';
             lessonTopic = sessionStorage.getItem('resume_lesson_topic') || 'unknown';
-            console.log(`[FrontendWS Log 1.3] Resuming: Story Category from sessionStorage: ${storyCategory}, Lesson Topic from sessionStorage: ${lessonTopic}`);
             // Optionally clear them if they are single-use, or keep for reconnects
             // sessionStorage.removeItem('resume_story_category');
             // sessionStorage.removeItem('resume_lesson_topic');
@@ -37,7 +35,6 @@ export class WebSocketManager {
             const lessonTopicEl = document.getElementById('lessonTopic');
             storyCategory = storyCategoryEl ? storyCategoryEl.value : 'unknown';
             lessonTopic = lessonTopicEl ? lessonTopicEl.value : 'unknown';
-            console.log(`[FrontendWS Log 1.4] New adventure: Story Category from input: ${storyCategory}, Lesson Topic from input: ${lessonTopic}`);
         }
         
         const clientUuid = this.stateManager.getClientUuid(); 
@@ -49,24 +46,20 @@ export class WebSocketManager {
         let url = `${protocol}//${window.location.host}/ws/story/${encodedStoryCategory}/${encodedLessonTopic}?client_uuid=${encodedClientUuid}`;
         
         if (this.authManager.accessToken) {
-            console.log('[FrontendWS Log 4] Token will be appended to URL.');
             url += `&token=${encodeURIComponent(this.authManager.accessToken)}`;
         } else {
-            console.warn('[FrontendWS Log 5] No token found, proceeding without token for WebSocket.');
+            // console.warn('[FrontendWS Log 5] No token found, proceeding without token for WebSocket.'); // Kept as warn for potential debugging
         }
 
         if (this.adventureIdToResume) {
             url += `&resume_adventure_id=${encodeURIComponent(this.adventureIdToResume)}`;
-            console.log(`[FrontendWS Log 5.1] Appending resume_adventure_id: ${this.adventureIdToResume}`);
         }
 
-        console.log('[FrontendWS Log 6] Final WebSocket URL:', url);
         return url;
     }
     
     setAdventureId(id) {
         this.adventureId = id;
-        console.log(`Set adventure_id: ${id} for persistence`);
     }
     
     getAdventureId() {
@@ -104,14 +97,12 @@ export class WebSocketManager {
         await new Promise(resolve => setTimeout(resolve, delay));
 
         const websocketUrl = this.getWebSocketUrl(); // This will now use sessionStorage if resuming
-        console.log("[WebSocketManager.reconnect] Attempting to connect to WebSocket URL:", websocketUrl); 
         try {
             this.connection = new WebSocket(websocketUrl);
-            console.log("[WebSocketManager.reconnect] WebSocket object created:", this.connection); 
             this.setupConnectionHandlers();
             this.reconnectAttempts++;
         } catch (e) {
-            console.error("[WebSocketManager.reconnect] Error creating WebSocket:", e); 
+            console.error("Error creating WebSocket during reconnect:", e); 
             const { hideLoader } = await import('./uiManager.js');
             hideLoader();
         }
@@ -123,11 +114,9 @@ export class WebSocketManager {
         const { manageState } = await import('./stateManager.js');
 
         this.connection.onopen = () => {
-            console.log('[FrontendWS Log 9] WebSocket connection opened.');
             this.reconnectAttempts = 0;
 
             if (this.adventureIdToResume) {
-                console.log(`[FrontendWS] Resuming specific adventure ID: ${this.adventureIdToResume}. Sending resume request.`);
                 this.connection.send(JSON.stringify({
                     choice: 'resume_specific_adventure', 
                     adventure_id_to_resume: this.adventureIdToResume 
@@ -154,16 +143,15 @@ export class WebSocketManager {
         };
 
         this.connection.onclose = (event) => {
-            console.log(`[FrontendWS Log 11] WebSocket connection closed. Code: ${event.code}, Reason: ${event.reason}, Clean: ${event.wasClean}`);
             hideLoader();
             if (!event.wasClean) {
-                console.error('WebSocket connection died');
+                console.error('WebSocket connection died unexpectedly. Code:', event.code, 'Reason:', event.reason);
                 this.handleDisconnect();
             }
         };
 
         this.connection.onerror = (error) => {
-            console.error('[FrontendWS Log 10] WebSocket Error: ', error);
+            console.error('WebSocket Error: ', error);
             hideLoader();
         };
 

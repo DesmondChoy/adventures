@@ -48,13 +48,6 @@ class StructuredLogger(logging.Logger):
             ]:
                 log_data[key] = value
 
-        # Print to console in a readable format
-        print(f"[{log_data['timestamp']}] {log_data['level']} - {log_data['message']}")
-        if "llm_prompt" in log_data:
-            print(f"Prompt: {log_data['llm_prompt']}")
-        if "llm_response" in log_data:
-            print(f"Response: {log_data['llm_response']}")
-
         # Safely serialize to JSON
         try:
             log_string = json.dumps(log_data)

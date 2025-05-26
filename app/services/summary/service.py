@@ -66,7 +66,6 @@ class SummaryService:
 
             try:
                 logger.info(f"Retrieved state with ID: {state_id}")
-                logger.debug(f"State content keys: {list(stored_state.keys())}")
 
                 # Use the method to reconstruct state from stored data
                 state = await state_manager.reconstruct_state_from_storage(stored_state)

@@ -40,23 +40,18 @@ if (!window.appConfig) {
 // Initialize WebSocket connection
 export function initWebSocket() {
     showLoader();
-    console.log('[FrontendWS Log 1.1] initWebSocket called.');
     if (!authManager || !authManager.accessToken) {
-        console.warn('[FrontendWS Log 2] In initWebSocket: AuthManager or AccessToken is missing initially.');
-    } else {
-        console.log('[FrontendWS Log 3] In initWebSocket: AccessToken found initially:', authManager.accessToken ? 'Exists' : 'MISSING');
+        // console.warn('[FrontendWS Log 2] In initWebSocket: AuthManager or AccessToken is missing initially.'); // Kept as warn
     }
 
     const websocketUrl = window.appState.wsManager.getWebSocketUrl(); 
 
     try {
-        console.log('[FrontendWS Log 7] About to call "new WebSocket()" in initWebSocket.');
         window.appState.storyWebSocket = new WebSocket(websocketUrl);
-        console.log("[FrontendWS Log 8] WebSocket object created:", window.appState.storyWebSocket); 
         window.appState.wsManager.connection = window.appState.storyWebSocket;
         window.appState.wsManager.setupConnectionHandlers(); // This will set onopen, onclose, onerror, onmessage
     } catch (e) {
-        console.error("[FrontendWS Log 12] CRITICAL ERROR instantiating WebSocket:", e); 
+        console.error("CRITICAL ERROR instantiating WebSocket:", e); 
         hideLoader(); // Hide loader if WebSocket creation fails
     }
 
@@ -131,7 +126,6 @@ export async function viewAdventureSummary() {
     
     // Set a timeout for WebSocket response
     let timeoutId = setTimeout(() => {
-        console.log('WebSocket response timeout, falling back to REST API');
         fallbackToRestApi();
     }, 5000); // 5 seconds timeout
     
@@ -158,7 +152,6 @@ export async function viewAdventureSummary() {
                     hasRedirected = true;
                     
                     // Log the state ID for debugging
-                    console.log('Adventure summary state ID (WebSocket):', stateId);
                     
                     // Navigate to the summary page with this state_id
                     window.location.href = `/adventure/summary?state_id=${stateId}`;
@@ -179,7 +172,6 @@ export async function viewAdventureSummary() {
     
     // Send reveal_summary message via WebSocket
     if (window.appState.storyWebSocket && window.appState.storyWebSocket.readyState === WebSocket.OPEN) {
-        console.log('Sending reveal_summary message via WebSocket');
         // Get the current state
         const currentState = stateManager.loadState();
         
@@ -196,7 +188,6 @@ export async function viewAdventureSummary() {
         }));
     } else {
         // Fallback if WebSocket is not available
-        console.log('WebSocket not available, falling back to REST API');
         clearTimeout(timeoutId);
         fallbackToRestApi();
     }
@@ -204,8 +195,6 @@ export async function viewAdventureSummary() {
     // Fallback function to use REST API
     async function fallbackToRestApi() {
         try {
-            console.log('Using REST API fallback for adventure summary');
-            
             // Prevent duplicate redirects
             if (hasRedirected) return;
             
@@ -240,9 +229,6 @@ export async function viewAdventureSummary() {
             const data = await response.json();
             const stateId = data.state_id;
             
-            // Log the state ID for debugging
-            console.log('Adventure summary state ID (REST API):', stateId);
-            
             // Prevent duplicate redirects
             if (hasRedirected) return;
             hasRedirected = true;
@@ -271,7 +257,7 @@ function initializeCarousels() {
     }
     
     if (!window.appConfig?.totalCategories || window.appConfig.totalCategories === 0) {
-        console.error('totalCategories is 0 or undefined:', window.appConfig?.totalCategories);
+        console.error('totalCategories is 0 or undefined in initializeCarousels:', window.appConfig?.totalCategories);
         return;
     }
     
@@ -308,7 +294,6 @@ async function initialize() {
 
     const authInitialized = await authManager.initialize();
     if (!authInitialized) {
-        console.log("Authentication not initialized or redirecting. Halting further page script execution.");
         return;
     }
 
@@ -316,14 +301,13 @@ async function initialize() {
     if (logoutButton) {
         logoutButton.addEventListener('click', () => authManager.handleLogout());
     } else {
-        console.warn("Logout button not found on the page. Ensure it's added to the HTML.");
+        // console.warn("Logout button not found on the page. Ensure it's added to the HTML."); // Kept as warn
     }
 
     const urlParams = new URLSearchParams(window.location.search);
     const adventureIdToResumeFromQuery = urlParams.get('resume_adventure_id');
 
     if (adventureIdToResumeFromQuery) {
-        console.log(`Resuming specific adventure ID from query param: ${adventureIdToResumeFromQuery}`);
         window.appState.wsManager.adventureIdToResume = adventureIdToResumeFromQuery;
         stateManager.clearState(); // Clear any local state to ensure fresh load from server
 
@@ -339,7 +323,6 @@ async function initialize() {
     } else {
         const savedState = stateManager.loadState();
         if (savedState?.chapters?.length > 0 && savedState.storyCategory && savedState.lessonTopic) {
-            console.log("Resuming existing adventure from localStorage.");
             showLoader();
             updateProgress(savedState.chapters.length + 1, savedState.story_length);
             
@@ -358,7 +341,6 @@ async function initialize() {
 
             initWebSocket();
         } else {
-            console.log("Starting new adventure selection (no resume ID or localStorage state).");
             manageState('reset');
             hideLoader();
             
@@ -366,7 +348,7 @@ async function initialize() {
             if (document.getElementById('categoryCarousel') && window.appConfig.totalCategories > 0) {
                 initializeCarousels();
             } else {
-                console.warn("Category carousel element or totalCategories not found. Carousel UI may not function.");
+                // console.warn("Category carousel element or totalCategories not found. Carousel UI may not function."); // Kept as warn
             }
         }
     }

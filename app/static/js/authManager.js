@@ -33,7 +33,6 @@ export const authManager = {
                 return false;
             }
             if (!data.session) {
-                console.log("No active session, redirecting to login.");
                 window.location.href = '/'; 
                 return false;
             }
@@ -41,11 +40,9 @@ export const authManager = {
             this.session = data.session;
             this.accessToken = data.session.access_token;
             this.user = data.session.user;
-            console.log("Session retrieved on /select:", this.session);
             this.updateUserStatusUI();
 
             window.supabase.auth.onAuthStateChange((event, session) => {
-                console.log('Auth event on /select page:', event, session);
                 if (event === 'SIGNED_OUT') {
                     this.clearSessionAndRedirect();
                 } else if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
@@ -105,7 +102,6 @@ export const authManager = {
         this.session = null;
         this.accessToken = null;
         this.user = null;
-        console.log("Session cleared, redirecting to login page.");
         window.location.href = '/';
     }
 };

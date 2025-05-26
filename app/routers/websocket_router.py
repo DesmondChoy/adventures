@@ -64,7 +64,7 @@ async def story_websocket(
                 user_id_from_token_str = payload.get("sub")
                 if user_id_from_token_str:
                     connection_data["user_id"] = UUID(user_id_from_token_str)
-                    logger.debug(
+                    logger.info(
                         f"Authenticated user via JWT: {connection_data['user_id']}"
                     )
                 else:
@@ -78,7 +78,7 @@ async def story_websocket(
         else:
             logger.error("SUPABASE_JWT_SECRET is missing or empty. Cannot decode JWT.")
     else:
-        logger.debug("No token provided, skipping JWT processing.")
+        logger.info("No token provided, skipping JWT processing.")
 
     try:
         loaded_state_from_storage = None
@@ -173,9 +173,6 @@ async def story_websocket(
             active_adventure_id = None
             # Check for existing active adventure (original logic)
             if connection_data.get("user_id"):
-                logger.debug(
-                    f"Checking for active adventure using user_id: {connection_data['user_id']}"
-                )
                 try:
                     active_adventure_id = (
                         await state_storage_service.get_active_adventure_id(
@@ -185,11 +182,11 @@ async def story_websocket(
                         )
                     )
                     if active_adventure_id:
-                        logger.debug(
+                        logger.info(
                             f"Found active adventure {active_adventure_id} for user_id {connection_data['user_id']}"
                         )
                     else:
-                        logger.debug(
+                        logger.info(
                             f"No active adventure found for user_id {connection_data['user_id']}. Will check client_uuid if present."
                         )
                 except Exception as e:
@@ -198,9 +195,6 @@ async def story_websocket(
                     )
 
             if not active_adventure_id and client_uuid:
-                logger.debug(
-                    f"Checking for active adventure using client_uuid: {client_uuid} (user_id lookup failed or no user_id)"
-                )
                 try:
                     active_adventure_id = (
                         await state_storage_service.get_active_adventure_id(
@@ -210,11 +204,11 @@ async def story_websocket(
                         )
                     )
                     if active_adventure_id:
-                        logger.debug(
+                        logger.info(
                             f"Found active adventure {active_adventure_id} for client_uuid {client_uuid}"
                         )
                     else:
-                        logger.debug(
+                        logger.info(
                             f"No active adventure found for client_uuid {client_uuid} either."
                         )
                 except Exception as e:
@@ -398,27 +392,6 @@ async def story_websocket(
                     connection_data["resumed_session_just_sent_chapter"] = False
                     continue
 
-            logger.debug("\n=== DEBUG: WebSocket Message (Post-Resumption Check) ===")
-            logger.debug(f"Has state: {validated_state is not None}")
-            if validated_state:
-                logger.debug(
-                    f"State chapters: {len(validated_state.get('chapters', []))}"
-                )
-                if validated_state.get("chapters"):
-                    last_chapter = validated_state["chapters"][-1]
-                    logger.debug(
-                        f"Last chapter type: {last_chapter.get('chapter_type')}"
-                    )
-                    logger.debug(
-                        f"Last chapter has response: {'response' in last_chapter}"
-                    )
-                    if "response" in last_chapter:
-                        logger.debug(f"Response data: {last_chapter['response']}")
-            logger.debug(f"Has choice: {choice_data is not None}")
-            if choice_data:
-                logger.debug(f"Choice data: {choice_data}")
-            logger.debug("==============================\n")
-
             if not validated_state:
                 logger.error("Missing state in message")
                 await websocket.send_text("Image not available")
@@ -437,9 +410,6 @@ async def story_websocket(
                         )
                         connection_data["adventure_id"] = None
                     total_chapters = validated_state.get("story_length", 10)
-                    logger.debug(
-                        f"Initializing state with total_chapters: {total_chapters}"
-                    )
                     try:
                         state = state_manager.initialize_state(
                             total_chapters, lesson_topic, story_category, difficulty
@@ -504,12 +474,8 @@ async def story_websocket(
                         await websocket.close(code=1001)
                         return
                 else:
-                    logger.debug("\nUpdating existing state from client message")
                     state_manager.update_state_from_client(validated_state)
                     state = state_manager.get_current_state()
-                    logger.debug(
-                        f"State after update from client - chapters: {len(state.chapters)}"
-                    )
 
                 if state is None:
                     logger.error("State is None after initialization/update.")

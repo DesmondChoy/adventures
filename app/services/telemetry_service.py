@@ -152,7 +152,7 @@ if __name__ == "__main__":
             )
 
         except Exception as e:
-            print(f"Error during TelemetryService test: {e}")
+            logger.error(f"Error during TelemetryService test: {e}")
 
     # asyncio.run(main()) # Comment out after testing
     pass
