@@ -14,7 +14,18 @@ from app.utils.case_conversion import snake_to_camel_dict
 
 # Configure logger
 logger = logging.getLogger("summary_router")
-telemetry_service = TelemetryService()
+
+# Lazy instantiation to avoid environment variable loading issues during import
+_telemetry_service = None
+
+
+def get_telemetry_service():
+    """Get or create the telemetry service instance."""
+    global _telemetry_service
+    if _telemetry_service is None:
+        _telemetry_service = TelemetryService()
+    return _telemetry_service
+
 
 # Directory paths
 SUMMARY_DATA_DIR = "app/static"
@@ -147,7 +158,7 @@ async def get_adventure_summary(
                     k: v for k, v in event_metadata.items() if v is not None
                 }
 
-                await telemetry_service.log_event(
+                await get_telemetry_service().log_event(
                     event_name="summary_viewed",
                     adventure_id=UUID(state_id) if state_id else None,
                     user_id=None,  # No authenticated user_id yet

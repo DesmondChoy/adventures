@@ -42,7 +42,12 @@ async def story_websocket(
 
     state_manager = AdventureStateManager()
     state_storage_service = StateStorageService()
-    telemetry_service = TelemetryService()
+
+    # Lazy instantiation to avoid environment variable loading issues during import
+    def get_telemetry_service():
+        return TelemetryService()
+
+    telemetry_service = get_telemetry_service()
 
     connection_data = {
         "adventure_id": None,

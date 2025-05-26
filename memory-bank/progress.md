@@ -2,6 +2,22 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-05-26: TelemetryService Railway Deployment Fix
+- **Goal:** Resolve critical Railway deployment error preventing application startup.
+- **Problem:** `TelemetryService` was being instantiated at module-level during import, causing "Supabase URL or Service Key not configured" error on Railway startup.
+- **Root Cause:** Module-level instantiation occurred before Railway environment variables were available during the application startup process.
+- **Solution:** Implemented lazy instantiation pattern across all affected files:
+  - Replaced `telemetry_service = TelemetryService()` with lazy loading functions
+  - Added `get_telemetry_service()` functions that instantiate only when needed
+  - Updated all telemetry logging calls to use the lazy instantiation pattern
+- **Files Updated:**
+  - `app/services/websocket/stream_handler.py` (lazy instantiation implemented)
+  - `app/services/websocket/choice_processor.py` (lazy instantiation implemented)
+  - `app/routers/websocket_router.py` (lazy instantiation implemented)
+  - `app/routers/summary_router.py` (lazy instantiation implemented)
+- **Result:** Railway deployment error resolved - TelemetryService now instantiates successfully after environment variables are loaded.
+- **Impact:** Application can now deploy and run successfully on Railway with full telemetry functionality.
+
 ### 2025-05-26: Supabase Integration - FULLY COMPLETED (PRODUCTION READY)
 - **Goal:** Complete integration of Supabase for user authentication, persistent adventure state, and telemetry.
 - **Major Achievement:** All four phases of Supabase integration are now production-ready:

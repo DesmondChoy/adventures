@@ -24,7 +24,17 @@ WORD_DELAY = 0.02  # Delay between words
 PARAGRAPH_DELAY = 0.1  # Delay between paragraphs
 
 logger = logging.getLogger("story_app")
-telemetry_service = TelemetryService()
+
+# Lazy instantiation to avoid environment variable loading issues during import
+_telemetry_service = None
+
+
+def get_telemetry_service():
+    """Get or create the telemetry service instance."""
+    global _telemetry_service
+    if _telemetry_service is None:
+        _telemetry_service = TelemetryService()
+    return _telemetry_service
 
 
 async def stream_chapter_content(
@@ -255,7 +265,7 @@ async def stream_chapter_content(
         # Remove None values from metadata to keep it clean
         event_metadata = {k: v for k, v in event_metadata.items() if v is not None}
 
-        await telemetry_service.log_event(
+        await get_telemetry_service().log_event(
             event_name="chapter_viewed",
             adventure_id=UUID(adventure_id) if adventure_id else None,
             user_id=connection_data.get("user_id") if connection_data else None,

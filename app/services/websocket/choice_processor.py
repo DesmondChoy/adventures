@@ -29,7 +29,17 @@ logger = logging.getLogger("story_app")
 chapter_manager = ChapterManager()
 state_storage_service = StateStorageService()
 llm_service = LLMService()
-telemetry_service = TelemetryService()
+
+# Lazy instantiation to avoid environment variable loading issues during import
+_telemetry_service = None
+
+
+def get_telemetry_service():
+    """Get or create the telemetry service instance."""
+    global _telemetry_service
+    if _telemetry_service is None:
+        _telemetry_service = TelemetryService()
+    return _telemetry_service
 
 
 async def handle_reveal_summary(
@@ -809,7 +819,7 @@ async def process_non_start_choice(
         current_adventure_id = (
             connection_data.get("adventure_id") if connection_data else None
         )
-        await telemetry_service.log_event(
+        await get_telemetry_service().log_event(
             event_name="choice_made",
             adventure_id=UUID(current_adventure_id) if current_adventure_id else None,
             user_id=connection_data.get("user_id") if connection_data else None,
