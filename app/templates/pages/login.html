@@ -498,7 +498,7 @@
             }
 
             function redirectToSelectPage(resumeAdventureId = null) {
-                let url = '/select';
+                let url = window.location.origin + '/select'; // Corrected to absolute URL
                 if (resumeAdventureId) {
                     url += `?resume_adventure_id=${resumeAdventureId}`;
                 }

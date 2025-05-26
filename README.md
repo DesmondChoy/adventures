@@ -2,7 +2,7 @@
 
 **Learning Odyssey is revolutionizing education by merging the immersive power of AI-driven storytelling with deeply personalized learning.** We create uniquely engaging experiences for children that traditional methods can't match, tackling the critical challenge of student disengagement and fostering a genuine love for knowledge through compelling narrative arcs and reflective learning.
 
-🚀 **[Try it live!](https://learning-odyssey.up.railway.app/)** (Note: Link might be from previous state, verify if still active)
+🚀 **[Try it live!](https://learning-odyssey.up.railway.app/)**
 
 ## Your Epic Journey Starts Here: How It Works
 
