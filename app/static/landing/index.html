@@ -422,7 +422,7 @@
                 console.log('Auth event:', event, session);
                 if (event === 'SIGNED_IN') {
                     // Redirect to the adventure selection page
-                    window.location.href = '/select';
+                    window.location.href = window.location.origin + '/select';
                 } else if (event === 'SIGNED_OUT') {
                     // User is signed out, ensure they are on the login page
                     // If they are on /select or other protected page, they should be redirected here by server/client logic
@@ -439,7 +439,7 @@
                 }
                 if (data.session) {
                     console.log("User already signed in, redirecting to /select");
-                    window.location.href = '/select';
+                    window.location.href = window.location.origin + '/select';
                 } else {
                     console.log("No active session found.");
                 }

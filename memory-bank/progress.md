@@ -2,6 +2,22 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-05-27: Production OAuth Redirect Fix
+- **Goal:** Resolve critical "localhost refused to connect" errors preventing mobile users from accessing the carousel screen after Google authentication.
+- **Problem:** After Google OAuth completion, users were redirected to localhost URLs instead of the production domain, causing connection failures on mobile devices and "loading user status..." issues.
+- **Root Cause:** JavaScript authentication handlers used relative URLs (e.g., `/select`) which were interpreted as `localhost/select` instead of the production domain `https://learning-odyssey.up.railway.app/select` due to browser context issues after OAuth.
+- **Solution:** Replaced all relative URL redirects with absolute URLs using `window.location.origin`:
+  - Updated `redirectToSelectPage()` function in `app/templates/pages/login.html`
+  - Fixed all 4 redirect locations in `app/static/js/authManager.js` error handlers and logout function
+  - Fixed both authentication success redirects in `app/static/landing/index.html`
+  - Replaced instances of `window.location.href = '/select'` with `window.location.href = window.location.origin + '/select'`
+- **Files Updated:**
+  - `app/templates/pages/login.html` (modified)
+  - `app/static/js/authManager.js` (modified) 
+  - `app/static/landing/index.html` (modified)
+- **Result:** Google OAuth now correctly redirects to production domain in all environments. Mobile users can successfully complete authentication and access the carousel screen without localhost connection errors.
+- **Impact:** Critical production stability fix ensuring cross-environment compatibility for authentication flow.
+
 ### 2025-05-26: TelemetryService Railway Deployment Fix
 - **Goal:** Resolve critical Railway deployment error preventing application startup.
 - **Problem:** `TelemetryService` was being instantiated at module-level during import, causing "Supabase URL or Service Key not configured" error on Railway startup.

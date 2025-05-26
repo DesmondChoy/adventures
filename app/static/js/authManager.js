@@ -29,11 +29,11 @@ export const authManager = {
             const { data, error } = await window.supabase.auth.getSession();
             if (error) {
                 console.error("Error getting session:", error.message);
-                window.location.href = '/'; 
+                window.location.href = window.location.origin + '/';
                 return false;
             }
             if (!data.session) {
-                window.location.href = '/'; 
+                window.location.href = window.location.origin + '/'; 
                 return false;
             }
             
@@ -57,7 +57,7 @@ export const authManager = {
             console.error("Exception during auth initialization:", e);
             const { showError } = await import('./uiManager.js');
             showError("An error occurred during authentication setup.");
-            window.location.href = '/'; 
+            window.location.href = window.location.origin + '/'; 
             return false;
         }
     },
@@ -102,6 +102,6 @@ export const authManager = {
         this.session = null;
         this.accessToken = null;
         this.user = null;
-        window.location.href = '/';
+        window.location.href = window.location.origin + '/';
     }
 };
