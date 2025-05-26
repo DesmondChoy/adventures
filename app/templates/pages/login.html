@@ -561,99 +561,179 @@
             async function handleSignIn() {
                 console.log("[RESUME DEBUG] handleSignIn() called");
                 
-                // Fetch current adventure state
-                try {
-                    console.log("[RESUME DEBUG] Getting session data...");
-                    const sessionResult = await loginPageSupabaseClient.auth.getSession();
-                    console.log("[RESUME DEBUG] Raw session result:", sessionResult);
-                    
-                    const session = sessionResult?.data?.session;
-                    console.log("[RESUME DEBUG] Session object:", session);
-                    console.log("[RESUME DEBUG] Session exists:", !!session);
-                    
-                    if (!session) {
-                        console.warn("[RESUME DEBUG] No session available after sign-in");
-                        redirectToSelectPage();
-                        return;
-                    }
-                    
-                    const token = session.access_token;
-                    console.log("[RESUME DEBUG] Token available:", !!token);
-                    console.log("[RESUME DEBUG] Token length:", token ? token.length : 0);
-                    console.log("[RESUME DEBUG] User ID from token:", session.user?.id);
-                    
-                    if (!token) {
-                        console.warn("[RESUME DEBUG] No access token available. Session:", session);
-                        console.warn("[RESUME DEBUG] Waiting 1 second and retrying...");
+                // Enhanced retry logic with exponential backoff
+                const maxRetries = 3;
+                let retryCount = 0;
+                
+                async function attemptSessionRetrieval() {
+                    try {
+                        console.log(`[RESUME DEBUG] Session retrieval attempt ${retryCount + 1}/${maxRetries}`);
                         
-                        // Retry after short delay
-                        setTimeout(async () => {
-                            try {
-                                const retrySession = await loginPageSupabaseClient.auth.getSession();
-                                const retryToken = retrySession?.data?.session?.access_token;
-                                console.log("[RESUME DEBUG] Retry token available:", !!retryToken);
-                                
-                                if (retryToken) {
-                                    await attemptResumeApiCall(retryToken);
-                                } else {
-                                    console.warn("[RESUME DEBUG] Retry failed, redirecting to /select");
-                                    redirectToSelectPage();
-                                }
-                            } catch (retryError) {
-                                console.error("[RESUME DEBUG] Retry error:", retryError);
+                        const sessionResult = await loginPageSupabaseClient.auth.getSession();
+                        console.log("[RESUME DEBUG] Raw session result:", sessionResult);
+                        
+                        const session = sessionResult?.data?.session;
+                        console.log("[RESUME DEBUG] Session object:", session);
+                        console.log("[RESUME DEBUG] Session exists:", !!session);
+                        console.log("[RESUME DEBUG] Session user:", session?.user);
+                        console.log("[RESUME DEBUG] Session expires at:", session?.expires_at);
+                        
+                        if (!session) {
+                            if (retryCount < maxRetries - 1) {
+                                retryCount++;
+                                const delay = Math.pow(2, retryCount) * 500; // 1s, 2s, 4s
+                                console.warn(`[RESUME DEBUG] No session available, retrying in ${delay}ms...`);
+                                setTimeout(attemptSessionRetrieval, delay);
+                                return;
+                            } else {
+                                console.warn("[RESUME DEBUG] No session available after all retries, redirecting to /select");
                                 redirectToSelectPage();
+                                return;
                             }
-                        }, 1000);
-                        return;
-                    }
+                        }
+                        
+                        const token = session.access_token;
+                        console.log("[RESUME DEBUG] Token available:", !!token);
+                        console.log("[RESUME DEBUG] Token length:", token ? token.length : 0);
+                        console.log("[RESUME DEBUG] Token expires at:", session.expires_at);
+                        console.log("[RESUME DEBUG] User ID from session:", session.user?.id);
+                        console.log("[RESUME DEBUG] User email from session:", session.user?.email);
+                        console.log("[RESUME DEBUG] User role from session:", session.user?.role);
+                        
+                        if (!token) {
+                            if (retryCount < maxRetries - 1) {
+                                retryCount++;
+                                const delay = Math.pow(2, retryCount) * 500;
+                                console.warn(`[RESUME DEBUG] No access token available, retrying in ${delay}ms...`);
+                                setTimeout(attemptSessionRetrieval, delay);
+                                return;
+                            } else {
+                                console.warn("[RESUME DEBUG] No access token available after all retries, redirecting to /select");
+                                redirectToSelectPage();
+                                return;
+                            }
+                        }
 
-                    // Step 3: Make API call with token
-                    await attemptResumeApiCall(token);
-                    
-                } catch (error) {
-                    console.error('[RESUME DEBUG] Error in handleSignIn:', error);
-                    console.error('[RESUME DEBUG] Error stack:', error.stack);
-                    redirectToSelectPage(); // Fallback
+                        // Token is available, proceed with API call
+                        await attemptResumeApiCall(token);
+                        
+                    } catch (error) {
+                        console.error(`[RESUME DEBUG] Error in session retrieval attempt ${retryCount + 1}:`, error);
+                        console.error('[RESUME DEBUG] Error stack:', error.stack);
+                        
+                        if (retryCount < maxRetries - 1) {
+                            retryCount++;
+                            const delay = Math.pow(2, retryCount) * 500;
+                            console.warn(`[RESUME DEBUG] Session error, retrying in ${delay}ms...`);
+                            setTimeout(attemptSessionRetrieval, delay);
+                        } else {
+                            console.error('[RESUME DEBUG] All session retrieval attempts failed, redirecting to /select');
+                            redirectToSelectPage();
+                        }
+                    }
                 }
+                
+                // Start the retry process
+                await attemptSessionRetrieval();
             }
 
             async function attemptResumeApiCall(token) {
                 console.log("[RESUME DEBUG] Making API call to /api/user/current-adventure");
                 console.log("[RESUME DEBUG] Using token (first 20 chars):", token.substring(0, 20) + "...");
                 
-                try {
-                    const response = await fetch('/api/user/current-adventure', {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
+                // Enhanced API call with retry logic
+                const maxApiRetries = 2;
+                let apiRetryCount = 0;
+                
+                async function makeApiCall() {
+                    try {
+                        console.log(`[RESUME DEBUG] API call attempt ${apiRetryCount + 1}/${maxApiRetries + 1}`);
+                        console.log("[RESUME DEBUG] Request URL:", '/api/user/current-adventure');
+                        console.log("[RESUME DEBUG] Request headers:", {
+                            'Authorization': `Bearer ${token.substring(0, 20)}...`
+                        });
+                        
+                        const response = await fetch('/api/user/current-adventure', {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        console.log("[RESUME DEBUG] API response status:", response.status);
+                        console.log("[RESUME DEBUG] API response ok:", response.ok);
+                        console.log("[RESUME DEBUG] API response status text:", response.statusText);
+                        console.log("[RESUME DEBUG] API response headers:", Object.fromEntries(response.headers.entries()));
+                        
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('[RESUME DEBUG] API call failed:', response.status, response.statusText, errorText);
+                            
+                            // Retry on 5xx errors or network issues
+                            if (response.status >= 500 && apiRetryCount < maxApiRetries) {
+                                apiRetryCount++;
+                                const delay = Math.pow(2, apiRetryCount) * 1000; // 2s, 4s
+                                console.warn(`[RESUME DEBUG] Server error, retrying API call in ${delay}ms...`);
+                                setTimeout(makeApiCall, delay);
+                                return;
+                            }
+                            
+                            console.error('[RESUME DEBUG] API call failed permanently, redirecting to /select');
+                            redirectToSelectPage();
+                            return;
                         }
-                    });
-                    
-                    console.log("[RESUME DEBUG] API response status:", response.status);
-                    console.log("[RESUME DEBUG] API response ok:", response.ok);
-                    console.log("[RESUME DEBUG] API response headers:", Object.fromEntries(response.headers.entries()));
-                    
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('[RESUME DEBUG] API call failed:', response.status, errorText);
-                        redirectToSelectPage(); // Fallback
-                        return;
+                        
+                        const data = await response.json();
+                        console.log("[RESUME DEBUG] API response data:", data);
+                        console.log("[RESUME DEBUG] API response data type:", typeof data);
+                        console.log("[RESUME DEBUG] API response adventure field:", data?.adventure);
+                        console.log("[RESUME DEBUG] API response adventure type:", typeof data?.adventure);
+                        
+                        if (data && data.adventure) {
+                            console.log("[RESUME DEBUG] Adventure found, validating data...");
+                            console.log("[RESUME DEBUG] Adventure ID:", data.adventure.adventure_id);
+                            console.log("[RESUME DEBUG] Story category:", data.adventure.story_category);
+                            console.log("[RESUME DEBUG] Lesson topic:", data.adventure.lesson_topic);
+                            console.log("[RESUME DEBUG] Current chapter:", data.adventure.current_chapter);
+                            console.log("[RESUME DEBUG] Last updated:", data.adventure.last_updated);
+                            
+                            // Validate required fields
+                            if (!data.adventure.adventure_id) {
+                                console.error("[RESUME DEBUG] Adventure missing adventure_id, redirecting to /select");
+                                redirectToSelectPage();
+                                return;
+                            }
+                            
+                            console.log("[RESUME DEBUG] Adventure data validated, showing modal");
+                            showResumeModal(data.adventure);
+                        } else {
+                            console.log("[RESUME DEBUG] No adventure found in response, redirecting to /select");
+                            console.log("[RESUME DEBUG] Expected structure: { adventure: {...} }, got:", data);
+                            redirectToSelectPage();
+                        }
+                        
+                    } catch (apiError) {
+                        console.error(`[RESUME DEBUG] API call error (attempt ${apiRetryCount + 1}):`, apiError);
+                        console.error('[RESUME DEBUG] API error stack:', apiError.stack);
+                        console.error('[RESUME DEBUG] API error name:', apiError.name);
+                        console.error('[RESUME DEBUG] API error message:', apiError.message);
+                        
+                        // Retry on network errors
+                        if (apiRetryCount < maxApiRetries && (apiError.name === 'TypeError' || apiError.message.includes('fetch'))) {
+                            apiRetryCount++;
+                            const delay = Math.pow(2, apiRetryCount) * 1000;
+                            console.warn(`[RESUME DEBUG] Network error, retrying API call in ${delay}ms...`);
+                            setTimeout(makeApiCall, delay);
+                        } else {
+                            console.error('[RESUME DEBUG] API call failed permanently after retries, redirecting to /select');
+                            redirectToSelectPage();
+                        }
                     }
-                    
-                    const data = await response.json();
-                    console.log("[RESUME DEBUG] API response data:", data);
-                    
-                    if (data && data.adventure) {
-                        console.log("[RESUME DEBUG] Adventure found, showing modal:", data.adventure);
-                        showResumeModal(data.adventure);
-                    } else {
-                        console.log("[RESUME DEBUG] No adventure found, redirecting to /select");
-                        redirectToSelectPage();
-                    }
-                } catch (apiError) {
-                    console.error('[RESUME DEBUG] API call error:', apiError);
-                    console.error('[RESUME DEBUG] API error stack:', apiError.stack);
-                    redirectToSelectPage(); // Fallback
                 }
+                
+                // Start the API call process
+                await makeApiCall();
             }
 
             loginPageSupabaseClient.auth.onAuthStateChange((event, session) => {

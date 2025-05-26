@@ -541,6 +541,19 @@ export async function handleMessage(event) {
                 selectedCategory = data.state.story_category || selectedCategory;
                 selectedLessonTopic = data.state.lesson_topic || selectedLessonTopic;
                 console.log(`[FrontendWS] Adventure loaded. Category: ${selectedCategory}, Topic: ${selectedLessonTopic}`);
+                
+                // CRITICAL FIX: Update progress display with correct chapter information from server
+                if (data.state.chapters && Array.isArray(data.state.chapters)) {
+                    const currentChapterNumber = data.state.chapters.length + 1;
+                    const totalChapters = data.state.story_length || 10;
+                    console.log(`[CHAPTER DISPLAY FIX] Updating progress: Chapter ${currentChapterNumber} of ${totalChapters}`);
+                    console.log(`[CHAPTER DISPLAY FIX] Server state chapters count: ${data.state.chapters.length}`);
+                    console.log(`[CHAPTER DISPLAY FIX] Server state story_length: ${data.state.story_length}`);
+                    updateProgress(currentChapterNumber, totalChapters);
+                } else {
+                    console.warn(`[CHAPTER DISPLAY FIX] No chapters array found in server state:`, data.state);
+                }
+                
                 // Update hidden inputs if they exist (they might not on direct resume)
                 const storyCatEl = document.getElementById('storyCategory');
                 const lessonTopicEl = document.getElementById('lessonTopic');

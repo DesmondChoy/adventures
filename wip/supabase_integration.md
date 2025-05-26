@@ -10,34 +10,26 @@ This document outlines the plan and progress for integrating Supabase into the L
     *   **Phase 2: Persistent Adventure State (Supabase Database):** Fully complete and validated.
     *   **Phase 3: Telemetry (Supabase Database):** Fully complete and validated.
     *   **Phase 4: Optional User Authentication (Supabase Auth):** Backend logic, database schema/RLS, and initial frontend flows completed.
-*   **Phase 4.1: Adventure Resumption Bug Fix & Enhanced UX - MOSTLY COMPLETE**
+*   **Phase 4.1: Adventure Resumption Bug Fix & Enhanced UX - ❌ PARTIALLY WORKING WITH CRITICAL BUGS**
     *   **Implementation Status:**
         *   Core fixes for adventure matching implemented.
-        *   Resume modal flow partially implemented; CSS and basic JS for modal display fixed.
-        *   Backend API (`/api/user/current-adventure`) updated to return `story_category` and `lesson_topic`.
+        *   Resume modal flow implemented but **NOT WORKING RELIABLY**.
+        *   Backend API (`/api/user/current-adventure`) enhanced with detailed logging.
         *   `StateStorageService` updated with `get_user_current_adventure_for_resume` method.
-        *   `login.html` updated to store `story_category` and `lesson_topic` in `sessionStorage`.
-        *   `scripts.html` updated to retrieve these values from `sessionStorage` for WebSocket URL construction.
+        *   `login.html` updated with retry logic and comprehensive debugging.
+        *   `uiManager.js` updated but chapter display issues persist.
         *   **✅ FIXED:** Multiple incomplete adventures per user issue resolved.
         *   **✅ FIXED:** Resume API KeyError resolved.
+        *   **❌ NOT FIXED:** Resume modal not appearing consistently.
+        *   **❌ NOT FIXED:** Chapter display inconsistency not fully resolved.
 
-*   **Current Issues & Next Steps:**
-    *   **✅ FIXED (Previously):** Wrong adventure resumption (adventures now match story/lesson selection - *needs re-verification due to new issues*).
-    *   **✅ FIXED (Previously):** Login flow now properly checks for existing adventures via `handleSignIn()` - *needs re-verification*.
-    *   **✅ FIXED:** Resume modal CSS and basic JS display logic in `login.html`.
-    *   **✅ FIXED:** Backend API and services updated to provide necessary data for resume.
-    *   **✅ FIXED:** WebSocket URL construction in `scripts.html` now attempts to use `story_category` and `lesson_topic` from `sessionStorage`.
-    *   **✅ FIXED:** Multiple incomplete adventures per user - comprehensive abandonment logic implemented.
-    *   **✅ FIXED:** Resume API KeyError (`adventure_id` vs `id` field mapping) resolved.
-    *   **❌ ISSUE (HIGH PRIORITY):** Resume modal still not appearing consistently after logout/login, even with an incomplete adventure in the database.
-        *   **Symptom:** User logs in, has an incomplete adventure, but no modal is shown.
-        *   **Suspected Causes (Re-evaluation):**
-            *   Timing issue with token availability or `handleSignIn` execution in `login.html`.
-            *   `/api/user/current-adventure` not being called reliably or returning unexpected data despite backend changes.
-            *   Logic in `login.html` that decides to show the modal might be flawed.
-    *   **❌ ISSUE (MEDIUM PRIORITY):** Chapter display inconsistency.
-        *   **Symptom:** When an adventure *is* manually resumed (by selecting the same story/lesson), UI shows "Chapter 1 out of 10" but should display the actual current chapter (e.g., Chapter 3).
-        *   **Suspected Causes:** Frontend state interpretation in `scripts.html` upon adventure load/resume, or the `state_data` itself might not be correctly reflecting `completed_chapter_count` in its `chapters` array length or `current_chapter_id`.
+*   **Testing Results (2025-05-26 PM) - LIMITED SCOPE:**
+    *   **✅ VERIFIED WORKING:** Adventure persistence and resumption via client_uuid fallback
+    *   **❌ INCONSISTENT:** Chapter display sometimes shows correct progress, sometimes doesn't
+    *   **✅ VERIFIED WORKING:** One adventure per user enforcement
+    *   **✅ VERIFIED WORKING:** Adventure state reconstruction from database
+    *   **❌ CRITICAL BUG:** Resume modal does NOT appear after logout/login (both guest and Google)
+    *   **⚠️ LIMITED TESTING:** Only guest login tested thoroughly, Google auth issues not addressed
 
 ---
 
@@ -92,144 +84,111 @@ This document outlines the plan and progress for integrating Supabase into the L
 
 ---
 
-## Phase 4.1: Adventure Resumption Bug Fix & Enhanced UX ✅ MOSTLY COMPLETE
-*Brief: Addressed critical bug where users couldn't start new adventures with different story/lesson combinations, and implemented resume modal for better UX. Major data integrity issues resolved.*
+## Phase 4.1: Adventure Resumption Bug Fix & Enhanced UX ❌ PARTIALLY WORKING WITH CRITICAL BUGS
+*Brief: Attempted to address critical bugs in adventure resumption system. Some fixes implemented but major issues remain unresolved.*
 
-### Root Problems Identified & Resolution Status:
-1.  **Adventure Matching Bug (Addressed, needs re-verification):** `get_active_adventure_id` found ANY incomplete adventure, not story/lesson-specific ones.
-2.  **Poor UX (Partially Addressed):** No clear resumption flow. Modal implemented but not appearing reliably.
-3.  **✅ Multiple Adventures (FIXED):** Users could accumulate multiple incomplete adventures. The "one adventure per user" rule is now properly enforced.
-4.  **Chapter Display Inconsistency (Persistent):** Resumed adventures show incorrect chapter progress.
-
-### Solution Approach: Enhanced Resume Flow + Story/Lesson Filtering + Data Integrity Fixes
-- **✅ One Adventure Per User (FIXED):** Comprehensive automatic abandonment of ALL old adventures when starting new ones.
-- **Resume Modal (NEEDS FIX):** Clean, professional modal showing adventure details with Continue/Start Fresh options.
-- **Story/Lesson Matching (Implemented, needs re-verification):** Only resume adventures that match current selection.
-- **30-Day Auto-Expiry (Implemented):** Cleanup system for old adventures.
+### Root Problems Identified & Current Status:
+1.  **✅ Adventure Matching Bug (FIXED):** Enhanced `get_active_adventure_id` with story/lesson-specific matching
+2.  **❌ UX Enhancement (FAILING):** Resume modal system implemented but NOT WORKING reliably
+3.  **✅ Multiple Adventures (FIXED):** Comprehensive abandonment logic prevents adventure accumulation
+4.  **❌ Chapter Display Inconsistency (NOT FIXED):** Frontend still shows incorrect chapter progress inconsistently
 
 ### Implementation Status (Updated 2025-05-26 PM):
 
 #### ✅ COMPLETED/FIXED:
-**1. Adventure Matching Logic (`app/services/state_storage_service.py`)**
+
+**1. ✅ Adventure Matching Logic (`app/services/state_storage_service.py`)**
 - Enhanced `get_active_adventure_id()` with `story_category` and `lesson_topic` parameters.
 - Updated WebSocket router to pass story/lesson context when searching for adventures.
 - Added `get_user_current_adventure_for_resume` to provide detailed data for modal and WebSocket URL.
-- **Result (Initial):** Adventures matched selection. *Current status needs re-verification due to modal issues.*
+- **Result:** ✅ **VERIFIED WORKING** - Adventures correctly match selection via client_uuid fallback.
 
-**2. Resume Modal System**
+**2. ✅ One Adventure Enforcement (`app/services/state_storage_service.py`) - MAJOR FIX**
+- **Root Cause Identified:** Original abandonment logic only found most recent incomplete adventure.
+- **Solution Implemented:** 
+  - Added `get_all_user_incomplete_adventures()` method to find ALL incomplete adventures.
+  - Added `_abandon_all_incomplete_adventures()` method with detailed logging.
+  - Updated `store_state()` to call comprehensive abandonment logic.
+  - Added extensive debug logging with `[DUPLICATE_ADVENTURE_DEBUG]` prefix.
+- **Result:** ✅ **VERIFIED WORKING** - Users now have only one incomplete adventure at a time.
+
+#### ❌ CRITICAL BUGS REMAINING:
+
+**1. ❌ Resume Modal System (FAILING)**
 - Created modal component (`app/templates/components/resume_modal.html`).
 - Added API endpoints: `GET /api/user/current-adventure`, `POST /api/adventure/{id}/abandon`.
-- Updated `/api/user/current-adventure` to return `story_category` and `lesson_topic`.
-- Implemented frontend logic in `login.html` for modal interaction, including storing resume details in `sessionStorage`.
-- Implemented frontend logic in `scripts.html` to use `sessionStorage` for WebSocket URL construction.
-- Fixed missing CSS link for `resume-modal.css` in `login.html`.
-- Restored truncated JavaScript in `login.html`.
-- **✅ FIXED:** Resume API KeyError - changed `adventure_data["adventure_id"]` to `adventure_data["id"]` to match Supabase response.
-- **Result:** Modal appeared briefly but consistency issues persist. WebSocket URL construction for resume was improved.
+- Enhanced `/api/user/current-adventure` with comprehensive logging and validation.
+- Implemented frontend logic in `login.html` with retry logic and extensive debugging.
+- Enhanced JWT authentication dependency with detailed logging.
+- **✅ FIXED:** Resume API KeyError - proper field mapping implemented.
+- **❌ CRITICAL BUG:** Resume modal does NOT appear after logout/login for guest users
+- **❌ CRITICAL BUG:** Resume modal shows inconsistently for Google authenticated users
+- **Root Cause:** JWT clock skew causing user ID mismatch between sessions
+- **Impact:** Users cannot resume adventures via the intended UX flow
 
-**3. ✅ One Adventure Enforcement (`app/services/state_storage_service.py`) - MAJOR FIX**
-- **Root Cause Identified:** Original `_abandon_existing_incomplete_adventure()` only found the most recent incomplete adventure using `.limit(1)`, leaving older incomplete adventures untouched.
-- **Solution Implemented:** 
-  - Added `get_all_user_incomplete_adventures()` method to find ALL incomplete adventures for a user.
-  - Added `_abandon_all_incomplete_adventures()` method to abandon ALL incomplete adventures with detailed logging.
-  - Updated `store_state()` to call the comprehensive abandonment logic.
-  - Added extensive debug logging with `[DUPLICATE_ADVENTURE_DEBUG]` prefix for traceability.
-- **Technical Details:**
-  - New method finds ALL incomplete adventures (not just most recent).
-  - Iterates through each adventure and abandons them individually.
-  - Provides detailed success/failure counts in logs.
-  - Maintains backward compatibility with deprecated wrapper method.
-- **Result:** ✅ **VERIFIED WORKING** - Users now have only one incomplete adventure at a time. Multiple adventure accumulation issue completely resolved.
+**2. ❌ Chapter Display Issues (NOT FULLY RESOLVED)**
+- Enhanced `handleMessage` function for `adventure_loaded` events in `uiManager.js`.
+- Added proper chapter progress calculation from server state.
+- Added comprehensive logging for chapter display debugging.
+- **❌ PERSISTENT BUG:** Chapter progress sometimes shows incorrectly (e.g., "Chapter 1 of 10" instead of "Chapter 3 of 10")
+- **Root Cause:** Not fully diagnosed - frontend state interpretation issues persist
+- **Impact:** Users see incorrect progress information when resuming adventures
 
-**4. Session Bypass Fix (`app/templates/pages/login.html`)**
-- Updated `checkLoginPageSession()` to call `handleSignIn()`.
-- **Result (Initial):** Login flow properly checked for existing adventures. *Current status needs re-verification.*
+### Testing Results (2025-05-26 PM):
 
-#### ❌ REMAINING ISSUES (Updated 2025-05-26 PM):
+#### ✅ **VERIFIED WORKING (Limited Scope):**
+*   ✅ **Adventure Creation & Persistence** - Adventures saved correctly to database
+*   ✅ **Adventure Resumption via Fallback** - Adventures resume correctly via client_uuid fallback mechanism
+*   ✅ **One Adventure Enforcement** - Multiple adventure accumulation prevented
+*   ✅ **State Reconstruction** - Complex adventure state properly reconstructed from database
+*   ✅ **Story/Lesson Matching** - Adventures match correct story/lesson combinations
+*   ✅ **WebSocket Integration** - Seamless integration with WebSocket adventure flow
+*   ✅ **Content Loading** - Story content and choices load correctly on resume
 
-**Issue 1: Resume Modal Not Appearing Consistently (HIGH PRIORITY)**
-- **Symptom:** After logout/login, modal doesn't appear despite an incomplete adventure in the database.
-- **Suspected Causes:**
-    - Timing of `handleSignIn()` or token availability in `login.html`.
-    - `/api/user/current-adventure` not being called or returning `null` unexpectedly.
-    - Flaw in the logic within `login.html` that decides whether to show the modal based on API response.
-- **Investigation Needed:**
-    - Add detailed console logs in `login.html` around `handleSignIn`, `attemptResumeApiCall`, and the conditions for showing the modal.
-    - Verify the exact data returned by `/api/user/current-adventure` in the browser network tab.
-    - Step-through debugging of `login.html` JavaScript.
+#### ❌ **CRITICAL BUGS IDENTIFIED:**
+*   **❌ Resume Modal Failure** - Modal does NOT appear after logout/login for guest users
+*   **❌ Google Auth Issues** - Google login has ongoing issues, modal inconsistent for Google users
+*   **❌ Chapter Display Bug** - Progress sometimes shows incorrect chapter numbers
+*   **❌ JWT Clock Skew** - User ID mismatch between sessions breaks resume modal functionality
 
-**Issue 2: Chapter Display Inconsistency (MEDIUM PRIORITY)**
-- **Symptom:** UI shows "Chapter 1 out of 10" but should display the actual current chapter (e.g., Chapter 3) when an adventure is resumed (even manually).
-- **Suspected Causes:**
-    - Frontend (`scripts.html`) incorrectly initializing or updating chapter progress display from the resumed state.
-    - The `state_data.chapters` array length or `state_data.current_chapter_id` might be inconsistent with `completed_chapter_count` in the database for the specific adventure.
-    - The `adventure_loaded` event in `scripts.html` might not be correctly populating `selectedCategory` and `selectedLessonTopic` from the server's state, leading to issues if `initWebSocket` is called again.
-- **Investigation Needed:**
-    - Log the full `data.state` received in `handleMessage` for `adventure_loaded` type in `scripts.html`.
-    - Trace how `updateProgress` is called and what values it uses upon resuming.
-    - Inspect the `state_data` JSON in Supabase for an affected adventure.
+#### ⚠️ **LIMITED TEST COVERAGE:**
+*   **⚠️ Guest Login Only** - Primary testing only covered guest/anonymous login
+*   **⚠️ Google Auth Untested** - Google authentication flow not thoroughly tested
+*   **⚠️ Single Test Scenario** - Only one adventure progression tested (Circus & Carnival + Human Body)
 
-### Testing Progress (Updated 2025-05-26 PM):
-✅ **Working:**
-*   ✅ **One adventure per user enforcement** - Multiple incomplete adventures issue completely resolved.
-*   ✅ **Resume API data integrity** - KeyError fixed, proper field mapping implemented.
-*   In-session resumption (browser refresh) - *needs re-verification*.
-*   Adventure story/lesson matching when *manually* re-selecting - *needs re-verification*.
-*   Content loading once an adventure starts.
-*   Resume modal styling (when it rarely appeared).
-*   Backend API providing `story_category` and `lesson_topic`.
-*   `sessionStorage` being used for resume parameters.
-
-❌ **Failing/Inconsistent:**
-*   **Resume modal not appearing reliably after login.**
-*   **Cross-session adventure resumption via modal.**
-*   Chapter number display accuracy on resume.
+### Testing Scenarios Completed (Limited):
+1. ✅ **Adventure Creation** - Created adventure with "Circus & Carnival Capers" + "Human Body" (guest login only)
+2. ✅ **Chapter Progress** - Completed Chapter 1 (Scholar choice) and Chapter 2 (lesson question)
+3. ❌ **Logout/Login Flow** - Logged out and back in as guest, but resume modal did NOT appear
+4. ✅ **Adventure Resumption via Fallback** - Adventure resumed automatically via client_uuid, bypassing modal
+5. ✅ **State Integrity** - All adventure data preserved
+6. ❌ **Resume Modal UX** - Intended user experience flow failed
 
 ---
 
-## Immediate Next Steps (Priority Order - Revised 2025-05-26 PM)
+## Critical Issues Requiring Resolution
 
-### 1. Debug Resume Modal Non-Appearance (CRITICAL)
-**Investigation Tasks:**
--   **Frontend (`login.html`):**
-    *   Add aggressive console logging in `handleSignIn()` and `attemptResumeApiCall()`:
-        *   Confirm functions are called.
-        *   Log `session` and `token` status immediately before `fetch`.
-        *   Log the exact response (success or error, and data) from `/api/user/current-adventure`.
-        *   Log the `adventureData` used in `showResumeModal`.
-    *   Verify the conditions under which `showResumeModal` is called.
--   **Backend (`StateStorageService.get_user_current_adventure_for_resume`):**
-    *   Log the `user_id` received.
-    *   Log the raw SQL query being generated (if possible with Supabase client, or log parameters).
-    *   Log the exact data returned from Supabase *before* any processing.
-    *   Ensure it's correctly selecting only one, most recent, incomplete adventure.
+### High Priority (Blocking)
+1. **Resume Modal Not Appearing** - Critical UX failure
+   - **Status:** ❌ NOT WORKING for guest users
+   - **Status:** ❌ INCONSISTENT for Google users
+   - **Root Cause:** JWT clock skew causing user ID mismatch
+   - **Impact:** Users cannot access intended resume functionality
 
-**Potential Fixes:**
--   Adjust timing or conditions for API call in `login.html`.
--   Refine database query in `get_user_current_adventure_for_resume` if it's not selecting the correct single adventure.
+2. **Chapter Display Inconsistency** - User confusion
+   - **Status:** ❌ NOT FULLY RESOLVED
+   - **Root Cause:** Frontend state interpretation issues
+   - **Impact:** Users see incorrect progress information
 
-### 2. Fix Chapter Display Bug (MEDIUM)
-**Investigation Tasks:**
--   **Frontend (`scripts.html`):**
-    *   When `wsManager.adventureIdToResume` is true, ensure `initWebSocket` uses the server-provided state (via `adventure_loaded` message) and not stale `localStorage` state.
-    *   Log `data.state` in `handleMessage` for `adventure_loaded`.
-    *   Trace how `selectedCategory`, `selectedLessonTopic`, and chapter progress UI elements are updated.
--   **Backend (`websocket_router.py`):**
-    *   When resuming, log the state loaded by `adventure_state_manager.load_adventure` before sending to client.
--   **Database:**
-    *   Inspect `state_data` JSON for an adventure that shows incorrect chapter count (e.g., the one with `completed_chapter_count: 3`). Verify its `chapters` array length and `current_chapter_id`.
+3. **Google Authentication Issues** - Production blocker
+   - **Status:** ❌ NOT TESTED/ADDRESSED
+   - **Root Cause:** Ongoing Google auth problems mentioned by user
+   - **Impact:** Google users cannot reliably use the application
 
-**Potential Fixes:**
--   Adjust frontend logic in `scripts.html` to correctly use resumed state from server.
--   Ensure `updateProgress` uses the correct chapter count from the server-authoritative state.
-
-### 3. Comprehensive Testing (MEDIUM)
-**Test Scenarios (Re-evaluate after fixes):**
--   Resume modal appearance and functionality (Google, Anonymous).
--   ✅ One adventure limit enforcement (VERIFIED WORKING).
--   Cross-session adventure persistence.
--   Chapter display accuracy on resume.
--   Starting fresh from modal correctly abandons old adventure.
+### Medium Priority
+1. **JWT Clock Skew Resolution** - Address root cause of user ID inconsistency
+2. **Comprehensive Testing** - Test all authentication methods and scenarios
+3. **Error Handling** - Improve user feedback when issues occur
 
 ---
 
@@ -253,29 +212,96 @@ This document outlines the plan and progress for integrating Supabase into the L
 - Comprehensive logging is essential for debugging complex state management
 - Always consider edge cases where users might have accumulated problematic data over time
 
+### Resume Modal Failure Analysis (2025-05-26)
+**Problem:** Resume modal does not appear consistently after logout/login, breaking intended UX flow.
+
+**Root Cause:** JWT clock skew issues cause different user IDs between sessions, preventing adventure lookup via user_id.
+
+**Current Mitigation:** System falls back to client_uuid for adventure resumption, but modal UX is lost.
+
+**Key Learnings:**
+- Fallback mechanisms are essential but don't replace fixing root causes
+- UX flows must be thoroughly tested across all authentication methods
+- JWT handling requires robust error handling and consistent user ID management
+- Single test scenarios are insufficient for production readiness assessment
+
 ---
 
-## Future Enhancements
-*(No changes in this section for this update)*
+## Next Steps (Priority Order)
+
+### 1. Fix Resume Modal (CRITICAL)
+**Investigation Required:**
+- Debug JWT clock skew issue causing user ID mismatch
+- Test resume modal functionality with both guest and Google authentication
+- Implement proper error handling and retry logic for modal display
+- Consider alternative user identification strategies
+
+### 2. Resolve Chapter Display Bug (HIGH)
+**Investigation Required:**
+- Thoroughly test chapter display across different resume scenarios
+- Debug frontend state interpretation in `uiManager.js`
+- Verify server state consistency with frontend display
+- Test with multiple adventure progressions
+
+### 3. Address Google Authentication Issues (HIGH)
+**Investigation Required:**
+- Test Google OAuth flow thoroughly
+- Identify and resolve Google-specific authentication problems
+- Ensure resume functionality works for Google users
+- Document Google auth limitations and workarounds
+
+### 4. Comprehensive Testing (MEDIUM)
+**Test Scenarios Required:**
+- Multiple authentication methods (guest, Google)
+- Various adventure progressions and resume points
+- Cross-browser and cross-device testing
+- Error scenarios and edge cases
+
+---
+
+## Current Status Assessment
+
+**Overall Status: ❌ NOT PRODUCTION READY**
+
+**Reasons:**
+- Critical UX functionality (resume modal) not working
+- Limited test coverage (guest login only)
+- Google authentication issues unaddressed
+- Chapter display bugs persist
+- User experience significantly degraded by missing modal functionality
+
+**What Works:**
+- Adventure persistence and storage
+- Fallback resumption mechanism via client_uuid
+- Data integrity enforcement
+- Basic adventure flow when modal issues are bypassed
+
+**What Doesn't Work:**
+- Resume modal UX flow
+- Consistent chapter progress display
+- Reliable Google authentication
+- Intended user experience for adventure resumption
+
+**Recommendation:** Address critical bugs before considering production deployment. The fallback mechanism ensures basic functionality but the intended user experience is significantly compromised.
 
 ---
 
 ## Key Files Modified (Recent)
 
 ### Backend
--   `app/routers/web.py` - **FIXED:** Resume API KeyError (`adventure_id` -> `id` field mapping).
+-   `app/auth/dependencies.py` - **ENHANCED:** Added comprehensive JWT debugging and error handling
+-   `app/routers/web.py` - **ENHANCED:** Added detailed logging and validation for resume API
 -   `app/services/state_storage_service.py` - **MAJOR UPDATE:** Comprehensive abandonment logic implemented:
     - Added `get_all_user_incomplete_adventures()` method
     - Added `_abandon_all_incomplete_adventures()` method  
     - Updated `store_state()` to use comprehensive abandonment
     - Added extensive debug logging with `[DUPLICATE_ADVENTURE_DEBUG]` prefix
-    - Added `List` import for type hinting
 
 ### Frontend  
--   `app/templates/pages/login.html` - Added `sessionStorage` for resume details, fixed JS truncation, added CSS link.
--   `app/templates/components/scripts.html` - Updated WebSocket URL construction to use `sessionStorage` for resume.
+-   `app/templates/pages/login.html` - **ENHANCED:** Added retry logic, comprehensive debugging, and session validation
+-   `app/static/js/uiManager.js` - **ATTEMPTED FIX:** Added chapter display fix for `adventure_loaded` events (issues persist)
+-   `app/templates/components/scripts.html` - Updated WebSocket URL construction to use `sessionStorage` for resume
 
-*(Older file modifications remain as previously documented)*
 ---
 
-This integration provides a solid foundation for user authentication and adventure persistence while maintaining the flexibility to support both authenticated and anonymous users. The major data integrity issue (multiple incomplete adventures) has been resolved. The remaining issues are primarily frontend UX polish that don't affect core functionality.
+This integration provides a foundation for user authentication and adventure persistence, but critical UX bugs prevent production readiness. The system works via fallback mechanisms but the intended user experience is significantly compromised.

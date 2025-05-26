@@ -239,11 +239,21 @@ async def get_user_current_adventure_api(
     """
     context = get_session_context(request)
     logger.info("[RESUME API DEBUG] /api/user/current-adventure called", extra=context)
+    logger.info(f"[RESUME API DEBUG] Request method: {request.method}", extra=context)
+    logger.info(f"[RESUME API DEBUG] Request URL: {request.url}", extra=context)
+    logger.info(
+        f"[RESUME API DEBUG] Request headers: {dict(request.headers)}", extra=context
+    )
     logger.info(f"[RESUME API DEBUG] Extracted user_id: {user_id}", extra=context)
+    logger.info(f"[RESUME API DEBUG] User_id type: {type(user_id)}", extra=context)
 
     if not user_id:
         logger.info(
             "[RESUME API DEBUG] No user_id found - unauthenticated request",
+            extra=context,
+        )
+        logger.info(
+            "[RESUME API DEBUG] Returning empty response (adventure=None)",
             extra=context,
         )
         return CurrentAdventureAPIResponse(adventure=None)
@@ -253,6 +263,11 @@ async def get_user_current_adventure_api(
             f"[RESUME API DEBUG] Fetching current adventure for user {user_id}",
             extra=context,
         )
+        logger.info(
+            f"[RESUME API DEBUG] Calling state_storage_service.get_user_current_adventure_for_resume",
+            extra=context,
+        )
+
         # This method now needs to return a dict that matches AdventureResumeDetails structure
         # or we adapt it here.
         adventure_data = (
@@ -262,52 +277,168 @@ async def get_user_current_adventure_api(
             f"[RESUME API DEBUG] Adventure data from service: {adventure_data}",
             extra=context,
         )
+        logger.info(
+            f"[RESUME API DEBUG] Adventure data type: {type(adventure_data)}",
+            extra=context,
+        )
 
         if adventure_data:
-            # Adapt the dictionary from the service to the Pydantic model
-            # The service method get_user_current_adventure_for_resume should ideally return
-            # data in the shape expected by AdventureResumeDetails or be easily adaptable.
-            # For now, assuming it returns a dict with the necessary keys.
+            logger.info(
+                "[RESUME API DEBUG] Adventure data found, processing...", extra=context
+            )
+            logger.info(
+                f"[RESUME API DEBUG] Adventure data keys: {list(adventure_data.keys()) if isinstance(adventure_data, dict) else 'Not a dict'}",
+                extra=context,
+            )
+
+            # Log key fields for debugging
+            logger.info(
+                f"[RESUME API DEBUG] Adventure ID field: {adventure_data.get('id')}",
+                extra=context,
+            )
+            logger.info(
+                f"[RESUME API DEBUG] Story category: {adventure_data.get('story_category')}",
+                extra=context,
+            )
+            logger.info(
+                f"[RESUME API DEBUG] Lesson topic: {adventure_data.get('lesson_topic')}",
+                extra=context,
+            )
+            logger.info(
+                f"[RESUME API DEBUG] Completed chapter count: {adventure_data.get('completed_chapter_count')}",
+                extra=context,
+            )
+            logger.info(
+                f"[RESUME API DEBUG] Updated at: {adventure_data.get('updated_at')}",
+                extra=context,
+            )
+            logger.info(
+                f"[RESUME API DEBUG] State data present: {bool(adventure_data.get('state_data'))}",
+                extra=context,
+            )
 
             # Calculate current_chapter. If state_data is None or chapters is missing, default to 0 or 1.
-            current_chapter_num = 0
-            if adventure_data.get("state_data") and adventure_data["state_data"].get(
-                "chapters"
-            ):
-                current_chapter_num = len(adventure_data["state_data"]["chapters"]) + 1
-            elif (
-                adventure_data.get("completed_chapter_count") is not None
-            ):  # Fallback to completed_chapter_count
+            current_chapter_num = 1  # Default to chapter 1
+            state_data = adventure_data.get("state_data")
+
+            if state_data and isinstance(state_data, dict):
+                chapters = state_data.get("chapters", [])
+                logger.info(
+                    f"[RESUME API DEBUG] State data chapters count: {len(chapters) if isinstance(chapters, list) else 'Not a list'}",
+                    extra=context,
+                )
+                if isinstance(chapters, list):
+                    current_chapter_num = len(chapters) + 1
+                    logger.info(
+                        f"[RESUME API DEBUG] Calculated current chapter from state_data: {current_chapter_num}",
+                        extra=context,
+                    )
+            elif adventure_data.get("completed_chapter_count") is not None:
+                # Fallback to completed_chapter_count
                 current_chapter_num = (
                     adventure_data.get("completed_chapter_count", 0) + 1
                 )
+                logger.info(
+                    f"[RESUME API DEBUG] Calculated current chapter from completed_chapter_count: {current_chapter_num}",
+                    extra=context,
+                )
 
-            adventure_details = AdventureResumeDetails(
-                adventure_id=adventure_data[
-                    "id"
-                ],  # FIXED: Changed from "adventure_id" to "id"
-                story_category=adventure_data["story_category"],
-                lesson_topic=adventure_data["lesson_topic"],
-                current_chapter=current_chapter_num,  # Needs to be calculated or retrieved
-                total_chapters=adventure_data.get(
-                    "total_chapters", 10
-                ),  # Assuming 10 if not present
-                last_updated=adventure_data["updated_at"],
-            )
             logger.info(
-                f"[RESUME API DEBUG] Returning adventure: {adventure_details.adventure_id}",
+                f"[RESUME API DEBUG] Final current chapter number: {current_chapter_num}",
                 extra=context,
             )
-            return CurrentAdventureAPIResponse(adventure=adventure_details)
+
+            # Validate required fields before creating the response
+            adventure_id = adventure_data.get("id")
+            story_category = adventure_data.get("story_category")
+            lesson_topic = adventure_data.get("lesson_topic")
+            updated_at = adventure_data.get("updated_at")
+
+            logger.info(
+                f"[RESUME API DEBUG] Validating required fields...", extra=context
+            )
+            logger.info(
+                f"[RESUME API DEBUG] - adventure_id: {adventure_id} (type: {type(adventure_id)})",
+                extra=context,
+            )
+            logger.info(
+                f"[RESUME API DEBUG] - story_category: {story_category} (type: {type(story_category)})",
+                extra=context,
+            )
+            logger.info(
+                f"[RESUME API DEBUG] - lesson_topic: {lesson_topic} (type: {type(lesson_topic)})",
+                extra=context,
+            )
+            logger.info(
+                f"[RESUME API DEBUG] - updated_at: {updated_at} (type: {type(updated_at)})",
+                extra=context,
+            )
+
+            if not adventure_id:
+                logger.error(
+                    "[RESUME API DEBUG] Adventure missing required 'id' field",
+                    extra=context,
+                )
+                return CurrentAdventureAPIResponse(adventure=None)
+
+            if not story_category:
+                logger.error(
+                    "[RESUME API DEBUG] Adventure missing required 'story_category' field",
+                    extra=context,
+                )
+                return CurrentAdventureAPIResponse(adventure=None)
+
+            if not lesson_topic:
+                logger.error(
+                    "[RESUME API DEBUG] Adventure missing required 'lesson_topic' field",
+                    extra=context,
+                )
+                return CurrentAdventureAPIResponse(adventure=None)
+
+            try:
+                adventure_details = AdventureResumeDetails(
+                    adventure_id=adventure_id,  # FIXED: Changed from "adventure_id" to "id"
+                    story_category=story_category,
+                    lesson_topic=lesson_topic,
+                    current_chapter=current_chapter_num,
+                    total_chapters=adventure_data.get(
+                        "total_chapters", 10
+                    ),  # Assuming 10 if not present
+                    last_updated=updated_at,
+                )
+                logger.info(
+                    f"[RESUME API DEBUG] Successfully created AdventureResumeDetails: {adventure_details.adventure_id}",
+                    extra=context,
+                )
+                logger.info(
+                    f"[RESUME API DEBUG] Adventure details dict: {adventure_details.dict()}",
+                    extra=context,
+                )
+
+                response = CurrentAdventureAPIResponse(adventure=adventure_details)
+                logger.info(
+                    f"[RESUME API DEBUG] Returning successful response with adventure",
+                    extra=context,
+                )
+                return response
+
+            except Exception as model_error:
+                logger.error(
+                    f"[RESUME API DEBUG] Error creating AdventureResumeDetails model: {model_error}",
+                    extra={**context, "error": str(model_error)},
+                    exc_info=True,
+                )
+                return CurrentAdventureAPIResponse(adventure=None)
 
         logger.info(
             "[RESUME API DEBUG] No adventure found, returning null", extra=context
         )
         return CurrentAdventureAPIResponse(adventure=None)
+
     except Exception as e:
         logger.error(
             f"[RESUME API DEBUG] Error fetching current adventure for user {user_id}: {str(e)}",
-            extra={**context, "error": str(e)},
+            extra={**context, "error": str(e), "error_type": type(e).__name__},
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Error fetching current adventure.")
