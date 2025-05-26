@@ -48,8 +48,6 @@ class FontSizeManager {
         
         // Add scroll behavior
         this.setupScrollBehavior();
-        
-        console.log('FontSizeManager initialized');
     }
     
     /**

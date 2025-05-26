@@ -272,6 +272,32 @@ Learning Odyssey requires sequential chapter generation due to:
     - `story_container.html`: Main story content container
   * `macros/form_macros.html`: Reusable template functions
 
+### 8. User Authentication and Session Management
+- **Strategy:** Optional user authentication is implemented using Supabase Auth, supporting Google Sign-In and anonymous guest sessions.
+- **JWT for WebSockets:**
+    - Authenticated sessions (both Google and anonymous) are identified on the backend via JWTs.
+    - The Supabase JS client on the frontend manages session persistence (typically in `localStorage`) and provides the JWT.
+    - This JWT is passed as a query parameter (`token`) when establishing the WebSocket connection.
+    - The backend (`app/routers/websocket_router.py`) validates this token using `PyJWT` and the `SUPABASE_JWT_SECRET`.
+    - The `user_id` (from the JWT's `sub` claim) is then associated with the WebSocket session and used for linking data in `adventures` and `telemetry_events` tables.
+- **Anonymous Users:** Supabase Auth's anonymous sign-in feature provides a persistent `user_id` for guest users, allowing their adventure data and telemetry to be linked to their session even if they don't create a full account.
+- **Login/Redirection:**
+    - A dedicated login page (`/`) handles authentication initiation.
+    - The main adventure selection page (`/select`) checks for an active session and redirects unauthenticated users to the login page.
+
+### 9. Data Access Control (RLS)
+- **Strategy:** Supabase Row-Level Security (RLS) policies are implemented to control data access based on user authentication.
+- **Policies on `adventures` table:**
+    - Users can select their own adventures or guest adventures (where `user_id` is `NULL`).
+    - Users can insert adventures for themselves or as guest.
+    - Users can only update their own adventures.
+    - Deletion policies are restrictive (currently not allowing user-initiated deletes).
+- **Policies on `telemetry_events` table:**
+    - Users can insert their own telemetry events or guest events.
+    - Select/update/delete operations are generally restricted to backend/admin roles.
+- **Service Role:** The backend uses the `SUPABASE_SERVICE_KEY`, which bypasses RLS policies, allowing it to perform necessary operations across all user data (e.g., for admin tasks, cleanup, or when RLS isn't appropriate for a specific backend logic).
+- **Foreign Keys:** `user_id` columns in `adventures` and `telemetry_events` are foreign keys to `auth.users(id)` with `ON DELETE SET NULL` behavior, ensuring data integrity if a user is deleted from the Supabase auth system.
+
 ## Implementation Solutions
 
 ### 1. State Persistence

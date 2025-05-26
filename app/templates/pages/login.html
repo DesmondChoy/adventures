@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Learning Odyssey - Educational Adventures</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/resume-modal.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         .glass {
@@ -72,7 +73,7 @@
                     </p>
 
                     <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start mb-4">
-                        <button id="login-google" class="bg-red-500 text-white px-6 py-3 rounded-md hover:bg-red-600 transition btn-hover inline-block text-center">
+                        <button id="login-google" class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition btn-hover inline-block text-center">
                             Login with Google
                         </button>
                         <button id="continue-guest" class="bg-gray-600 text-white px-6 py-3 rounded-md hover:bg-gray-700 transition btn-hover inline-block text-center">
@@ -354,6 +355,8 @@
         </div>
     </footer>
 
+    {% include 'components/resume_modal.html' %}
+
     <script>
         // Smooth scrolling for anchor links
         document.addEventListener('DOMContentLoaded', function() {
@@ -374,79 +377,350 @@
             });
         });
 
-        // Supabase Client Initialization and Auth Logic
-        const SUPABASE_URL = '{{ supabase_url_env }}'; // Will be replaced by FastAPI if served via Jinja
-        const SUPABASE_ANON_KEY = '{{ supabase_anon_key_env }}'; // Will be replaced by FastAPI if served via Jinja
+        // Supabase Client Initialization and Auth Logic for login.html
+        const LOGIN_PAGE_SUPABASE_URL = '{{ supabase_url }}'; 
+        const LOGIN_PAGE_SUPABASE_ANON_KEY = '{{ supabase_anon_key }}'; 
         
-        let supabase;
-        try {
-            if (!SUPABASE_URL || SUPABASE_URL.startsWith('{{')) {
-                console.warn('Supabase URL not configured. Using placeholder. Ensure this page is served via FastAPI with context or configure manually.');
+        let loginPageSupabaseClient = null; 
+        let lastAuthProvider = null; // Track authentication provider for timing adjustments
+
+        // Check if the Supabase library itself has loaded (it's included earlier in this file)
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+            // Check if URL and Key are actually provided and not placeholders
+            // Note: Jinja replaces template variables (e.g., the double curly brace syntax) so if they are still present as such, it means they were not in context.
+            // An empty string means they were in context but empty, or default('') was used.
+            
+            // Corrected condition: Check if URL and Key are truthy (not empty, null, or undefined)
+            if (LOGIN_PAGE_SUPABASE_URL && LOGIN_PAGE_SUPABASE_URL !== '' && LOGIN_PAGE_SUPABASE_ANON_KEY && LOGIN_PAGE_SUPABASE_ANON_KEY !== '') {
+                try {
+                    loginPageSupabaseClient = window.supabase.createClient(LOGIN_PAGE_SUPABASE_URL, LOGIN_PAGE_SUPABASE_ANON_KEY);
+                } catch (error) {
+                    console.error("Error initializing Supabase client in login.html:", error);
+                    alert("Could not initialize authentication (client creation failed). Please try again later.");
+                }
+            } else {
+                // This block should ideally not be hit if Jinja renders the values correctly and they are not empty.
+                console.warn('Supabase URL or Anon Key is missing or empty on login page.');
+                alert("Authentication configuration is missing or invalid on the login page. Please contact support.");
             }
-            if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.startsWith('{{')) {
-                console.warn('Supabase Anon Key not configured. Using placeholder. Ensure this page is served via FastAPI with context or configure manually.');
-            }
-            supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } catch (error) {
-            console.error("Error initializing Supabase client:", error);
-            alert("Could not initialize authentication. Please try again later.");
+        } else {
+            console.error('Supabase JavaScript library (window.supabase) not loaded correctly before login.html script.');
+            alert("Critical error: Authentication library failed to load. Please try again later.");
         }
 
-
-        if (supabase) {
+        if (loginPageSupabaseClient) {
             const googleLoginButton = document.getElementById('login-google');
             const guestLoginButton = document.getElementById('continue-guest');
             const guestWarning = document.getElementById('guest-warning');
 
-            googleLoginButton.addEventListener('click', async () => {
-                guestWarning.classList.add('hidden');
-                const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-                if (error) {
-                    console.error('Error logging in with Google:', error);
-                    alert('Error logging in with Google: ' + error.message);
-                }
-            });
+            if (googleLoginButton) {
+                googleLoginButton.addEventListener('click', async () => {
+                    if (guestWarning) guestWarning.classList.add('hidden');
+                    lastAuthProvider = 'google'; // Track Google login
+                    const { error } = await loginPageSupabaseClient.auth.signInWithOAuth({ provider: 'google' });
+                    if (error) {
+                        console.error('Error logging in with Google:', error);
+                        alert('Error logging in with Google: ' + error.message);
+                    }
+                });
+            }
 
-            guestLoginButton.addEventListener('click', async () => {
-                const { data, error } = await supabase.auth.signInAnonymously();
-                if (error) {
-                    console.error('Error signing in anonymously:', error);
-                    alert('Error signing in anonymously: ' + error.message);
+            if (guestLoginButton) {
+                guestLoginButton.addEventListener('click', async () => {
+                    lastAuthProvider = 'anonymous'; // Track anonymous login
+                    const { data, error } = await loginPageSupabaseClient.auth.signInAnonymously();
+                    if (error) {
+                        console.error('Error signing in anonymously:', error);
+                        alert('Error signing in anonymously: ' + error.message);
+                    } else {
+                        if (guestWarning) guestWarning.classList.remove('hidden');
+                        // onAuthStateChange will handle redirect
+                    }
+                });
+            }
+
+            // --- Resume Modal Logic ---
+            const resumeModal = document.getElementById('resumeModal');
+            const modalAdventureName = document.getElementById('modalAdventureName');
+            const modalLessonTopic = document.getElementById('modalLessonTopic');
+            const modalProgress = document.getElementById('modalProgress');
+            const modalLastPlayed = document.getElementById('modalLastPlayed');
+            const continueAdventureBtn = document.getElementById('continueAdventureBtn');
+            const startFreshBtn = document.getElementById('startFreshBtn');
+            let currentAdventureForModal = null;
+
+            function formatTimeAgo(dateString) {
+                if (!dateString) return 'Unknown';
+                const date = new Date(dateString);
+                const now = new Date();
+                const seconds = Math.round((now - date) / 1000);
+                const minutes = Math.round(seconds / 60);
+                const hours = Math.round(minutes / 60);
+                const days = Math.round(hours / 24);
+
+                if (seconds < 60) return `${seconds} seconds ago`;
+                if (minutes < 60) return `${minutes} minutes ago`;
+                if (hours < 24) return `${hours} hours ago`;
+                return `${days} days ago`;
+            }
+
+            async function showResumeModal(adventureData) {
+                currentAdventureForModal = adventureData;
+                if (!resumeModal || !modalAdventureName || !modalLessonTopic || !modalProgress || !modalLastPlayed) {
+                    console.error("Modal elements not found!");
+                    redirectToSelectPage(); // Fallback if modal elements are missing
+                    return;
+                }
+                modalAdventureName.textContent = adventureData.story_category || 'N/A';
+                modalLessonTopic.textContent = adventureData.lesson_topic || 'N/A';
+                
+                // Store for /select page
+                if (adventureData.story_category) {
+                    sessionStorage.setItem('resume_story_category', adventureData.story_category);
+                }
+                if (adventureData.lesson_topic) {
+                    sessionStorage.setItem('resume_lesson_topic', adventureData.lesson_topic);
+                }
+
+                let progressText = `Chapter ${adventureData.current_chapter || 0}`;
+                if (adventureData.total_chapters) {
+                    progressText += ` out of ${adventureData.total_chapters}`;
+                }
+                modalProgress.textContent = progressText;
+                modalLastPlayed.textContent = formatTimeAgo(adventureData.last_updated);
+                
+                resumeModal.style.display = 'flex';
+            }
+
+            function hideResumeModal() {
+                if (resumeModal) resumeModal.style.display = 'none';
+                currentAdventureForModal = null;
+            }
+
+            function redirectToSelectPage(resumeAdventureId = null) {
+                let url = '/select';
+                if (resumeAdventureId) {
+                    url += `?resume_adventure_id=${resumeAdventureId}`;
+                }
+                window.location.href = url;
+            }
+
+            if (continueAdventureBtn) {
+                continueAdventureBtn.addEventListener('click', () => {
+                    if (currentAdventureForModal && currentAdventureForModal.adventure_id) {
+                        // The actual resumption will be handled on the /select page based on query param or session storage
+                        redirectToSelectPage(currentAdventureForModal.adventure_id);
+                    }
+                    hideResumeModal();
+                });
+            }
+
+            if (startFreshBtn) {
+                startFreshBtn.addEventListener('click', async () => {
+                    if (currentAdventureForModal && currentAdventureForModal.adventure_id) {
+                        try {
+                            const token = (await loginPageSupabaseClient.auth.getSession())?.data.session?.access_token;
+                            if (!token) {
+                                alert("Authentication token not found. Cannot abandon adventure.");
+                                hideResumeModal();
+                                return;
+                            }
+                            const response = await fetch(`/api/adventure/${currentAdventureForModal.adventure_id}/abandon`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            });
+                            if (!response.ok) {
+                                const errorData = await response.json();
+                                throw new Error(errorData.detail || `Failed to abandon adventure (status ${response.status})`);
+                            }
+                        } catch (error) {
+                            console.error('Error abandoning adventure:', error);
+                            alert(`Could not abandon previous adventure: ${error.message}. Proceeding to new selection.`);
+                        }
+                    }
+                    hideResumeModal();
+                    redirectToSelectPage();
+                });
+            }
+
+            async function handleSignIn() {
+                // Enhanced retry logic with exponential backoff
+                const maxRetries = 3;
+                let retryCount = 0;
+                
+                async function attemptSessionRetrieval() {
+                    try {
+                        const sessionResult = await loginPageSupabaseClient.auth.getSession();
+                        const session = sessionResult?.data?.session;
+                        
+                        if (!session) {
+                            if (retryCount < maxRetries - 1) {
+                                retryCount++;
+                                const delay = Math.pow(2, retryCount) * 500; // 1s, 2s, 4s
+                                setTimeout(attemptSessionRetrieval, delay);
+                                return;
+                            } else {
+                                redirectToSelectPage();
+                                return;
+                            }
+                        }
+                        
+                        const token = session.access_token;
+                        if (!token) {
+                            if (retryCount < maxRetries - 1) {
+                                retryCount++;
+                                const delay = Math.pow(2, retryCount) * 500;
+                                setTimeout(attemptSessionRetrieval, delay);
+                                return;
+                            } else {
+                                redirectToSelectPage();
+                                return;
+                            }
+                        }
+
+                        // Token is available, proceed with API call
+                        const isAnonymousUser = session.user?.is_anonymous === true; // Explicitly check for true
+                        await attemptResumeApiCall(token, isAnonymousUser);
+                        
+                    } catch (error) {
+                        console.error(`Error in session retrieval attempt ${retryCount + 1}:`, error);
+                        
+                        if (retryCount < maxRetries - 1) {
+                            retryCount++;
+                            const delay = Math.pow(2, retryCount) * 500;
+                            setTimeout(attemptSessionRetrieval, delay);
+                        } else {
+                            console.error('All session retrieval attempts failed, redirecting to /select');
+                            redirectToSelectPage();
+                        }
+                    }
+                }
+                
+                // Start the retry process
+                await attemptSessionRetrieval();
+            }
+
+            async function attemptResumeApiCall(token, isAnonymous) {
+                const maxApiRetries = 2;
+                let apiRetryCount = 0;
+                let apiUrl;
+                let apiHeaders = {
+                    'Content-Type': 'application/json'
+                };
+
+                if (isAnonymous) {
+                    const clientUUID = localStorage.getItem('learning_odyssey_user_uuid'); // Correct key from adventureStateManager.js
+                    if (clientUUID) {
+                        apiUrl = `/api/adventure/active_by_client_uuid/${clientUUID}`;
+                        // No Authorization header needed for this specific guest endpoint
+                    } else {
+                        console.error("Anonymous user but no client_uuid found in localStorage. Cannot fetch adventure for modal.");
+                        redirectToSelectPage();
+                        return;
+                    }
                 } else {
-                    // User is signed in anonymously, onAuthStateChange will handle redirect
-                    guestWarning.classList.remove('hidden');
+                    apiUrl = '/api/user/current-adventure';
+                    apiHeaders['Authorization'] = `Bearer ${token}`;
                 }
-            });
+                
+                async function makeApiCall() {
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'GET',
+                            headers: apiHeaders
+                        });
+                        
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('API call failed:', response.status, response.statusText, errorText);
+                            
+                            // Retry on 5xx errors or network issues
+                            if (response.status >= 500 && apiRetryCount < maxApiRetries) {
+                                apiRetryCount++;
+                                const delay = Math.pow(2, apiRetryCount) * 1000; // 2s, 4s
+                                setTimeout(makeApiCall, delay);
+                                return;
+                            }
+                            
+                            console.error('API call failed permanently, redirecting to /select');
+                            redirectToSelectPage();
+                            return;
+                        }
+                        
+                        const data = await response.json();
+                        
+                        if (data && data.adventure) {
+                            // Validate required fields
+                            if (!data.adventure.adventure_id) {
+                                console.error("Adventure missing adventure_id, redirecting to /select");
+                                redirectToSelectPage();
+                                return;
+                            }
+                            
+                            showResumeModal(data.adventure);
+                        } else {
+                            redirectToSelectPage();
+                        }
+                        
+                    } catch (apiError) {
+                        console.error(`API call error (attempt ${apiRetryCount + 1}):`, apiError);
+                        
+                        // Retry on network errors
+                        if (apiRetryCount < maxApiRetries && (apiError.name === 'TypeError' || apiError.message.includes('fetch'))) {
+                            apiRetryCount++;
+                            const delay = Math.pow(2, apiRetryCount) * 1000;
+                            setTimeout(makeApiCall, delay);
+                        } else {
+                            console.error('API call failed permanently after retries, redirecting to /select');
+                            redirectToSelectPage();
+                        }
+                    }
+                }
+                
+                // Start the API call process
+                await makeApiCall();
+            }
 
-            supabase.auth.onAuthStateChange((event, session) => {
-                console.log('Auth event:', event, session);
+            loginPageSupabaseClient.auth.onAuthStateChange((event, session) => {
                 if (event === 'SIGNED_IN') {
-                    // Redirect to the adventure selection page
-                    window.location.href = '/select';
+                    // Add delay for Google OAuth to allow session to fully establish
+                    if (lastAuthProvider === 'google') {
+                        setTimeout(handleSignIn, 1500); // 1.5 second delay
+                    } else {
+                        handleSignIn();
+                    }
                 } else if (event === 'SIGNED_OUT') {
-                    // User is signed out, ensure they are on the login page
-                    // If they are on /select or other protected page, they should be redirected here by server/client logic
-                    guestWarning.classList.add('hidden');
+                    if (guestWarning) guestWarning.classList.add('hidden');
+                    hideResumeModal(); // Ensure modal is hidden on sign out
+                    lastAuthProvider = null; // Clear last provider on sign out
                 }
             });
 
-            // Check initial session state on load
-            async function checkSession() {
-                const { data, error } = await supabase.auth.getSession();
+            // Check initial session state on load for this page
+            async function checkLoginPageSession() {
+                const { data, error } = await loginPageSupabaseClient.auth.getSession();
                 if (error) {
-                    console.error("Error getting session:", error.message);
+                    console.error("Error getting session on login page:", error.message);
                     return;
                 }
                 if (data.session) {
-                    console.log("User already signed in, redirecting to /select");
-                    window.location.href = '/select';
-                } else {
-                    console.log("No active session found.");
+                    // Determine if this was a Google session if possible, or assume not for initial check
+                    // For simplicity, we won't add a delay here unless we can reliably know it was a Google redirect
+                    await handleSignIn();
                 }
             }
-            checkSession();
+            checkLoginPageSession();
+        } else {
+            console.error("Supabase client instance (loginPageSupabaseClient) is null. Login buttons will not function.");
+            // Optionally disable buttons or show a more permanent error message on the page
+            const googleLoginButton = document.getElementById('login-google');
+            const guestLoginButton = document.getElementById('continue-guest');
+            if(googleLoginButton) googleLoginButton.disabled = true;
+            if(guestLoginButton) guestLoginButton.disabled = true;
+            // You could also inject an error message into the DOM here.
         }
-
     </script>
 </body>
 </html>

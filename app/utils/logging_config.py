@@ -2,6 +2,7 @@ import logging
 import json
 import sys
 import os
+import io
 from typing import Any, Dict
 from datetime import datetime
 
@@ -47,13 +48,6 @@ class StructuredLogger(logging.Logger):
             ]:
                 log_data[key] = value
 
-        # Print to console in a readable format
-        print(f"[{log_data['timestamp']}] {log_data['level']} - {log_data['message']}")
-        if "llm_prompt" in log_data:
-            print(f"Prompt: {log_data['llm_prompt']}")
-        if "llm_response" in log_data:
-            print(f"Response: {log_data['llm_response']}")
-
         # Safely serialize to JSON
         try:
             log_string = json.dumps(log_data)
@@ -93,15 +87,28 @@ def setup_logging():
     try:
         # Console handler - show INFO and above in console to reduce verbosity
         # Change to INFO to reduce debug logging in the console
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)  
+        # Wrap stdout to handle potential encoding issues on Windows console
+        utf8_stdout = io.TextIOWrapper(
+            sys.stdout.buffer, encoding="utf-8", errors="replace"
+        )
+        console_handler = logging.StreamHandler(utf8_stdout)
+        console_handler.setLevel(logging.DEBUG)  # Changed from INFO to DEBUG
+        # Use a basic formatter for the console to avoid double printing from StructuredLogger
+        console_formatter = logging.Formatter("%(message)s")
+        console_handler.setFormatter(console_formatter)
         logger.addHandler(console_handler)
 
         # File handler for persistent logs - keep all logs
-        file_handler = logging.FileHandler("logs/fastapi_server.log")
+        # Ensure file handler also uses UTF-8
+        file_handler = logging.FileHandler("logs/fastapi_server.log", encoding="utf-8")
         file_handler.setLevel(
             logging.INFO
         )  # Keep file handler at INFO or DEBUG, depending on your needs. INFO is fine to reduce file size.
+        # Use a JSON formatter for the file to keep structured logs
+        json_formatter = logging.Formatter(
+            '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s"}'
+        )  # Basic JSON structure
+        file_handler.setFormatter(json_formatter)
         logger.addHandler(file_handler)
     except Exception as e:
         print(f"Failed to setup logging handlers: {str(e)}")

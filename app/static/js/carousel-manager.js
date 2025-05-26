@@ -63,8 +63,6 @@ class Carousel {
       
       // Add event listeners
       this.setupEventListeners();
-      
-      console.log(`Carousel "${this.elementId}" initialized with ${this.itemCount} items`);
     } catch (error) {
       console.error(`Error during carousel initialization:`, error);
     }
@@ -242,3 +240,10 @@ function setupCarouselKeyboardNavigation(carousels) {
     }
   });
 }
+
+// Export for ES6 modules
+export { Carousel, setupCarouselKeyboardNavigation };
+
+// Also make available globally for onclick handlers
+window.Carousel = Carousel;
+window.setupCarouselKeyboardNavigation = setupCarouselKeyboardNavigation;

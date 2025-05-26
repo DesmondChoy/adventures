@@ -2,30 +2,77 @@
 
 ## Key Design Patterns
 
-### 1. Singleton Pattern for State Storage
+### 1. Supabase Persistence Pattern
 - **StateStorageService** (`app/services/state_storage_service.py`)
-  * Ensures all instances share the same memory cache
-  * Implemented with class variables and `__new__` method
-  * Prevents state loss between different service instances
-  * Critical for "Take a Trip Down Memory Lane" button functionality
+  * Uses the `supabase-py` client to interact with a Supabase backend.
+  * Initializes the client using environment variables (`SUPABASE_URL`, `SUPABASE_SERVICE_KEY`).
+  * Provides methods (`store_state`, `get_state`, `get_active_adventure_id`) for CRUD operations on the `adventures` table.
+  * Handles JSON serialization/deserialization for the `state_data` column.
+  * Implements an upsert mechanism in `store_state` (update if `adventure_id` exists, insert otherwise).
+  * Extracts key fields (`story_category`, `lesson_topic`, `is_complete`, `completed_chapter_count`, `environment`) into dedicated columns for querying, while storing the full state in `state_data`.
+  * Enables persistent adventure state across sessions and server restarts.
+  * Handles `user_id` (from authenticated users) by converting it to a string before database operations to prevent serialization errors.
+  * Prioritizes `user_id` over `client_uuid` for retrieving active adventures if `user_id` is available.
   ```python
+  # Example Initialization in StateStorageService
   class StateStorageService:
-      _instance = None
-      _memory_cache = {}  # Shared memory cache across all instances
-      _initialized = False
-
-      def __new__(cls):
-          if cls._instance is None:
-              cls._instance = super(StateStorageService, cls).__new__(cls)
-          return cls._instance
-
       def __init__(self):
-          if not StateStorageService._initialized:
-              StateStorageService._initialized = True
-              logger.info("Initializing StateStorageService singleton")
+          load_dotenv()
+          supabase_url = os.getenv("SUPABASE_URL")
+          supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
+          # ... error handling ...
+          self.supabase: Client = create_client(supabase_url, supabase_key)
+          logger.info("Initialized StateStorageService with Supabase client")
+
+      async def store_state(self, state_data: Dict[str, Any], adventure_id: Optional[str] = None, user_id: Optional[UUID] = None, ...) -> str:
+          user_id_for_db = str(user_id) if user_id is not None else None
+          # ... prepares record including user_id_for_db ...
+          if adventure_id:
+              # ... update logic using self.supabase.table("adventures").update()...
+          else:
+              # ... insert logic using self.supabase.table("adventures").insert()...
+          # ... returns adventure_id ...
+
+      async def get_state(self, state_id: str) -> Optional[Dict[str, Any]]:
+          # ... logic using self.supabase.table("adventures").select("state_data")...
+          # ... returns state_data ...
+
+      async def get_active_adventure_id(self, client_uuid: Optional[str] = None, user_id: Optional[UUID] = None) -> Optional[str]:
+          # ... logic prioritizes user_id (converted to str for query) then client_uuid ...
+          # ... returns adventure_id or None ...
   ```
 
-### 2. Case Sensitivity Handling Pattern
+### 2. WebSocket JWT Authentication and User Identification Pattern
+- **Mechanism:**
+  * User authentication (e.g., Google Sign-In) is handled on the frontend, yielding a JWT from Supabase Auth.
+  * The JWT is passed as a query parameter (`token`) when establishing the WebSocket connection (`/ws/story/{story_category}/{lesson_topic}?token=...`).
+  * **Backend Validation (`app/routers/websocket_router.py`):**
+    * The `story_websocket` endpoint receives the `token`.
+    * If a token is present, it's decoded and validated using `PyJWT` and the `SUPABASE_JWT_SECRET` environment variable.
+    * The `sub` claim from the JWT payload is extracted as the `user_id`.
+    * This `user_id` (as a `UUID` object) is stored in a `connection_data` dictionary associated with the WebSocket session.
+- **Usage:**
+  * The `user_id` from `connection_data` is used by services like `StateStorageService` (for associating adventures with users) and `TelemetryService` (for logging user-specific events).
+  * This allows linking game state and telemetry data to authenticated users.
+- **Error Handling:** Includes checks for missing tokens, missing JWT secret, expired tokens, and invalid tokens.
+  ```python
+  # Simplified example from websocket_router.py
+  async def story_websocket(websocket: WebSocket, token: Optional[str] = Query(None)):
+      connection_data = {"user_id": None}
+      if token:
+          supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+          if supabase_jwt_secret:
+              try:
+                  payload = jwt.decode(token, supabase_jwt_secret, algorithms=["HS256"], audience="authenticated")
+                  user_id_from_token_str = payload.get("sub")
+                  if user_id_from_token_str:
+                      connection_data["user_id"] = UUID(user_id_from_token_str)
+              except Exception as e:
+                  logger.warning(f"JWT processing error: {e}")
+      # ... rest of WebSocket logic using connection_data["user_id"] ...
+  ```
+
+### 3. Case Sensitivity Handling Pattern
 - **AdventureStateManager** (`app/services/adventure_state_manager.py`)
   * Converts uppercase chapter types to lowercase during state reconstruction
   * Ensures compatibility between stored state and AdventureState model
@@ -37,7 +84,7 @@
       logger.debug(f"Converted chapter_type to lowercase: {chapter['chapter_type']}")
   ```
 
-### 3. Modular Summary Service Pattern
+### 4. Modular Summary Service Pattern
 - **Package Structure** (`app/services/summary/`)
   * Organized by responsibility with clear component separation
   * Proper package exports through `__init__.py`
@@ -63,7 +110,7 @@
       # Use injected summary_service
   ```
 
-### 4. Format Example Pattern for LLM Prompts
+### 5. Format Example Pattern for LLM Prompts
 - **Structure and Examples**
   * Providing both incorrect and correct examples in prompts
   * Showing the incorrect example first to highlight what to avoid
@@ -72,7 +119,7 @@
   * Explicitly instructing the LLM to use exact section headers
   * Example implementation in `SUMMARY_CHAPTER_PROMPT` for title and summary extraction
 
-### 5. Mobile-Optimized Scrolling Pattern
+### 6. Mobile-Optimized Scrolling Pattern
 - **Fixed Height with Dynamic Content**
   * Using fixed container heights with scrollable content areas
   * Explicit height containers with proper overflow handling
@@ -86,7 +133,7 @@
   * Wider scrollbars for better touch interaction
   * Visual indicators (fade effects) to show scrollable content
 
-### 6. Backend-Frontend Naming Convention Pattern
+### 7. Backend-Frontend Naming Convention Pattern
 - **Centralized Case Conversion** (`app/utils/case_conversion.py`)
   * Utility functions for converting between snake_case and camelCase
   * Recursive handling of nested dictionaries and lists
@@ -123,7 +170,7 @@
       return result
   ```
 
-### 7. Modular Template Structure Pattern
+### 8. Modular Template Structure Pattern
 - **Template Hierarchy** (`app/templates/`)
   * `layouts/main_layout.html`: Base layout template that extends `base.html`
   * `pages/index.html`: Page-specific template that extends the layout
@@ -138,7 +185,30 @@
   * Simplified testing and debugging of individual components
   * Reduced duplication through component reuse
 
-### 8. Paragraph Formatting Pattern
+### 9. Modular JavaScript Architecture Pattern
+- **ES6 Module Structure** (`app/static/js/`)
+  * `authManager.js`: Handles Supabase authentication, session management, and user status UI updates
+  * `adventureStateManager.js`: Manages localStorage operations for adventure state persistence and client UUID generation
+  * `webSocketManager.js`: Handles WebSocket connections, reconnection logic, URL construction, and message handling setup
+  * `stateManager.js`: Manages adventure state operations, state transitions, and state manipulation functions
+  * `uiManager.js`: Consolidates all DOM manipulation, UI updates, story content rendering, choice display, and user interface functions
+  * `main.js`: Serves as the main entry point, coordinates all modules, handles application initialization, and manages global state
+
+- **Configuration Bridge** (`app/templates/components/scripts.html`)
+  * Sets up `window.appConfig` with server-side Jinja2 data (totalCategories, totalLessonTopics)
+  * Loads the main JavaScript application module using `<script type="module">`
+  * Exposes necessary functions globally for template onclick handlers
+  * Minimal inline JavaScript focused on module loading and configuration
+
+- **Benefits**
+  * Clean dependency management through ES6 import/export
+  * Improved testability with isolated, focused modules
+  * Enhanced maintainability through separation of concerns
+  * Reduced global namespace pollution
+  * Clear module boundaries and responsibilities
+  * Easier debugging and development with focused files
+
+### 10. Paragraph Formatting Pattern
 - **Regeneration-First Approach**
   * Detects text that needs paragraph formatting based on length and structure
   * Makes up to 3 new requests with the original prompt to get properly formatted text
@@ -151,7 +221,7 @@
   * Streams text normally if properly formatted
   * Optimizes for different LLM providers
 
-### 9. Story Simulation Pattern
+### 11. Story Simulation Pattern
 - **Standardized Logging**
   * Consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`)
   * Source tracking for debugging
@@ -164,7 +234,7 @@
   * Graceful degradation when services are unavailable
   * Comprehensive logging of error states and recovery attempts
 
-### 10. Dual-Purpose Content Generation
+### 12. Dual-Purpose Content Generation
 - **Chapter Summaries** (`generate_chapter_summary()`)
   * Focus on narrative events and character development
   * 70-100 words covering key events and educational content
@@ -172,16 +242,53 @@
   * Written in third person, past tense narrative style
 
 - **Image Scenes** (`generate_image_scene()`)
-  * Focus on the most visually striking moment from a chapter
-  * Approximately 100 words of pure visual description, incorporating character visual context
-  * Used exclusively for image generation
-  * Describes specific dramatic action or emotional peak
+  * Focus on the most visually striking moment from a chapter.
+  * Generates a concise visual description (approx. 50 words) of this moment using `IMAGE_SCENE_PROMPT`.
+  * This description serves as a primary input to the two-step image prompt synthesis process.
+  * Describes specific dramatic action or emotional peak, focusing purely on visual elements of the immediate scene.
 
-### 11. Dynamic Narrative Handling Pattern (CRITICAL)
+### 13. Dynamic Narrative Handling Pattern (CRITICAL)
 - **Principle:** Narrative content (story text, character names, specific events) is generated dynamically by LLMs and is inherently variable. It MUST NOT be hardcoded into application logic or tests.
 - **Strategies:**
   * **Rely on Structure:** Base logic and validation on the defined structure of the `AdventureState`, `ChapterData`, and expected `ChapterType`. Check for the presence and type of data, not its specific content.
   * **Use Metadata:** Leverage structured data stored in `state.metadata` (e.g., agency details, extracted character identifiers) for reliable decision-making.
   * **Abstract Testing:** Focus tests on verifying state transitions, structural correctness of data, service interactions, and adherence to chapter flow rules. Avoid asserting against specific narrative sentences. (See `testingGuidelines.md`).
-  * **LLM-Based Extraction:** If specific details *must* be extracted from narrative text (e.g., character visuals), use robust LLM-based extraction prompts designed for this purpose. Store the extracted information in structured fields within the state, rather than re-parsing the text later. Avoid brittle regex for narrative content.
+  * **LLM-Based Extraction:** If specific details *must* be extracted from narrative text (e.g., character visuals), use robust LLM-based extraction prompts designed for this purpose. Store the extracted information in structured fields within the state (e.g., `state.character_visuals`), rather than re-parsing the text later. Avoid brittle regex for narrative content.
 - **Goal:** Ensure the application is robust and functions correctly regardless of the specific text generated by the LLM in any given playthrough.
+
+### 14. Character Visual Evolution Pattern
+- **State Management (`AdventureState.character_visuals`):**
+  * A dictionary `state.character_visuals` stores the current visual descriptions for all significant characters (protagonist and NPCs), keyed by character name.
+  * Initialized with the protagonist's base description (`state.protagonist_description`).
+- **Asynchronous Visual Updates (`choice_processor.py` -> `_update_character_visuals`):**
+  * After each chapter's narrative is processed, an asynchronous task is triggered.
+  * This task uses the `CHARACTER_VISUAL_UPDATE_PROMPT` with the latest chapter content and the current `state.character_visuals` as input.
+  * The LLM identifies new characters or visual changes to existing ones and returns an updated JSON dictionary of visuals.
+  * Robust JSON extraction and error handling are employed.
+- **Synchronous Extraction Fix:**
+  * The call to `_update_character_visuals` is made synchronously (awaited) within `choice_processor.py` after a timing issue was identified with fully asynchronous calls, ensuring visual data is processed reliably before subsequent steps that might depend on it. Non-streaming LLM calls are used for this extraction to get complete JSON objects. (Details in `wip/implemented/character_visual_extraction_timing_fix.md`).
+- **Intelligent Merging (`AdventureStateManager.update_character_visuals`):**
+  * The `AdventureStateManager` takes the updated visuals dictionary from the LLM.
+  * It intelligently merges this with the existing `state.character_visuals`, only updating descriptions for characters that are new or have changed, preserving existing descriptions otherwise.
+  * Detailed logging tracks new, updated, and unchanged character visuals.
+- **Goal:** Maintain consistent and evolving character appearances throughout the adventure, reflecting narrative developments in their visual descriptions for use in image generation.
+
+### 15. Two-Step Image Prompt Synthesis Pattern
+- **Overview:** A multi-step process to create rich, context-aware prompts for the image generation model (Imagen), enhancing visual consistency and relevance.
+- **Step 1: Gather Core Visual Inputs:**
+  * **Image Scene Description:** A concise (~50 words) description of the chapter's most visually striking moment, generated by an LLM call using `IMAGE_SCENE_PROMPT` and the chapter content. This focuses purely on the immediate scene's action and visual elements.
+  * **Protagonist Base Look:** The consistent base visual description of the protagonist, stored in `state.protagonist_description`.
+  * **Agency Details:** The protagonist's chosen agency (item, companion, etc.), including its name, category, and specific visual description, stored in `state.metadata.agency`. (Enhanced by `wip/implemented/agency_visual_details_enhancement.md`).
+  * **Story Visual Sensory Detail:** An overall visual mood/style element for the story, from `state.selected_sensory_details['visuals']`.
+  * **Evolved Character Visuals:** The latest available `state.character_visuals` dictionary, containing up-to-date descriptions for the protagonist (if evolved) and NPCs.
+- **Step 2: LLM-Powered Prompt Synthesis (`ImageGenerationService.synthesize_image_prompt`):**
+  * An LLM (Gemini Flash) is invoked with a specialized meta-prompt (`IMAGE_SYNTHESIS_PROMPT`).
+  * This meta-prompt instructs the LLM to logically combine all the above inputs into a single, coherent, and vivid visual scene description (target 30-50 words) suitable for Imagen.
+  * The LLM is guided to prioritize the immediate `Image Scene Description` while integrating the protagonist's look, agency, and relevant NPC visuals from `state.character_visuals` if they appear in the scene.
+- **Step 3: Image Generation:**
+  * The synthesized prompt from Step 2 is then fed to `ImageGenerationService.generate_image_async()` to produce the final image.
+- **Benefits:**
+  * Improves visual consistency for the protagonist and recurring NPCs.
+  * Allows for dynamic integration of agency elements.
+  * Produces more contextually relevant and detailed images by leveraging an LLM to intelligently merge various visual cues.
+  * (Details in `wip/implemented/protagonist_inconsistencies.md` and `wip/implemented/characters_evolution_visual_inconsistencies.md`).

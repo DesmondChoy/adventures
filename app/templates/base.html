@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/static/css/layout.css">
     <link rel="stylesheet" href="/static/css/components.css">
     <link rel="stylesheet" href="/static/css/carousel-component.css">
+    <link rel="stylesheet" href="/static/css/resume-modal.css"> {# Added resume modal CSS #}
     {% block styles %}{% endblock %}
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -19,6 +20,37 @@
     {% block scripts %}
     <script src="/static/js/font-size-manager.js"></script>
     <script src="/static/js/carousel-manager.js"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+      const SUPABASE_URL_FROM_JINJA_TEST = '{{ supabase_url | default("JINJA_URL_MISSING") }}';
+      const SUPABASE_ANON_KEY_FROM_JINJA_TEST = '{{ supabase_anon_key | default("JINJA_KEY_MISSING") }}';
+      
+      if (SUPABASE_URL_FROM_JINJA_TEST && SUPABASE_URL_FROM_JINJA_TEST !== 'JINJA_URL_MISSING' &&
+          SUPABASE_ANON_KEY_FROM_JINJA_TEST && SUPABASE_ANON_KEY_FROM_JINJA_TEST !== 'JINJA_KEY_MISSING' &&
+          window.supabase && typeof window.supabase.createClient === 'function') {
+        try {
+          const clientInstance = window.supabase.createClient(SUPABASE_URL_FROM_JINJA_TEST, SUPABASE_ANON_KEY_FROM_JINJA_TEST);
+          window.supabase = clientInstance; 
+        } catch (error) {
+          console.error("[DEBUG base.html] Error initializing Supabase client instance:", error);
+          window.supabase = null; // Ensure it's null if initialization fails
+        }
+      } else {
+        if (!(window.supabase && typeof window.supabase.createClient === 'function')) {
+            // console.warn("[DEBUG base.html] Supabase library (window.supabase) from CDN not loaded correctly or createClient is not a function."); // Kept as warn
+        }
+        if (!SUPABASE_URL_FROM_JINJA_TEST || SUPABASE_URL_FROM_JINJA_TEST === 'JINJA_URL_MISSING') {
+            // console.warn("[DEBUG base.html] Supabase URL not provided by Jinja. Client not initialized."); // Kept as warn
+        }
+        if (!SUPABASE_ANON_KEY_FROM_JINJA_TEST || SUPABASE_ANON_KEY_FROM_JINJA_TEST === 'JINJA_KEY_MISSING') {
+            // console.warn("[DEBUG base.html] Supabase Anon Key not provided by Jinja. Client not initialized."); // Kept as warn
+        }
+        if (typeof window.supabase?.auth === 'undefined') { 
+            window.supabase = null;
+        }
+      }
+    </script>
     {% endblock %}
 </body>
 </html>

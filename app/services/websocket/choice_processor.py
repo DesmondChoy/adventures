@@ -4,6 +4,8 @@ import logging
 import re
 import json
 import asyncio
+import time  # Added import
+from uuid import UUID
 
 from app.models.story import (
     ChapterType,
@@ -18,6 +20,7 @@ from app.services.chapter_manager import ChapterManager
 from app.services.state_storage_service import StateStorageService
 from app.services.llm import LLMService
 from app.services.llm.prompt_templates import CHARACTER_VISUAL_UPDATE_PROMPT
+from app.services.telemetry_service import TelemetryService
 
 from .content_generator import generate_chapter
 from .summary_generator import generate_summary_content, stream_summary_content
@@ -26,10 +29,14 @@ logger = logging.getLogger("story_app")
 chapter_manager = ChapterManager()
 state_storage_service = StateStorageService()
 llm_service = LLMService()
+telemetry_service = TelemetryService()
 
 
 async def handle_reveal_summary(
-    state: AdventureState, state_manager: AdventureStateManager, websocket: WebSocket
+    state: AdventureState,
+    state_manager: AdventureStateManager,
+    websocket: WebSocket,
+    connection_data: Optional[Dict[str, Any]] = None,
 ) -> Tuple[None, None, bool]:
     """Handle the reveal_summary special choice."""
     logger.info("Processing reveal_summary choice")
@@ -51,7 +58,9 @@ async def handle_reveal_summary(
             "Created placeholder response for CONCLUSION chapter with whitespace"
         )
 
-        await generate_conclusion_chapter_summary(conclusion_chapter, state, websocket)
+        await generate_conclusion_chapter_summary(
+            conclusion_chapter, state, websocket, connection_data
+        )
 
     # Create and generate the SUMMARY chapter
     summary_chapter = chapter_manager.create_summary_chapter(state)
@@ -93,7 +102,10 @@ async def handle_reveal_summary(
 
 
 async def generate_conclusion_chapter_summary(
-    conclusion_chapter: ChapterData, state: AdventureState, websocket: WebSocket
+    conclusion_chapter: ChapterData,
+    state: AdventureState,
+    websocket: WebSocket,
+    connection_data: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Generate and store summary for the conclusion chapter."""
     try:
@@ -158,10 +170,35 @@ async def generate_conclusion_chapter_summary(
             )
 
         # Store the updated state in StateStorageService
-        state_id = await state_storage_service.store_state(state.dict())
-        logger.info(
-            f"Stored state with ID: {state_id} after generating CONCLUSION chapter summary"
-        )
+        adventure_id = None
+
+        # Use existing adventure_id if available in connection_data
+        if connection_data and "adventure_id" in connection_data:
+            adventure_id = connection_data["adventure_id"]
+            logger.info(
+                f"Using existing adventure_id: {adventure_id} for state storage"
+            )
+
+            # Update the existing record with is_complete=True
+            # Update the existing record with is_complete=True
+            state_id = await state_storage_service.store_state(
+                state.dict(),
+                adventure_id=adventure_id,
+                user_id=None,  # No authenticated user yet
+                explicit_is_complete=True,  # Mark as complete
+            )
+            logger.info(
+                f"Updated state with ID: {state_id} (is_complete=True) after generating CONCLUSION chapter summary"
+            )
+        else:
+            # Create a new record if no adventure_id is available
+            state_id = await state_storage_service.store_state(
+                state.dict(),
+                explicit_is_complete=True,  # Mark as complete
+            )
+            logger.info(
+                f"Stored new state with ID: {state_id} (is_complete=True) after generating CONCLUSION chapter summary"
+            )
 
         # Include the state_id in the response to the client
         await websocket.send_json({"type": "summary_ready", "state_id": state_id})
@@ -694,6 +731,7 @@ async def process_non_start_choice(
     story_category: str,
     lesson_topic: str,
     websocket: WebSocket,
+    connection_data: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Optional[ChapterContent], Optional[dict], bool]:
     """Process a non-start choice from the user."""
     logger.debug(f"Processing non-start choice: {chosen_path}")
@@ -723,6 +761,68 @@ async def process_non_start_choice(
         await process_lesson_response(previous_chapter, choice_text, state, websocket)
     else:
         await process_story_response(previous_chapter, chosen_path, choice_text, state)
+
+    # Calculate event_duration_ms for 'choice_made'
+    calculated_duration_ms: Optional[int] = None
+    if connection_data and isinstance(connection_data, dict):
+        start_time_ms = connection_data.pop("current_chapter_start_time_ms", None)
+        if start_time_ms is not None:
+            current_time_ms = int(time.time() * 1000)
+            calculated_duration_ms = current_time_ms - start_time_ms
+            logger.info(
+                f"Calculated time spent on chapter {previous_chapter.chapter_number}: {calculated_duration_ms} ms"
+            )
+        else:
+            logger.warning(
+                f"Could not find 'current_chapter_start_time_ms' in connection_data for chapter {previous_chapter.chapter_number}. Duration will be null."
+            )
+    else:
+        logger.warning(
+            "'connection_data' not available or not a dict in choice_processor, cannot calculate duration."
+        )
+
+    calculated_duration_seconds: Optional[int] = None
+    if calculated_duration_ms is not None:
+        calculated_duration_seconds = round(calculated_duration_ms / 1000)
+
+    # Log choice_made event
+    try:
+        event_metadata = {
+            "chapter_number": previous_chapter.chapter_number,
+            "chapter_type": previous_chapter.chapter_type.value,
+            "choice_text": choice_text,
+            "story_category": story_category,
+            "lesson_topic": lesson_topic,
+            "client_uuid": connection_data.get("client_uuid")
+            if connection_data
+            else None,
+        }
+        if previous_chapter.chapter_type == ChapterType.STORY:
+            event_metadata["chosen_path"] = chosen_path
+        elif previous_chapter.chapter_type == ChapterType.LESSON and isinstance(
+            previous_chapter.response, LessonResponse
+        ):
+            event_metadata["is_correct"] = previous_chapter.response.is_correct
+
+        event_metadata = {k: v for k, v in event_metadata.items() if v is not None}
+
+        current_adventure_id = (
+            connection_data.get("adventure_id") if connection_data else None
+        )
+        await telemetry_service.log_event(
+            event_name="choice_made",
+            adventure_id=UUID(current_adventure_id) if current_adventure_id else None,
+            user_id=connection_data.get("user_id") if connection_data else None,
+            metadata=event_metadata,
+            chapter_type=previous_chapter.chapter_type.value,
+            chapter_number=previous_chapter.chapter_number,
+            event_duration_seconds=calculated_duration_seconds,
+        )
+        logger.info(
+            f"Logged 'choice_made' event for adventure ID: {current_adventure_id}, chapter: {previous_chapter.chapter_number}, duration: {calculated_duration_seconds} s"
+        )
+    except Exception as tel_e:
+        logger.error(f"Error logging 'choice_made' event: {tel_e}")
 
     # Generate a chapter summary for the previous chapter
     await generate_chapter_summary(previous_chapter, state)

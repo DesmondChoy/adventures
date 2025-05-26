@@ -2,7 +2,7 @@
 
 ## Implementation Status
 
-**Status: IN PROGRESS ⏳**
+**Status: Completed**
 
 **Completed Steps:**
 - ✅ Step 1: Define Predefined Protagonist Descriptions (2025-03-30)
@@ -275,7 +275,7 @@ Implement a two-step process where an intermediary LLM call synthesizes the fina
         logger.info("=" * 50 + "\n")
         ```
 
-*   [ ] **Step 9: Update Chapter 1 Prompt Generation:**
+*   [x] **Step 9: Update Chapter 1 Prompt Generation:**
     *   **File:** `app/services/llm/prompt_templates.py`
     *   **Action:** Modify the `FIRST_CHAPTER_PROMPT` template to accept and incorporate the `protagonist_description`. Add a placeholder like `{protagonist_description}` within the "Chapter Development Guidelines" or similar section.
     *   **File:** `app/services/llm/prompt_engineering.py`

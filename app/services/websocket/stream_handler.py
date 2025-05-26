@@ -4,11 +4,19 @@ import asyncio
 import logging
 import re
 import os
+import time  # Added import
+from uuid import UUID
 
-from app.models.story import ChapterType, ChapterContent, AdventureState
+from app.models.story import (
+    ChapterType,
+    ChapterContent,
+    AdventureState,
+    StoryChoice,
+)  # Changed ChapterChoice to StoryChoice
 
 from .content_generator import clean_chapter_content
 from .image_generator import start_image_generation_tasks, process_image_tasks
+from app.services.telemetry_service import TelemetryService
 
 # Constants for streaming optimization
 WORD_BATCH_SIZE = 1  # Reduced to stream word by word
@@ -16,55 +24,169 @@ WORD_DELAY = 0.02  # Delay between words
 PARAGRAPH_DELAY = 0.1  # Delay between paragraphs
 
 logger = logging.getLogger("story_app")
+telemetry_service = TelemetryService()
 
 
 async def stream_chapter_content(
     websocket: WebSocket,
-    chapter_content: ChapterContent,
-    sampled_question: Optional[Dict[str, Any]],
     state: AdventureState,
+    adventure_id: Optional[str] = None,  # Added for telemetry
+    story_category: Optional[str] = None,  # Added for telemetry
+    lesson_topic: Optional[str] = None,  # Added for telemetry
+    connection_data: Optional[Dict[str, Any]] = None,  # Added for storing start time
+    # For non-resumption:
+    generated_chapter_content_model: Optional[ChapterContent] = None,
+    generated_sampled_question_dict: Optional[Dict[str, Any]] = None,
+    # For resumption:
+    is_resumption: bool = False,
+    resumption_chapter_content_dict: Optional[Dict[str, Any]] = None,
+    resumption_sampled_question_dict: Optional[Dict[str, Any]] = None,
+    resumption_chapter_number: Optional[int] = None,
+    resumption_chapter_type: Optional[ChapterType] = None,
 ) -> None:
-    """Stream chapter content and send chapter data to the client."""
-    # Use the Pydantic validator to clean the content before streaming
-    content_to_stream = clean_chapter_content(chapter_content.content)
+    """Stream chapter content and send chapter data to the client.
+    Handles both new chapter generation and resumption of an existing chapter.
+    """
+    final_chapter_content_pydantic: ChapterContent
+    final_sampled_question_as_dict: Optional[Dict[str, Any]]
+    current_chapter_number_to_send: int
+    current_chapter_type_to_send: ChapterType
+    content_to_stream: str
+    image_tasks: List[asyncio.Task] = []
 
-    # Get chapter type for current chapter
-    # The current chapter has already been added to the state at this point
-    current_chapter_number = len(state.chapters)
-
-    # Debug log to check chapter number calculation
-    logger.debug(f"Current chapter number: {current_chapter_number}")
-    logger.debug(f"State has {len(state.chapters)} existing chapters")
-
-    # Make sure we have a valid chapter number (never 0)
-    if current_chapter_number < 1:
-        logger.warning(f"Invalid chapter number {current_chapter_number}, setting to 1")
-        current_chapter_number = 1
-
-    # Get the chapter type from planned types (index is 0-based, so subtract 1)
-    chapter_type_index = current_chapter_number - 1
-    if chapter_type_index < 0 or chapter_type_index >= len(state.planned_chapter_types):
-        logger.error(
-            f"Chapter type index {chapter_type_index} out of range for planned_chapter_types with length {len(state.planned_chapter_types)}"
+    if is_resumption:
+        logger.info(
+            f"Resuming chapter. Using provided chapter content and question data dicts for chapter {resumption_chapter_number}."
         )
-        # Use a default chapter type as fallback
-        chapter_type = ChapterType.STORY
-    else:
-        chapter_type = state.planned_chapter_types[chapter_type_index]
-        if not isinstance(chapter_type, ChapterType):
-            chapter_type = ChapterType(chapter_type)
+        if (
+            resumption_chapter_content_dict is None
+            or resumption_chapter_number is None
+            or resumption_chapter_type is None
+        ):
+            logger.error(
+                "Resumption error: missing resumption_chapter_content_dict, resumption_chapter_number, or resumption_chapter_type."
+            )
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "message": "Failed to resume chapter: critical data missing.",
+                }
+            )
+            return
 
-    # Start image generation - do this first to give more time for generation
-    try:
-        image_tasks = await start_image_generation_tasks(
-            current_chapter_number, chapter_type, chapter_content, state
+        try:
+            parsed_choices_for_resumption = []
+            raw_choices = resumption_chapter_content_dict.get("choices", [])
+            if raw_choices:  # Ensure raw_choices is not None
+                for choice_data in raw_choices:
+                    if (
+                        isinstance(choice_data, dict)
+                        and "text" in choice_data
+                        and "next_chapter" in choice_data
+                    ):
+                        parsed_choices_for_resumption.append(
+                            StoryChoice(  # Changed ChapterChoice to StoryChoice
+                                text=choice_data["text"],
+                                next_chapter=str(choice_data["next_chapter"]),
+                            )
+                        )
+                    elif isinstance(
+                        choice_data,
+                        StoryChoice,  # Changed ChapterChoice to StoryChoice
+                    ):  # Should not happen if .dict() was called from Pydantic model
+                        parsed_choices_for_resumption.append(choice_data)
+                    else:
+                        logger.warning(
+                            f"Skipping invalid choice data during resumption: {choice_data}"
+                        )
+
+            final_chapter_content_pydantic = ChapterContent(
+                content=resumption_chapter_content_dict.get("content", ""),
+                choices=parsed_choices_for_resumption,
+            )
+            final_sampled_question_as_dict = resumption_sampled_question_dict
+
+            current_chapter_number_to_send = resumption_chapter_number
+            current_chapter_type_to_send = resumption_chapter_type
+
+        except Exception as e:
+            logger.error(
+                f"Error reconstructing ChapterContent from dict during resumption: {e}",
+                exc_info=True,
+            )
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "message": "Failed to resume chapter: content parsing error.",
+                }
+            )
+            return
+
+        content_to_stream = clean_chapter_content(
+            final_chapter_content_pydantic.content
         )
         logger.info(
-            f"Started {len(image_tasks)} image generation tasks for chapter {current_chapter_number}"
+            f"Skipping image generation for resumed chapter {current_chapter_number_to_send}"
         )
-    except Exception as e:
-        logger.error(f"Error starting image generation tasks: {str(e)}")
-        image_tasks = []  # Empty list as fallback
+
+    else:  # Not resumption
+        if generated_chapter_content_model is None:
+            logger.error("Non-resumption call missing generated_chapter_content_model.")
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "message": "Internal server error: missing chapter data for streaming.",
+                }
+            )
+            return
+        final_chapter_content_pydantic = generated_chapter_content_model
+        final_sampled_question_as_dict = generated_sampled_question_dict
+
+        current_chapter_number_to_send = len(state.chapters)
+        logger.debug(
+            f"New chapter number: {current_chapter_number_to_send}. State has {len(state.chapters)} existing chapters."
+        )
+        if current_chapter_number_to_send < 1:
+            logger.warning(
+                f"Invalid chapter number {current_chapter_number_to_send} for new chapter, setting to 1"
+            )
+            current_chapter_number_to_send = 1
+
+        chapter_type_index = current_chapter_number_to_send - 1
+        if chapter_type_index < 0 or chapter_type_index >= len(
+            state.planned_chapter_types
+        ):
+            logger.error(
+                f"Chapter type index {chapter_type_index} out of range for planned_chapter_types with length {len(state.planned_chapter_types)}"
+            )
+            current_chapter_type_to_send = ChapterType.STORY  # Fallback
+        else:
+            planned_type = state.planned_chapter_types[chapter_type_index]
+            if isinstance(planned_type, ChapterType):
+                current_chapter_type_to_send = planned_type
+            else:  # Assuming it's a string from older state or direct manipulation
+                current_chapter_type_to_send = ChapterType(str(planned_type).lower())
+
+        content_to_stream = clean_chapter_content(
+            final_chapter_content_pydantic.content
+        )
+
+        # Start image generation for new chapters
+        try:
+            image_tasks = await start_image_generation_tasks(
+                current_chapter_number_to_send,
+                current_chapter_type_to_send,
+                final_chapter_content_pydantic,
+                state,
+            )
+            logger.info(
+                f"Started {len(image_tasks)} image generation tasks for chapter {current_chapter_number_to_send}"
+            )
+        except Exception as e:
+            logger.error(
+                f"Error starting image generation tasks: {str(e)}", exc_info=True
+            )
+            image_tasks = []
 
     # Stream chapter content
     await stream_text_content(content_to_stream, websocket)
@@ -72,10 +194,10 @@ async def stream_chapter_content(
     # Send complete chapter data with choices included
     await send_chapter_data(
         content_to_stream,
-        chapter_content,
-        chapter_type,
-        current_chapter_number,
-        sampled_question,
+        final_chapter_content_pydantic,
+        current_chapter_type_to_send,
+        current_chapter_number_to_send,
+        final_sampled_question_as_dict,
         state,
         websocket,
     )
@@ -85,8 +207,8 @@ async def stream_chapter_content(
         {
             "type": "choices",
             "choices": [
-                {"text": choice.text, "id": choice.next_chapter}
-                for choice in chapter_content.choices
+                {"text": choice.text, "id": str(choice.next_chapter)}
+                for choice in final_chapter_content_pydantic.choices
             ],
         }
     )
@@ -94,20 +216,69 @@ async def stream_chapter_content(
     # Hide loader after streaming content, but before waiting for image tasks
     await websocket.send_json({"type": "hide_loader"})
 
-    # If we have image tasks, wait for them to complete and send updates
+    # If we have image tasks (only if not is_resumption), wait for them to complete and send updates
+    if not is_resumption:
+        try:
+            if image_tasks:
+                await process_image_tasks(
+                    image_tasks, current_chapter_number_to_send, websocket
+                )
+                logger.info(
+                    f"Processed image tasks for chapter {current_chapter_number_to_send}"
+                )
+            else:
+                logger.warning(
+                    f"No image tasks available for chapter {current_chapter_number_to_send} (non-resumption), using fallback image"
+                )
+                await send_fallback_image(
+                    state, current_chapter_number_to_send, websocket
+                )
+        except Exception as e:
+            logger.error(f"Error processing image tasks: {str(e)}", exc_info=True)
+            await send_fallback_image(state, current_chapter_number_to_send, websocket)
+    elif is_resumption:
+        logger.info(
+            f"Image processing skipped for resumed chapter {current_chapter_number_to_send}."
+        )
+        # Optionally, send a message or ensure client handles no new image for resumed chapter
+
+    # Log chapter_viewed event
     try:
-        if image_tasks:
-            await process_image_tasks(image_tasks, current_chapter_number, websocket)
-            logger.info(f"Processed image tasks for chapter {current_chapter_number}")
-        else:
-            logger.warning(
-                f"No image tasks available for chapter {current_chapter_number}, using fallback image"
-            )
-            await send_fallback_image(state, current_chapter_number, websocket)
-    except Exception as e:
-        logger.error(f"Error processing image tasks: {str(e)}")
-        # Try to send a fallback image for the chapter
-        await send_fallback_image(state, current_chapter_number, websocket)
+        event_metadata = {
+            "chapter_number": current_chapter_number_to_send,
+            "chapter_type": current_chapter_type_to_send.value,
+            "story_category": story_category,  # Use passed argument
+            "lesson_topic": lesson_topic,  # Use passed argument
+            "is_resumption": is_resumption,
+            "client_uuid": state.metadata.get("client_uuid"),
+        }
+        # Remove None values from metadata to keep it clean
+        event_metadata = {k: v for k, v in event_metadata.items() if v is not None}
+
+        await telemetry_service.log_event(
+            event_name="chapter_viewed",
+            adventure_id=UUID(adventure_id) if adventure_id else None,
+            user_id=connection_data.get("user_id") if connection_data else None,
+            metadata=event_metadata,
+            chapter_type=current_chapter_type_to_send.value,  # Added
+            chapter_number=current_chapter_number_to_send,  # Added
+        )
+        logger.info(
+            f"Logged 'chapter_viewed' event for adventure ID: {adventure_id}, chapter: {current_chapter_number_to_send}, type: {current_chapter_type_to_send.value}"
+        )
+    except Exception as tel_e:
+        logger.error(f"Error logging 'chapter_viewed' event: {tel_e}")
+
+    # Store chapter start time for duration calculation
+    if connection_data and isinstance(connection_data, dict):
+        connection_data["current_chapter_start_time_ms"] = int(time.time() * 1000)
+        logger.debug(
+            f"Stored chapter start time for adventure_id {adventure_id}, chapter {current_chapter_number_to_send}"
+        )
+    else:
+        logger.warning(
+            f"'connection_data' not available or not a dict in stream_handler for adventure {adventure_id}, chapter {current_chapter_number_to_send}, cannot store chapter start time."
+        )
 
 
 async def send_fallback_image(

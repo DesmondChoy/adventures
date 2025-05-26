@@ -4,14 +4,17 @@ from typing import Optional
 import os
 import logging
 import json
+from uuid import UUID
 
 from app.models.story import AdventureState
 from app.services.state_storage_service import StateStorageService
 from app.services.summary import SummaryService, StateNotFoundError, SummaryError
+from app.services.telemetry_service import TelemetryService
 from app.utils.case_conversion import snake_to_camel_dict
 
 # Configure logger
 logger = logging.getLogger("summary_router")
+telemetry_service = TelemetryService()
 
 # Directory paths
 SUMMARY_DATA_DIR = "app/static"
@@ -65,7 +68,7 @@ async def test_plain():
 @router.get("/api/adventure-summary")
 async def get_adventure_summary(
     state_id: Optional[str] = None,
-    summary_service: SummaryService = Depends(get_summary_service)
+    summary_service: SummaryService = Depends(get_summary_service),
 ):
     """API endpoint to get the adventure summary data.
 
@@ -129,6 +132,35 @@ async def get_adventure_summary(
         logger.info("Ensuring CONCLUSION chapter is properly identified")
         adventure_state = summary_service.ensure_conclusion_chapter(adventure_state)
 
+        # Log summary_viewed event
+        if adventure_state:
+            try:
+                event_metadata = {
+                    "story_category": adventure_state.metadata.get("story_category"),
+                    "lesson_topic": adventure_state.metadata.get("lesson_topic"),
+                    "client_uuid": adventure_state.metadata.get("client_uuid"),
+                    "chapters_in_summary": len(adventure_state.chapters)
+                    if adventure_state.chapters
+                    else 0,
+                }
+                event_metadata = {
+                    k: v for k, v in event_metadata.items() if v is not None
+                }
+
+                await telemetry_service.log_event(
+                    event_name="summary_viewed",
+                    adventure_id=UUID(state_id) if state_id else None,
+                    user_id=None,  # No authenticated user_id yet
+                    metadata=event_metadata,
+                    chapter_type="summary",  # Added
+                    chapter_number=None,  # Added
+                )
+                logger.info(
+                    f"Logged 'summary_viewed' event for adventure ID: {state_id}"
+                )
+            except Exception as tel_e:
+                logger.error(f"Error logging 'summary_viewed' event: {tel_e}")
+
         # Format the adventure state data for the React summary component
         logger.info("Formatting adventure summary data")
         summary_data = summary_service.format_adventure_summary_data(adventure_state)
@@ -154,12 +186,13 @@ async def get_adventure_summary(
 @router.post("/api/store-adventure-state")
 async def store_adventure_state(
     state_data: dict,
-    summary_service: SummaryService = Depends(get_summary_service)
+    adventure_id: Optional[str] = None,
+    summary_service: SummaryService = Depends(get_summary_service),
 ):
     """Store adventure state and return a unique ID."""
     try:
         # Store the state with the service
-        state_id = await summary_service.store_adventure_state(state_data)
+        state_id = await summary_service.store_adventure_state(state_data, adventure_id)
         return {"state_id": state_id}
     except SummaryError as e:
         logger.error(f"Error storing adventure state: {str(e)}")
@@ -171,8 +204,7 @@ async def store_adventure_state(
 
 @router.get("/api/get-adventure-state/{state_id}")
 async def get_adventure_state(
-    state_id: str,
-    summary_service: SummaryService = Depends(get_summary_service)
+    state_id: str, summary_service: SummaryService = Depends(get_summary_service)
 ):
     """Retrieve adventure state by ID."""
     try:

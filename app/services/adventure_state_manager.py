@@ -456,7 +456,7 @@ class AdventureStateManager:
 
         # Get the current visuals
         current_visuals = getattr(state, "character_visuals", {})
-        
+
         # Ensure it's a dictionary
         if not isinstance(current_visuals, dict):
             logger.warning(
@@ -707,9 +707,9 @@ class AdventureStateManager:
                 chapter_number = chapter.get("chapter_number")
                 if chapter_number == stored_state.get("story_length", 10):
                     logger.info(
-                        f"Setting last chapter {chapter_number} type to 'conclusion' (was: {chapter.get('chapter_type', 'unknown')})"
+                        f"Setting last chapter {chapter_number} type to ChapterType.CONCLUSION (was: {chapter.get('chapter_type', 'unknown')})"
                     )
-                    chapter["chapter_type"] = "conclusion"
+                    chapter["chapter_type"] = ChapterType.CONCLUSION
 
                 # For story chapters, ensure exactly 3 choices
                 if (
@@ -941,7 +941,8 @@ class AdventureStateManager:
                 logger.info(
                     "Successfully reconstructed AdventureState from stored data"
                 )
-                return reconstructed_state
+                self.state = reconstructed_state  # Set the internal state
+                return self.state  # Return the set state
             except Exception as e:
                 logger.error(
                     f"Error creating AdventureState from valid_state: {str(e)}"

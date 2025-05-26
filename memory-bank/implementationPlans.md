@@ -27,13 +27,13 @@ Implement a two-step process where an intermediary LLM call synthesizes the fina
 - ✅ Add detailed logging and monitoring
 
 ### Remaining Steps
-- 🔲 Update Chapter 1 prompt generation to incorporate protagonist description:
+- ✅ Update Chapter 1 prompt generation to incorporate protagonist description: *(Done as per wip/implemented/protagonist_inconsistencies.md)*
   - Modify `FIRST_CHAPTER_PROMPT` template in `prompt_templates.py` to include protagonist description
   - Update `build_first_chapter_prompt` in `prompt_engineering.py` to pass protagonist description
 - 🔲 Add comprehensive tests for the new functionality
-- 🔲 Add additional logging to track visual consistency across chapters
+- ✅ Add additional logging to track visual consistency across chapters *(Largely done as per wip/implemented/protagonist_inconsistencies.md & wip/implemented/characters_evolution_visual_inconsistencies.md)*
 - 🔲 Implement protagonist gender consistency checks
-- 🔲 Update documentation to reflect the new approach
+- 🔲 Update documentation to reflect the new approach *(Core Memory Bank files)*
 
 ## Future Implementation: Persistent Storage Solution
 

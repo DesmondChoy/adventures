@@ -8,6 +8,13 @@
   * Structured logging system
   * Middleware stack for request tracking
   * State management and synchronization
+- **Authentication & Authorization**
+  * `PyJWT[crypto]` library for JWT decoding.
+  * Supabase Auth for user management (Google & Anonymous providers).
+  * JWTs passed via WebSocket query parameters (`token`).
+  * Backend validation of JWTs using `SUPABASE_JWT_SECRET`.
+  * Row-Level Security (RLS) policies in Supabase for data access control.
+  * `app/auth/dependencies.py` for FastAPI JWT verification dependency (though primarily WebSocket auth is used for core adventure flow).
 
 ### AI Integration
 - **Provider-Agnostic Implementation**
@@ -17,14 +24,25 @@
     ```
     GOOGLE_API_KEY=your_google_key  # Used for both LLM and image generation
     OPENAI_API_KEY=your_openai_key  # Optional alternative for LLM only
+    SUPABASE_JWT_SECRET=your_supabase_jwt_secret # For backend JWT validation
     ```
 
 ### Frontend
+- **Modular JavaScript Architecture**
+  * ES6 modules for clean dependency management (`app/static/js/`)
+  * `authManager.js`: Supabase authentication, session management, and user status UI updates
+  * `adventureStateManager.js`: localStorage operations for adventure state persistence
+  * `webSocketManager.js`: WebSocket connections, reconnection logic, and message handling
+  * `stateManager.js`: Adventure state operations and state transitions
+  * `uiManager.js`: DOM manipulation, UI updates, story content rendering, and user interface functions
+  * `main.js`: Main entry point, coordinates all modules, and handles application initialization
+
 - **State Management**
   ```javascript
-  // app/templates/index.html
-  class AdventureStateManager {
+  // app/static/js/adventureStateManager.js
+  export class AdventureStateManager {
       STORAGE_KEY = 'adventure_state';
+      CLIENT_UUID_KEY = 'learning_odyssey_user_uuid';
       // Uses localStorage for persistence
       // Maintains complete chapter history
   }
@@ -32,8 +50,8 @@
 
 - **Connection Management**
   ```javascript
-  // app/templates/index.html
-  class WebSocketManager {
+  // app/static/js/webSocketManager.js
+  export class WebSocketManager {
       reconnectAttempts = 0;
       maxReconnectAttempts = 5;
       
@@ -46,6 +64,7 @@
 - **Template Structure**
   * Modular organization with component separation
   * Inheritance-based template system
+  * `components/scripts.html`: Module loading and configuration bridge between server-side data and client-side modules
 
 - **UI Components**
   * Modular CSS organization (`app/static/css/`)
@@ -56,23 +75,12 @@
 ## Core Data Structures
 
 ### StateStorageService
-```python
-class StateStorageService:
-    # Singleton pattern implementation
-    _instance = None
-    _memory_cache = {}  # Shared memory cache across all instances
-    _initialized = False
-    
-    # Methods
-    async def store_state(self, state_data: Dict[str, Any]) -> str:
-        # Stores state with UUID and returns the ID
-        
-    async def get_state(self, state_id: str) -> Optional[Dict[str, Any]]:
-        # Retrieves state by ID
-        
-    async def cleanup_expired(self) -> int:
-        # Removes expired states
-```
+- **Implementation:** `app/services/state_storage_service.py`
+- **Description:** Provides persistent storage for `AdventureState` using a Supabase backend. Handles state creation, retrieval, updates (upsert), and retrieval of active adventures for resumption. `user_id` (if present) is converted to a string before database operations to prevent serialization errors. See `memory-bank/systemPatterns.md` for the Supabase Persistence Pattern details.
+
+### TelemetryService
+- **Implementation:** `app/services/telemetry_service.py`
+- **Description:** Logs telemetry events to a Supabase backend. `user_id` (if present) is converted to a string before database operations.
 
 ### AdventureState
 ```python
@@ -89,6 +97,7 @@ class AdventureState:
     selected_theme: str
     selected_moral_teaching: str
     selected_plot_twist: str
+    protagonist_description: str # Base visual description of the protagonist
     
     # Summary chapter data
     chapter_summaries: List[str]  # Summaries for SUMMARY chapter
@@ -98,6 +107,7 @@ class AdventureState:
     # Tracking
     metadata: Dict[str, Any]  # Stores agency, challenge history, etc.
     chapters: List[ChapterData]
+    character_visuals: Dict[str, str] # Stores current visual descriptions for all characters
 ```
 
 ### ChapterType Enum
@@ -120,10 +130,10 @@ class ChapterType(str, Enum):
 
 ### WebSocket Service Structure
 - **Core Module** (`core.py`): Central coordination
-- **Choice Processor** (`choice_processor.py`): Handles user choices
+- **Choice Processor** (`choice_processor.py`): Handles user choices, triggers character visual updates (via `_update_character_visuals`).
 - **Content Generator** (`content_generator.py`): Creates chapter content
 - **Stream Handler** (`stream_handler.py`): Manages content streaming
-- **Image Generator** (`image_generator.py`): Handles image generation
+- **Image Generator** (`image_generator.py`): Handles image generation, incorporating synthesized prompts.
 - **Summary Generator** (`summary_generator.py`): Manages summary content
 
 ### LLM Integration
@@ -140,10 +150,18 @@ class ChapterType(str, Enum):
   * Paragraph formatting integration
 
 ### Image Generation
-- Asynchronous processing with `generate_image_async()`
-- 5 retries with exponential backoff
-- Base64 encoding for WebSocket transmission
-- Progressive enhancement (text first, images as available)
+- Implements a **two-step image prompt synthesis pattern**:
+  1. Generates a concise scene description from chapter content (`IMAGE_SCENE_PROMPT`).
+  2. Uses `ImageGenerationService.synthesize_image_prompt` with an LLM (Gemini Flash) and `IMAGE_SYNTHESIS_PROMPT` to combine the scene description, protagonist base look (`state.protagonist_description`), agency details, story sensory visuals, and evolved character visuals (`state.character_visuals`) into a final, rich prompt.
+- Asynchronous image generation (`generate_image_async()`) using the synthesized prompt.
+- 5 retries with exponential backoff.
+- Base64 encoding for WebSocket transmission.
+- Progressive enhancement (text first, images as available).
+
+### Adventure State Manager (`app/services/adventure_state_manager.py`)
+- Manages `AdventureState` updates.
+- Includes `update_character_visuals` method to intelligently merge new character visual information into `state.character_visuals`, preserving existing descriptions unless changes are detected.
+- Handles agency reference tracking (see Agency Implementation).
 
 ### Summary Service Architecture
 - **Modular Package** (`app/services/summary/`)

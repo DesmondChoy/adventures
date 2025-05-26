@@ -55,11 +55,6 @@ class SummaryService:
         if not state and state_id:
             logger.info(f"No active state, trying to get stored state: {state_id}")
 
-            # Log the memory cache contents for debugging
-            logger.info(
-                f"Memory cache keys before retrieval: {list(self.state_storage_service._memory_cache.keys())}"
-            )
-
             # Get the stored state from the storage service
             stored_state = await self.state_storage_service.get_state(state_id)
 
@@ -71,7 +66,6 @@ class SummaryService:
 
             try:
                 logger.info(f"Retrieved state with ID: {state_id}")
-                logger.debug(f"State content keys: {list(stored_state.keys())}")
 
                 # Use the method to reconstruct state from stored data
                 state = await state_manager.reconstruct_state_from_storage(stored_state)
@@ -158,11 +152,14 @@ class SummaryService:
                 },
             }
 
-    async def store_adventure_state(self, state_data: Dict[str, Any]) -> str:
+    async def store_adventure_state(
+        self, state_data: Dict[str, Any], adventure_id: Optional[str] = None
+    ) -> str:
         """Store adventure state with enhanced processing.
 
         Args:
             state_data: The adventure state data to store
+            adventure_id: Optional ID of an existing adventure to update
 
         Returns:
             The ID of the stored state
@@ -214,8 +211,15 @@ class SummaryService:
                 )
 
             # Store the enhanced state
-            state_id = await self.state_storage_service.store_state(state_data)
-            logger.info(f"Successfully stored enhanced state with ID: {state_id}")
+            state_id = await self.state_storage_service.store_state(
+                state_data, adventure_id=adventure_id
+            )
+            if adventure_id:
+                logger.info(f"Successfully updated enhanced state with ID: {state_id}")
+            else:
+                logger.info(
+                    f"Successfully stored new enhanced state with ID: {state_id}"
+                )
             return state_id
         except Exception as e:
             logger.error(f"Error storing adventure state: {str(e)}")

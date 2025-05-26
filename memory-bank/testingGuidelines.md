@@ -244,3 +244,50 @@ When debugging WebSocket issues:
 - Implement retry mechanism with exponential backoff
 - Add robust null checking for responses
 - Provide graceful degradation when images fail
+
+## Authentication and Authorization Testing
+
+With the introduction of Supabase Auth, specific testing for authentication and authorization flows is crucial.
+
+### Key Areas to Test:
+1.  **Google Login Flow:**
+    *   Verify successful login via Google.
+    *   Confirm JWT is received by the frontend.
+    *   Confirm JWT is correctly passed to the WebSocket backend.
+    *   Verify backend successfully decodes JWT and extracts `user_id`.
+    *   Ensure `user_id` is correctly associated with new `adventures` records.
+    *   Ensure `user_id` is correctly associated with `telemetry_events` records.
+2.  **Anonymous Sign-In Flow ("Continue as Guest"):**
+    *   Verify successful anonymous sign-in.
+    *   Confirm a Supabase-managed JWT is received and used.
+    *   Verify backend processes this JWT and extracts the anonymous `user_id`.
+    *   Ensure this anonymous `user_id` is linked to `adventures` and `telemetry_events`.
+3.  **Adventure Resumption (Authenticated Users):**
+    *   Test resuming an incomplete adventure for a Google-authenticated user.
+    *   Test resuming an incomplete adventure for an anonymous (guest) user.
+    *   Verify `StateStorageService.get_active_adventure_id` correctly prioritizes and uses `user_id`.
+4.  **Logout Functionality:**
+    *   Verify user is redirected to the login page (`/`) after logout.
+    *   Confirm session is cleared (e.g., Supabase JS client clears its storage).
+    *   Verify subsequent attempts to access protected routes (e.g., `/select`) fail or redirect to login.
+5.  **Unauthenticated Access:**
+    *   Verify that attempting to access protected routes like `/select` directly without an active session redirects to the login page.
+6.  **RLS Policy Verification (Client-Side Simulation):**
+    *   **Manual/Simulated Tests:** Since direct client-side RLS testing can be complex, simulate scenarios:
+        *   Using a valid user's JWT (e.g., obtained from browser developer tools during a test session), try to use the Supabase JS client library directly (or via `curl` with appropriate headers if testing API endpoints protected by RLS) to:
+            *   Select adventures belonging to another user (should fail or return empty).
+            *   Update an adventure belonging to another user (should fail).
+            *   Insert an adventure with a `user_id` different from `auth.uid()` (should fail, unless it's a guest adventure where `user_id` is `NULL`).
+            *   Attempt similar restricted operations on `telemetry_events`.
+    *   **Focus:** Ensure users can only access/modify data permitted by the defined RLS policies (e.g., "Users can select their own or guest adventures", "Users can update their own adventures").
+7.  **Foreign Key `ON DELETE SET NULL` Behavior:**
+    *   (If feasible and safe in a test environment) Test deleting a user from `auth.users` in the Supabase dashboard.
+    *   Verify that corresponding `user_id` fields in `adventures` and `telemetry_events` tables are set to `NULL` for that user's records.
+8.  **JWT Expiration and Refresh:**
+    *   Observe behavior when a JWT expires. The Supabase JS client should handle token refresh. Ensure the application continues to function seamlessly.
+    *   Test scenarios where token refresh might fail and ensure graceful error handling or redirection.
+
+### Debugging Authentication:
+*   **Frontend:** Use browser developer tools to inspect `localStorage` for Supabase session data and network requests for JWTs.
+*   **Backend:** Check `websocket_router.py` logs for JWT decoding status, `user_id` extraction, and any errors.
+*   **Supabase Dashboard:** Review Auth logs and user table in the Supabase dashboard.
