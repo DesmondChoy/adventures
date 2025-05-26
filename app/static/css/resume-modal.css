@@ -128,3 +128,56 @@
         margin-bottom: 0;
     }
 }
+
+/* Styles for Conflict Modal (extending resume-modal styles) */
+.adventure-conflict-details {
+    margin-top: 20px;
+    margin-bottom: 25px;
+    padding: 15px;
+    background-color: var(--secondary-background-color-light, #fdfdfd); /* Lighter than resume details */
+    border-radius: 8px;
+    border: 1px solid var(--border-color-light, #eee);
+}
+
+.adventure-section {
+    margin-bottom: 15px;
+}
+
+.adventure-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-header {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: var(--text-color-medium, #555);
+    margin-bottom: 8px;
+}
+
+.section-divider {
+    border: 0;
+    height: 1px;
+    background-color: var(--border-color, #ddd);
+    margin: 15px 0;
+}
+
+.modal-actions .danger-button {
+    background-color: var(--danger-color, #dc3545); /* Bootstrap danger red */
+    color: var(--danger-button-text, #fff);
+    border: none;
+}
+
+.modal-actions .danger-button:hover {
+    background-color: var(--danger-color-dark, #c82333); /* Darker red on hover */
+    transform: translateY(-1px);
+}
+
+/* Ensure warning color is defined if not in theme */
+:root {
+    --warning-color: #ffc107; /* Default Bootstrap warning yellow */
+    --warning-color-dark: #e0a800;
+    --danger-color: #dc3545;
+    --danger-color-dark: #c82333;
+    --secondary-background-color-light: #fdfdfd;
+    --text-color-medium: #555;
+}

@@ -64,12 +64,16 @@ async def get_current_user_id_optional(
     try:
         # Supabase typically uses HS256 for its JWTs signed with the JWT secret
         # Supabase tokens have audience "authenticated" for logged-in users
-        logger.info("[JWT DEBUG] Attempting to decode JWT with secret...")
+        # Add 60-second leeway to handle clock skew between client/server (industry standard)
+        logger.info(
+            "[JWT DEBUG] Attempting to decode JWT with secret and 60s clock skew tolerance..."
+        )
         decoded_token = jwt.decode(
             token,
             supabase_jwt_secret,
             algorithms=["HS256"],
             audience="authenticated",  # Supabase uses "authenticated" as audience
+            leeway=60,  # 60-second tolerance for clock skew (industry standard)
         )
         logger.info(
             f"[JWT DEBUG] Successfully decoded JWT payload keys: {list(decoded_token.keys())}"

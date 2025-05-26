@@ -127,6 +127,115 @@ export async function startAdventure() {
         return;
     }
     
+    // Validate both inputs
+    if (!selectedCategory) {
+        showError('Please select a story category to continue');
+        return;
+    }
+    
+    if (!selectedLessonTopic) {
+        showError('Please select a lesson topic to begin');
+        return;
+    }
+
+    // --- New Adventure Conflict Logic ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const resumeAdventureIdFromQuery = urlParams.get('resume_adventure_id');
+    const authManager = window.appState?.authManager;
+
+    if (resumeAdventureIdFromQuery && authManager && authManager.accessToken) {
+        console.log(`[Conflict Check] Found resume_adventure_id in URL: ${resumeAdventureIdFromQuery}`);
+        try {
+            const response = await fetch('/api/user/current-adventure', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authManager.accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const currentAdventureData = await response.json();
+                if (currentAdventureData && currentAdventureData.adventure) {
+                    const activeAdventure = currentAdventureData.adventure;
+                    console.log('[Conflict Check] Active adventure found:', activeAdventure);
+                    
+                    // Check if the new selection conflicts with the active adventure
+                    if (activeAdventure.story_category !== selectedCategory || activeAdventure.lesson_topic !== selectedLessonTopic) {
+                        console.log('[Conflict Check] Conflict detected. New selection:', selectedCategory, selectedLessonTopic);
+                        
+                        // Use the new custom modal
+                        const userConfirmedAbandonment = await showConflictConfirmationModal(
+                            activeAdventure,
+                            { story_category: selectedCategory, lesson_topic: selectedLessonTopic }
+                        );
+
+                        if (userConfirmedAbandonment) {
+                            console.log('[Conflict Check] User confirmed abandonment via custom modal.');
+                            const abandonResponse = await fetch(`/api/adventure/${activeAdventure.adventure_id}/abandon`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${authManager.accessToken}`
+                                }
+                            });
+                            if (abandonResponse.ok) {
+                                console.log('[Conflict Check] Active adventure abandoned successfully.');
+                                if (window.appState?.wsManager) {
+                                    window.appState.wsManager.adventureIdToResume = null;
+                                }
+                                cleanUrlResumeParam(); // Remove resume_adventure_id from URL
+                            } else {
+                                console.error('[Conflict Check] Failed to abandon active adventure.');
+                                showError('Could not abandon previous adventure. Please try again or contact support.');
+                                hideLoader();
+                                return; 
+                            }
+                        } else {
+                            console.log('[Conflict Check] User cancelled abandonment via custom modal.');
+                            hideLoader();
+                            return; 
+                        }
+                    } else {
+                        console.log('[Conflict Check] No conflict. New selection matches resumable adventure.');
+                        // If selections match, we let the existing resume logic in main.js handle it by keeping resume_adventure_id in URL.
+                        // However, we should ensure wsManager is aware if it wasn't already.
+                        if (window.appState?.wsManager) {
+                             window.appState.wsManager.adventureIdToResume = activeAdventure.adventure_id;
+                        }
+                    }
+                } else {
+                     console.log('[Conflict Check] No active adventure found via API, though resume_id was in URL. Proceeding with new.');
+                     if (window.appState?.wsManager) {
+                        window.appState.wsManager.adventureIdToResume = null;
+                     }
+                     cleanUrlResumeParam();
+                }
+            } else {
+                console.error('[Conflict Check] Failed to fetch current adventure status.');
+                // Decide if we should block or allow proceeding with new adventure. For now, let's allow.
+                if (window.appState?.wsManager) {
+                    window.appState.wsManager.adventureIdToResume = null;
+                }
+                cleanUrlResumeParam();
+            }
+        } catch (error) {
+            console.error('[Conflict Check] Error during adventure conflict check:', error);
+            showError('Error checking for existing adventures. Please try again.');
+            hideLoader(); // Hide loader if shown before this point
+            return; // Stop further execution
+        }
+    } else {
+        // No resume_adventure_id in URL or no auth token, clear any potential stale resume ID in wsManager
+        if (window.appState?.wsManager) {
+            window.appState.wsManager.adventureIdToResume = null;
+        }
+        // If resume_adventure_id was in URL but no token, clean it.
+        if (resumeAdventureIdFromQuery && !(authManager && authManager.accessToken)) {
+            cleanUrlResumeParam();
+        }
+    }
+    // --- End New Adventure Conflict Logic ---
+
     // Initialize state with selected options
     manageState('initialize', {
         storyCategory: selectedCategory,
@@ -669,4 +778,61 @@ export function clearStreamBuffer() {
 
 export function clearActiveParagraphs() {
     activeParagraphs.clear();
+}
+
+// Helper function to remove resume_adventure_id from URL without reload
+function cleanUrlResumeParam() {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('resume_adventure_id')) {
+        url.searchParams.delete('resume_adventure_id');
+        window.history.replaceState({}, document.title, url.toString());
+        console.log('[Conflict Check] resume_adventure_id removed from URL.');
+    }
+}
+
+// --- Conflict Confirmation Modal Functions ---
+function showConflictConfirmationModal(currentAdventure, newSelection) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('conflictModal');
+        if (!modal) {
+            console.error('Conflict modal element not found!');
+            resolve(false); // Fallback to prevent blocking
+            return;
+        }
+
+        // Populate modal with data
+        document.getElementById('conflictModalCurrentAdventureName').textContent = currentAdventure.story_category;
+        document.getElementById('conflictModalCurrentLessonTopic').textContent = currentAdventure.lesson_topic;
+        document.getElementById('conflictModalCurrentProgress').textContent = `Chapter ${currentAdventure.current_chapter}`;
+        
+        document.getElementById('conflictModalNewAdventureName').textContent = newSelection.story_category;
+        document.getElementById('conflictModalNewLessonTopic').textContent = newSelection.lesson_topic;
+
+        modal.style.display = 'flex';
+
+        const abandonBtn = document.getElementById('abandonAndStartBtn');
+        const cancelBtn = document.getElementById('cancelConflictBtn');
+
+        // Store handlers to remove them later
+        const handleAbandon = () => {
+            cleanup();
+            resolve(true);
+        };
+
+        const handleCancel = () => {
+            cleanup();
+            resolve(false);
+        };
+        
+        const cleanup = () => {
+            modal.style.display = 'none';
+            // Remove event listeners to prevent multiple bindings if modal is reused
+            abandonBtn.removeEventListener('click', handleAbandon);
+            cancelBtn.removeEventListener('click', handleCancel);
+        };
+
+        // Add event listeners, ensuring they are only added once or are removable
+        abandonBtn.addEventListener('click', handleAbandon, { once: true });
+        cancelBtn.addEventListener('click', handleCancel, { once: true });
+    });
 }

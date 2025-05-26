@@ -10,26 +10,36 @@ This document outlines the plan and progress for integrating Supabase into the L
     *   **Phase 2: Persistent Adventure State (Supabase Database):** Fully complete and validated.
     *   **Phase 3: Telemetry (Supabase Database):** Fully complete and validated.
     *   **Phase 4: Optional User Authentication (Supabase Auth):** Backend logic, database schema/RLS, and initial frontend flows completed.
-*   **Phase 4.1: Adventure Resumption Bug Fix & Enhanced UX - ❌ PARTIALLY WORKING WITH CRITICAL BUGS**
-    *   **Implementation Status:**
+*   **Phase 4.1: Adventure Resumption Bug Fix & Enhanced UX - ✅ PARTIALLY FIXED, NEW ISSUES IDENTIFIED**
+    *   **Implementation Status (Updated 2025-05-26 Evening):**
         *   Core fixes for adventure matching implemented.
-        *   Resume modal flow implemented but **NOT WORKING RELIABLY**.
+        *   **✅ FIXED:** Resume modal flow for Google Authenticated users.
+        *   **✅ FIXED:** Custom conflict modal implemented and working for Google Authenticated users (replaces native `confirm()`).
         *   Backend API (`/api/user/current-adventure`) enhanced with detailed logging.
         *   `StateStorageService` updated with `get_user_current_adventure_for_resume` method.
         *   `login.html` updated with retry logic and comprehensive debugging.
-        *   `uiManager.js` updated but chapter display issues persist.
+        *   `uiManager.js` updated with custom conflict modal logic. Chapter display issues persist.
         *   **✅ FIXED:** Multiple incomplete adventures per user issue resolved.
         *   **✅ FIXED:** Resume API KeyError resolved.
-        *   **❌ NOT FIXED:** Resume modal not appearing consistently.
+        *   **❌ NOT FIXED (Guest Login):** Resume modal does NOT appear for guest users after logout/login.
+        *   **❌ NOT FIXED (Guest Login):** Conflict modal does NOT appear for guest users.
         *   **❌ NOT FIXED:** Chapter display inconsistency not fully resolved.
 
-*   **Testing Results (2025-05-26 PM) - LIMITED SCOPE:**
-    *   **✅ VERIFIED WORKING:** Adventure persistence and resumption via client_uuid fallback
-    *   **❌ INCONSISTENT:** Chapter display sometimes shows correct progress, sometimes doesn't
-    *   **✅ VERIFIED WORKING:** One adventure per user enforcement
-    *   **✅ VERIFIED WORKING:** Adventure state reconstruction from database
-    *   **❌ CRITICAL BUG:** Resume modal does NOT appear after logout/login (both guest and Google)
-    *   **⚠️ LIMITED TESTING:** Only guest login tested thoroughly, Google auth issues not addressed
+*   **Testing Results (2025-05-26 Evening):**
+    *   **Google Authentication:**
+        *   **✅ VERIFIED WORKING:** Resume modal appears consistently.
+        *   **✅ VERIFIED WORKING:** Custom conflict modal (for abandoning incomplete adventures) appears consistently and functions correctly on desktop and mobile.
+        *   **✅ VERIFIED WORKING:** Adventure persistence and resumption.
+        *   **✅ VERIFIED WORKING:** One adventure per user enforcement.
+    *   **Guest Login:**
+        *   **✅ VERIFIED WORKING:** Adventure persistence and resumption via `client_uuid` fallback (adventure resumes automatically).
+        *   **❌ CRITICAL BUG:** Resume modal does NOT appear after logout/login.
+        *   **❌ CRITICAL BUG:** Custom conflict modal does NOT appear when trying to start a new adventure over an existing one.
+        *   **✅ VERIFIED WORKING:** One adventure per user enforcement (likely due to `client_uuid` fallback and backend logic).
+    *   **General:**
+        *   **❌ INCONSISTENT:** Chapter display sometimes shows correct progress, sometimes doesn't (both auth types).
+        *   **✅ VERIFIED WORKING:** Adventure state reconstruction from database.
+    *   **Root Cause Identified for Guest Login Modal Issues:** Inconsistent `user_id` for guest users across sessions. API calls dependent on `user_id` (like `/api/user/current-adventure`) fail, preventing modal triggers. Google Auth maintains stable `user_id`.
 
 ---
 
@@ -115,16 +125,19 @@ This document outlines the plan and progress for integrating Supabase into the L
 #### ❌ CRITICAL BUGS REMAINING:
 
 **1. ❌ Resume Modal System (FAILING)**
-- Created modal component (`app/templates/components/resume_modal.html`).
+- Created resume modal component (`app/templates/components/resume_modal.html`).
+- **✅ NEW (2025-05-26 Evening):** Created custom conflict modal component (`app/templates/components/conflict_modal.html`) and associated CSS (`app/static/css/resume-modal.css`).
 - Added API endpoints: `GET /api/user/current-adventure`, `POST /api/adventure/{id}/abandon`.
 - Enhanced `/api/user/current-adventure` with comprehensive logging and validation.
-- Implemented frontend logic in `login.html` with retry logic and extensive debugging.
+- Implemented frontend logic in `login.html` (for resume modal) and `uiManager.js` (for conflict modal).
 - Enhanced JWT authentication dependency with detailed logging.
 - **✅ FIXED:** Resume API KeyError - proper field mapping implemented.
-- **❌ CRITICAL BUG:** Resume modal does NOT appear after logout/login for guest users
-- **❌ CRITICAL BUG:** Resume modal shows inconsistently for Google authenticated users
-- **Root Cause:** JWT clock skew causing user ID mismatch between sessions
-- **Impact:** Users cannot resume adventures via the intended UX flow
+- **✅ FIXED (Google Auth):** Resume modal now appears consistently for Google authenticated users.
+- **✅ FIXED (Google Auth):** Custom conflict modal appears consistently for Google authenticated users.
+- **❌ CRITICAL BUG (Guest Login):** Resume modal does NOT appear after logout/login for guest users.
+- **❌ CRITICAL BUG (Guest Login):** Custom conflict modal does NOT appear for guest users.
+- **Updated Root Cause:** For Google Auth, previous JWT clock skew issues seem resolved or mitigated. For Guest Login, the primary issue is inconsistent `user_id` across sessions, causing API lookups for active adventures to fail.
+- **Impact:** Google users now have the intended UX flow. Guest users can resume adventures via fallback but lack the modal-guided experience.
 
 **2. ❌ Chapter Display Issues (NOT FULLY RESOLVED)**
 - Enhanced `handleMessage` function for `adventure_loaded` events in `uiManager.js`.
@@ -136,59 +149,76 @@ This document outlines the plan and progress for integrating Supabase into the L
 
 ### Testing Results (2025-05-26 PM):
 
-#### ✅ **VERIFIED WORKING (Limited Scope):**
-*   ✅ **Adventure Creation & Persistence** - Adventures saved correctly to database
-*   ✅ **Adventure Resumption via Fallback** - Adventures resume correctly via client_uuid fallback mechanism
-*   ✅ **One Adventure Enforcement** - Multiple adventure accumulation prevented
-*   ✅ **State Reconstruction** - Complex adventure state properly reconstructed from database
-*   ✅ **Story/Lesson Matching** - Adventures match correct story/lesson combinations
-*   ✅ **WebSocket Integration** - Seamless integration with WebSocket adventure flow
-*   ✅ **Content Loading** - Story content and choices load correctly on resume
+#### ✅ **VERIFIED WORKING (Updated 2025-05-26 Evening):**
+*   ✅ **Adventure Creation & Persistence** - Adventures saved correctly to database.
+*   ✅ **Adventure Resumption via Fallback (`client_uuid`)** - Adventures resume correctly for guest users.
+*   ✅ **Adventure Resumption via Modal (Google Auth)** - Adventures resume correctly via modal for Google users.
+*   ✅ **Custom Conflict Modal (Google Auth)** - Works as expected for Google users on desktop and mobile.
+*   ✅ **One Adventure Enforcement** - Multiple adventure accumulation prevented (backend logic and `client_uuid` fallback contribute).
+*   ✅ **State Reconstruction** - Complex adventure state properly reconstructed from database.
+*   ✅ **Story/Lesson Matching** - Adventures match correct story/lesson combinations.
+*   ✅ **WebSocket Integration** - Seamless integration with WebSocket adventure flow.
+*   ✅ **Content Loading** - Story content and choices load correctly on resume.
 
-#### ❌ **CRITICAL BUGS IDENTIFIED:**
-*   **❌ Resume Modal Failure** - Modal does NOT appear after logout/login for guest users
-*   **❌ Google Auth Issues** - Google login has ongoing issues, modal inconsistent for Google users
-*   **❌ Chapter Display Bug** - Progress sometimes shows incorrect chapter numbers
-*   **❌ JWT Clock Skew** - User ID mismatch between sessions breaks resume modal functionality
+#### ❌ **CRITICAL BUGS IDENTIFIED (Updated 2025-05-26 Evening):**
+*   **❌ Resume Modal Failure (Guest Login)** - Modal does NOT appear after logout/login for guest users.
+*   **❌ Conflict Modal Failure (Guest Login)** - Custom conflict modal does NOT appear for guest users.
+*   **❌ Chapter Display Bug** - Progress sometimes shows incorrect chapter numbers (both auth types).
+*   **Identified Root Cause for Guest Modal Failures:** Inconsistent `user_id` for guest users across sessions. API calls for active adventure lookup (required for modals) fail.
 
-#### ⚠️ **LIMITED TEST COVERAGE:**
-*   **⚠️ Guest Login Only** - Primary testing only covered guest/anonymous login
-*   **⚠️ Google Auth Untested** - Google authentication flow not thoroughly tested
-*   **⚠️ Single Test Scenario** - Only one adventure progression tested (Circus & Carnival + Human Body)
+#### ⚠️ **TEST COVERAGE (Updated 2025-05-26 Evening):**
+*   **✅ Google Auth Tested:** Resume and conflict modals tested on desktop and mobile.
+*   **✅ Guest Login Tested:** Basic adventure flow and `client_uuid` resumption tested. Modal failures confirmed.
+*   **⚠️ Single Test Scenario per Auth Type:** Limited adventure progression testing.
 
-### Testing Scenarios Completed (Limited):
-1. ✅ **Adventure Creation** - Created adventure with "Circus & Carnival Capers" + "Human Body" (guest login only)
-2. ✅ **Chapter Progress** - Completed Chapter 1 (Scholar choice) and Chapter 2 (lesson question)
-3. ❌ **Logout/Login Flow** - Logged out and back in as guest, but resume modal did NOT appear
-4. ✅ **Adventure Resumption via Fallback** - Adventure resumed automatically via client_uuid, bypassing modal
-5. ✅ **State Integrity** - All adventure data preserved
-6. ❌ **Resume Modal UX** - Intended user experience flow failed
+### Testing Scenarios Completed (Updated 2025-05-26 Evening):
+**Google Authentication:**
+1. ✅ Log in with Google.
+2. ✅ Start adventure (e.g., Enchanted Forest/Human Body), progress to Chapter 3.
+3. ✅ Log out, log back in with Google.
+4. ✅ **VERIFIED:** Resume modal appears with correct adventure details.
+5. ✅ Click "Continue Adventure" - adventure resumes at Chapter 3.
+6. ✅ Click "Learning Odyssey" banner (bypassing modal if it were to show again).
+7. ✅ Select new adventure (e.g., Jade Mountain/Singapore History).
+8. ✅ Click "Let's dive in!".
+9. ✅ **VERIFIED:** Custom conflict modal appears, detailing current and new adventure.
+10. ✅ Click "Abandon & Start New" - new adventure (Jade Mountain) starts correctly.
+
+**Guest Login:**
+1. ✅ Log in as guest.
+2. ✅ Start adventure, progress to Chapter 3.
+3. ✅ Log out, log back in as guest.
+4. ✅ **VERIFIED:** Adventure resumes automatically at Chapter 3 (via `client_uuid` fallback).
+5. ✅ **BUG:** Resume modal does NOT appear.
+6. ✅ Click "Learning Odyssey" banner.
+7. ✅ Select new adventure.
+8. ✅ Click "Let's dive in!".
+9. ✅ **BUG:** Custom conflict modal does NOT appear. Adventure still resumes old one (or starts new one without warning, depending on exact state of `client_uuid` and backend logic).
+10. ✅ **State Integrity:** All adventure data preserved.
+11. ✅ **Modal UX Failure (Guest):** Intended modal-guided user experience flow failed for guest users.
 
 ---
 
 ## Critical Issues Requiring Resolution
 
-### High Priority (Blocking)
-1. **Resume Modal Not Appearing** - Critical UX failure
-   - **Status:** ❌ NOT WORKING for guest users
-   - **Status:** ❌ INCONSISTENT for Google users
-   - **Root Cause:** JWT clock skew causing user ID mismatch
-   - **Impact:** Users cannot access intended resume functionality
+### High Priority (Blocking) - Updated 2025-05-26 Evening
+1.  **Guest Login Modal Failures (Resume & Conflict)** - Critical UX failure for guest users.
+    *   **Status:** ❌ NOT WORKING for guest users.
+    *   **Root Cause:** Inconsistent `user_id` for guest users across sessions. API calls for active adventure lookup fail.
+    *   **Impact:** Guest users lack modal-guided experience for resuming or abandoning adventures.
 
-2. **Chapter Display Inconsistency** - User confusion
-   - **Status:** ❌ NOT FULLY RESOLVED
-   - **Root Cause:** Frontend state interpretation issues
-   - **Impact:** Users see incorrect progress information
+2.  **Chapter Display Inconsistency** - User confusion.
+    *   **Status:** ❌ NOT FULLY RESOLVED (affects both auth types).
+    *   **Root Cause:** Frontend state interpretation issues in `uiManager.js`.
+    *   **Impact:** Users see incorrect progress information.
 
-3. **Google Authentication Issues** - Production blocker
-   - **Status:** ❌ NOT TESTED/ADDRESSED
-   - **Root Cause:** Ongoing Google auth problems mentioned by user
-   - **Impact:** Google users cannot reliably use the application
+3.  **Ensure Guest User ID Stability or Fallback for Modals** - Technical requirement for guest UX.
+    *   **Status:** ❌ NOT ADDRESSED.
+    *   **Impact:** Without this, guest modal functionality cannot be reliably implemented.
 
-### Medium Priority
-1. **JWT Clock Skew Resolution** - Address root cause of user ID inconsistency
-2. **Comprehensive Testing** - Test all authentication methods and scenarios
-3. **Error Handling** - Improve user feedback when issues occur
+### Medium Priority - Updated 2025-05-26 Evening
+1.  **Comprehensive Testing (Guest & Google)** - Test all authentication methods, various adventure progressions, edge cases, and cross-browser/device scenarios.
+2.  **Error Handling** - Improve user feedback when API calls or other critical operations fail, especially for guest users.
 
 ---
 
@@ -213,76 +243,77 @@ This document outlines the plan and progress for integrating Supabase into the L
 - Always consider edge cases where users might have accumulated problematic data over time
 
 ### Resume Modal Failure Analysis (2025-05-26)
-**Problem:** Resume modal does not appear consistently after logout/login, breaking intended UX flow.
+**Problem:** Resume and Conflict modals do not appear for guest users after logout/login. Google Auth modals now work.
 
-**Root Cause:** JWT clock skew issues cause different user IDs between sessions, preventing adventure lookup via user_id.
+**Root Cause (Guest Login):** Inconsistent `user_id` for guest users across sessions. The Supabase anonymous authentication might generate a new `user_id` each time, or the session/JWT is not persisting/being re-established correctly for guests to maintain the same `user_id`. API calls to `/api/user/current-adventure` (which require a stable `user_id`) fail, so the modals are not triggered.
 
-**Current Mitigation:** System falls back to client_uuid for adventure resumption, but modal UX is lost.
+**Root Cause (Google Auth - Previously):** Likely JWT clock skew or session management issues, which seem to be resolved or less impactful now.
 
-**Key Learnings:**
-- Fallback mechanisms are essential but don't replace fixing root causes
-- UX flows must be thoroughly tested across all authentication methods
-- JWT handling requires robust error handling and consistent user ID management
-- Single test scenarios are insufficient for production readiness assessment
+**Current Mitigation (Guest Login):** System falls back to `client_uuid` for adventure resumption, which works for continuing the adventure but bypasses the intended modal UX.
+
+**Key Learnings (Updated 2025-05-26 Evening):**
+- Fallback mechanisms (`client_uuid`) are crucial for core functionality but don't replace the intended UX.
+- UX flows (especially modals) must be thoroughly tested across ALL authentication methods (Guest and Google).
+- Guest user authentication and session management require specific attention to ensure `user_id` consistency if features depend on it. If `user_id` cannot be made stable for guests, features need alternative identifiers (like `client_uuid`) for API lookups.
+- Custom modals significantly improve UX over native browser dialogs.
 
 ---
 
-## Next Steps (Priority Order)
+## Next Steps (Priority Order - Updated 2025-05-26 Evening)
 
-### 1. Fix Resume Modal (CRITICAL)
-**Investigation Required:**
-- Debug JWT clock skew issue causing user ID mismatch
-- Test resume modal functionality with both guest and Google authentication
-- Implement proper error handling and retry logic for modal display
-- Consider alternative user identification strategies
+### 1. Fix Guest Login Modal Issues (CRITICAL)
+**Goal:** Ensure Resume and Conflict modals appear consistently for Guest Users.
+**Investigation & Implementation Required:**
+-   **Analyze Guest Auth Flow:** Deep dive into `authManager.js` and Supabase anonymous sign-in. Determine why `user_id` is not stable across guest sessions or why JWT token might not be passed correctly for API calls after re-login.
+-   **Option A (Preferred): Stabilize Guest `user_id`:** If possible, modify guest session handling to maintain a consistent `user_id` across logout/login cycles (e.g., by storing/retrieving a guest-specific identifier in `localStorage` that maps to a Supabase user).
+-   **Option B (Fallback): Modify Modal Trigger Logic for Guests:** If guest `user_id` cannot be stabilized, update `login.html` (for resume modal) and `uiManager.js` (for conflict modal) to use `client_uuid` (from `localStorage` or `sessionStorage`) to fetch adventure details for guest users. This might involve:
+    *   A new API endpoint like `/api/adventure/details_by_client_uuid/{client_uuid}`.
+    *   Or, enhancing `/api/user/current-adventure` to optionally accept `client_uuid` if `user_id` is unavailable or indicates a guest.
+-   **Test Thoroughly:** Verify modal appearance and functionality for guest users on desktop and mobile.
 
 ### 2. Resolve Chapter Display Bug (HIGH)
+**Goal:** Ensure chapter progress is displayed consistently and accurately.
 **Investigation Required:**
-- Thoroughly test chapter display across different resume scenarios
-- Debug frontend state interpretation in `uiManager.js`
-- Verify server state consistency with frontend display
-- Test with multiple adventure progressions
+-   Thoroughly test chapter display across different resume scenarios (Google & Guest).
+-   Debug frontend state interpretation in `uiManager.js` (`handleMessage` for `adventure_loaded`).
+-   Verify server state (`state_data.chapters`, `state_data.story_length`) consistency with frontend display.
+-   Add more detailed logging in `uiManager.js` around `updateProgress` calls.
 
-### 3. Address Google Authentication Issues (HIGH)
-**Investigation Required:**
-- Test Google OAuth flow thoroughly
-- Identify and resolve Google-specific authentication problems
-- Ensure resume functionality works for Google users
-- Document Google auth limitations and workarounds
-
-### 4. Comprehensive Testing (MEDIUM)
+### 3. Comprehensive Testing (MEDIUM)
+**Goal:** Ensure overall application stability and robustness.
 **Test Scenarios Required:**
-- Multiple authentication methods (guest, Google)
-- Various adventure progressions and resume points
-- Cross-browser and cross-device testing
-- Error scenarios and edge cases
+-   **Authentication Methods:** Guest login, Google OAuth.
+-   **Adventure Flows:** Start new, resume, abandon via modal, abandon by starting new.
+-   **Progress Points:** Test resumption and conflicts at various chapter numbers.
+-   **Cross-Browser/Device:** Chrome, Firefox, Safari (if possible); Desktop, Mobile.
+-   **Error Scenarios:** API failures, WebSocket disconnections, invalid data.
+-   **Logout/Login Cycles:** Multiple cycles to check session stability.
 
 ---
 
 ## Current Status Assessment
 
-**Overall Status: ❌ NOT PRODUCTION READY**
+**Overall Status: ⚠️ IMPROVED BUT NOT PRODUCTION READY (Updated 2025-05-26 Evening)**
 
 **Reasons:**
-- Critical UX functionality (resume modal) not working
-- Limited test coverage (guest login only)
-- Google authentication issues unaddressed
-- Chapter display bugs persist
-- User experience significantly degraded by missing modal functionality
+-   **Critical Guest Login UX Bugs:** Resume and Conflict modals are not working for guest users, significantly degrading their experience.
+-   **Chapter Display Bugs Persist:** Incorrect chapter progress display causes user confusion.
+-   **Limited Comprehensive Testing:** While specific scenarios were tested, broader testing is still needed.
 
-**What Works:**
-- Adventure persistence and storage
-- Fallback resumption mechanism via client_uuid
-- Data integrity enforcement
-- Basic adventure flow when modal issues are bypassed
+**What Works (Updated):**
+-   **Google Authentication Flow:** Resume and Conflict modals work reliably.
+-   Adventure persistence and storage.
+-   Fallback resumption mechanism via `client_uuid` (ensures guest adventures can continue, albeit without modals).
+-   Data integrity enforcement (one adventure per user).
+-   Basic adventure flow when modal issues are bypassed (for guests) or handled (for Google users).
+-   Custom conflict modal provides good UX for Google users.
 
-**What Doesn't Work:**
-- Resume modal UX flow
-- Consistent chapter progress display
-- Reliable Google authentication
-- Intended user experience for adventure resumption
+**What Doesn't Work (Updated):**
+-   **Guest Login Modal UX:** Resume and Conflict modals fail for guest users.
+-   Consistent chapter progress display (both auth types).
+-   Full intended user experience for adventure resumption/conflict for guest users.
 
-**Recommendation:** Address critical bugs before considering production deployment. The fallback mechanism ensures basic functionality but the intended user experience is significantly compromised.
+**Recommendation:** Prioritize fixing guest login modal issues. The application is approaching a better state for Google authenticated users, but guest user experience remains significantly compromised. After guest issues are resolved, focus on the chapter display bug and then conduct comprehensive testing.
 
 ---
 
@@ -299,9 +330,13 @@ This document outlines the plan and progress for integrating Supabase into the L
 
 ### Frontend  
 -   `app/templates/pages/login.html` - **ENHANCED:** Added retry logic, comprehensive debugging, and session validation
--   `app/static/js/uiManager.js` - **ATTEMPTED FIX:** Added chapter display fix for `adventure_loaded` events (issues persist)
--   `app/templates/components/scripts.html` - Updated WebSocket URL construction to use `sessionStorage` for resume
+-   `app/static/js/uiManager.js` - **MAJOR UPDATE (2025-05-26 Evening):** Replaced native `confirm()` with custom conflict modal logic. Still contains chapter display issues.
+-   `app/templates/components/scripts.html` - Updated WebSocket URL construction to use `sessionStorage` for resume.
+-   **NEW (2025-05-26 Evening):** `app/templates/components/conflict_modal.html` - Created for custom conflict confirmation.
+-   **NEW (2025-05-26 Evening):** `app/static/css/resume-modal.css` - Extended with styles for the conflict modal.
+-   **NEW (2025-05-26 Evening):** `app/templates/pages/index.html` - Included the new `conflict_modal.html`.
+
 
 ---
 
-This integration provides a foundation for user authentication and adventure persistence, but critical UX bugs prevent production readiness. The system works via fallback mechanisms but the intended user experience is significantly compromised.
+This integration provides a foundation for user authentication and adventure persistence. Google authenticated users now have a significantly improved UX for adventure resumption and conflict handling. However, critical UX bugs for guest users and persistent chapter display issues prevent production readiness. The system works via fallback mechanisms for guests, but the intended modal-guided experience is missing for them.
