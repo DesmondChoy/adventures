@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Learning Odyssey - Educational Adventures</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/resume-modal.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         .glass {
@@ -483,6 +484,14 @@
                 modalAdventureName.textContent = adventureData.story_category || 'N/A';
                 modalLessonTopic.textContent = adventureData.lesson_topic || 'N/A';
                 
+                // Store for /select page
+                if (adventureData.story_category) {
+                    sessionStorage.setItem('resume_story_category', adventureData.story_category);
+                }
+                if (adventureData.lesson_topic) {
+                    sessionStorage.setItem('resume_lesson_topic', adventureData.lesson_topic);
+                }
+
                 let progressText = `Chapter ${adventureData.current_chapter || 0}`;
                 if (adventureData.total_chapters) {
                     progressText += ` out of ${adventureData.total_chapters}`;
@@ -550,35 +559,99 @@
             }
 
             async function handleSignIn() {
+                console.log("[RESUME DEBUG] handleSignIn() called");
+                
                 // Fetch current adventure state
                 try {
-                    const token = (await loginPageSupabaseClient.auth.getSession())?.data.session?.access_token;
-                    if (!token) {
-                        // This might happen if onAuthStateChange fires before session is fully available for API calls.
-                        // Or if user is truly unauthenticated (should not happen if event is SIGNED_IN)
-                        console.warn("No access token available immediately after sign-in for API call. Redirecting to /select directly.");
+                    console.log("[RESUME DEBUG] Getting session data...");
+                    const sessionResult = await loginPageSupabaseClient.auth.getSession();
+                    console.log("[RESUME DEBUG] Raw session result:", sessionResult);
+                    
+                    const session = sessionResult?.data?.session;
+                    console.log("[RESUME DEBUG] Session object:", session);
+                    console.log("[RESUME DEBUG] Session exists:", !!session);
+                    
+                    if (!session) {
+                        console.warn("[RESUME DEBUG] No session available after sign-in");
                         redirectToSelectPage();
                         return;
                     }
+                    
+                    const token = session.access_token;
+                    console.log("[RESUME DEBUG] Token available:", !!token);
+                    console.log("[RESUME DEBUG] Token length:", token ? token.length : 0);
+                    console.log("[RESUME DEBUG] User ID from token:", session.user?.id);
+                    
+                    if (!token) {
+                        console.warn("[RESUME DEBUG] No access token available. Session:", session);
+                        console.warn("[RESUME DEBUG] Waiting 1 second and retrying...");
+                        
+                        // Retry after short delay
+                        setTimeout(async () => {
+                            try {
+                                const retrySession = await loginPageSupabaseClient.auth.getSession();
+                                const retryToken = retrySession?.data?.session?.access_token;
+                                console.log("[RESUME DEBUG] Retry token available:", !!retryToken);
+                                
+                                if (retryToken) {
+                                    await attemptResumeApiCall(retryToken);
+                                } else {
+                                    console.warn("[RESUME DEBUG] Retry failed, redirecting to /select");
+                                    redirectToSelectPage();
+                                }
+                            } catch (retryError) {
+                                console.error("[RESUME DEBUG] Retry error:", retryError);
+                                redirectToSelectPage();
+                            }
+                        }, 1000);
+                        return;
+                    }
 
+                    // Step 3: Make API call with token
+                    await attemptResumeApiCall(token);
+                    
+                } catch (error) {
+                    console.error('[RESUME DEBUG] Error in handleSignIn:', error);
+                    console.error('[RESUME DEBUG] Error stack:', error.stack);
+                    redirectToSelectPage(); // Fallback
+                }
+            }
+
+            async function attemptResumeApiCall(token) {
+                console.log("[RESUME DEBUG] Making API call to /api/user/current-adventure");
+                console.log("[RESUME DEBUG] Using token (first 20 chars):", token.substring(0, 20) + "...");
+                
+                try {
                     const response = await fetch('/api/user/current-adventure', {
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }
                     });
+                    
+                    console.log("[RESUME DEBUG] API response status:", response.status);
+                    console.log("[RESUME DEBUG] API response ok:", response.ok);
+                    console.log("[RESUME DEBUG] API response headers:", Object.fromEntries(response.headers.entries()));
+                    
                     if (!response.ok) {
-                        console.error('Failed to fetch current adventure status:', response.status, await response.text());
+                        const errorText = await response.text();
+                        console.error('[RESUME DEBUG] API call failed:', response.status, errorText);
                         redirectToSelectPage(); // Fallback
                         return;
                     }
+                    
                     const data = await response.json();
+                    console.log("[RESUME DEBUG] API response data:", data);
+                    
                     if (data && data.adventure) {
+                        console.log("[RESUME DEBUG] Adventure found, showing modal:", data.adventure);
                         showResumeModal(data.adventure);
                     } else {
+                        console.log("[RESUME DEBUG] No adventure found, redirecting to /select");
                         redirectToSelectPage();
                     }
-                } catch (error) {
-                    console.error('Error fetching current adventure:', error);
+                } catch (apiError) {
+                    console.error('[RESUME DEBUG] API call error:', apiError);
+                    console.error('[RESUME DEBUG] API error stack:', apiError.stack);
                     redirectToSelectPage(); // Fallback
                 }
             }

@@ -331,6 +331,8 @@ class StateStorageService:
     ) -> Optional[Dict[str, Any]]:
         """
         Get the user's single incomplete adventure with essential info for the resume modal.
+        This method is kept for compatibility but new calls for resume modal should use
+        get_user_current_adventure_for_resume.
 
         Args:
             user_id: The UUID of the user.
@@ -338,13 +340,27 @@ class StateStorageService:
         Returns:
             Optional[Dict[str, Any]]: A dictionary containing adventure details if an
                                      incomplete adventure is found, otherwise None.
-                                     The dictionary includes: adventure_id, story_category,
-                                     lesson_topic, current_chapter (completed_chapter_count),
-                                     total_chapters (from state_data.story_length),
-                                     and last_updated (updated_at).
+        """
+        return await self.get_user_current_adventure_for_resume(user_id)
+
+    async def get_user_current_adventure_for_resume(
+        self, user_id: UUID
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get the user's single incomplete adventure with all details needed for the resume modal
+        and for reconstructing the WebSocket URL.
+
+        Args:
+            user_id: The UUID of the user.
+
+        Returns:
+            Optional[Dict[str, Any]]: A dictionary containing adventure details if an
+                                     incomplete adventure is found, otherwise None.
+                                     Includes: adventure_id, story_category, lesson_topic,
+                                     completed_chapter_count, updated_at, and state_data.
         """
         try:
-            logger.info(f"Fetching current adventure for user_id: {user_id}")
+            logger.info(f"Fetching current adventure for resume for user_id: {user_id}")
             response = (
                 self.supabase.table("adventures")
                 .select(
@@ -360,35 +376,22 @@ class StateStorageService:
 
             if not response.data:
                 logger.info(
-                    f"No active incomplete adventure found for user_id: {user_id}"
+                    f"No active incomplete adventure found for resume for user_id: {user_id}"
                 )
                 return None
 
             adventure_data = response.data
-            story_length = adventure_data.get("state_data", {}).get("story_length")
-
-            # Ensure current_chapter is at least 1 if chapters exist, or 0 if new
-            current_chapter = adventure_data.get("completed_chapter_count", 0)
-            if current_chapter > 0:
-                # If chapters are completed, current_chapter for display is usually +1
-                # However, for "Chapter X out of Y", completed_chapter_count is fine.
-                # If modal shows "Chapter 3 of 10", it means 3 chapters are done.
-                pass  # Using completed_chapter_count directly for "Chapter X"
-
-            modal_info = {
-                "adventure_id": adventure_data["id"],
-                "story_category": adventure_data["story_category"],
-                "lesson_topic": adventure_data["lesson_topic"],
-                "current_chapter": current_chapter,
-                "total_chapters": story_length,  # Can be None if not in state_data
-                "last_updated": adventure_data["updated_at"],
-            }
-            logger.info(f"Found current adventure for user_id {user_id}: {modal_info}")
-            return modal_info
+            # The router will transform this into the Pydantic model AdventureResumeDetails
+            # It will calculate current_chapter and total_chapters based on this data.
+            # Key change: Return the full adventure_data dict as fetched.
+            logger.info(
+                f"Found current adventure for resume for user_id {user_id}: {adventure_data['id']}"
+            )
+            return adventure_data  # Return the raw dict
 
         except Exception as e:
             logger.error(
-                f"Error fetching current adventure for user_id {user_id}: {str(e)}"
+                f"Error fetching current adventure for resume for user_id {user_id}: {str(e)}"
             )
             return None
 
@@ -526,7 +529,10 @@ class StateStorageService:
         logger.info(
             f"Checking for existing incomplete adventure for user {user_id} to abandon."
         )
-        current_adventure_details = await self.get_user_current_adventure(user_id)
+        # Use the new method that returns the full data needed by other parts of the system
+        current_adventure_details = await self.get_user_current_adventure_for_resume(
+            user_id
+        )
         if current_adventure_details and current_adventure_details.get("adventure_id"):
             adventure_to_abandon_id = current_adventure_details["adventure_id"]
             logger.info(

@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel, Field
+from datetime import datetime
 import pandas as pd
 import logging
 import uuid
@@ -11,10 +13,23 @@ from app.data.story_loader import StoryLoader
 from app.services.state_storage_service import StateStorageService
 from app.auth.dependencies import get_current_user_id_optional, get_current_user_id
 
-
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 logger = logging.getLogger("story_app")
+
+
+# Pydantic Models for API Response
+class AdventureResumeDetails(BaseModel):
+    adventure_id: UUID_type
+    story_category: str
+    lesson_topic: str
+    current_chapter: int
+    total_chapters: int = 10  # Assuming a fixed total for now
+    last_updated: datetime
+
+
+class CurrentAdventureAPIResponse(BaseModel):
+    adventure: Optional[AdventureResumeDetails] = None
 
 
 def load_story_data() -> Dict[str, Any]:
@@ -210,7 +225,7 @@ async def story_page(request: Request, chapter: int):
 # --- New API Endpoints for Phase 4.1 ---
 
 
-@router.get("/api/user/current-adventure", response_model=Optional[Dict[str, Any]])
+@router.get("/api/user/current-adventure", response_model=CurrentAdventureAPIResponse)
 async def get_user_current_adventure_api(
     request: Request,
     user_id: Optional[UUID_type] = Depends(get_current_user_id_optional),
@@ -221,32 +236,78 @@ async def get_user_current_adventure_api(
     """
     API endpoint to get the current user's single incomplete adventure.
     Returns adventure details if found, otherwise null.
-    The token for authentication is expected as a query parameter by get_current_user_id_optional.
     """
-    context = get_session_context(request)  # For logging
+    context = get_session_context(request)
+    logger.info("[RESUME API DEBUG] /api/user/current-adventure called", extra=context)
+    logger.info(f"[RESUME API DEBUG] Extracted user_id: {user_id}", extra=context)
+
     if not user_id:
         logger.info(
-            "Attempt to get current adventure for unauthenticated user.", extra=context
+            "[RESUME API DEBUG] No user_id found - unauthenticated request",
+            extra=context,
         )
-        return {
-            "adventure": None
-        }  # Or simply: return None, if response_model handles it.
+        return CurrentAdventureAPIResponse(adventure=None)
 
     try:
-        logger.info(f"Fetching current adventure for user {user_id}", extra=context)
-        adventure_details = await state_storage_service.get_user_current_adventure(
-            user_id
+        logger.info(
+            f"[RESUME API DEBUG] Fetching current adventure for user {user_id}",
+            extra=context,
         )
-        if adventure_details:
-            return {"adventure": adventure_details}
-        return {"adventure": None}
+        # This method now needs to return a dict that matches AdventureResumeDetails structure
+        # or we adapt it here.
+        adventure_data = (
+            await state_storage_service.get_user_current_adventure_for_resume(user_id)
+        )
+        logger.info(
+            f"[RESUME API DEBUG] Adventure data from service: {adventure_data}",
+            extra=context,
+        )
+
+        if adventure_data:
+            # Adapt the dictionary from the service to the Pydantic model
+            # The service method get_user_current_adventure_for_resume should ideally return
+            # data in the shape expected by AdventureResumeDetails or be easily adaptable.
+            # For now, assuming it returns a dict with the necessary keys.
+
+            # Calculate current_chapter. If state_data is None or chapters is missing, default to 0 or 1.
+            current_chapter_num = 0
+            if adventure_data.get("state_data") and adventure_data["state_data"].get(
+                "chapters"
+            ):
+                current_chapter_num = len(adventure_data["state_data"]["chapters"]) + 1
+            elif (
+                adventure_data.get("completed_chapter_count") is not None
+            ):  # Fallback to completed_chapter_count
+                current_chapter_num = (
+                    adventure_data.get("completed_chapter_count", 0) + 1
+                )
+
+            adventure_details = AdventureResumeDetails(
+                adventure_id=adventure_data["adventure_id"],
+                story_category=adventure_data["story_category"],
+                lesson_topic=adventure_data["lesson_topic"],
+                current_chapter=current_chapter_num,  # Needs to be calculated or retrieved
+                total_chapters=adventure_data.get(
+                    "total_chapters", 10
+                ),  # Assuming 10 if not present
+                last_updated=adventure_data["updated_at"],
+            )
+            logger.info(
+                f"[RESUME API DEBUG] Returning adventure: {adventure_details.adventure_id}",
+                extra=context,
+            )
+            return CurrentAdventureAPIResponse(adventure=adventure_details)
+
+        logger.info(
+            "[RESUME API DEBUG] No adventure found, returning null", extra=context
+        )
+        return CurrentAdventureAPIResponse(adventure=None)
     except Exception as e:
         logger.error(
-            f"Error fetching current adventure for user {user_id}: {str(e)}",
+            f"[RESUME API DEBUG] Error fetching current adventure for user {user_id}: {str(e)}",
             extra={**context, "error": str(e)},
             exc_info=True,
         )
-        # Depending on desired behavior, could return 500 or a specific error structure
         raise HTTPException(status_code=500, detail="Error fetching current adventure.")
 
 
@@ -272,7 +333,6 @@ async def abandon_adventure_api(
                 f"Adventure {adventure_id} successfully abandoned by user {user_id}",
                 extra=context,
             )
-            # Return a 200 OK response, possibly with a confirmation message
             return {"message": "Adventure successfully abandoned."}
         else:
             logger.warning(
@@ -280,7 +340,6 @@ async def abandon_adventure_api(
                 f"It might not exist, not belong to the user, or already be complete.",
                 extra=context,
             )
-            # Adventure not found, or not owned by user, or already complete
             raise HTTPException(
                 status_code=404,
                 detail="Adventure not found or cannot be abandoned by this user.",

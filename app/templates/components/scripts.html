@@ -175,12 +175,24 @@
         getWebSocketUrl() {
             console.log('[FrontendWS Log 1.2] getWebSocketUrl called.');
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const storyCategoryEl = document.getElementById('storyCategory');
-            const lessonTopicEl = document.getElementById('lessonTopic');
             
-            // These might not be available if resuming directly via adventureIdToResume
-            const storyCategory = storyCategoryEl ? storyCategoryEl.value : 'unknown';
-            const lessonTopic = lessonTopicEl ? lessonTopicEl.value : 'unknown';
+            let storyCategory = 'unknown';
+            let lessonTopic = 'unknown';
+
+            if (this.adventureIdToResume) {
+                storyCategory = sessionStorage.getItem('resume_story_category') || 'unknown';
+                lessonTopic = sessionStorage.getItem('resume_lesson_topic') || 'unknown';
+                console.log(`[FrontendWS Log 1.3] Resuming: Story Category from sessionStorage: ${storyCategory}, Lesson Topic from sessionStorage: ${lessonTopic}`);
+                // Optionally clear them if they are single-use, or keep for reconnects
+                // sessionStorage.removeItem('resume_story_category');
+                // sessionStorage.removeItem('resume_lesson_topic');
+            } else {
+                const storyCategoryEl = document.getElementById('storyCategory');
+                const lessonTopicEl = document.getElementById('lessonTopic');
+                storyCategory = storyCategoryEl ? storyCategoryEl.value : 'unknown';
+                lessonTopic = lessonTopicEl ? lessonTopicEl.value : 'unknown';
+                console.log(`[FrontendWS Log 1.4] New adventure: Story Category from input: ${storyCategory}, Lesson Topic from input: ${lessonTopic}`);
+            }
             
             const clientUuid = this.stateManager.getClientUuid(); 
             
@@ -197,8 +209,6 @@
                 console.warn('[FrontendWS Log 5] No token found, proceeding without token for WebSocket.');
             }
 
-            // If resuming a specific adventure, add its ID to the URL
-            // The backend will prioritize this over category/topic for loading state.
             if (this.adventureIdToResume) {
                 url += `&resume_adventure_id=${encodeURIComponent(this.adventureIdToResume)}`;
                 console.log(`[FrontendWS Log 5.1] Appending resume_adventure_id: ${this.adventureIdToResume}`);
@@ -237,7 +247,7 @@
             }
 
             const savedState = this.stateManager.loadState();
-            if (!savedState) {
+            if (!savedState && !this.adventureIdToResume) { // Also check adventureIdToResume
                 appendStoryText('\n\nUnable to recover story state. Please refresh the page.');
                 return;
             }
@@ -245,7 +255,7 @@
             const delay = this.calculateBackoff();
             await new Promise(resolve => setTimeout(resolve, delay));
 
-            const websocketUrl = this.getWebSocketUrl();
+            const websocketUrl = this.getWebSocketUrl(); // This will now use sessionStorage if resuming
             console.log("[WebSocketManager.reconnect] Attempting to connect to WebSocket URL:", websocketUrl); 
             try {
                 this.connection = new WebSocket(websocketUrl);
@@ -267,20 +277,10 @@
 
                 if (this.adventureIdToResume) {
                     console.log(`[FrontendWS] Resuming specific adventure ID: ${this.adventureIdToResume}. Sending resume request.`);
-                    // Server will load state based on this ID. No need to send client-side state.
-                    // The backend WebSocket handler needs to be updated to look for `resume_adventure_id`
-                    // in the query params and use it to load state via StateStorageService.get_state().
-                    // For now, we'll send a specific message type.
-                    // OR, the backend can pick up resume_adventure_id from the URL query params directly.
-                    // Let's assume backend handles resume_adventure_id from URL for now.
-                    // We still need to send a 'start' or 'resume' signal.
                     this.connection.send(JSON.stringify({
-                        choice: 'resume_specific_adventure', // A new choice type for clarity
+                        choice: 'resume_specific_adventure', 
                         adventure_id_to_resume: this.adventureIdToResume 
-                        // state: null // No client state needed if server loads by ID
                     }));
-                    // Clear it after sending so normal flow resumes if connection drops and reconnects
-                    // this.adventureIdToResume = null; // Reconsider this, might be needed for reconnects
                 } else if (savedState) {
                     const currentChapter = savedState.chapters.length;
                     updateProgress(currentChapter + 1, savedState.story_length);
@@ -292,8 +292,8 @@
                     const storyCategoryEl = document.getElementById('storyCategory');
                     const lessonTopicEl = document.getElementById('lessonTopic');
                     const initialState = manageState('initialize', {
-                        storyCategory: storyCategoryEl ? storyCategoryEl.value : '',
-                        lessonTopic: lessonTopicEl ? lessonTopicEl.value : ''
+                        storyCategory: storyCategoryEl ? storyCategoryEl.value : (sessionStorage.getItem('resume_story_category') || ''),
+                        lessonTopic: lessonTopicEl ? lessonTopicEl.value : (sessionStorage.getItem('resume_lesson_topic') || '')
                     });
                     this.connection.send(JSON.stringify({
                         state: initialState,
@@ -504,7 +504,7 @@ function startAdventure() {
 
         // Initialize with a new state or restore existing
         const savedState = stateManager.loadState();
-        if (savedState) {
+        if (savedState && !wsManager.adventureIdToResume) { // Only use savedState if not resuming specific
             // Restore UI state
             const currentChapter = savedState.chapters.length;
             updateProgress(currentChapter + 1, savedState.story_length);
@@ -553,6 +553,17 @@ function startAdventure() {
                 if (data.adventure_id) {
                     wsManager.setAdventureId(data.adventure_id);
                     console.log(`Received adventure_id: ${data.adventure_id} from server`);
+                }
+                 // If adventure_loaded, update selectedCategory and selectedLessonTopic from server state
+                if (data.type === 'adventure_loaded' && data.state) {
+                    selectedCategory = data.state.story_category || selectedCategory;
+                    selectedLessonTopic = data.state.lesson_topic || selectedLessonTopic;
+                    console.log(`[FrontendWS] Adventure loaded. Category: ${selectedCategory}, Topic: ${selectedLessonTopic}`);
+                    // Update hidden inputs if they exist (they might not on direct resume)
+                    const storyCatEl = document.getElementById('storyCategory');
+                    const lessonTopicEl = document.getElementById('lessonTopic');
+                    if (storyCatEl) storyCatEl.value = selectedCategory;
+                    if (lessonTopicEl) lessonTopicEl.value = selectedLessonTopic;
                 }
                 // Don't hide loader here - wait for hide_loader message
             } else {
@@ -863,6 +874,7 @@ function startAdventure() {
             document.getElementById('introText').classList.add('hidden');
             document.getElementById('storyContainer').classList.remove('hidden');
             // Note: selectedCategory and selectedLessonTopic will be set by server state
+            // and retrieved from sessionStorage in getWebSocketUrl
             initWebSocket();
         } else {
             const savedState = stateManager.loadState();
