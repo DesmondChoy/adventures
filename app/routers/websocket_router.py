@@ -421,7 +421,7 @@ async def story_websocket(
 
             if not validated_state:
                 logger.error("Missing state in message")
-                await websocket.send_text("Missing state in message")
+                await websocket.send_text("Image not available")
                 continue
             if not choice_data:
                 logger.error("Missing choice in message")
