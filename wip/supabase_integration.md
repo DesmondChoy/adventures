@@ -10,22 +10,24 @@ This document outlines the plan and progress for integrating Supabase into the L
     *   **Phase 2: Persistent Adventure State (Supabase Database):** Fully complete and validated.
     *   **Phase 3: Telemetry (Supabase Database):** Fully complete and validated.
     *   **Phase 4: Optional User Authentication (Supabase Auth):** Backend logic, database schema/RLS, and initial frontend flows completed.
-*   **Phase 4.1: Adventure Resumption Bug Fix & Enhanced UX - ✅ PARTIALLY FIXED, NEW ISSUES IDENTIFIED**
+*   **Phase 4.1: Adventure Resumption Bug Fix & Enhanced UX - ✅ MAJOR FIXES COMPLETED**
     *   **Implementation Status (Updated 2025-05-26 Evening):**
         *   Core fixes for adventure matching implemented.
         *   **✅ FIXED:** Resume modal flow for Google Authenticated users.
         *   **✅ FIXED:** Custom conflict modal implemented and working for Google Authenticated users (replaces native `confirm()`).
+        *   **✅ FIXED:** Resume modal flow for Guest users (localStorage key mismatch resolved).
+        *   **✅ FIXED:** Conflict modal flow for Guest users (ES6 module loading and modal promise flow fixed).
         *   Backend API (`/api/user/current-adventure`) enhanced with detailed logging.
         *   `StateStorageService` updated with `get_user_current_adventure_for_resume` method.
         *   `login.html` updated with retry logic and comprehensive debugging.
-        *   `uiManager.js` updated with custom conflict modal logic. Chapter display issues persist.
+        *   `uiManager.js` updated with custom conflict modal logic and comprehensive debugging.
         *   **✅ FIXED:** Multiple incomplete adventures per user issue resolved.
         *   **✅ FIXED:** Resume API KeyError resolved.
-        *   **❌ NOT FIXED (Guest Login):** Resume modal does NOT appear for guest users after logout/login.
-        *   **❌ NOT FIXED (Guest Login):** Conflict modal does NOT appear for guest users.
+        *   **✅ FIXED:** ES6 module import path corrected in `scripts.html`.
+        *   **✅ FIXED:** Modal flow improved (loader hidden before modal display).
         *   **❌ NOT FIXED:** Chapter display inconsistency not fully resolved.
 
-*   **Testing Results (2025-05-26 Evening):**
+*   **Testing Results (2025-05-26 Evening - UPDATED):**
     *   **Google Authentication:**
         *   **✅ VERIFIED WORKING:** Resume modal appears consistently.
         *   **✅ VERIFIED WORKING:** Custom conflict modal (for abandoning incomplete adventures) appears consistently and functions correctly on desktop and mobile.
@@ -33,13 +35,14 @@ This document outlines the plan and progress for integrating Supabase into the L
         *   **✅ VERIFIED WORKING:** One adventure per user enforcement.
     *   **Guest Login:**
         *   **✅ VERIFIED WORKING:** Adventure persistence and resumption via `client_uuid` fallback (adventure resumes automatically).
-        *   **❌ CRITICAL BUG:** Resume modal does NOT appear after logout/login.
-        *   **❌ CRITICAL BUG:** Custom conflict modal does NOT appear when trying to start a new adventure over an existing one.
+        *   **✅ FIXED:** Resume modal now appears correctly after logout/login.
+        *   **✅ FIXED:** Custom conflict modal now appears and functions correctly when trying to start a new adventure over an existing one.
         *   **✅ VERIFIED WORKING:** One adventure per user enforcement (likely due to `client_uuid` fallback and backend logic).
     *   **General:**
         *   **❌ INCONSISTENT:** Chapter display sometimes shows correct progress, sometimes doesn't (both auth types).
         *   **✅ VERIFIED WORKING:** Adventure state reconstruction from database.
-    *   **Root Cause Identified for Guest Login Modal Issues:** Inconsistent `user_id` for guest users across sessions. API calls dependent on `user_id` (like `/api/user/current-adventure`) fail, preventing modal triggers. Google Auth maintains stable `user_id`.
+        *   **⚠️ MINOR ISSUE:** ES6 module error in `carousel-manager.js:247` still present in console ("Uncaught SyntaxError: Unexpected token 'export'") but does not affect functionality.
+    *   **Root Cause RESOLVED for Guest Login Modal Issues:** localStorage key mismatch fixed (`'client_uuid'` vs `'learning_odyssey_user_uuid'`) and ES6 module import path corrected in `scripts.html`.
 
 ---
 

@@ -642,3 +642,58 @@ class StateStorageService:
             f"[DUPLICATE_ADVENTURE_DEBUG] _abandon_existing_incomplete_adventure: DEPRECATED method called, redirecting to _abandon_all_incomplete_adventures for user {user_id}"
         )
         return await self._abandon_all_incomplete_adventures(user_id)
+
+    async def get_active_adventure_by_client_uuid(
+        self, client_uuid: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get the active (incomplete) adventure for a given client_uuid.
+        Returns details needed for the resume modal.
+
+        Args:
+            client_uuid: The client's UUID.
+
+        Returns:
+            Optional[Dict[str, Any]]: A dictionary containing adventure details if an
+                                     incomplete adventure is found, otherwise None.
+                                     Includes: adventure_id, story_category, lesson_topic,
+                                     completed_chapter_count, updated_at, and state_data.
+        """
+        try:
+            logger.info(
+                f"[RESUME_MODAL_GUEST_DEBUG] get_active_adventure_by_client_uuid: Called for client_uuid: {client_uuid}"
+            )
+            response = (
+                self.supabase.table("adventures")
+                .select(
+                    "id, story_category, lesson_topic, completed_chapter_count, updated_at, state_data"
+                )
+                .eq("client_uuid", client_uuid)
+                .eq("is_complete", False)
+                .order("updated_at", desc=True)
+                .limit(1)
+                .maybe_single()  # Expects at most one row
+                .execute()
+            )
+
+            logger.info(
+                f"[RESUME_MODAL_GUEST_DEBUG] get_active_adventure_by_client_uuid: Supabase response: {response}"
+            )
+
+            if not response.data:
+                logger.info(
+                    f"[RESUME_MODAL_GUEST_DEBUG] get_active_adventure_by_client_uuid: No active incomplete adventure found for client_uuid: {client_uuid}"
+                )
+                return None
+
+            adventure_data = response.data
+            logger.info(
+                f"[RESUME_MODAL_GUEST_DEBUG] get_active_adventure_by_client_uuid: Found current adventure for client_uuid {client_uuid}: {adventure_data.get('id')}"
+            )
+            return adventure_data
+
+        except Exception as e:
+            logger.error(
+                f"[RESUME_MODAL_GUEST_DEBUG] get_active_adventure_by_client_uuid: Error fetching current adventure for client_uuid {client_uuid}: {str(e)}"
+            )
+            return None

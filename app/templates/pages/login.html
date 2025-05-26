@@ -618,7 +618,9 @@
                         }
 
                         // Token is available, proceed with API call
-                        await attemptResumeApiCall(token);
+                        const isAnonymousUser = session.user?.is_anonymous === true; // Explicitly check for true
+                        console.log("[RESUME DEBUG] User is anonymous:", isAnonymousUser);
+                        await attemptResumeApiCall(token, isAnonymousUser);
                         
                     } catch (error) {
                         console.error(`[RESUME DEBUG] Error in session retrieval attempt ${retryCount + 1}:`, error);
@@ -640,28 +642,41 @@
                 await attemptSessionRetrieval();
             }
 
-            async function attemptResumeApiCall(token) {
-                console.log("[RESUME DEBUG] Making API call to /api/user/current-adventure");
-                console.log("[RESUME DEBUG] Using token (first 20 chars):", token.substring(0, 20) + "...");
+            async function attemptResumeApiCall(token, isAnonymous) {
+                console.log(`[RESUME DEBUG] Making API call. User is anonymous: ${isAnonymous}`);
                 
-                // Enhanced API call with retry logic
                 const maxApiRetries = 2;
                 let apiRetryCount = 0;
+                let apiUrl;
+                let apiHeaders = {
+                    'Content-Type': 'application/json'
+                };
+
+                if (isAnonymous) {
+                    const clientUUID = localStorage.getItem('learning_odyssey_user_uuid'); // Correct key from adventureStateManager.js
+                    if (clientUUID) {
+                        apiUrl = `/api/adventure/active_by_client_uuid/${clientUUID}`;
+                        // No Authorization header needed for this specific guest endpoint
+                        console.log(`[RESUME DEBUG] Anonymous user, using client_uuid: ${clientUUID}. API URL: ${apiUrl}`);
+                    } else {
+                        console.error("[RESUME DEBUG] Anonymous user but no client_uuid found in localStorage. Cannot fetch adventure for modal.");
+                        redirectToSelectPage();
+                        return;
+                    }
+                } else {
+                    apiUrl = '/api/user/current-adventure';
+                    apiHeaders['Authorization'] = `Bearer ${token}`;
+                    console.log(`[RESUME DEBUG] Authenticated user. API URL: ${apiUrl}. Token (first 20): ${token ? token.substring(0,20) + "..." : "N/A"}`);
+                }
                 
                 async function makeApiCall() {
                     try {
-                        console.log(`[RESUME DEBUG] API call attempt ${apiRetryCount + 1}/${maxApiRetries + 1}`);
-                        console.log("[RESUME DEBUG] Request URL:", '/api/user/current-adventure');
-                        console.log("[RESUME DEBUG] Request headers:", {
-                            'Authorization': `Bearer ${token.substring(0, 20)}...`
-                        });
+                        console.log(`[RESUME DEBUG] API call attempt ${apiRetryCount + 1}/${maxApiRetries + 1} to ${apiUrl}`);
+                        console.log("[RESUME DEBUG] Request headers:", apiHeaders);
                         
-                        const response = await fetch('/api/user/current-adventure', {
+                        const response = await fetch(apiUrl, {
                             method: 'GET',
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json'
-                            }
+                            headers: apiHeaders
                         });
                         
                         console.log("[RESUME DEBUG] API response status:", response.status);

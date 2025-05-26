@@ -444,6 +444,105 @@ async def get_user_current_adventure_api(
         raise HTTPException(status_code=500, detail="Error fetching current adventure.")
 
 
+@router.get(
+    "/api/adventure/active_by_client_uuid/{client_uuid}",
+    response_model=CurrentAdventureAPIResponse,
+)
+async def get_active_adventure_by_client_uuid_api(
+    request: Request,
+    client_uuid: str,
+    state_storage_service: StateStorageService = Depends(StateStorageService),
+):
+    """
+    API endpoint to get the active adventure by client_uuid.
+    This endpoint does not require JWT authentication.
+    Returns adventure details if found, otherwise null.
+    """
+    context = get_session_context(request)
+    logger.info(
+        f"[RESUME_MODAL_GUEST_DEBUG] /api/adventure/active_by_client_uuid/{client_uuid} called",
+        extra=context,
+    )
+
+    if not client_uuid:
+        logger.warning(
+            "[RESUME_MODAL_GUEST_DEBUG] client_uuid is missing.", extra=context
+        )
+        raise HTTPException(status_code=400, detail="Client UUID is required.")
+
+    try:
+        logger.info(
+            f"[RESUME_MODAL_GUEST_DEBUG] Fetching active adventure for client_uuid {client_uuid}",
+            extra=context,
+        )
+        adventure_data = (
+            await state_storage_service.get_active_adventure_by_client_uuid(client_uuid)
+        )
+        logger.info(
+            f"[RESUME_MODAL_GUEST_DEBUG] Adventure data from service for client_uuid {client_uuid}: {adventure_data}",
+            extra=context,
+        )
+
+        if adventure_data:
+            logger.info(
+                f"[RESUME_MODAL_GUEST_DEBUG] Adventure data found for client_uuid {client_uuid}, processing...",
+                extra=context,
+            )
+
+            current_chapter_num = 1  # Default to chapter 1
+            state_data = adventure_data.get("state_data")
+            if state_data and isinstance(state_data, dict):
+                chapters = state_data.get("chapters", [])
+                if isinstance(chapters, list):
+                    current_chapter_num = len(chapters) + 1
+            elif adventure_data.get("completed_chapter_count") is not None:
+                current_chapter_num = (
+                    adventure_data.get("completed_chapter_count", 0) + 1
+                )
+
+            adventure_id = adventure_data.get("id")
+            story_category = adventure_data.get("story_category")
+            lesson_topic = adventure_data.get("lesson_topic")
+            updated_at = adventure_data.get("updated_at")
+
+            if not all([adventure_id, story_category, lesson_topic, updated_at]):
+                logger.error(
+                    f"[RESUME_MODAL_GUEST_DEBUG] Adventure for client_uuid {client_uuid} missing required fields.",
+                    extra=context,
+                )
+                return CurrentAdventureAPIResponse(adventure=None)
+
+            adventure_details = AdventureResumeDetails(
+                adventure_id=adventure_id,
+                story_category=story_category,
+                lesson_topic=lesson_topic,
+                current_chapter=current_chapter_num,
+                total_chapters=adventure_data.get("total_chapters", 10),
+                last_updated=updated_at,
+            )
+            logger.info(
+                f"[RESUME_MODAL_GUEST_DEBUG] Successfully created AdventureResumeDetails for client_uuid {client_uuid}: {adventure_details.adventure_id}",
+                extra=context,
+            )
+            return CurrentAdventureAPIResponse(adventure=adventure_details)
+
+        logger.info(
+            f"[RESUME_MODAL_GUEST_DEBUG] No adventure found for client_uuid {client_uuid}, returning null",
+            extra=context,
+        )
+        return CurrentAdventureAPIResponse(adventure=None)
+
+    except Exception as e:
+        logger.error(
+            f"[RESUME_MODAL_GUEST_DEBUG] Error fetching active adventure for client_uuid {client_uuid}: {str(e)}",
+            extra={**context, "error": str(e), "error_type": type(e).__name__},
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail="Error fetching active adventure by client UUID."
+        )
+
+
 @router.post("/api/adventure/{adventure_id}/abandon", status_code=200)
 async def abandon_adventure_api(
     request: Request,
