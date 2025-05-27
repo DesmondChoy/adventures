@@ -152,7 +152,7 @@ async def stream_chapter_content(
         final_chapter_content_pydantic = generated_chapter_content_model
         final_sampled_question_as_dict = generated_sampled_question_dict
 
-        current_chapter_number_to_send = len(state.chapters)
+        current_chapter_number_to_send = len(state.chapters) + 1
         logger.debug(
             f"New chapter number: {current_chapter_number_to_send}. State has {len(state.chapters)} existing chapters."
         )
