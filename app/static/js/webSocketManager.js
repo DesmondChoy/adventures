@@ -122,8 +122,7 @@ export class WebSocketManager {
                     adventure_id_to_resume: this.adventureIdToResume 
                 }));
             } else if (savedState) {
-                const currentChapter = savedState.chapters.length;
-                updateProgress(currentChapter + 1, savedState.story_length);
+                // Don't update progress here - let server send correct chapter numbers via adventure_loaded
                 this.connection.send(JSON.stringify({
                     state: savedState,
                     choice: 'start'

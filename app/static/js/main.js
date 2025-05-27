@@ -97,7 +97,7 @@ export function makeChoice(choiceId, choiceText) {
             chapters: [...currentChapter, newChapter]
         });
 
-        updateProgress(updatedState.chapters.length + 1, updatedState.story_length);
+        // Don't update progress here - let server send correct chapter numbers via response
 
         // Send state and choice data to server
         window.appState.wsManager.sendMessage({

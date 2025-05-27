@@ -657,6 +657,16 @@ export async function handleMessage(event) {
                 
                 updateProgress(currentChapterFromServer, totalChaptersFromServer);
             }
+            
+            // If chapter_update, update progress display with server data
+            if (data.type === 'chapter_update') {
+                const currentChapterFromServer = data.current_chapter;
+                const totalChaptersFromServer = data.total_chapters;
+                
+                if (currentChapterFromServer && totalChaptersFromServer) {
+                    updateProgress(currentChapterFromServer, totalChaptersFromServer);
+                }
+            }
             // Don't hide loader here - wait for hide_loader message
         } else {
             // For any other message types, hide the loader as a fallback

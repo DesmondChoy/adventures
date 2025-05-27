@@ -1,6 +1,34 @@
 # Implementation Plans
 
-## Current Focus: Protagonist Inconsistencies Fix
+## Current Focus: Chapter Numbering Synchronization Fix (COMPLETED)
+
+### Problem Statement
+Chapter numbers were briefly showing incorrect values (e.g., "Chapter 1 of" then "Chapter 2 of") due to race conditions between frontend state calculations and server responses during adventure resumption and progression.
+
+### Root Cause Analysis
+- Multiple sources were updating chapter progress simultaneously:
+  1. Frontend immediately calculated and displayed chapter numbers based on local state
+  2. Server sent different chapter numbers via WebSocket messages at different times
+  3. Race conditions between `adventure_loaded` and `chapter_update` messages
+- WebSocketManager updated progress on connection open, then server sent different numbers
+- makeChoice function updated progress before server confirmation
+
+### Solution Implemented
+1. **Removed premature progress updates**: Frontend no longer calculates chapter numbers independently
+   - `webSocketManager.js:126` - removed updateProgress call on state restoration
+   - `main.js:100` - removed updateProgress call in makeChoice function
+2. **Enhanced server responses**: Added authoritative chapter numbers to all relevant server messages
+   - `stream_handler.py:546-547` - added `current_chapter` and `total_chapters` to `chapter_update` messages
+3. **Improved frontend message handling**: Added proper handler for chapter updates
+   - `uiManager.js:661-669` - added handler for `chapter_update` messages to update progress display
+
+### Files Modified
+- `/app/static/js/webSocketManager.js` - removed race condition in state restoration
+- `/app/static/js/main.js` - removed premature progress update in choice handling
+- `/app/services/websocket/stream_handler.py` - added chapter numbers to server responses
+- `/app/static/js/uiManager.js` - enhanced message handling for chapter updates
+
+## Previous Focus: Protagonist Inconsistencies Fix
 
 ### Problem Statement
 The current image generation process struggles to maintain visual stability for the protagonist across different chapters. Combining base protagonist look, agency details, and chapter scene description consistently via simple templating is challenging, leading to potential visual conflicts or ignored elements.

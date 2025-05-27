@@ -543,6 +543,8 @@ async def send_chapter_data(
     """Send complete chapter data to the client."""
     chapter_data = {
         "type": "chapter_update",
+        "current_chapter": chapter_number,
+        "total_chapters": state.story_length,
         "state": {
             "current_chapter_id": state.current_chapter_id,
             "current_chapter": {
