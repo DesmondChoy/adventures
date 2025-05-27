@@ -356,13 +356,28 @@ class AdventureStateManager:
                         new_chapters.append(new_chapter)
 
                 # Update self.state.chapters
-                # Keep existing chapters not in client_chapters and add new chapters
-                updated_chapters = [
-                    ch
-                    for ch in self.state.chapters
-                    if ch.chapter_number
-                    not in [c["chapter_number"] for c in client_chapters]
-                ] + new_chapters
+                # Keep all existing chapters and add only truly new chapters
+                client_chapter_numbers = [c["chapter_number"] for c in client_chapters]
+                max_existing_chapter = max([ch.chapter_number for ch in self.state.chapters]) if self.state.chapters else 0
+                
+                # Only add chapters that are truly new (higher chapter number than existing)
+                truly_new_chapters = [
+                    ch for ch in new_chapters 
+                    if ch.chapter_number > max_existing_chapter
+                ]
+                
+                # Update existing chapters if they're included in client_chapters
+                for existing_ch in self.state.chapters:
+                    for new_ch in new_chapters:
+                        if existing_ch.chapter_number == new_ch.chapter_number:
+                            # Update the existing chapter with new data
+                            existing_ch.content = new_ch.content
+                            existing_ch.chapter_type = new_ch.chapter_type
+                            existing_ch.response = new_ch.response
+                            existing_ch.chapter_content = new_ch.chapter_content
+                            existing_ch.question = new_ch.question
+                
+                updated_chapters = self.state.chapters + truly_new_chapters
                 self.state.chapters = sorted(
                     updated_chapters, key=lambda x: x.chapter_number
                 )
