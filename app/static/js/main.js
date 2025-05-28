@@ -57,10 +57,8 @@ export function initWebSocket() {
 
     // Initialize with a new state or restore existing
     const savedState = stateManager.loadState();
-    if (savedState && !window.appState.wsManager.adventureIdToResume) { // Only use savedState if not resuming specific
-        // Restore UI state
-        const currentChapter = savedState.chapters.length;
-        updateProgress(currentChapter + 1, savedState.story_length);
+    if (savedState && !window.appState.wsManager.adventureIdToResume) { 
+        // Don't call updateProgress here - let the backend's adventure_loaded message handle it
     }
 }
 
@@ -97,8 +95,7 @@ export function makeChoice(choiceId, choiceText) {
             chapters: [...currentChapter, newChapter]
         });
 
-        // Provide immediate UI feedback - server will override with authoritative numbers when it responds
-        updateProgress(updatedState.chapters.length + 1, updatedState.story_length);
+        // Don't call updateProgress here - let the backend handle chapter display updates
 
         // Send state and choice data to server
         window.appState.wsManager.sendMessage({
@@ -325,7 +322,7 @@ async function initialize() {
         const savedState = stateManager.loadState();
         if (savedState?.chapters?.length > 0 && savedState.storyCategory && savedState.lessonTopic) {
             showLoader();
-            updateProgress(savedState.chapters.length + 1, savedState.story_length);
+            // Don't call updateProgress here - let the backend's adventure_loaded message handle it
             
             document.getElementById('storyCategoryScreen').classList.add('hidden');
             document.getElementById('lessonTopicScreen').classList.add('hidden');

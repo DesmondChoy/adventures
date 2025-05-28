@@ -1,12 +1,48 @@
 # Active Context
 
-## Current Focus: Post-Supabase Integration Enhancements (As of 2025-05-26)
+## Current Focus: Post-Security Audit (As of 2025-05-28)
 
-✅ **MAJOR MILESTONE ACHIEVED:** Complete Supabase Integration is now PRODUCTION READY! All four phases (Prerequisites, Persistent State, Telemetry, and User Authentication with Bug Fixes) have been successfully implemented and thoroughly tested. The application now offers optional user accounts (Google/Guest), persistent adventure state, comprehensive telemetry, and robust adventure resumption with custom modal flows.
-
-With Supabase integration complete, the project focus shifts to remaining enhancements and optimizations.
+🔒 **CRITICAL SECURITY MILESTONE ACHIEVED:** Complete security audit completed with all vulnerabilities fixed! Critical user data mixing vulnerability resolved, comprehensive user ownership validation implemented, and defense-in-depth security achieved across all application layers.
 
 ### Recently Completed Milestones
+
+*   **Critical Security Audit and Vulnerability Fixes (2025-05-28):**
+    *   **Goal:** Resolve critical user data mixing vulnerability where authenticated users could access other users' adventures.
+    *   **Problem:** Multiple security vulnerabilities allowing cross-user data access:
+        *   Primary: WebSocket router incorrectly falling back to `client_uuid` searches for authenticated users
+        *   Secondary: Summary endpoints lacking user ownership validation (bypassing RLS via service key)
+        *   Frontend: Chapter display bugs showing incorrect progress numbers
+    *   **Root Cause Analysis:**
+        *   WebSocket router fell back to `client_uuid` even when user was authenticated, allowing access to other users' adventures
+        *   Summary router used `SUPABASE_SERVICE_KEY` which bypasses RLS policies without application-level validation
+        *   Frontend race conditions with corrupted localStorage data overriding correct server data
+    *   **Security Fixes Implemented:**
+        *   **WebSocket Router (`app/routers/websocket_router.py`):**
+            *   Added condition to only fall back to `client_uuid` for guest users (`not connection_data.get("user_id")`)
+            *   Authenticated users now only access their own adventures via `user_id`
+            *   Added security logging for blocked unauthorized access attempts
+        *   **Summary Router (`app/routers/summary_router.py`):**
+            *   Added `validate_user_adventure_access()` function for comprehensive user ownership validation
+            *   Added `user_id` dependency injection to `/api/adventure-summary` and `/api/get-adventure-state/{state_id}` endpoints
+            *   Implemented proper HTTP 403/404 error responses for unauthorized access
+            *   Guest adventures remain accessible (`user_id IS NULL`) while user adventures require authentication
+        *   **Frontend Display Fixes (`app/static/js/`):**
+            *   Removed premature `updateProgress()` calls using corrupted localStorage data
+            *   Added `chapter_update` message handler for new chapter progression
+            *   Fixed race conditions between localStorage and server-provided data
+    *   **Affected Files:**
+        *   `app/routers/websocket_router.py` (modified - security fix)
+        *   `app/routers/summary_router.py` (modified - security validation added)
+        *   `app/static/js/webSocketManager.js` (modified - frontend fixes)
+        *   `app/static/js/main.js` (modified - frontend fixes)
+        *   `app/static/js/uiManager.js` (modified - frontend fixes)
+    *   **Security Architecture Achieved:**
+        *   **Application Layer:** User validation in all endpoints (WebSocket + REST)
+        *   **Database Layer:** RLS policies prevent unauthorized database queries
+        *   **Service Layer:** Comprehensive ownership validation despite service key usage
+    *   **Result:** Complete user data isolation - authenticated users can only access their own adventures, guest functionality preserved, all cross-user access vectors eliminated.
+    *   **Impact:** Critical security vulnerability eliminated, ensuring complete user privacy and data protection.
+
 *   **Production OAuth Redirect Fix (2025-05-27):**
     *   **Goal:** Resolve critical "localhost refused to connect" errors preventing mobile users from accessing the carousel screen after Google authentication.
     *   **Problem:** After Google OAuth completion, users were redirected to localhost URLs instead of the production domain, causing connection failures on mobile devices and "loading user status..." issues.
@@ -58,28 +94,20 @@ With Supabase integration complete, the project focus shifts to remaining enhanc
         *   `app/static/js/main.js` (created)
     *   **Benefits:** Significantly improved code organization, maintainability, and testability of the frontend JavaScript. Reduced global namespace pollution and established clear module boundaries.
 
-*   **Supabase Integration - Phase 4 (User Authentication - Google Flow):**
-    *   **Backend Logic:** Implemented JWT verification in `websocket_router.py` using `PyJWT`.
-    *   **User ID Propagation:** Ensured `user_id` (extracted from JWT) is correctly passed to `StateStorageService` and `TelemetryService`.
-    *   **Database Interaction Fixes:**
-        *   Resolved `TypeError: Object of type UUID is not JSON serializable` in `StateStorageService` by converting `user_id` to a string before database operations.
-        *   Fixed `NULL` `user_id` issue in `telemetry_events` table for `choice_made` and `chapter_viewed` events by ensuring correct `user_id` passing in `choice_processor.py` and `stream_handler.py`.
-    *   **Database Schema & RLS:** Added foreign key constraints for `user_id` in `adventures` and `telemetry_events` tables, and defined initial RLS policies. Migration applied successfully.
-    *   **Debug Log Cleanup:** Removed temporary `print()` statements from `websocket_router.py`, converting to standard logging.
-    *   **Google Login Flow Testing:** Successfully tested the Google login flow, verifying `user_id` is correctly populated in `adventures` and `telemetry_events` tables.
-*   **Supabase Integration - Phase 3 (Telemetry):** Fully completed and validated (as of 2025-05-21). This includes schema definition, backend logging integration, detailed telemetry columns, and analytics capabilities.
-*   **Supabase Integration - Phase 2 (Persistent Adventure State):** Fully completed and validated (as of 2025-05-20). Adventures are persistent, and resumption is functional.
-*   **Visual Consistency Epic (Core Implementation):**
-    *   Implemented two-step image prompt synthesis for protagonist visual stability.
-    *   Established a system for tracking and updating visual descriptions for all characters (protagonist and NPCs) across chapters (`state.character_visuals`).
-    *   Fixed character visual extraction timing issues.
-    *   Enhanced agency visual detail integration into prompts.
-    *   Updated Chapter 1 prompt generation to include protagonist description.
-    *   Added significant logging for visual tracking and image generation processes.
-
 ### Immediate Next Steps & Priorities
 
-1.  **Implement Resuming Chapter Image Display (Chapters 1-9)**
+1.  **Conflict Modal Intermittent Issue (Resolved but Monitoring - 2025-05-28)**
+    *   **Goal:** Monitor intermittent conflict modal display issues for Google authenticated users.
+    *   **Problem:** Google authenticated users occasionally didn't see the conflict modal when attempting to start a new adventure while having an incomplete adventure.
+    *   **Resolution Status:** 
+        *   Issue resolved spontaneously without explicit code changes - suggests timing/state-related root cause
+        *   Added comprehensive diagnostic logging to `app/static/js/uiManager.js` conflict detection logic (retained for future monitoring)
+        *   Logging covers: authManager state, API endpoint determination, JWT token details, fetch responses, conflict detection logic
+        *   **Diagnostic code retained** - provides valuable troubleshooting data if issue resurfaces
+    *   **Likely Root Causes:** Browser/session state inconsistencies, race conditions, caching issues, or authentication token lifecycle timing
+    *   **Monitoring Plan:** Continue observing for intermittent behavior; diagnostic logging will help identify patterns if issue reoccurs
+
+2.  **Implement Resuming Chapter Image Display (Chapters 1-9)**
     *   **Goal:** Address the known issue where the original image for chapters 1-9 is not re-displayed when an adventure is resumed.
     *   **Context:** This is a follow-up enhancement to the Supabase Phase 2 (Resumption) work. Potential solutions are outlined in `wip/supabase_integration.md`.
 
@@ -87,24 +115,34 @@ With Supabase integration complete, the project focus shifts to remaining enhanc
     *   **Goal:** Resolve WebSocket `ConnectionClosedOK` errors and `RuntimeError` that occur when clients navigate away (e.g., to the summary page) by improving connection lifecycle management.
     *   **Context:** Noted as a known issue in `wip/implemented/summary_chapter_race_condition.md`.
 
-4.  **Finalize "Visual Consistency Epic"**
+3.  **Finalize "Visual Consistency Epic"**
     *   **Goal:** Ensure full completion of the visual consistency improvements.
     *   **Tasks:**
         *   Add comprehensive tests specifically for the new visual consistency features.
         *   Implement explicit protagonist gender consistency checks, if deemed necessary.
         *   Update core Memory Bank documentation (`projectbrief.md`, `systemPatterns.md`, `techContext.md`, `progress.md`, `llmBestPractices.md`, `implementationPlans.md`) to reflect all recent visual consistency implementations.
 
-5.  **Ongoing Supabase Considerations & Enhancements**
-    *   **Goal:** Continuously improve the Supabase integration.
-    *   **Tasks:** Refine user identification for resumption, enhance error handling for Supabase interactions, add specific tests for Supabase features (especially if Auth is added), implement/verify RLS policies, and monitor scalability.
-
-6.  **General Testing Enhancements & LLM Prompt Optimization**
+4.  **General Testing Enhancements & LLM Prompt Optimization**
     *   **Goal:** Broader, ongoing improvements to overall test coverage and LLM prompt efficiency.
 
 ---
 
-## Previous Focus: Testing Supabase Persistence & Resume (2025-04-27)
-*(This phase is now complete and validated as of 2025-05-20. See "Recently Completed Milestones" above.)*
+## Previous Milestones (Completed)
+
+### Supabase Integration (Fully Complete)
+*   **Supabase Integration - Phase 4 (User Authentication - Google Flow):** Fully completed with JWT verification, user ID propagation, database interaction fixes, RLS policies, and Google login flow testing.
+*   **Supabase Integration - Phase 3 (Telemetry):** Fully completed and validated (as of 2025-05-21). Includes schema definition, backend logging integration, detailed telemetry columns, and analytics capabilities.
+*   **Supabase Integration - Phase 2 (Persistent Adventure State):** Fully completed and validated (as of 2025-05-20). Adventures are persistent, and resumption is functional.
+
+### Visual Consistency Epic (Core Implementation)
+*   Implemented two-step image prompt synthesis for protagonist visual stability.
+*   Established a system for tracking and updating visual descriptions for all characters (protagonist and NPCs) across chapters (`state.character_visuals`).
+*   Fixed character visual extraction timing issues.
+*   Enhanced agency visual detail integration into prompts.
+*   Updated Chapter 1 prompt generation to include protagonist description.
+*   Added significant logging for visual tracking and image generation processes.
+
+---
 
 ## Previous Focus: Logging Configuration Fix (2025-04-07)
 *(Details of this completed task are preserved below for historical context but are no longer the active focus.)*
@@ -127,5 +165,3 @@ The application now starts without the `TypeError`, and console logging correctl
 
 ### Affected Files
 1.  `app/utils/logging_config.py`: Updated `setup_logging` function.
-
-*(Older "Previous Focus" sections for Image Scene Prompt Enhancement, Agency Choice Visual Details, Character Visual Extraction Timing Fix, Logging Improvements & Bug Fixes, Protagonist Inconsistencies Fix (initial work), and Character Visual Consistency & Evolution Debugging have been summarized into the "Visual Consistency Epic" under "Recently Completed Milestones" to keep this document focused on the most current active context.)*

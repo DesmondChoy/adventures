@@ -51,3 +51,5 @@ Thumbs.db
 .cursorignore
 .cursorrules
 node_modules/
+
+AGENT.md

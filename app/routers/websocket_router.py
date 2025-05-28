@@ -199,7 +199,12 @@ async def story_websocket(
                         f"Error checking active adventure by user_id {connection_data['user_id']}: {e}"
                     )
 
-            if not active_adventure_id and client_uuid:
+            # SECURITY FIX: Only fall back to client_uuid if user is NOT authenticated
+            if (
+                not active_adventure_id
+                and client_uuid
+                and not connection_data.get("user_id")
+            ):
                 try:
                     active_adventure_id = (
                         await state_storage_service.get_active_adventure_id(
@@ -210,7 +215,7 @@ async def story_websocket(
                     )
                     if active_adventure_id:
                         logger.info(
-                            f"Found active adventure {active_adventure_id} for client_uuid {client_uuid}"
+                            f"Found active adventure {active_adventure_id} for client_uuid {client_uuid} (guest user)"
                         )
                     else:
                         logger.info(
@@ -220,6 +225,14 @@ async def story_websocket(
                     logger.error(
                         f"Error checking active adventure by client_uuid {client_uuid}: {e}"
                     )
+            elif (
+                not active_adventure_id
+                and client_uuid
+                and connection_data.get("user_id")
+            ):
+                logger.info(
+                    f"User {connection_data['user_id']} is authenticated - skipping client_uuid fallback for security"
+                )
 
             if active_adventure_id:
                 connection_data["adventure_id"] = active_adventure_id

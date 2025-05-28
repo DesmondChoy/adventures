@@ -11,6 +11,7 @@ from app.services.state_storage_service import StateStorageService
 from app.services.summary import SummaryService, StateNotFoundError, SummaryError
 from app.services.telemetry_service import TelemetryService
 from app.utils.case_conversion import snake_to_camel_dict
+from app.auth.dependencies import get_current_user_id_optional
 
 # Configure logger
 logger = logging.getLogger("summary_router")
@@ -37,6 +38,51 @@ def get_summary_service():
     """Dependency injection for SummaryService."""
     state_storage_service = StateStorageService()
     return SummaryService(state_storage_service)
+
+
+async def validate_user_adventure_access(
+    state_id: str, user_id: Optional[UUID], summary_service: SummaryService
+) -> dict:
+    """
+    Validate that the user has access to the adventure.
+    Returns the state_data if access is allowed, raises HTTPException otherwise.
+    """
+    # Get the raw state data to check ownership
+    state_data = await summary_service.state_storage_service.get_state(state_id)
+    if not state_data:
+        raise HTTPException(status_code=404, detail="Adventure not found")
+
+    # Check ownership
+    adventure_user_id_str = None
+
+    # Check for user_id in metadata first
+    if "metadata" in state_data and "user_id" in state_data["metadata"]:
+        adventure_user_id_str = state_data["metadata"]["user_id"]
+    # Fallback to top-level user_id
+    elif "user_id" in state_data:
+        adventure_user_id_str = state_data["user_id"]
+
+    # If adventure has no user_id (guest adventure), allow access
+    if adventure_user_id_str is None:
+        logger.info(f"Allowing access to guest adventure {state_id}")
+        return state_data
+
+    # If user is not authenticated, deny access to user adventures
+    if not user_id:
+        logger.warning(
+            f"Unauthenticated user attempted access to user adventure {state_id}"
+        )
+        raise HTTPException(status_code=403, detail="Authentication required")
+
+    # Check if the authenticated user owns this adventure
+    if adventure_user_id_str != str(user_id):
+        logger.warning(
+            f"User {user_id} attempted access to adventure {state_id} owned by {adventure_user_id_str}"
+        )
+        raise HTTPException(status_code=403, detail="Access denied: not your adventure")
+
+    logger.info(f"User {user_id} granted access to their adventure {state_id}")
+    return state_data
 
 
 # Create router
@@ -79,6 +125,7 @@ async def test_plain():
 @router.get("/api/adventure-summary")
 async def get_adventure_summary(
     state_id: Optional[str] = None,
+    user_id: Optional[UUID] = Depends(get_current_user_id_optional),
     summary_service: SummaryService = Depends(get_summary_service),
 ):
     """API endpoint to get the adventure summary data.
@@ -86,10 +133,13 @@ async def get_adventure_summary(
     Args:
         state_id: Optional ID of the stored state to use for generating the summary.
                If not provided, uses the current adventure state.
+        user_id: Optional authenticated user ID for security validation.
         summary_service: Injected SummaryService
     """
     # Log the request parameters for debugging
-    logger.info(f"get_adventure_summary called with state_id: {state_id}")
+    logger.info(
+        f"get_adventure_summary called with state_id: {state_id}, user_id: {user_id}"
+    )
 
     # Check if state_id is provided
     if not state_id:
@@ -135,6 +185,11 @@ async def get_adventure_summary(
         logger.info(f"Using first state_id value: {state_id}")
 
     try:
+        # SECURITY: Validate user access to this adventure before proceeding
+        state_data = await validate_user_adventure_access(
+            state_id, user_id, summary_service
+        )
+
         # Get adventure state from storage or active state
         logger.info(f"Getting adventure state from ID: {state_id}")
         adventure_state = await summary_service.get_adventure_state_from_id(state_id)
@@ -161,7 +216,7 @@ async def get_adventure_summary(
                 await get_telemetry_service().log_event(
                     event_name="summary_viewed",
                     adventure_id=UUID(state_id) if state_id else None,
-                    user_id=None,  # No authenticated user_id yet
+                    user_id=user_id,  # Use the authenticated user_id
                     metadata=event_metadata,
                     chapter_type="summary",  # Added
                     chapter_number=None,  # Added
@@ -181,6 +236,9 @@ async def get_adventure_summary(
 
         logger.info("Returning formatted summary data to React app")
         return camel_case_data
+    except HTTPException:
+        # Re-raise HTTP exceptions (from validation)
+        raise
     except StateNotFoundError as e:
         logger.warning(f"State not found: {str(e)}")
         raise HTTPException(status_code=404, detail=str(e))
@@ -215,15 +273,21 @@ async def store_adventure_state(
 
 @router.get("/api/get-adventure-state/{state_id}")
 async def get_adventure_state(
-    state_id: str, summary_service: SummaryService = Depends(get_summary_service)
+    state_id: str,
+    user_id: Optional[UUID] = Depends(get_current_user_id_optional),
+    summary_service: SummaryService = Depends(get_summary_service),
 ):
-    """Retrieve adventure state by ID."""
+    """Retrieve adventure state by ID with user ownership validation."""
     try:
-        state_data = await summary_service.state_storage_service.get_state(state_id)
-        if not state_data:
-            raise HTTPException(status_code=404, detail="State not found or expired")
+        # SECURITY: Validate user access to this adventure before proceeding
+        state_data = await validate_user_adventure_access(
+            state_id, user_id, summary_service
+        )
+
+        logger.info(f"User {user_id} successfully retrieved adventure state {state_id}")
         return state_data
     except HTTPException:
+        # Re-raise HTTP exceptions (from validation)
         raise
     except Exception as e:
         logger.error(f"Error retrieving adventure state: {str(e)}")
