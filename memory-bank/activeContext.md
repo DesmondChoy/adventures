@@ -1,10 +1,28 @@
 # Active Context
 
-## Current Focus: Post-Security Audit (As of 2025-05-28)
+## Current Focus: Core UX Stability (As of 2025-05-28)
 
-🔒 **CRITICAL SECURITY MILESTONE ACHIEVED:** Complete security audit completed with all vulnerabilities fixed! Critical user data mixing vulnerability resolved, comprehensive user ownership validation implemented, and defense-in-depth security achieved across all application layers.
+✅ **CRITICAL UX MILESTONE ACHIEVED:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
 
 ### Recently Completed Milestones
+
+*   **Chapter Numbering Display Fix - FULLY RESOLVED (2025-05-28):**
+    *   **Goal:** Resolve chapter numbering timing issues where chapters displayed incorrect numbers during streaming and final chapter showed wrong numbering.
+    *   **Problems Identified:**
+        *   **Chapter timing during streaming:** Chapter numbers updated AFTER streaming completed instead of immediately when streaming began
+        *   **Final chapter special case:** Chapter 10 showed "Chapter 9 of 10" instead of "Chapter 10 of 10" due to different code path that bypassed `chapter_update` message
+        *   **Regression during fix:** Initial fix caused +1 offset making Chapter 1 show as "Chapter 2 of 10"
+    *   **Root Causes Discovered:**
+        *   **Normal chapters (1-9):** `chapter_update` message sent AFTER text streaming instead of BEFORE
+        *   **Final chapter (10):** Used `send_story_complete()` flow which never called `send_chapter_data()` to send `chapter_update` message
+        *   **Calculation error:** Used `len(state.chapters) + 1` after chapter was already appended, causing off-by-one errors
+    *   **Three-Part Solution Implemented:**
+        *   **Fixed chapter timing** (`app/services/websocket/stream_handler.py`): Moved `send_chapter_data()` call BEFORE `stream_text_content()`
+        *   **Fixed final chapter** (`app/services/websocket/core.py`): Added `chapter_update` message to `send_story_complete()` function
+        *   **Fixed calculation** (`app/services/websocket/stream_handler.py`): Use explicit `state.chapters[-1].chapter_number` instead of recalculating with state length
+    *   **Debugging Journey:** 6-phase investigation including Git history analysis, code path divergence hunting, and legacy code pattern discovery
+    *   **Result:** All chapters now display correct numbering immediately when choices are made. Chapter 1 shows "Chapter 1 of 10", final chapter shows "Chapter 10 of 10", and image generation syncs properly with chapter numbers.
+    *   **Impact:** Critical UX improvement ensuring consistent and immediate chapter numbering feedback throughout the entire adventure experience.
 
 *   **Critical Security Audit and Vulnerability Fixes (2025-05-28):**
     *   **Goal:** Resolve critical user data mixing vulnerability where authenticated users could access other users' adventures.

@@ -2,6 +2,28 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-05-28: Chapter Numbering Display Fix - FULLY RESOLVED
+- **Goal:** Resolve chapter numbering timing issues where chapters displayed incorrect numbers during streaming and final chapter showed wrong numbering.
+- **Problems Identified:**
+  1. **Chapter timing during streaming**: Chapter numbers updated AFTER streaming completed instead of immediately when streaming began
+  2. **Final chapter special case**: Chapter 10 showed "Chapter 9 of 10" instead of "Chapter 10 of 10" due to different code path that bypassed `chapter_update` message
+  3. **Regression during fix**: Initial fix caused +1 offset making Chapter 1 show as "Chapter 2 of 10"
+- **Root Causes Discovered:**
+  - **Normal chapters (1-9)**: `chapter_update` message sent AFTER text streaming instead of BEFORE
+  - **Final chapter (10)**: Used `send_story_complete()` flow which never called `send_chapter_data()` to send `chapter_update` message  
+  - **Calculation error**: Used `len(state.chapters) + 1` after chapter was already appended, causing off-by-one errors
+- **Three-Part Solution Implemented:**
+  1. **Fixed chapter timing** (`app/services/websocket/stream_handler.py`): Moved `send_chapter_data()` call BEFORE `stream_text_content()` 
+  2. **Fixed final chapter** (`app/services/websocket/core.py`): Added `chapter_update` message to `send_story_complete()` function
+  3. **Fixed calculation** (`app/services/websocket/stream_handler.py`): Use explicit `state.chapters[-1].chapter_number` instead of recalculating with state length
+- **Debugging Journey:** 6-phase investigation including Git history analysis, code path divergence hunting, and legacy code pattern discovery
+- **Files Updated:**
+  - `app/services/websocket/stream_handler.py` (timing and calculation fixes)
+  - `app/services/websocket/core.py` (final chapter fix)
+  - `wip/chapter_numbering_display_fix.md` (comprehensive documentation)
+- **Result:** All chapters now display correct numbering immediately when choices are made. Chapter 1 shows "Chapter 1 of 10", final chapter shows "Chapter 10 of 10", and image generation syncs properly with chapter numbers.
+- **Impact:** Critical UX improvement ensuring consistent and immediate chapter numbering feedback throughout the entire adventure experience.
+
 ### 2025-05-27: Production OAuth Redirect Fix
 - **Goal:** Resolve critical "localhost refused to connect" errors preventing mobile users from accessing the carousel screen after Google authentication.
 - **Problem:** After Google OAuth completion, users were redirected to localhost URLs instead of the production domain, causing connection failures on mobile devices and "loading user status..." issues.

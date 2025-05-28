@@ -365,9 +365,14 @@ export function addParagraphListeners() {
 
 export function appendStoryText(text) {
     const storyContent = document.getElementById('storyContent');
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = text;
-    const decodedText = tempDiv.textContent;
+    
+    // Decode HTML entities without using innerHTML/textContent which can strip quotes
+    const decodedText = text
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>');
 
     // Check if this is the first chunk of text and it starts with a dialogue verb
     // This indicates we might have lost a character name and opening quote
