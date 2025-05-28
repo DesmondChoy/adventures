@@ -643,6 +643,16 @@ export async function handleMessage(event) {
         } else if (data.type === 'summary_complete') {
             // Display the complete summary
             displaySummaryComplete(data.state);
+        } else if (data.type === 'chapter_update') {
+            // Handle new chapter updates (when progressing to next chapter)
+            if (data.state && data.state.current_chapter) {
+                const currentChapter = data.state.current_chapter.chapter_number;
+                // Get total chapters from the stored state or assume 10 as fallback
+                const savedState = stateManager.loadState();
+                const totalChapters = savedState?.story_length || 10;
+                
+                updateProgress(currentChapter, totalChapters);
+            }
         } else if (data.type === 'adventure_created' || data.type === 'adventure_loaded') {
             // Store the adventure_id for persistence
             if (data.adventure_id && window.appState?.wsManager) {

@@ -42,7 +42,57 @@
           # ... returns adventure_id or None ...
   ```
 
-### 2. WebSocket JWT Authentication and User Identification Pattern
+### 2. Security Validation and User Isolation Pattern (CRITICAL)
+- **Defense-in-Depth Security Architecture:**
+  * **Application Layer:** User validation in all endpoints (WebSocket + REST)
+  * **Database Layer:** RLS policies prevent unauthorized database queries  
+  * **Service Layer:** Comprehensive ownership validation despite service key usage
+- **WebSocket User Isolation (`app/routers/websocket_router.py`):**
+  * Authenticated users ONLY access adventures via their `user_id`
+  * Guest users access adventures via `client_uuid` 
+  * **Security Fix:** Prevents fallback to `client_uuid` for authenticated users
+  ```python
+  # SECURITY FIX: Only fall back to client_uuid if user is NOT authenticated
+  if (
+      not active_adventure_id
+      and client_uuid  
+      and not connection_data.get("user_id")  # ← KEY: Only for guests
+  ):
+      # Search by client_uuid for guest users only
+  elif (
+      not active_adventure_id
+      and client_uuid
+      and connection_data.get("user_id")  # ← Authenticated user case
+  ):
+      logger.info("User authenticated - skipping client_uuid fallback for security")
+  ```
+- **REST API User Ownership Validation (`app/routers/summary_router.py`):**
+  * `validate_user_adventure_access()` function validates ownership before data access
+  * Checks adventure ownership via `user_id` in metadata or state data
+  * Guest adventures (`user_id IS NULL`) remain accessible
+  * User adventures require authentication and ownership validation
+  ```python
+  async def validate_user_adventure_access(
+      state_id: str, user_id: Optional[UUID], summary_service: SummaryService
+  ) -> dict:
+      # Get raw state data to check ownership
+      state_data = await summary_service.state_storage_service.get_state(state_id)
+      if not state_data:
+          raise HTTPException(status_code=404, detail="Adventure not found")
+      
+      # Check ownership logic...
+      if adventure_user_id_str and adventure_user_id_str != str(user_id):
+          raise HTTPException(status_code=403, detail="Access denied: not your adventure")
+      
+      return state_data
+  ```
+- **Service Key vs RLS Consideration:**
+  * `StateStorageService` uses `SUPABASE_SERVICE_KEY` which bypasses RLS policies
+  * Application-level validation compensates by checking ownership before data access
+  * RLS policies provide additional protection for direct database queries
+- **Goal:** Complete user data isolation preventing cross-user adventure access while preserving guest functionality.
+
+### 3. WebSocket JWT Authentication and User Identification Pattern
 - **Mechanism:**
   * User authentication (e.g., Google Sign-In) is handled on the frontend, yielding a JWT from Supabase Auth.
   * The JWT is passed as a query parameter (`token`) when establishing the WebSocket connection (`/ws/story/{story_category}/{lesson_topic}?token=...`).
@@ -72,7 +122,7 @@
       # ... rest of WebSocket logic using connection_data["user_id"] ...
   ```
 
-### 3. Case Sensitivity Handling Pattern
+### 4. Case Sensitivity Handling Pattern
 - **AdventureStateManager** (`app/services/adventure_state_manager.py`)
   * Converts uppercase chapter types to lowercase during state reconstruction
   * Ensures compatibility between stored state and AdventureState model
@@ -84,7 +134,7 @@
       logger.debug(f"Converted chapter_type to lowercase: {chapter['chapter_type']}")
   ```
 
-### 4. Modular Summary Service Pattern
+### 5. Modular Summary Service Pattern
 - **Package Structure** (`app/services/summary/`)
   * Organized by responsibility with clear component separation
   * Proper package exports through `__init__.py`
@@ -110,7 +160,7 @@
       # Use injected summary_service
   ```
 
-### 5. Format Example Pattern for LLM Prompts
+### 6. Format Example Pattern for LLM Prompts
 - **Structure and Examples**
   * Providing both incorrect and correct examples in prompts
   * Showing the incorrect example first to highlight what to avoid
@@ -119,7 +169,7 @@
   * Explicitly instructing the LLM to use exact section headers
   * Example implementation in `SUMMARY_CHAPTER_PROMPT` for title and summary extraction
 
-### 6. Mobile-Optimized Scrolling Pattern
+### 7. Mobile-Optimized Scrolling Pattern
 - **Fixed Height with Dynamic Content**
   * Using fixed container heights with scrollable content areas
   * Explicit height containers with proper overflow handling
@@ -133,7 +183,7 @@
   * Wider scrollbars for better touch interaction
   * Visual indicators (fade effects) to show scrollable content
 
-### 7. Backend-Frontend Naming Convention Pattern
+### 8. Backend-Frontend Naming Convention Pattern
 - **Centralized Case Conversion** (`app/utils/case_conversion.py`)
   * Utility functions for converting between snake_case and camelCase
   * Recursive handling of nested dictionaries and lists
@@ -170,7 +220,7 @@
       return result
   ```
 
-### 8. Modular Template Structure Pattern
+### 9. Modular Template Structure Pattern
 - **Template Hierarchy** (`app/templates/`)
   * `layouts/main_layout.html`: Base layout template that extends `base.html`
   * `pages/index.html`: Page-specific template that extends the layout
@@ -185,7 +235,7 @@
   * Simplified testing and debugging of individual components
   * Reduced duplication through component reuse
 
-### 9. Modular JavaScript Architecture Pattern
+### 10. Modular JavaScript Architecture Pattern
 - **ES6 Module Structure** (`app/static/js/`)
   * `authManager.js`: Handles Supabase authentication, session management, and user status UI updates
   * `adventureStateManager.js`: Manages localStorage operations for adventure state persistence and client UUID generation
@@ -208,7 +258,7 @@
   * Clear module boundaries and responsibilities
   * Easier debugging and development with focused files
 
-### 10. Paragraph Formatting Pattern
+### 11. Paragraph Formatting Pattern
 - **Regeneration-First Approach**
   * Detects text that needs paragraph formatting based on length and structure
   * Makes up to 3 new requests with the original prompt to get properly formatted text
@@ -221,7 +271,7 @@
   * Streams text normally if properly formatted
   * Optimizes for different LLM providers
 
-### 11. Story Simulation Pattern
+### 12. Story Simulation Pattern
 - **Standardized Logging**
   * Consistent event prefixes (e.g., `EVENT:CHAPTER_SUMMARY`)
   * Source tracking for debugging
@@ -234,7 +284,7 @@
   * Graceful degradation when services are unavailable
   * Comprehensive logging of error states and recovery attempts
 
-### 12. Dual-Purpose Content Generation
+### 13. Dual-Purpose Content Generation
 - **Chapter Summaries** (`generate_chapter_summary()`)
   * Focus on narrative events and character development
   * 70-100 words covering key events and educational content
@@ -247,7 +297,7 @@
   * This description serves as a primary input to the two-step image prompt synthesis process.
   * Describes specific dramatic action or emotional peak, focusing purely on visual elements of the immediate scene.
 
-### 13. Dynamic Narrative Handling Pattern (CRITICAL)
+### 14. Dynamic Narrative Handling Pattern (CRITICAL)
 - **Principle:** Narrative content (story text, character names, specific events) is generated dynamically by LLMs and is inherently variable. It MUST NOT be hardcoded into application logic or tests.
 - **Strategies:**
   * **Rely on Structure:** Base logic and validation on the defined structure of the `AdventureState`, `ChapterData`, and expected `ChapterType`. Check for the presence and type of data, not its specific content.
@@ -256,7 +306,7 @@
   * **LLM-Based Extraction:** If specific details *must* be extracted from narrative text (e.g., character visuals), use robust LLM-based extraction prompts designed for this purpose. Store the extracted information in structured fields within the state (e.g., `state.character_visuals`), rather than re-parsing the text later. Avoid brittle regex for narrative content.
 - **Goal:** Ensure the application is robust and functions correctly regardless of the specific text generated by the LLM in any given playthrough.
 
-### 14. Character Visual Evolution Pattern
+### 15. Character Visual Evolution Pattern
 - **State Management (`AdventureState.character_visuals`):**
   * A dictionary `state.character_visuals` stores the current visual descriptions for all significant characters (protagonist and NPCs), keyed by character name.
   * Initialized with the protagonist's base description (`state.protagonist_description`).
@@ -273,7 +323,7 @@
   * Detailed logging tracks new, updated, and unchanged character visuals.
 - **Goal:** Maintain consistent and evolving character appearances throughout the adventure, reflecting narrative developments in their visual descriptions for use in image generation.
 
-### 15. Two-Step Image Prompt Synthesis Pattern
+### 16. Two-Step Image Prompt Synthesis Pattern
 - **Overview:** A multi-step process to create rich, context-aware prompts for the image generation model (Imagen), enhancing visual consistency and relevance.
 - **Step 1: Gather Core Visual Inputs:**
   * **Image Scene Description:** A concise (~50 words) description of the chapter's most visually striking moment, generated by an LLM call using `IMAGE_SCENE_PROMPT` and the chapter content. This focuses purely on the immediate scene's action and visual elements.
