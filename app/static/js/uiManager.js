@@ -130,40 +130,74 @@ export async function startAdventure() {
     let fetchErrorOccurred = false;
 
     // Step 1: Determine if there's a current active adventure for the logged-in user/guest
+    console.log('[CONFLICT DEBUG] Starting conflict detection...');
+    console.log('[CONFLICT DEBUG] authManager state:', {
+        hasAuthManager: !!authManager,
+        hasAccessToken: !!authManager?.accessToken,
+        isAnonymous: isAnonymous,
+        userEmail: authManager?.user?.email,
+        userId: authManager?.user?.id?.substring(0, 8) + '...'
+    });
+
     if (authManager && (authManager.accessToken || isAnonymous)) {
         let endpoint;
         let headers = { 'Content-Type': 'application/json' };
 
         if (isAnonymous) {
             const clientUUID = localStorage.getItem('learning_odyssey_user_uuid');
+            console.log('[CONFLICT DEBUG] Guest user - clientUUID:', clientUUID?.substring(0, 8) + '...');
             if (clientUUID) {
                 endpoint = `/api/adventure/active_by_client_uuid/${clientUUID}`;
             }
         } else { // Google authenticated user
             endpoint = '/api/user/current-adventure';
             headers['Authorization'] = `Bearer ${authManager.accessToken}`;
+            console.log('[CONFLICT DEBUG] Google user - endpoint:', endpoint);
+            console.log('[CONFLICT DEBUG] Google user - token length:', authManager.accessToken?.length);
+            console.log('[CONFLICT DEBUG] Google user - token preview:', authManager.accessToken?.substring(0, 20) + '...');
         }
+
+        console.log('[CONFLICT DEBUG] Final endpoint:', endpoint);
+        console.log('[CONFLICT DEBUG] Headers:', { ...headers, Authorization: headers.Authorization ? 'Bearer [REDACTED]' : undefined });
 
         if (endpoint) {
             try {
+                console.log('[CONFLICT DEBUG] Making fetch request...');
                 const response = await fetch(endpoint, { method: 'GET', headers: headers });
+                
+                console.log('[CONFLICT DEBUG] Response status:', response.status);
+                console.log('[CONFLICT DEBUG] Response ok:', response.ok);
+                console.log('[CONFLICT DEBUG] Response headers:', Object.fromEntries(response.headers.entries()));
                 
                 if (response.ok) {
                     const adventureData = await response.json();
+                    console.log('[CONFLICT DEBUG] Response data:', adventureData);
                     
                     if (adventureData && adventureData.adventure) {
                         currentActiveAdventureForConflictCheck = adventureData.adventure;
+                        console.log('[CONFLICT DEBUG] Found active adventure:', {
+                            adventure_id: currentActiveAdventureForConflictCheck.adventure_id,
+                            story_category: currentActiveAdventureForConflictCheck.story_category,
+                            lesson_topic: currentActiveAdventureForConflictCheck.lesson_topic,
+                            current_chapter: currentActiveAdventureForConflictCheck.current_chapter
+                        });
+                    } else {
+                        console.log('[CONFLICT DEBUG] No adventure found in response or missing adventure property');
                     }
                 } else {
                     const errorText = await response.text();
-                    console.error('API call to find active adventure failed:', response.status, errorText);
+                    console.error('[CONFLICT DEBUG] API call failed:', response.status, errorText);
                     fetchErrorOccurred = true;
                 }
             } catch (error) {
-                console.error('Error fetching active adventure:', error);
+                console.error('[CONFLICT DEBUG] Exception during fetch:', error);
                 fetchErrorOccurred = true;
             }
+        } else {
+            console.log('[CONFLICT DEBUG] No endpoint determined - skipping API call');
         }
+    } else {
+        console.log('[CONFLICT DEBUG] No authManager or access conditions not met');
     }
 
     if (fetchErrorOccurred) {
@@ -173,11 +207,20 @@ export async function startAdventure() {
     }
 
     // Step 2: Perform conflict check if an active adventure was found
+    console.log('[CONFLICT DEBUG] Checking for conflicts...');
+    console.log('[CONFLICT DEBUG] Current active adventure:', currentActiveAdventureForConflictCheck);
+    console.log('[CONFLICT DEBUG] Selected category:', selectedCategory);
+    console.log('[CONFLICT DEBUG] Selected lesson:', selectedLessonTopic);
+
     if (currentActiveAdventureForConflictCheck) {
         const activeStory = currentActiveAdventureForConflictCheck.story_category;
         const activeLesson = currentActiveAdventureForConflictCheck.lesson_topic;
 
+        console.log('[CONFLICT DEBUG] Active adventure details:', { activeStory, activeLesson });
+        console.log('[CONFLICT DEBUG] Will have conflict?', activeStory !== selectedCategory || activeLesson !== selectedLessonTopic);
+
         if (activeStory !== selectedCategory || activeLesson !== selectedLessonTopic) {
+            console.log('[CONFLICT DEBUG] Conflict detected! Showing conflict modal...');
             // Hide loader before showing modal so user can interact with it
             hideLoader();
             
@@ -186,6 +229,8 @@ export async function startAdventure() {
                     currentActiveAdventureForConflictCheck,
                     { story_category: selectedCategory, lesson_topic: selectedLessonTopic }
                 );
+                
+                console.log('[CONFLICT DEBUG] User confirmed abandonment:', userConfirmedAbandonment);
                 
                 if (userConfirmedAbandonment) {
                     showLoader(); // Show loader again for API calls
@@ -196,6 +241,7 @@ export async function startAdventure() {
                     }
 
                     if (!isAnonymous && authManager && authManager.accessToken) { // Google User
+                        console.log('[CONFLICT DEBUG] Abandoning adventure for Google user...');
                         try {
                             const abandonResponse = await fetch(`/api/adventure/${currentActiveAdventureForConflictCheck.adventure_id}/abandon`, {
                                 method: 'POST',
@@ -206,25 +252,29 @@ export async function startAdventure() {
                                  showError('Could not abandon previous adventure. Please try again.');
                                  hideLoader(); return;
                             }
+                            console.log('[CONFLICT DEBUG] Adventure abandoned successfully');
                         } catch (error) {
                             console.error('Error abandoning adventure via API:', error);
                             showError('Error abandoning previous adventure.');
                             hideLoader(); return;
                         }
                     } else if (isAnonymous) { // Guest User
+                        console.log('[CONFLICT DEBUG] Guest user - no explicit abandonment API call needed');
                         // No explicit API call for guest abandonment here.
                     }
                 } else { // User cancelled conflict modal
+                    console.log('[CONFLICT DEBUG] User cancelled conflict modal');
                     hideLoader(); 
                     return; 
                 }
             } catch (error) {
-                console.error('Error with conflict modal:', error);
+                console.error('[CONFLICT DEBUG] Error with conflict modal:', error);
                 showError('Error processing conflict resolution.');
                 hideLoader();
                 return;
             }
         } else { // No conflict, selections match the active adventure
+            console.log('[CONFLICT DEBUG] No conflict - resuming existing adventure');
             if (window.appState?.wsManager) {
                  window.appState.wsManager.adventureIdToResume = currentActiveAdventureForConflictCheck.adventure_id;
             }
@@ -235,6 +285,7 @@ export async function startAdventure() {
             }
         }
     } else {
+        console.log('[CONFLICT DEBUG] No current active adventure found - proceeding to start fresh');
         // No current active adventure found. Proceed to start fresh.
         cleanUrlResumeParam(); 
         if (window.appState?.wsManager) {

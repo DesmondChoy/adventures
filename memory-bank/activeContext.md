@@ -96,11 +96,22 @@
 
 ### Immediate Next Steps & Priorities
 
-1.  **Implement Resuming Chapter Image Display (Chapters 1-9)**
+1.  **Conflict Modal Intermittent Issue (Resolved but Monitoring - 2025-05-28)**
+    *   **Goal:** Monitor intermittent conflict modal display issues for Google authenticated users.
+    *   **Problem:** Google authenticated users occasionally didn't see the conflict modal when attempting to start a new adventure while having an incomplete adventure.
+    *   **Resolution Status:** 
+        *   Issue resolved spontaneously without explicit code changes - suggests timing/state-related root cause
+        *   Added comprehensive diagnostic logging to `app/static/js/uiManager.js` conflict detection logic (retained for future monitoring)
+        *   Logging covers: authManager state, API endpoint determination, JWT token details, fetch responses, conflict detection logic
+        *   **Diagnostic code retained** - provides valuable troubleshooting data if issue resurfaces
+    *   **Likely Root Causes:** Browser/session state inconsistencies, race conditions, caching issues, or authentication token lifecycle timing
+    *   **Monitoring Plan:** Continue observing for intermittent behavior; diagnostic logging will help identify patterns if issue reoccurs
+
+2.  **Implement Resuming Chapter Image Display (Chapters 1-9)**
     *   **Goal:** Address the known issue where the original image for chapters 1-9 is not re-displayed when an adventure is resumed.
     *   **Context:** This is a follow-up enhancement to the Supabase Phase 2 (Resumption) work. Potential solutions are outlined in `wip/supabase_integration.md`.
 
-2.  **WebSocket Disconnection Fix**
+3.  **WebSocket Disconnection Fix**
     *   **Goal:** Resolve WebSocket `ConnectionClosedOK` errors and `RuntimeError` that occur when clients navigate away (e.g., to the summary page) by improving connection lifecycle management.
     *   **Context:** Noted as a known issue in `wip/implemented/summary_chapter_race_condition.md`.
 
