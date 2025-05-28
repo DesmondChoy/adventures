@@ -69,11 +69,31 @@ export function hideLoader() {
 
 // --- Progress Functions ---
 export function updateProgress(currentChapter, totalChapters) {
+    // Validate inputs
+    if (!Number.isInteger(currentChapter) || !Number.isInteger(totalChapters) || 
+        currentChapter < 1 || totalChapters < 1 || currentChapter > totalChapters) {
+        console.warn('Invalid chapter progress:', { currentChapter, totalChapters });
+        return;
+    }
+    
     document.getElementById('current-chapter').textContent = currentChapter;
     document.getElementById('total-chapters').textContent = totalChapters;
     
     // Dispatch event for new chapter loaded (for font size manager)
     document.dispatchEvent(new CustomEvent('newChapterLoaded'));
+}
+
+// Single function to handle all chapter updates
+function handleChapterProgress(data) {
+    const currentChapter = data.current_chapter || 
+                          (data.state?.current_chapter?.chapter_number) || 1;
+    const totalChapters = data.total_chapters || 
+                         data.state?.total_chapters || 
+                         window.appConfig?.defaultStoryLength || 10;
+    
+    if (currentChapter && totalChapters) {
+        updateProgress(currentChapter, totalChapters);
+    }
 }
 
 // --- Navigation Functions ---
@@ -694,41 +714,16 @@ export async function handleMessage(event) {
         } else if (data.type === 'summary_complete') {
             // Display the complete summary
             displaySummaryComplete(data.state);
-        } else if (data.type === 'chapter_update') {
-            // Handle new chapter updates (when progressing to next chapter)
-            if (data.state && data.state.current_chapter) {
-                const currentChapter = data.state.current_chapter.chapter_number;
-                // Get total chapters from the stored state or assume 10 as fallback
-                const savedState = stateManager.loadState();
-                const totalChapters = savedState?.story_length || 10;
-                
-                updateProgress(currentChapter, totalChapters);
-            }
-        } else if (data.type === 'adventure_created' || data.type === 'adventure_loaded') {
+        } else if (['adventure_created', 'adventure_loaded', 'adventure_status', 'chapter_update'].includes(data.type)) {
             // Store the adventure_id for persistence
             if (data.adventure_id && window.appState?.wsManager) {
                 window.appState.wsManager.setAdventureId(data.adventure_id);
             }
             
-            // If adventure_loaded, update progress display with server data
-            if (data.type === 'adventure_loaded') {
-                // Use the data that the server actually sends: current_chapter and total_chapters
-                const currentChapterFromServer = data.current_chapter || 1;
-                const totalChaptersFromServer = data.total_chapters || 10;
-                
-                updateProgress(currentChapterFromServer, totalChaptersFromServer);
+            // Use consolidated function for all chapter progress messages
+            if (['adventure_loaded', 'adventure_status', 'chapter_update'].includes(data.type)) {
+                handleChapterProgress(data);
             }
-            
-            // If chapter_update, update progress display with server data
-            if (data.type === 'chapter_update') {
-                const currentChapterFromServer = data.current_chapter;
-                const totalChaptersFromServer = data.total_chapters;
-                
-                if (currentChapterFromServer && totalChaptersFromServer) {
-                    updateProgress(currentChapterFromServer, totalChaptersFromServer);
-                }
-            }
-            // Don't hide loader here - wait for hide_loader message
         } else {
             // For any other message types, hide the loader as a fallback
             hideLoader();

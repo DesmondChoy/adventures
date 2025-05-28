@@ -18,6 +18,12 @@ from .content_generator import clean_chapter_content
 from .image_generator import start_image_generation_tasks, process_image_tasks
 from app.services.telemetry_service import TelemetryService
 
+def get_display_chapter_number(state: AdventureState) -> int:
+    """Get chapter number for UI display (completed chapters)"""
+    if not state or not state.chapters:
+        return 1
+    return len(state.chapters)  # Show completed chapters, not next to generate
+
 # Constants for streaming optimization
 WORD_BATCH_SIZE = 1  # Reduced to stream word by word
 WORD_DELAY = 0.02  # Delay between words
@@ -541,9 +547,12 @@ async def send_chapter_data(
     websocket: WebSocket,
 ) -> None:
     """Send complete chapter data to the client."""
+    # Use display chapter number for UI (completed chapters)
+    current_chapter_for_display = get_display_chapter_number(state)
+    
     chapter_data = {
         "type": "chapter_update",
-        "current_chapter": chapter_number,
+        "current_chapter": current_chapter_for_display,
         "total_chapters": state.story_length,
         "state": {
             "current_chapter_id": state.current_chapter_id,

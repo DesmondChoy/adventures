@@ -3,7 +3,8 @@
     // Global configuration object for JavaScript modules
     window.appConfig = {
         totalCategories: parseInt("{{ story_categories|length }}"),
-        totalLessonTopics: parseInt("{{ lesson_topics|length }}")
+        totalLessonTopics: parseInt("{{ lesson_topics|length }}"),
+        defaultStoryLength: 10  // Default story length from model
     };
 </script>
 

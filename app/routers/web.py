@@ -12,6 +12,7 @@ from uuid import UUID as UUID_type  # To avoid conflict with uuid.uuid4()
 from app.data.story_loader import StoryLoader
 from app.services.state_storage_service import StateStorageService
 from app.auth.dependencies import get_current_user_id_optional, get_current_user_id
+from app.models.story import AdventureState
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -24,7 +25,7 @@ class AdventureResumeDetails(BaseModel):
     story_category: str
     lesson_topic: str
     current_chapter: int
-    total_chapters: int = 10  # Assuming a fixed total for now
+    total_chapters: int = 10  # Will be set from AdventureState default in practice
     last_updated: datetime
 
 
@@ -324,8 +325,8 @@ async def get_user_current_adventure_api(
                     lesson_topic=lesson_topic,
                     current_chapter=current_chapter_num,
                     total_chapters=adventure_data.get(
-                        "total_chapters", 10
-                    ),  # Assuming 10 if not present
+                        "total_chapters", AdventureState.model_fields["story_length"].default
+                    ),  # Use configurable default
                     last_updated=updated_at,
                 )
                 response = CurrentAdventureAPIResponse(adventure=adventure_details)
@@ -408,7 +409,7 @@ async def get_active_adventure_by_client_uuid_api(
                 story_category=story_category,
                 lesson_topic=lesson_topic,
                 current_chapter=current_chapter_num,
-                total_chapters=adventure_data.get("total_chapters", 10),
+                total_chapters=adventure_data.get("total_chapters", AdventureState.model_fields["story_length"].default),
                 last_updated=updated_at,
             )
             return CurrentAdventureAPIResponse(adventure=adventure_details)

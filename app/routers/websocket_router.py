@@ -20,6 +20,40 @@ router = APIRouter()
 logger = logging.getLogger("story_app")
 
 
+def get_display_chapter_number(state) -> int:
+    """Get chapter number for UI display (completed chapters)"""
+    if not state or not hasattr(state, 'chapters'):
+        return 1
+    if not state.chapters:
+        return 1
+    return len(state.chapters)  # Show completed chapters, not next to generate
+
+def get_generation_chapter_number(state) -> int:
+    """Get next chapter number for content generation"""
+    if not state or not hasattr(state, 'chapters'):
+        return 1
+    if not state.chapters:
+        return 1
+    return len(state.chapters) + 1  # Next chapter to generate
+
+def get_safe_chapter_number(state) -> int:
+    """Get current chapter number with validation"""
+    if not state or not hasattr(state, 'chapters'):
+        return 1
+    if not state.chapters:
+        return 1
+    return max(1, state.current_chapter_number)
+
+
+def get_safe_total_chapters(state) -> int:
+    """Get total chapters with fallback"""
+    if not state:
+        from app.models.story import AdventureState
+        return AdventureState.model_fields["story_length"].default
+    from app.models.story import AdventureState
+    return getattr(state, 'story_length', None) or AdventureState.model_fields["story_length"].default
+
+
 @router.websocket("/ws/story/{story_category}/{lesson_topic}")
 async def story_websocket(
     websocket: WebSocket,
@@ -282,8 +316,13 @@ async def story_websocket(
 
         # Send status based on whether an adventure was loaded (either specific or active)
         if loaded_state_from_storage and connection_data["adventure_id"]:
-            # Always show the next chapter being loaded - consistent with stream_handler logic
-            display_chapter_number = len(loaded_state_from_storage.chapters) + 1
+            # For resumed adventures, display the last completed chapter number (the one being re-displayed)
+            # not the next chapter to be generated
+            if loaded_state_from_storage.chapters:
+                display_chapter_number = len(loaded_state_from_storage.chapters)
+            else:
+                display_chapter_number = 1
+            total_chapters = get_safe_total_chapters(loaded_state_from_storage)
 
             await websocket.send_json(
                 {
@@ -291,11 +330,11 @@ async def story_websocket(
                     "status": "existing_loaded",  # More specific status
                     "adventure_id": connection_data["adventure_id"],
                     "current_chapter": display_chapter_number,
-                    "total_chapters": loaded_state_from_storage.story_length,
+                    "total_chapters": total_chapters,
                 }
             )
             logger.info(
-                f"Loaded state indicates current chapter is {loaded_state_from_storage.current_chapter_number}, displaying chapter {display_chapter_number} to user"
+                f"Loaded state has {len(loaded_state_from_storage.chapters)} completed chapters, displaying chapter {display_chapter_number} to user (next chapter to generate would be {loaded_state_from_storage.current_chapter_number})"
             )
             # Resend last chapter content if needed (existing logic)
             if loaded_state_from_storage.chapters:
@@ -366,7 +405,18 @@ async def story_websocket(
                     "Loaded state has no chapters, cannot determine chapter to resume."
                 )
         else:  # No adventure loaded, will be new
-            await websocket.send_json({"type": "adventure_status", "status": "new"})
+            # Import to get default story length
+            from app.models.story import AdventureState
+            
+            # Reference the configurable story length parameter
+            default_story_length = AdventureState.model_fields["story_length"].default
+            
+            await websocket.send_json({
+                "type": "adventure_status", 
+                "status": "new",
+                "current_chapter": 1,
+                "total_chapters": default_story_length
+            })
 
         while True:
             data = await websocket.receive_json()
@@ -408,7 +458,8 @@ async def story_websocket(
                             f"State is None but adventure_id {connection_data['adventure_id']} exists. Re-initializing."
                         )
                         connection_data["adventure_id"] = None
-                    total_chapters = validated_state.get("story_length", 10)
+                    from app.models.story import AdventureState
+                    total_chapters = validated_state.get("story_length", AdventureState.model_fields["story_length"].default)
                     try:
                         state = state_manager.initialize_state(
                             total_chapters, lesson_topic, story_category, difficulty
@@ -462,6 +513,8 @@ async def story_websocket(
                                 {
                                     "type": "adventure_created",
                                     "adventure_id": adventure_id,
+                                    "current_chapter": 1,
+                                    "total_chapters": state.story_length
                                 }
                             )
                         except Exception as e:

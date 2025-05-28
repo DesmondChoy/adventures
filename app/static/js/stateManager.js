@@ -15,7 +15,7 @@ export function manageState(action, data) {
             const initialState = {
                 storyCategory: data.storyCategory,
                 lessonTopic: data.lessonTopic,
-                story_length: 10, // Fixed at 10 chapters
+                story_length: window.appConfig?.defaultStoryLength || 10, // Use configurable story length
                 current_chapter_id: 'start',
                 chapters: [],
                 selected_narrative_elements: {},
