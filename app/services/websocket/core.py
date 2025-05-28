@@ -119,6 +119,13 @@ async def send_story_complete(
     # Get the final chapter (which should be CONCLUSION type)
     final_chapter = state.chapters[-1]
 
+    # Send chapter update for final chapter display (fix for chapter numbering timing issue)
+    await websocket.send_json({
+        "type": "chapter_update",
+        "current_chapter": final_chapter.chapter_number,
+        "total_chapters": state.story_length
+    })
+
     # Start image generation for the CONCLUSION chapter
     try:
         image_tasks = await start_image_generation_tasks(

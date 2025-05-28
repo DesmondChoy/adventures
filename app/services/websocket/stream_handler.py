@@ -158,9 +158,10 @@ async def stream_chapter_content(
         final_chapter_content_pydantic = generated_chapter_content_model
         final_sampled_question_as_dict = generated_sampled_question_dict
 
-        current_chapter_number_to_send = len(state.chapters) + 1
+        # Get chapter number from the last chapter that was just appended
+        current_chapter_number_to_send = state.chapters[-1].chapter_number
         logger.debug(
-            f"New chapter number: {current_chapter_number_to_send}. State has {len(state.chapters)} existing chapters."
+            f"Chapter number from appended chapter: {current_chapter_number_to_send}. State has {len(state.chapters)} existing chapters."
         )
         if current_chapter_number_to_send < 1:
             logger.warning(
@@ -204,10 +205,7 @@ async def stream_chapter_content(
             )
             image_tasks = []
 
-    # Stream chapter content
-    await stream_text_content(content_to_stream, websocket)
-
-    # Send complete chapter data with choices included
+    # Send complete chapter data BEFORE streaming to update chapter number immediately
     await send_chapter_data(
         content_to_stream,
         final_chapter_content_pydantic,
@@ -217,6 +215,9 @@ async def stream_chapter_content(
         state,
         websocket,
     )
+
+    # Stream chapter content
+    await stream_text_content(content_to_stream, websocket)
 
     # Also send choices separately for backward compatibility
     await websocket.send_json(
@@ -547,12 +548,10 @@ async def send_chapter_data(
     websocket: WebSocket,
 ) -> None:
     """Send complete chapter data to the client."""
-    # Use display chapter number for UI (completed chapters)
-    current_chapter_for_display = get_display_chapter_number(state)
-    
+    # Use the actual chapter number being streamed for UI display
     chapter_data = {
         "type": "chapter_update",
-        "current_chapter": current_chapter_for_display,
+        "current_chapter": chapter_number,
         "total_chapters": state.story_length,
         "state": {
             "current_chapter_id": state.current_chapter_id,
