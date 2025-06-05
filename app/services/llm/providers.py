@@ -101,7 +101,7 @@ class OpenAIService(BaseLLMService):
             )
 
             # First, collect a buffer to check if paragraphing is needed
-            buffer_size = 1000  # Characters to check for paragraph formatting
+            buffer_size = 400  # Characters to check for paragraph formatting (reduced for earlier detection)
             collected_text = ""
             full_response = ""  # Track the full response regardless of streaming
             buffer_complete = False
@@ -242,7 +242,7 @@ class OpenAIService(BaseLLMService):
             )
 
             # First, collect a buffer to check if paragraphing is needed
-            buffer_size = 1000  # Characters to check for paragraph formatting
+            buffer_size = 400  # Characters to check for paragraph formatting (reduced for earlier detection)
             collected_text = ""
             full_response = ""  # Track the full response regardless of streaming
             buffer_complete = False
@@ -442,7 +442,7 @@ class GeminiService(BaseLLMService):
             response = model.generate_content(user_prompt, stream=True)
 
             # First, collect a buffer to check if paragraphing is needed
-            buffer_size = 1000  # Characters to check for paragraph formatting
+            buffer_size = 400  # Characters to check for paragraph formatting (reduced for earlier detection)
             collected_text = ""
             full_response = ""  # Track the full response regardless of streaming
             buffer_complete = False
@@ -581,7 +581,7 @@ class GeminiService(BaseLLMService):
             response = model.generate_content(user_prompt, stream=True)
 
             # First, collect a buffer to check if paragraphing is needed
-            buffer_size = 1000  # Characters to check for paragraph formatting
+            buffer_size = 400  # Characters to check for paragraph formatting (reduced for earlier detection)
             collected_text = ""
             full_response = ""  # Track the full response regardless of streaming
             buffer_complete = False

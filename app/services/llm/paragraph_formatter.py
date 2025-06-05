@@ -25,8 +25,8 @@ def needs_paragraphing(text: str) -> bool:
     Returns:
         bool: True if the text needs paragraph formatting, False otherwise
     """
-    # Check if text is substantial in length (at least 300 chars)
-    if len(text) < 300:
+    # Check if text is substantial in length (at least 200 chars)
+    if len(text) < 200:
         return False
 
     # Check if text already has paragraph breaks
