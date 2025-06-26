@@ -2,6 +2,23 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-06-26: Landing Page Visual Accuracy Improvement
+- **Goal:** Replace misleading hero image with accurate representation of the app's text-based functionality.
+- **Problem:** Original Unsplash forest image suggested a graphical game experience, but the app is primarily text-based storytelling with word-by-word streaming and choice buttons, creating false user expectations.
+- **Solution:** Generated custom magical library portal image using AI text-to-image model that accurately represents the concept of "learning through adventures":
+  - Shows scholarly library setting with floating text and words swirling toward a magical portal
+  - Includes educational elements (globe, maps, open books with glowing text)
+  - Represents books/reading as the gateway to adventure (metaphorically accurate)
+  - Maintains fantasy appeal while being truthful about text-based interaction
+- **Technical Implementation:**
+  - Added `learning-adventure-library.png` to `app/static/images/` directory
+  - Updated `app/templates/pages/login.html` to use new image path
+  - Removed overlay text box that was obscuring the image
+  - Removed white border (`glass` class and padding) for better visual integration
+- **Image Prompt Used:** "An enchanted library captured in a sophisticated medium shot with warm, cinematic lighting... [detailed prompt focusing on floating text, educational elements, and portal metaphor]"
+- **Result:** Landing page now accurately represents the app's text-based educational adventure experience without misleading users about functionality.
+- **Impact:** Critical UX improvement ensuring user expectations align with actual app functionality, reducing confusion upon login.
+
 ### 2025-05-28: Chapter Numbering Display Fix - FULLY RESOLVED
 - **Goal:** Resolve chapter numbering timing issues where chapters displayed incorrect numbers during streaming and final chapter showed wrong numbering.
 - **Problems Identified:**
