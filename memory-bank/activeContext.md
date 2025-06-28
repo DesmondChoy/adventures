@@ -1,10 +1,28 @@
 # Active Context
 
-## Current Focus: Core UX Stability (As of 2025-05-28)
+## Current Focus: Frontend UX Accuracy (As of 2025-06-28)
 
-✅ **CRITICAL UX MILESTONE ACHIEVED:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
+✅ **LATEST ACHIEVEMENT:** Frontend expectation alignment completed! Landing page now accurately represents the app's streaming-based, adaptive learning experience without misleading elements.
+
+✅ **PREVIOUS MILESTONE:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
 
 ### Recently Completed Milestones
+
+*   **Frontend UX Accuracy Improvements - COMPLETED (2025-06-28):**
+    *   **Goal:** Eliminate misleading elements in landing page that created false expectations about app functionality.
+    *   **Problems Identified:**
+        *   **Orphaned Landing Page File:** `app/static/landing/index.html` existed but wasn't served, contained outdated Unsplash image
+        *   **Misleading Marketing Copy:** "Face puzzles and challenges" didn't accurately describe the adaptive learning approach
+        *   **Fake Interactive Preview:** Mock UI showing clickable choices and complete text contradicted actual word-by-word streaming experience
+    *   **Solutions Implemented:**
+        *   **Removed Orphaned File:** Deleted unused `app/static/landing/index.html` that could cause confusion
+        *   **Updated Marketing Copy:** Changed "Face puzzles and challenges that reinforce learning" to "Learn through choices - when you make mistakes, the story adapts to correct misunderstandings"
+        *   **Removed Misleading Preview:** Completely removed the "Adventure Preview" section showing fake interactive UI and all navigation links to it
+    *   **Files Modified:**
+        *   Deleted `app/static/landing/index.html` (orphaned file)
+        *   Modified `app/templates/pages/login.html` (marketing copy and preview section removal)
+    *   **Result:** Landing page now accurately represents the streaming-based, adaptive learning experience without setting false expectations.
+    *   **Impact:** Critical UX alignment ensuring users understand the actual app functionality before starting their adventure.
 
 *   **Chapter Numbering Display Fix - FULLY RESOLVED (2025-05-28):**
     *   **Goal:** Resolve chapter numbering timing issues where chapters displayed incorrect numbers during streaming and final chapter showed wrong numbering.

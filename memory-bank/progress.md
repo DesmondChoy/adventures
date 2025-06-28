@@ -2,6 +2,23 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-06-28: Frontend UX Accuracy Improvements
+- **Goal:** Eliminate misleading elements in landing page that created false expectations about app functionality.
+- **Problems Identified:**
+  1. **Orphaned Landing Page File:** `app/static/landing/index.html` existed but wasn't served, contained outdated Unsplash image
+  2. **Misleading Marketing Copy:** "Face puzzles and challenges" didn't accurately describe the adaptive learning approach
+  3. **Fake Interactive Preview:** Mock UI showing clickable choices and complete text contradicted actual word-by-word streaming experience
+- **Solutions Implemented:**
+  - **Removed Orphaned File:** Deleted unused `app/static/landing/index.html` that could cause confusion
+  - **Updated Marketing Copy:** Changed "Face puzzles and challenges that reinforce learning" to "Learn through choices - when you make mistakes, the story adapts to correct misunderstandings"
+  - **Removed Misleading Preview:** Completely removed the "Adventure Preview" section showing fake interactive UI and all navigation links to it
+- **Technical Changes:**
+  - Deleted `app/static/landing/index.html` (not served by any route)
+  - Modified `app/templates/pages/login.html`: Updated Interactive Challenges description
+  - Modified `app/templates/pages/login.html`: Removed entire preview section (70+ lines) and navigation links
+- **Result:** Landing page now accurately represents the streaming-based, adaptive learning experience without setting false expectations.
+- **Impact:** Critical UX alignment ensuring users understand the actual app functionality before starting their adventure.
+
 ### 2025-06-26: Landing Page Visual Accuracy Improvement
 - **Goal:** Replace misleading hero image with accurate representation of the app's text-based functionality.
 - **Problem:** Original Unsplash forest image suggested a graphical game experience, but the app is primarily text-based storytelling with word-by-word streaming and choice buttons, creating false user expectations.
