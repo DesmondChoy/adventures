@@ -144,10 +144,11 @@ class ChapterType(str, Enum):
   * `_get_phase_guidance()`: Adds phase-specific guidance
 
 - **Provider Abstraction**
-  * Supports GPT-4o and Gemini
-  * Standardized response handling
+  * Supports GPT-4o and Gemini using unified `google-genai` SDK
+  * Standardized response handling across providers
   * Error recovery mechanisms
   * Paragraph formatting integration
+  * Migrated from deprecated `google-generativeai` to `google-genai`
 
 ### Image Generation
 - Implements a **two-step image prompt synthesis pattern**:

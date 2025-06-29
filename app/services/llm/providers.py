@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional, List, AsyncGenerator
 import os
 from openai import AsyncOpenAI
-import google.generativeai as genai
+from google import genai
 from app.models.story import AdventureState, ChapterType
 from app.services.llm.base import BaseLLMService
 from app.services.llm.prompt_engineering import build_prompt
@@ -12,7 +12,6 @@ from app.services.llm.paragraph_formatter import (
 import logging
 
 logger = logging.getLogger("story_app")
-
 
 class OpenAIService(BaseLLMService):
     """OpenAI implementation of the LLM service."""
@@ -348,7 +347,6 @@ class OpenAIService(BaseLLMService):
             )
             raise  # Re-raise the exception after logging
 
-
 class GeminiService(BaseLLMService):
     """Google Gemini implementation of the LLM service."""
 
@@ -358,15 +356,8 @@ class GeminiService(BaseLLMService):
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             logger.warning("GOOGLE_API_KEY is not set in environment variables!")
-        genai.configure(api_key=api_key)
-        # Initialize with system prompt as part of model configuration
-        self.client = genai.GenerativeModel(
-            model_name=self.model,
-            generation_config=genai.GenerationConfig(
-                temperature=0.9,
-                max_output_tokens=8000,  # Adjust based on your needs
-            ),
-        )
+        # Initialize with new google-genai client
+        self.client = genai.Client(api_key=api_key)
 
     async def generate_character_visuals_json(
         self,
@@ -395,14 +386,13 @@ class GeminiService(BaseLLMService):
         logger.info("========================\n")
 
         try:
-            # Initialize the model with system prompt - NO STREAMING
-            model = genai.GenerativeModel(
-                model_name=self.model,
-                system_instruction=system_prompt,
+            # Generate complete response in one call (no streaming) using new API
+            # Combine system and user prompts as the new API handles system instruction differently
+            combined_prompt = f"{system_prompt}\n\n{user_prompt}"
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=combined_prompt
             )
-
-            # Generate complete response in one call (no streaming)
-            response = model.generate_content(user_prompt)
 
             # Extract the text
             response_text = response.text
@@ -432,14 +422,12 @@ class GeminiService(BaseLLMService):
         )
 
         try:
-            # Initialize the model with system prompt
-            model = genai.GenerativeModel(
-                model_name=self.model,
-                system_instruction=system_prompt,
+            # Generate content with streaming using new API
+            combined_prompt = f"{system_prompt}\n\n{user_prompt}"
+            response = self.client.models.generate_content_stream(
+                model=self.model,
+                contents=combined_prompt
             )
-
-            # Generate content with streaming
-            response = model.generate_content(user_prompt, stream=True)
 
             # First, collect a buffer to check if paragraphing is needed
             buffer_size = 400  # Characters to check for paragraph formatting (reduced for earlier detection)
@@ -488,14 +476,12 @@ class GeminiService(BaseLLMService):
                     logger.info(f"Regeneration attempt {attempt}/{max_attempts}")
 
                     try:
-                        # Re-initialize model to use the same system instruction
-                        retry_model = genai.GenerativeModel(
-                            model_name=self.model,
-                            system_instruction=system_prompt,
+                        # Generate new response using new API
+                        combined_prompt = f"{system_prompt}\n\n{user_prompt}"
+                        retry_response = self.client.models.generate_content(
+                            model=self.model,
+                            contents=combined_prompt
                         )
-
-                        # Generate new response
-                        retry_response = retry_model.generate_content(user_prompt)
                         regenerated_text = retry_response.text
 
                         # Check if it has proper paragraph formatting
@@ -571,14 +557,12 @@ class GeminiService(BaseLLMService):
         logger.info("========================\n")
 
         try:
-            # Initialize the model with system prompt
-            model = genai.GenerativeModel(
-                model_name=self.model,
-                system_instruction=system_prompt,
+            # Generate content with streaming using new API
+            combined_prompt = f"{system_prompt}\n\n{user_prompt}"
+            response = self.client.models.generate_content_stream(
+                model=self.model,
+                contents=combined_prompt
             )
-
-            # Generate content with streaming
-            response = model.generate_content(user_prompt, stream=True)
 
             # First, collect a buffer to check if paragraphing is needed
             buffer_size = 400  # Characters to check for paragraph formatting (reduced for earlier detection)

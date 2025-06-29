@@ -124,6 +124,7 @@ graph TD
 
 Learning Odyssey is a living project, constantly evolving to deliver a richer experience:
 
+*   **🚀 Latest: Future-Proof AI Integration:** Successfully migrated to Google's unified `google-genai` SDK, ensuring access to the latest AI capabilities and improved stability while maintaining 100% backward compatibility.
 *   **🎉 Complete Supabase Integration - PRODUCTION READY:** Full implementation of user authentication (Google OAuth & Guest), persistent adventure state, comprehensive telemetry tracking, and robust adventure resumption with custom modal flows. All four phases completed with thorough testing and bug fixes.
 *   **Enhanced User Experience:** Custom modal system for adventure management, consistent chapter display across all components, and seamless resumption flows for both authenticated and guest users.
 *   **Improved Visual Consistency:** Characters and agency elements now maintain more consistent and evolving visual appearances throughout your adventure with advanced prompt synthesis and character tracking.

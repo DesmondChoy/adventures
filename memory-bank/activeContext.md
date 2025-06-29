@@ -1,12 +1,33 @@
 # Active Context
 
-## Current Focus: Frontend UX Accuracy (As of 2025-06-28)
+## Current Focus: Google GenAI SDK Migration (As of 2025-06-29)
 
-✅ **LATEST ACHIEVEMENT:** Frontend expectation alignment completed! Landing page now accurately represents the app's streaming-based, adaptive learning experience without misleading elements.
+✅ **LATEST ACHIEVEMENT:** Google GenAI SDK migration completed! Successfully migrated from deprecated `google-generativeai` to unified `google-genai` SDK with full backward compatibility.
+
+✅ **PREVIOUS MILESTONE:** Frontend expectation alignment completed! Landing page now accurately represents the app's streaming-based, adaptive learning experience without misleading elements.
 
 ✅ **PREVIOUS MILESTONE:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
 
 ### Recently Completed Milestones
+
+*   **Google GenAI SDK Migration - COMPLETED (2025-06-29):**
+    *   **Goal:** Migrate from deprecated `google-generativeai` library to unified `google-genai` SDK for future compatibility.
+    *   **Problem:** Google deprecated the old library in favor of the new unified SDK supporting all Google AI models.
+    *   **Migration Completed:**
+        *   Updated all imports from `import google.generativeai as genai` to `from google import genai`
+        *   Replaced client initialization from `genai.configure()` + `genai.GenerativeModel()` to unified `genai.Client()`
+        *   Updated API calls from model-based to client-based architecture (`client.models.generate_content()`)
+        *   Fixed streaming with `generate_content_stream()` method
+        *   Removed deprecated packages from requirements.txt
+    *   **Files Modified:**
+        *   `app/services/llm/providers.py` (complete LLM service migration)
+        *   `app/services/llm/paragraph_formatter.py` (text formatting)
+        *   `app/services/image_generation_service.py` (unified imports)
+        *   `app/services/chapter_manager.py` (removed direct calls)
+        *   `requirements.txt` (dependency cleanup)
+    *   **Testing:** Post-migration testing confirmed complete functionality from first chapter through summary generation
+    *   **Result:** Successfully migrated to future-proof unified Google AI SDK with 100% backward compatibility
+    *   **Impact:** Application now uses latest Google AI SDK with access to new features and improved stability
 
 *   **Frontend UX Accuracy Improvements - COMPLETED (2025-06-28):**
     *   **Goal:** Eliminate misleading elements in landing page that created false expectations about app functionality.

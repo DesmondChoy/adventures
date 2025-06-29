@@ -10,7 +10,7 @@ import os
 from typing import Optional, Tuple
 
 # Import genai for Gemini service
-import google.generativeai as genai
+from google import genai
 
 logger = logging.getLogger("story_app")
 
@@ -131,12 +131,13 @@ async def reformat_text_with_paragraphs(
                 reformatted_text = response.choices[0].message.content
 
             elif service_class_name == "GeminiService":
-                # Use the Gemini service directly
-                model = genai.GenerativeModel(
-                    model_name=llm_service.model,
-                    system_instruction="You are a helpful assistant that reformats text with proper paragraph breaks.",
+                # Use the Gemini service directly with new API
+                system_prompt = "You are a helpful assistant that reformats text with proper paragraph breaks."
+                combined_prompt = f"{system_prompt}\n\n{prompt}"
+                response = llm_service.client.models.generate_content(
+                    model=llm_service.model,
+                    contents=combined_prompt
                 )
-                response = model.generate_content(prompt)
                 reformatted_text = response.text
 
             else:

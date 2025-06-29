@@ -295,18 +295,14 @@ class ImageGenerationService:
             # For Gemini, use a direct approach instead of streaming
             if is_gemini:
                 try:
-                    # Initialize the model with system prompt
-                    from google import generativeai as genai
-
-                    # Use Gemini Flash
-                    model_name = "gemini-2.0-flash"
-                    model = genai.GenerativeModel(
-                        model_name=model_name,
-                        system_instruction="You are a helpful assistant that follows instructions precisely.",
+                    # Use unified genai client with new API
+                    system_prompt = "You are a helpful assistant that follows instructions precisely."
+                    combined_prompt = f"{system_prompt}\n\n{meta_prompt}"
+                    
+                    response = self.client.models.generate_content(
+                        model="gemini-2.0-flash",
+                        contents=combined_prompt
                     )
-
-                    # Generate content without streaming
-                    response = model.generate_content(meta_prompt)
 
                     # Extract the text directly
                     synthesized_prompt = response.text.strip()

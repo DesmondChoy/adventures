@@ -2,6 +2,26 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-06-29: Google GenAI SDK Migration
+- **Goal:** Migrate from deprecated `google-generativeai` library to the new unified `google-genai` SDK to ensure future compatibility and access to latest features.
+- **Problem:** Google deprecated the `google-generativeai` library in favor of the new unified `google-genai` SDK that supports all Google's generative AI models and features.
+- **Migration Tasks Completed:**
+  1. **Updated Dependencies:** Removed `google-generativeai==0.8.4` and `google-ai-generativelanguage==0.6.15` from requirements.txt
+  2. **Updated Imports:** Changed all imports from `import google.generativeai as genai` to `from google import genai`
+  3. **Replaced Client Initialization:** Removed `genai.configure()` calls and replaced `genai.GenerativeModel()` with unified `genai.Client()`
+  4. **Updated API Calls:** Migrated from model-based API to client-based API structure (`client.models.generate_content()`)
+  5. **Fixed Streaming:** Updated streaming calls to use `generate_content_stream()` method
+  6. **Unified API Usage:** Consolidated all Google AI calls to use the new unified SDK consistently
+- **Files Modified:**
+  - `app/services/llm/providers.py` (main LLM service - complete API migration)
+  - `app/services/llm/paragraph_formatter.py` (text formatting utilities)
+  - `app/services/image_generation_service.py` (cleaned up mixed imports)
+  - `app/services/chapter_manager.py` (removed direct API calls, use LLM service)
+  - `requirements.txt` (removed deprecated packages)
+- **Testing:** Post-migration testing confirmed all functionality works correctly from first chapter to summary generation
+- **Result:** Successfully migrated to future-proof unified Google AI SDK while maintaining 100% backward compatibility of all existing features
+- **Impact:** Application now uses the latest Google AI SDK with access to new features like Live API and improved stability
+
 ### 2025-06-28: Frontend UX Accuracy Improvements
 - **Goal:** Eliminate misleading elements in landing page that created false expectations about app functionality.
 - **Problems Identified:**
