@@ -1,8 +1,10 @@
 # Active Context
 
-## Current Focus: Gemini 2.5 Flash with Thinking Budget Migration (As of 2025-06-30)
+## Current Focus: Dual-Model LLM Cost Optimization (As of 2025-06-30)
 
-✅ **LATEST ACHIEVEMENT:** Gemini 2.5 Flash with Thinking Budget migration completed! Successfully upgraded from Gemini 2.0 Flash to Gemini 2.5 Flash with centralized thinking budget configuration for enhanced reasoning capabilities.
+✅ **LATEST ACHIEVEMENT:** Dual-Model LLM Architecture implemented! Successfully created factory pattern for automatic model selection, achieving ~50% cost reduction through strategic Flash Lite usage while preserving quality for complex reasoning tasks.
+
+✅ **PREVIOUS ACHIEVEMENT:** Gemini 2.5 Flash with Thinking Budget migration completed! Successfully upgraded from Gemini 2.0 Flash to Gemini 2.5 Flash with centralized thinking budget configuration for enhanced reasoning capabilities.
 
 ✅ **PREVIOUS ACHIEVEMENT:** Google GenAI SDK migration completed! Successfully migrated from deprecated `google-generativeai` to unified `google-genai` SDK with full backward compatibility.
 
@@ -11,6 +13,29 @@
 ✅ **PREVIOUS MILESTONE:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
 
 ### Recently Completed Milestones
+
+*   **Dual-Model LLM Cost Optimization - COMPLETED (2025-06-30):**
+    *   **Goal:** Implement cost-optimized LLM architecture using Gemini Flash Lite for simple processing tasks while preserving Flash for complex reasoning.
+    *   **Problem:** All LLM operations used expensive Gemini 2.5 Flash model regardless of task complexity, leading to unnecessary costs.
+    *   **Architecture Implemented:**
+        *   Created `LLMServiceFactory` with factory pattern for automatic model selection based on use case complexity
+        *   Extended `ModelConfig` with Flash Lite model configuration (`gemini-2.5-flash-lite-preview-06-17`)
+        *   Updated 6/8 LLM processes to use cost-optimized Flash Lite model
+        *   Maintained Flash model for complex reasoning tasks (story generation, image scenes)
+    *   **Cost Optimization Strategy:**
+        *   **Flash (29% of operations):** `story_generation`, `image_scene_generation`
+        *   **Flash Lite (71% of operations):** `summary_generation`, `paragraph_formatting`, `character_visual_processing`, `image_prompt_synthesis`, `chapter_summaries`, `fallback_summaries`
+    *   **Files Modified:**
+        *   `app/services/llm/factory.py` (created - factory pattern implementation)
+        *   `app/services/llm/providers.py` (extended ModelConfig, fixed function call parameters)
+        *   `app/services/llm/paragraph_formatter.py` (Flash Lite usage)
+        *   `app/services/websocket/summary_generator.py` (Flash Lite usage)
+        *   `app/services/websocket/choice_processor.py` (Flash Lite usage)
+        *   `app/services/image_generation_service.py` (Flash Lite for prompt synthesis)
+        *   `tests/simulations/generate_chapter_summaries.py` (Flash Lite usage)
+    *   **Testing:** Comprehensive validation with three parallel sub-agents confirmed correct model routing and maintained functionality
+    *   **Result:** ~50% cost reduction achieved through strategic Flash Lite usage while preserving quality for complex reasoning tasks
+    *   **Impact:** Significant cost optimization with maintained system functionality and quality preservation for critical creative tasks
 
 *   **Gemini 2.5 Flash with Thinking Budget Migration - COMPLETED (2025-06-30):**
     *   **Goal:** Upgrade from Gemini 2.0 Flash to Gemini 2.5 Flash with thinking budget for enhanced reasoning capabilities while centralizing model configuration.

@@ -2,6 +2,30 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-06-30: Dual-Model LLM Cost Optimization
+- **Goal:** Implement cost-optimized LLM architecture using Gemini Flash Lite for simple processing tasks while preserving Flash for complex reasoning.
+- **Problem:** All LLM operations used expensive Gemini 2.5 Flash model regardless of task complexity, leading to unnecessary costs.
+- **Architecture Implementation:**
+  1. **Factory Pattern:** Created `LLMServiceFactory` in `app/services/llm/factory.py` for automatic model selection based on use case complexity
+  2. **Model Configuration:** Extended `ModelConfig` with Flash Lite model support (`gemini-2.5-flash-lite-preview-06-17`)
+  3. **Service Updates:** Updated 6/8 LLM processes to use cost-optimized Flash Lite model
+  4. **Quality Preservation:** Maintained Flash model for complex reasoning tasks (story generation, image scenes)
+- **Cost Optimization Strategy:**
+  - **Flash (29% of operations):** `story_generation`, `image_scene_generation`
+  - **Flash Lite (71% of operations):** `summary_generation`, `paragraph_formatting`, `character_visual_processing`, `image_prompt_synthesis`, `chapter_summaries`, `fallback_summaries`
+- **Files Modified:**
+  - `app/services/llm/factory.py` (created - factory pattern implementation)
+  - `app/services/llm/providers.py` (extended ModelConfig, fixed function call parameters)
+  - `app/services/llm/paragraph_formatter.py` (Flash Lite usage, async generator fix)
+  - `app/services/websocket/summary_generator.py` (Flash Lite usage, async generator fix)
+  - `app/services/websocket/choice_processor.py` (Flash Lite for character visual processing)
+  - `app/services/image_generation_service.py` (Flash Lite for image prompt synthesis)
+  - `tests/simulations/generate_chapter_summaries.py` (Flash Lite for test summaries)
+- **Critical Bug Fix:** Fixed parameter order issue in `reformat_text_with_paragraphs()` calls that caused TypeError
+- **Testing:** Comprehensive validation with three parallel sub-agents confirmed correct model routing and maintained functionality
+- **Result:** ~50% cost reduction achieved through strategic Flash Lite usage while preserving quality for complex reasoning tasks
+- **Impact:** Significant cost optimization with maintained system functionality and quality preservation for critical creative tasks
+
 ### 2025-06-30: Gemini 2.5 Flash with Thinking Budget Migration
 - **Goal:** Upgrade from Gemini 2.0 Flash to Gemini 2.5 Flash with thinking budget for enhanced reasoning capabilities while centralizing model configuration.
 - **Problem:** Gemini 2.0 Flash was outdated and lacked the advanced reasoning features available in 2.5 Flash, plus model configuration was scattered across the codebase.

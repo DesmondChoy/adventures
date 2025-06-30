@@ -18,7 +18,7 @@ from app.models.story import (
 from app.services.adventure_state_manager import AdventureStateManager
 from app.services.chapter_manager import ChapterManager
 from app.services.state_storage_service import StateStorageService
-from app.services.llm import LLMService
+from app.services.llm.factory import LLMServiceFactory
 from app.services.llm.prompt_templates import CHARACTER_VISUAL_UPDATE_PROMPT
 from app.services.telemetry_service import TelemetryService
 
@@ -28,7 +28,7 @@ from .summary_generator import generate_summary_content, stream_summary_content
 logger = logging.getLogger("story_app")
 chapter_manager = ChapterManager()
 state_storage_service = StateStorageService()
-llm_service = LLMService()
+llm_service = LLMServiceFactory.create_for_use_case("character_visual_processing")
 
 # Lazy instantiation to avoid environment variable loading issues during import
 _telemetry_service = None

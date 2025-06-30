@@ -19,11 +19,22 @@ class ModelConfig:
     """Centralized configuration for LLM models and their settings."""
     
     # Gemini Models
-    GEMINI_MODEL = "gemini-2.5-flash"
+    GEMINI_MODEL = "gemini-2.5-flash"  # Default for backward compatibility
+    GEMINI_FLASH_MODEL = "gemini-2.5-flash"
+    GEMINI_FLASH_LITE_MODEL = "gemini-2.5-flash-lite-preview-06-17"  # Cost-optimized model
     GEMINI_THINKING_BUDGET = 1024
     
     # OpenAI Models  
     OPENAI_MODEL = "gpt-4o-2024-08-06"
+    
+    # Usage-specific model assignments
+    STORY_GENERATION_MODEL = GEMINI_FLASH_MODEL
+    IMAGE_SCENE_MODEL = GEMINI_FLASH_MODEL
+    SUMMARY_MODEL = GEMINI_FLASH_LITE_MODEL
+    PARAGRAPH_FORMAT_MODEL = GEMINI_FLASH_LITE_MODEL
+    CHARACTER_VISUAL_MODEL = GEMINI_FLASH_LITE_MODEL
+    CHAPTER_SUMMARY_MODEL = GEMINI_FLASH_LITE_MODEL
+    IMAGE_PROMPT_MODEL = GEMINI_FLASH_LITE_MODEL
     
     @classmethod
     def get_gemini_config(cls) -> GenerateContentConfig:
@@ -199,10 +210,10 @@ class OpenAIService(BaseLLMService):
                 else:
                     # If all regeneration attempts failed, fall back to reformatting
                     logger.warning(
-                        f"All {max_attempts} regeneration attempts failed, falling back to reformatting"
+                    f"All {max_attempts} regeneration attempts failed, falling back to reformatting"
                     )
                     reformatted_text = await reformat_text_with_paragraphs(
-                        self, full_response
+                    full_response, 3, self
                     )
                     yield reformatted_text
                     logger.info("Sent reformatted text with paragraph formatting")
@@ -343,7 +354,7 @@ class OpenAIService(BaseLLMService):
                         f"All {max_attempts} regeneration attempts failed, falling back to reformatting"
                     )
                     reformatted_text = await reformat_text_with_paragraphs(
-                        self, full_response
+                        full_response, 3, self
                     )
                     yield reformatted_text
                     logger.info("Sent reformatted text with paragraph formatting")
@@ -532,7 +543,7 @@ class GeminiService(BaseLLMService):
                         f"All {max_attempts} regeneration attempts failed, falling back to reformatting"
                     )
                     reformatted_text = await reformat_text_with_paragraphs(
-                        self, full_response
+                        full_response, 3, self
                     )
                     yield reformatted_text
                     logger.info("Sent reformatted text with paragraph formatting")
@@ -624,7 +635,7 @@ class GeminiService(BaseLLMService):
                     "Detected text without proper paragraph formatting, reformatting..."
                 )
                 reformatted_text = await reformat_text_with_paragraphs(
-                    self, full_response
+                    full_response, 3, self
                 )
                 yield reformatted_text
                 logger.info("Sent reformatted text with proper paragraphing")

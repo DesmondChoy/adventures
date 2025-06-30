@@ -6,11 +6,7 @@ This module provides functions to detect and fix text that lacks proper paragrap
 
 import re
 import logging
-import os
-from typing import Optional, Tuple
-
-# Import genai for Gemini service
-from google import genai
+from typing import Tuple
 
 logger = logging.getLogger("story_app")
 
@@ -49,16 +45,16 @@ def needs_paragraphing(text: str) -> bool:
 
 
 async def reformat_text_with_paragraphs(
-    llm_service, text: str, max_attempts: int = 3
+    text: str, max_attempts: int = 3, llm_service=None
 ) -> str:
     """
-    Reformat text with proper paragraph breaks using the provided LLM service.
+    Reformat text with proper paragraph breaks using a lightweight LLM service.
     Will make multiple attempts if needed.
 
     Args:
-        llm_service: The LLM service to use for reformatting
         text: The text to reformat
         max_attempts: Maximum number of formatting attempts (default: 3)
+        llm_service: Optional LLM service, defaults to Flash Lite service
 
     Returns:
         str: The reformatted text with proper paragraph breaks
@@ -66,6 +62,11 @@ async def reformat_text_with_paragraphs(
     # Skip reformatting if text doesn't need it
     if not needs_paragraphing(text):
         return text
+
+    # Use Flash Lite service if none provided
+    if llm_service is None:
+        from app.services.llm.factory import LLMServiceFactory
+        llm_service = LLMServiceFactory.create_for_use_case("paragraph_formatting")
 
     logger.info("Reformatting text with paragraphs")
 
@@ -105,47 +106,21 @@ async def reformat_text_with_paragraphs(
                 extra={
                     "reformatting_prompt": prompt,
                     "service_type": llm_service.__class__.__name__,
-                    "model": llm_service.model,
                     "temperature": 0.3 if attempt == 0 else 0.7,
                 },
             )
 
-            # Make service-specific API call
-            service_class_name = llm_service.__class__.__name__
-
-            if service_class_name == "OpenAIService":
-                # Use the OpenAI service directly
-                response = await llm_service.client.chat.completions.create(
-                    model=llm_service.model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "You are a helpful assistant that reformats text with proper paragraph breaks.",
-                        },
-                        {"role": "user", "content": prompt},
-                    ],
-                    temperature=0.3
-                    if attempt == 0
-                    else 0.7,  # Increase temperature in later attempts for more variation
-                )
-                reformatted_text = response.choices[0].message.content
-
-            elif service_class_name == "GeminiService":
-                # Use the Gemini service directly with new API
-                system_prompt = "You are a helpful assistant that reformats text with proper paragraph breaks."
-                combined_prompt = f"{system_prompt}\n\n{prompt}"
-                response = llm_service.client.models.generate_content(
-                    model=llm_service.model,
-                    contents=combined_prompt
-                )
-                reformatted_text = response.text
-
-            else:
-                # Unknown service type
-                logger.warning(
-                    f"Unknown LLM service type {type(llm_service)}, using original text"
-                )
-                return text
+            # Use the standard LLM service interface
+            system_prompt = "You are a helpful assistant that reformats text with proper paragraph breaks."
+            
+            # Collect the complete response from the streaming interface
+            reformatted_text = ""
+            response_generator = await llm_service.generate_with_prompt(
+                system_prompt=system_prompt,
+                user_prompt=prompt
+            )
+            async for chunk in response_generator:
+                reformatted_text += chunk
 
             # Log the reformatted response
             logger.info(

@@ -284,8 +284,9 @@ class ImageGenerationService:
                 character_visual_context=character_visual_context,
             )
 
-            # Use LLMService to call Gemini Flash
-            llm = LLMService()
+            # Use Flash Lite for image prompt synthesis
+            from app.services.llm.factory import LLMServiceFactory
+            llm = LLMServiceFactory.create_for_use_case("image_prompt_synthesis")
 
             # Check if we're using Gemini or OpenAI
             is_gemini = (
@@ -301,7 +302,7 @@ class ImageGenerationService:
                     combined_prompt = f"{system_prompt}\n\n{meta_prompt}"
                     
                     response = self.client.models.generate_content(
-                        model=ModelConfig.GEMINI_MODEL,
+                        model=llm.model,  # Use the Flash Lite model from the factory
                         contents=combined_prompt,
                         config=ModelConfig.get_gemini_config()
                     )
@@ -323,34 +324,21 @@ class ImageGenerationService:
                             self.chapters = []
                             self.metadata = {"prompt_override": True}
 
-                    async for chunk in llm.generate_chapter_stream(
-                        story_config={},
-                        state=MinimalState(),
-                        question=None,
-                        previous_lessons=None,
-                        context={"prompt_override": meta_prompt},
-                    ):
+                    response_generator = await llm.generate_with_prompt(
+                        system_prompt="You are a helpful assistant that follows instructions precisely.",
+                        user_prompt=meta_prompt,
+                    )
+                    async for chunk in response_generator:
                         chunks.append(chunk)
                     synthesized_prompt = "".join(chunks).strip()
             else:
                 # For OpenAI, use the streaming approach
                 chunks = []
-
-                # Create a minimal AdventureState-like object with just what we need
-                class MinimalState:
-                    def __init__(self):
-                        self.current_chapter_id = "image_prompt_synthesis"
-                        self.story_length = 1
-                        self.chapters = []
-                        self.metadata = {"prompt_override": True}
-
-                async for chunk in llm.generate_chapter_stream(
-                    story_config={},
-                    state=MinimalState(),
-                    question=None,
-                    previous_lessons=None,
-                    context={"prompt_override": meta_prompt},
-                ):
+                response_generator = await llm.generate_with_prompt(
+                    system_prompt="You are a helpful assistant that follows instructions precisely.",
+                    user_prompt=meta_prompt,
+                )
+                async for chunk in response_generator:
                     chunks.append(chunk)
                 synthesized_prompt = "".join(chunks).strip()
 

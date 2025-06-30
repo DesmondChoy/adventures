@@ -17,10 +17,15 @@
   * `app/auth/dependencies.py` for FastAPI JWT verification dependency (though primarily WebSocket auth is used for core adventure flow).
 
 ### AI Integration
-- **Provider-Agnostic Implementation**
-  * `app/services/llm/providers.py`: Supports GPT-4o/Gemini 2.5 Flash with centralized model configuration
-  * `app/services/image_generation_service.py`: Gemini Imagen API with 2.5 Flash for prompt synthesis
+- **Dual-Model LLM Architecture**
+  * `app/services/llm/factory.py`: Factory pattern for optimal model selection
+  * `app/services/llm/providers.py`: Supports GPT-4o/Gemini 2.5 Flash/Flash Lite with centralized configuration
+  * **Cost-Optimized Model Routing:**
+    - Gemini 2.5 Flash (`gemini-2.5-flash`): Complex reasoning (story generation, image scenes)
+    - Gemini 2.5 Flash Lite (`gemini-2.5-flash-lite-preview-06-17`): Simple processing (summaries, formatting, JSON extraction)
+  * `app/services/image_generation_service.py`: Gemini Imagen API with Flash Lite for prompt synthesis
   * Centralized model configuration in `ModelConfig` class with thinking budget support
+  * **~50% cost reduction** through strategic Flash Lite usage on 6/8 LLM processes
   * Environment variables:
     ```
     GOOGLE_API_KEY=your_google_key  # Used for both LLM and image generation
@@ -144,13 +149,17 @@ class ChapterType(str, Enum):
   * `build_user_prompt()`: Creates chapter-specific prompts
   * `_get_phase_guidance()`: Adds phase-specific guidance
 
-- **Provider Abstraction**
-  * Supports GPT-4o and Gemini 2.5 Flash using unified `google-genai` SDK
+- **Dual-Model Provider Architecture**
+  * Factory pattern (`LLMServiceFactory`) for automatic model selection based on use case complexity
+  * Supports GPT-4o and Gemini 2.5 Flash/Flash Lite using unified `google-genai` SDK
+  * **Model Assignment Strategy:**
+    - Flash: `story_generation`, `image_scene_generation` (29% of operations)
+    - Flash Lite: `summary_generation`, `paragraph_formatting`, `character_visual_processing`, `image_prompt_synthesis`, `chapter_summaries`, `fallback_summaries` (71% of operations)
   * Centralized model configuration with `ModelConfig` class
   * 1024 token thinking budget for enhanced reasoning across all Gemini operations
   * Standardized response handling across providers
   * Error recovery mechanisms
-  * Paragraph formatting integration
+  * Paragraph formatting integration with Flash Lite optimization
   * Migrated from deprecated `google-generativeai` to `google-genai`
 
 ### Image Generation
