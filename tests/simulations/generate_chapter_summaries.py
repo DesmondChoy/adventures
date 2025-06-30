@@ -126,10 +126,11 @@ async def generate_chapter_summary(
                 f"Attempting direct API call (attempt {retry + 1}/{max_retries})"
             )
             from google import generativeai as genai
+            from app.services.llm.providers import ModelConfig
 
             # Initialize the model with system prompt
             model = genai.GenerativeModel(
-                model_name="gemini-2.0-flash",
+                model_name=ModelConfig.GEMINI_MODEL,
                 system_instruction="You are a helpful assistant that follows instructions precisely.",
             )
 

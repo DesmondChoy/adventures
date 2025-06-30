@@ -1,5 +1,6 @@
 from google import genai
 from google.genai.types import GenerateImagesConfig
+from app.services.llm.providers import ModelConfig
 from PIL import Image
 from io import BytesIO
 import base64
@@ -300,8 +301,9 @@ class ImageGenerationService:
                     combined_prompt = f"{system_prompt}\n\n{meta_prompt}"
                     
                     response = self.client.models.generate_content(
-                        model="gemini-2.0-flash",
-                        contents=combined_prompt
+                        model=ModelConfig.GEMINI_MODEL,
+                        contents=combined_prompt,
+                        config=ModelConfig.get_gemini_config()
                     )
 
                     # Extract the text directly

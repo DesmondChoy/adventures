@@ -1,14 +1,34 @@
 # Active Context
 
-## Current Focus: Google GenAI SDK Migration (As of 2025-06-29)
+## Current Focus: Gemini 2.5 Flash with Thinking Budget Migration (As of 2025-06-30)
 
-✅ **LATEST ACHIEVEMENT:** Google GenAI SDK migration completed! Successfully migrated from deprecated `google-generativeai` to unified `google-genai` SDK with full backward compatibility.
+✅ **LATEST ACHIEVEMENT:** Gemini 2.5 Flash with Thinking Budget migration completed! Successfully upgraded from Gemini 2.0 Flash to Gemini 2.5 Flash with centralized thinking budget configuration for enhanced reasoning capabilities.
+
+✅ **PREVIOUS ACHIEVEMENT:** Google GenAI SDK migration completed! Successfully migrated from deprecated `google-generativeai` to unified `google-genai` SDK with full backward compatibility.
 
 ✅ **PREVIOUS MILESTONE:** Frontend expectation alignment completed! Landing page now accurately represents the app's streaming-based, adaptive learning experience without misleading elements.
 
 ✅ **PREVIOUS MILESTONE:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
 
 ### Recently Completed Milestones
+
+*   **Gemini 2.5 Flash with Thinking Budget Migration - COMPLETED (2025-06-30):**
+    *   **Goal:** Upgrade from Gemini 2.0 Flash to Gemini 2.5 Flash with thinking budget for enhanced reasoning capabilities while centralizing model configuration.
+    *   **Problem:** Gemini 2.0 Flash was outdated and lacked the advanced reasoning features available in 2.5 Flash, plus model configuration was scattered across the codebase.
+    *   **Migration Completed:**
+        *   Upgraded google-genai library from 1.3.0 to 1.23.0 for 2.5 Flash support
+        *   Created centralized `ModelConfig` class in `app/services/llm/providers.py` with model and thinking budget constants
+        *   Updated all model references from `gemini-2.0-flash` to `gemini-2.5-flash` using centralized config
+        *   Implemented 1024 token thinking budget across all Gemini API calls (streaming and non-streaming)
+        *   Added `get_gemini_config()` method for consistent thinking budget application
+    *   **Files Modified:**
+        *   `requirements.txt` (library version upgrade)
+        *   `app/services/llm/providers.py` (centralized config, all API calls updated)
+        *   `app/services/image_generation_service.py` (using centralized config)
+        *   `tests/simulations/generate_chapter_summaries.py` (using centralized config)
+    *   **Testing:** Post-migration testing confirmed enhanced reasoning quality with thinking budget applied to all LLM operations
+    *   **Result:** Successfully upgraded to Gemini 2.5 Flash with centralized configuration management and consistent 1024 thinking budget across all operations
+    *   **Impact:** Enhanced reasoning capabilities for story generation, image prompt synthesis, and character visual updates while improving code maintainability
 
 *   **Google GenAI SDK Migration - COMPLETED (2025-06-29):**
     *   **Goal:** Migrate from deprecated `google-generativeai` library to unified `google-genai` SDK for future compatibility.

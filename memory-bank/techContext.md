@@ -18,8 +18,9 @@
 
 ### AI Integration
 - **Provider-Agnostic Implementation**
-  * `app/services/llm/providers.py`: Supports GPT-4o/Gemini
-  * `app/services/image_generation_service.py`: Gemini Imagen API
+  * `app/services/llm/providers.py`: Supports GPT-4o/Gemini 2.5 Flash with centralized model configuration
+  * `app/services/image_generation_service.py`: Gemini Imagen API with 2.5 Flash for prompt synthesis
+  * Centralized model configuration in `ModelConfig` class with thinking budget support
   * Environment variables:
     ```
     GOOGLE_API_KEY=your_google_key  # Used for both LLM and image generation
@@ -144,7 +145,9 @@ class ChapterType(str, Enum):
   * `_get_phase_guidance()`: Adds phase-specific guidance
 
 - **Provider Abstraction**
-  * Supports GPT-4o and Gemini using unified `google-genai` SDK
+  * Supports GPT-4o and Gemini 2.5 Flash using unified `google-genai` SDK
+  * Centralized model configuration with `ModelConfig` class
+  * 1024 token thinking budget for enhanced reasoning across all Gemini operations
   * Standardized response handling across providers
   * Error recovery mechanisms
   * Paragraph formatting integration

@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional, List, AsyncGenerator
 import os
 from openai import AsyncOpenAI
 from google import genai
+from google.genai.types import GenerateContentConfig, ThinkingConfig
 from app.models.story import AdventureState, ChapterType
 from app.services.llm.base import BaseLLMService
 from app.services.llm.prompt_engineering import build_prompt
@@ -13,10 +14,28 @@ import logging
 
 logger = logging.getLogger("story_app")
 
+# Centralized Model Configuration
+class ModelConfig:
+    """Centralized configuration for LLM models and their settings."""
+    
+    # Gemini Models
+    GEMINI_MODEL = "gemini-2.5-flash"
+    GEMINI_THINKING_BUDGET = 1024
+    
+    # OpenAI Models  
+    OPENAI_MODEL = "gpt-4o-2024-08-06"
+    
+    @classmethod
+    def get_gemini_config(cls) -> GenerateContentConfig:
+        """Get Gemini configuration with thinking budget."""
+        return GenerateContentConfig(
+            thinking_config=ThinkingConfig(thinking_budget=cls.GEMINI_THINKING_BUDGET)
+        )
+
 class OpenAIService(BaseLLMService):
     """OpenAI implementation of the LLM service."""
 
-    def __init__(self, model: str = "gpt-4o-2024-08-06"):
+    def __init__(self, model: str = ModelConfig.OPENAI_MODEL):
         self.model = model
         self.client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         if not os.getenv("OPENAI_API_KEY"):
@@ -350,7 +369,7 @@ class OpenAIService(BaseLLMService):
 class GeminiService(BaseLLMService):
     """Google Gemini implementation of the LLM service."""
 
-    def __init__(self, model: str = "gemini-2.0-flash"):
+    def __init__(self, model: str = ModelConfig.GEMINI_MODEL):
         """Initialize Gemini service with the specified model."""
         self.model = model
         api_key = os.getenv("GOOGLE_API_KEY")
@@ -391,7 +410,8 @@ class GeminiService(BaseLLMService):
             combined_prompt = f"{system_prompt}\n\n{user_prompt}"
             response = self.client.models.generate_content(
                 model=self.model,
-                contents=combined_prompt
+                contents=combined_prompt,
+                config=ModelConfig.get_gemini_config()
             )
 
             # Extract the text
@@ -426,7 +446,8 @@ class GeminiService(BaseLLMService):
             combined_prompt = f"{system_prompt}\n\n{user_prompt}"
             response = self.client.models.generate_content_stream(
                 model=self.model,
-                contents=combined_prompt
+                contents=combined_prompt,
+                config=ModelConfig.get_gemini_config()
             )
 
             # First, collect a buffer to check if paragraphing is needed
@@ -480,7 +501,8 @@ class GeminiService(BaseLLMService):
                         combined_prompt = f"{system_prompt}\n\n{user_prompt}"
                         retry_response = self.client.models.generate_content(
                             model=self.model,
-                            contents=combined_prompt
+                            contents=combined_prompt,
+                            config=ModelConfig.get_gemini_config()
                         )
                         regenerated_text = retry_response.text
 
@@ -561,7 +583,8 @@ class GeminiService(BaseLLMService):
             combined_prompt = f"{system_prompt}\n\n{user_prompt}"
             response = self.client.models.generate_content_stream(
                 model=self.model,
-                contents=combined_prompt
+                contents=combined_prompt,
+                config=ModelConfig.get_gemini_config()
             )
 
             # First, collect a buffer to check if paragraphing is needed

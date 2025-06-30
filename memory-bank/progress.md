@@ -2,6 +2,25 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-06-30: Gemini 2.5 Flash with Thinking Budget Migration
+- **Goal:** Upgrade from Gemini 2.0 Flash to Gemini 2.5 Flash with thinking budget for enhanced reasoning capabilities while centralizing model configuration.
+- **Problem:** Gemini 2.0 Flash was outdated and lacked the advanced reasoning features available in 2.5 Flash, plus model configuration was scattered across the codebase.
+- **Migration Tasks Completed:**
+  1. **Library Upgrade:** Updated google-genai from 1.3.0 to 1.23.0 for Gemini 2.5 Flash support
+  2. **Centralized Configuration:** Created `ModelConfig` class in `app/services/llm/providers.py` with centralized model and thinking budget constants
+  3. **Model Updates:** Changed all references from `gemini-2.0-flash` to `gemini-2.5-flash` using centralized config
+  4. **Thinking Budget Implementation:** Added 1024 token thinking budget to all Gemini API calls (streaming and non-streaming)
+  5. **Configuration Method:** Implemented `get_gemini_config()` method for consistent thinking budget application
+  6. **Code Consolidation:** Eliminated hardcoded model names and thinking configurations throughout codebase
+- **Files Modified:**
+  - `requirements.txt` (google-genai library version upgrade)
+  - `app/services/llm/providers.py` (centralized ModelConfig class, all API calls updated with thinking budget)
+  - `app/services/image_generation_service.py` (using centralized config for prompt synthesis)
+  - `tests/simulations/generate_chapter_summaries.py` (using centralized config)
+- **Testing:** Post-migration testing confirmed enhanced reasoning quality with thinking budget applied to story generation, image prompt synthesis, and character visual updates
+- **Result:** Successfully upgraded to Gemini 2.5 Flash with centralized configuration management and consistent 1024 thinking budget across all operations
+- **Impact:** Enhanced reasoning capabilities for all AI operations while improving code maintainability and configuration management
+
 ### 2025-06-29: Google GenAI SDK Migration
 - **Goal:** Migrate from deprecated `google-generativeai` library to the new unified `google-genai` SDK to ensure future compatibility and access to latest features.
 - **Problem:** Google deprecated the `google-generativeai` library in favor of the new unified `google-genai` SDK that supports all Google's generative AI models and features.
@@ -371,7 +390,8 @@
 - Educational content integration with narrative wrapper
 - Agency system with evolution throughout adventure
 - Real-time WebSocket state management
-- Provider-agnostic LLM integration (GPT-4o/Gemini)
+- Provider-agnostic LLM integration (GPT-4o/Gemini 2.5 Flash with thinking budget)
+- Centralized model configuration with enhanced reasoning capabilities
 - Asynchronous image generation for all chapters
 - Comprehensive summary chapter with educational recap
 - Responsive design for both desktop and mobile
