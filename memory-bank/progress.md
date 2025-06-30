@@ -2,27 +2,29 @@
 
 ## Recently Completed (Last 14 Days)
 
-### 2025-06-30: Summary Screen Issues Investigation (IN PROGRESS)
-- **Goal:** Resolve summary screen showing 9 chapters instead of 10 and placeholder questions instead of actual adventure questions.
+### 2025-06-30: Summary Screen Data Integrity Investigation - MAJOR DEBUGGING PROGRESS
+- **Goal:** Resolve summary screen showing incorrect data after a complete 10-chapter adventure.
+- **Root Cause Discovered:** State corruption occurring AFTER successful summary generation due to problematic "bandaid" functions added in March 2025
 - **Problems Identified:**
-  1. **Chapter Count Discrepancy**: Adventures completing with 9 chapters instead of expected 10 (missing CONCLUSION chapter)
-  2. **Educational Content Loss**: Knowledge Gained section shows placeholder questions instead of actual questions asked during LESSON chapters
-  3. **State Serialization Issues**: `planned_chapter_types` field missing during reconstruction despite fixes
-  4. **Chapter Type Preservation**: All chapters being stored as "story" type instead of mixed types (LESSON/STORY/CONCLUSION)
-- **Debugging Attempts Completed:**
-  1. **Race Condition Resolution**: Modified `handle_reveal_summary()` to complete all state operations before sending navigation signals
-  2. **Pydantic V2 Serialization**: Updated all `.dict()` to `.model_dump(mode='json')` in WebSocket and choice processor files
-  3. **AdventureState Validation**: Enhanced chapter validation to allow 11 chapters (story_length + 1 for SUMMARY)
-  4. **Async Generator Pattern**: Fixed broken async generator usage in `summary_generator.py`
-  5. **WebSocket Stability**: Implemented lazy instantiation for LLM factory to prevent module-level initialization timeouts
-- **Files Modified:**
-  - `app/services/websocket/choice_processor.py` (race condition fix, serialization updates, lazy LLM instantiation)
-  - `app/services/websocket/summary_generator.py` (async generator fix)
-  - `app/routers/websocket_router.py` (Pydantic serialization updates)
-  - `app/models/story.py` (validation logic enhancement for 11-chapter support)
-- **Current Status**: **DEBUGGING IN PROGRESS** - Despite fixes, core issues persist with identical symptoms
-- **Key Discovery**: Adventure flow is not reaching CONCLUSION chapter generation, suggesting issue in story progression logic rather than state persistence
-- **Impact**: Users cannot access complete adventure summaries with correct chapter counts and educational questions
+  1. **Chapter Count Discrepancy**: Shows "9 Chapters Completed" instead of correct 10
+  2. **Educational Content Loss**: Shows generic placeholder questions instead of actual LESSON chapter questions  
+  3. **State Overwrite**: Good 11-chapter state gets overwritten by corrupted 9-chapter state during summary display
+- **Investigation Method:** 
+  - **5 parallel sub-agents** deployed to investigate different aspects of the issue
+  - **Comprehensive logging** added throughout adventure flow to trace exact corruption sequence
+  - **Git history analysis** revealed `process_stored_chapter_summaries` was recent problematic addition (March 23, 2025)
+- **Major Fixes Implemented:**
+  1. **REMOVED** `process_stored_chapter_summaries()` function causing state corruption during read operations
+  2. **REMOVED** `process_stored_lesson_questions()` calls during storage operations  
+  3. **DISABLED** summary/question generation during state reconstruction (made reconstruction read-only)
+  4. **DISABLED** REST API fallback in frontend that was sending corrupted localStorage data
+- **Current Status:** Issue persists despite major fixes - frontend fallback still triggering somehow
+- **Next Critical Steps:**
+  1. Test fallback disabling fix with complete adventure run
+  2. If persists: investigate localStorage corruption in browser dev tools
+  3. If still persists: trace WebSocket timing and background async operations
+- **Impact**: Critical UX issue undermining user experience - users see incomplete adventure summary
+- **Architectural Lessons:** "Defensive programming" in read operations can corrupt data; summary display must be purely read-only
 
 ## Recently Completed (Last 14 Days)
 

@@ -80,19 +80,26 @@ class StateStorageService:
             chapters = state_data.get("chapters", [])
             completed_chapter_count = len(chapters)
 
+            # LOG DETAILED STATE INFO BEFORE SAVING
+            logger.info(f"[STATE STORAGE] About to save state with {completed_chapter_count} chapters")
+            for i, ch in enumerate(chapters):
+                ch_type = ch.get("chapter_type", "unknown")
+                ch_num = ch.get("chapter_number", "unknown")
+                logger.info(f"[STATE STORAGE] Chapter {i+1}: type={ch_type}, number={ch_num}")
+
             # Determine is_complete status
             if explicit_is_complete is not None:
                 is_complete = explicit_is_complete
-                logger.info(f"Using explicit_is_complete value: {is_complete}")
+                logger.info(f"[STATE STORAGE] Using explicit_is_complete value: {is_complete}")
             elif completed_chapter_count > 0:
                 last_chapter_type = chapters[-1].get("chapter_type", "").lower()
                 is_complete = last_chapter_type in ["conclusion", "summary"]
                 logger.info(
-                    f"Derived is_complete based on last chapter type ({last_chapter_type}): {is_complete}"
+                    f"[STATE STORAGE] Derived is_complete based on last chapter type ({last_chapter_type}): {is_complete}"
                 )
             else:
                 is_complete = False  # Default for new/empty adventures
-                logger.info(f"Defaulting is_complete to False for new/empty adventure.")
+                logger.info(f"[STATE STORAGE] Defaulting is_complete to False for new/empty adventure.")
 
             # Prepare the record for insertion/update
             record = {

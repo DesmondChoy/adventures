@@ -477,6 +477,11 @@ async def story_websocket(
                             },
                         )
                         try:
+                            logger.info(f"[WEBSOCKET ROUTER] About to save state via WebSocket router")
+                            current_state_debug = state_manager.get_current_state()
+                            if current_state_debug:
+                                logger.info(f"[WEBSOCKET ROUTER] State has {len(current_state_debug.chapters)} chapters")
+                                logger.info(f"[WEBSOCKET ROUTER] Current phase: {current_state_debug.current_storytelling_phase}")
                             adventure_id = await state_storage_service.store_state(
                                 state.model_dump(mode='json'),
                                 user_id=connection_data.get("user_id"),
@@ -581,6 +586,11 @@ async def story_websocket(
                                 state_manager.get_current_state()
                             )
                             if current_state_for_completion:
+                                logger.info(f"[WEBSOCKET ROUTER] About to save state via WebSocket router")
+                                current_state_debug = state_manager.get_current_state()
+                                if current_state_debug:
+                                    logger.info(f"[WEBSOCKET ROUTER] State has {len(current_state_debug.chapters)} chapters")
+                                    logger.info(f"[WEBSOCKET ROUTER] Current phase: {current_state_debug.current_storytelling_phase}")
                                 await state_storage_service.store_state(
                                     current_state_for_completion.model_dump(mode='json'),
                                     adventure_id=connection_data["adventure_id"],
@@ -617,6 +627,9 @@ async def story_websocket(
                     try:
                         current_state = state_manager.get_current_state()
                         if current_state:
+                            logger.info(f"[WEBSOCKET ROUTER] About to save state via WebSocket router")
+                            logger.info(f"[WEBSOCKET ROUTER] State has {len(current_state.chapters)} chapters")
+                            logger.info(f"[WEBSOCKET ROUTER] Current phase: {current_state.current_storytelling_phase}")
                             await state_storage_service.store_state(
                                 current_state.model_dump(mode='json'),
                                 adventure_id=connection_data["adventure_id"],

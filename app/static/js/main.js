@@ -185,9 +185,11 @@ export async function viewAdventureSummary() {
             choice: "reveal_summary"
         }));
     } else {
-        // Fallback if WebSocket is not available
-        clearTimeout(timeoutId);
-        fallbackToRestApi();
+        // DISABLED: Fallback was causing state corruption by overwriting good state
+        // The WebSocket path works correctly, so fallback is not needed
+        console.error('WebSocket not available for summary generation');
+        showError('Unable to generate summary. Please try refreshing the page.');
+        hideLoader();
     }
     
     // Fallback function to use REST API

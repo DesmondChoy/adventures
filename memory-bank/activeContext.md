@@ -196,38 +196,91 @@
         *   `app/static/js/main.js` (created)
     *   **Benefits:** Significantly improved code organization, maintainability, and testability of the frontend JavaScript. Reduced global namespace pollution and established clear module boundaries.
 
-### 🔴 CRITICAL ISSUES IN PROGRESS (2025-06-30)
+### 🔴 CRITICAL DEBUGGING IN PROGRESS (2025-06-30)
 
-**Summary Screen Data Loss Investigation:**
-After completing adventures, users are experiencing:
-- **Chapter Count Issue**: Summary shows 9 chapters instead of 10 (missing CONCLUSION chapter)
-- **Placeholder Questions**: Knowledge Gained section shows generic placeholder questions instead of actual questions asked during adventure
+**Summary Screen Data Integrity Investigation - MAJOR PROGRESS:**
 
-**Debugging Attempts Made:**
-1. ✅ **Race Condition Fix**: Modified adventure completion flow to save complete state before sending navigation signals
-2. ✅ **Pydantic Serialization Fix**: Updated all `.dict()` calls to `.model_dump(mode='json')` for proper enum serialization
-3. ✅ **Validation Fix**: Updated AdventureState validation to allow 11 chapters (10 story + 1 summary)
-4. ✅ **Async Generator Fix**: Fixed broken async generator pattern in summary generation
-5. ✅ **WebSocket Stability**: Implemented lazy instantiation for LLM factory to prevent module-level timeout issues
+#### **Original Problem (CONFIRMED):**
+- **Symptom 1**: Summary screen displays "9 Chapters Completed" instead of correct 10
+- **Symptom 2**: Shows generic placeholder questions ("What did you learn from this adventure?") instead of actual LESSON chapter questions
+- **Impact**: Users see incomplete/incorrect adventure summary, undermining experience
 
-**Issues Still Persisting:**
-- Adventures still stopping at 9 chapters (last chapter type: "story", not "conclusion")
-- `planned_chapter_types` field still missing during state reconstruction despite serialization fixes
-- All chapters being stored as "story" type instead of mixed LESSON/STORY/CONCLUSION types
-- Adventure completion flow not reaching CONCLUSION chapter generation
+#### **Root Cause Analysis COMPLETED (2025-06-30):**
 
-**Key Log Evidence:**
+**🎯 EXACT SEQUENCE DISCOVERED:**
+1. ✅ **Adventure Completes Successfully**: All 10 chapters (STORY/LESSON/REFLECT/CONCLUSION) generated and saved correctly
+2. ✅ **"Take a Trip Down Memory Lane" Clicked**: WebSocket `reveal_summary` flow executes properly  
+3. ✅ **Summary Generation Works**: CONCLUSION summary generated, 11-chapter state (including SUMMARY chapter) saved successfully
+4. 🚨 **State Corruption Occurs**: AFTER summary page loads, corrupted 9-chapter state overwrites good state
+5. ❌ **Summary Display Shows Bad Data**: Loads corrupted state with wrong chapter count and missing questions
+
+**🔍 ROOT CAUSE IDENTIFIED**: `process_stored_chapter_summaries` function (added March 23, 2025) was causing state corruption during summary display by:
+- Detecting "missing summaries" in reconstructed state (due to reconstruction corruption)
+- Generating new summaries for corrupted 9-chapter state
+- **SAVING corrupted state back to database, overwriting good 11-chapter state**
+
+#### **FIXES IMPLEMENTED (2025-06-30):**
+
+**Phase 1: Removed Problematic Functions**
+- ❌ **REMOVED**: `process_stored_chapter_summaries()` function from `app/services/summary/chapter_processor.py` 
+- ❌ **REMOVED**: `process_stored_chapter_summaries()` call from `app/services/summary/service.py:201`
+- ❌ **REMOVED**: `process_stored_lesson_questions()` call during storage operations
+- ✅ **JUSTIFICATION**: These were March 2025 "bandaid fixes" causing more problems than solving
+
+**Phase 2: Made State Reconstruction Read-Only**
+- ❌ **DISABLED**: Summary generation during `reconstruct_state_from_storage()` in `app/services/adventure_state_manager.py`
+- ❌ **DISABLED**: Lesson question extraction during state reconstruction  
+- ✅ **PRINCIPLE**: State reconstruction should be purely read-only, never modify stored data
+
+**Phase 3: Enhanced Logging**
+- ✅ **ADDED**: Comprehensive logging throughout adventure flow (`[ADVENTURE FLOW]`, `[CHAPTER CREATION]`, `[STATE STORAGE]`, `[REVEAL SUMMARY]`)
+- ✅ **PURPOSE**: Track exact sequence of state creation, modification, and corruption
+
+#### **CURRENT STATUS (2025-06-30):**
+
+**⚠️ ISSUE PERSISTS** despite major fixes. Latest test logs show:
+
 ```
-Derived is_complete based on last chapter type (story): False
-Updated state with 9 chapters and 9 summaries
-Missing planned_chapter_types, using default sequence
+[REVEAL SUMMARY] State has 10 chapters before processing  ✅ GOOD
+[All correct chapter types: STORY/LESSON/REFLECT/CONCLUSION] ✅ GOOD  
+Saved final complete state with 11 chapters ✅ GOOD
+Summary ready signal sent ✅ GOOD
+--- THEN CORRUPTION OCCURS ---
+[STATE STORAGE] About to save state with 9 chapters ❌ BAD
+[All chapters now "story" type] ❌ BAD  
+Updated state with 9 chapters and 0 summaries ❌ BAD
 ```
 
-**Next Steps Required:**
-1. Investigate why adventures are stopping at Chapter 9 instead of proceeding to Chapter 10 (CONCLUSION)
-2. Debug why `planned_chapter_types` serialization is still failing
-3. Examine the story flow logic that determines when to generate CONCLUSION chapters
-4. Verify that LESSON chapters are being generated during adventures (not just STORY chapters)
+**🔍 CURRENT HYPOTHESIS**: Frontend REST API fallback is triggering and sending corrupted localStorage data
+
+#### **IMMEDIATE NEXT DEBUGGING STEPS:**
+
+**Step 1: Disable REST API Fallback (COMPLETED)**
+- ✅ **DISABLED**: `fallbackToRestApi()` call in `app/static/js/main.js:190` 
+- 🎯 **REASON**: WebSocket path works correctly; fallback may be sending corrupted state from localStorage
+
+**Step 2: Test Fallback Fix**
+- 🔄 **ACTION NEEDED**: Run complete adventure and test "Take a Trip Down Memory Lane"
+- 📊 **EXPECT**: No more state corruption logs after WebSocket completion
+- ✅ **SUCCESS CRITERIA**: Summary shows 10 chapters and actual lesson questions
+
+**Step 3: If Issue Persists - localStorage Investigation**
+- 🔍 **INVESTIGATE**: Frontend localStorage state corruption
+- 🔍 **CHECK**: Browser developer tools for state data when clicking summary button
+- 🔍 **VERIFY**: stateManager.loadState() returns correct 10-chapter state
+
+**Step 4: If Still Persists - WebSocket Timing Investigation**  
+- 🔍 **INVESTIGATE**: WebSocket close event triggering unintended state saves
+- 🔍 **CHECK**: Background async operations saving state after summary completion
+- 🔍 **TRACE**: All state_storage_service.store_state() calls in logs
+
+#### **ARCHITECTURAL LESSONS LEARNED:**
+
+1. **"Bandaid" functions are dangerous**: `process_stored_chapter_summaries` was added to fix missing summaries but created worse corruption
+2. **Read operations must be truly read-only**: Summary display should never modify or save state  
+3. **State reconstruction corruption**: Aggressive "defensive programming" can corrupt valid data during reconstruction
+4. **Dual-path complexity**: WebSocket + REST fallback creates race conditions and corruption opportunities
+5. **Comprehensive logging essential**: Without detailed logging, this bug would have been impossible to trace
 
 ### Immediate Next Steps & Priorities
 

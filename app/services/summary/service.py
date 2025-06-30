@@ -191,24 +191,15 @@ class SummaryService:
                 state_data["summary_chapter_titles"] = []
                 logger.info("Created empty summary_chapter_titles array")
 
-            # Only generate summaries if they're actually missing
-            if state_data.get("chapters") and (
-                not state_data.get("chapter_summaries")
-                or len(state_data.get("chapter_summaries", []))
-                < len(state_data.get("chapters", []))
-            ):
-                logger.info("Missing chapter summaries detected, generating them now")
-                await self.chapter_processor.process_stored_chapter_summaries(
-                    state_data
-                )
-            else:
-                logger.info("All chapter summaries already exist, skipping generation")
+            # REMOVED: process_stored_chapter_summaries function call
+            # This function was causing state corruption during summary display
+            # by modifying and saving state during what should be read-only operations
+            logger.info("Skipping summary generation during storage - summaries should already exist from adventure flow")
 
-            # Process lesson questions if needed
-            if not state_data.get("lesson_questions"):
-                await self.question_processor.process_stored_lesson_questions(
-                    state_data
-                )
+            # REMOVED: process_stored_lesson_questions during storage
+            # Like chapter summaries, lesson questions should already exist from adventure flow
+            # This ensures summary display remains read-only
+            logger.info("Skipping lesson question processing during storage - questions should already exist from adventure flow")
 
             # Store the enhanced state
             state_id = await self.state_storage_service.store_state(

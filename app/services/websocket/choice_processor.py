@@ -57,7 +57,11 @@ async def handle_reveal_summary(
     connection_data: Optional[Dict[str, Any]] = None,
 ) -> Tuple[None, None, bool]:
     """Handle the reveal_summary special choice."""
-    logger.info("Processing reveal_summary choice")
+    logger.info("[REVEAL SUMMARY] Processing reveal_summary choice")
+    logger.info(f"[REVEAL SUMMARY] State has {len(state.chapters)} chapters before processing")
+    logger.info(f"[REVEAL SUMMARY] Current storytelling phase: {state.current_storytelling_phase}")
+    for i, ch in enumerate(state.chapters):
+        logger.info(f"[REVEAL SUMMARY] Chapter {i+1}: type={ch.chapter_type}, number={ch.chapter_number}")
     logger.info(f"Current state has {len(state.chapters)} chapters")
     logger.info(f"Current chapter summaries: {len(state.chapter_summaries)}")
 
@@ -775,15 +779,28 @@ async def process_non_start_choice(
     connection_data: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Optional[ChapterContent], Optional[dict], bool]:
     """Process a non-start choice from the user."""
-    logger.debug(f"Processing non-start choice: {chosen_path}")
-    logger.debug(f"Current state chapters: {len(state.chapters)}")
+    logger.info(f"[ADVENTURE FLOW] Processing non-start choice: {chosen_path}")
+    logger.info(f"[ADVENTURE FLOW] Current state chapters: {len(state.chapters)}")
+    logger.info(f"[ADVENTURE FLOW] Current storytelling phase: {state.current_storytelling_phase}")
+    
+    # LOG EXISTING CHAPTER TYPES
+    for i, ch in enumerate(state.chapters):
+        logger.info(f"[ADVENTURE FLOW] Existing Chapter {i+1}: type={ch.chapter_type}, number={ch.chapter_number}")
 
     current_chapter_number = len(state.chapters) + 1
-    logger.debug(f"Processing chapter {current_chapter_number}")
+    logger.info(f"[ADVENTURE FLOW] Processing chapter {current_chapter_number}")
+    
+    # LOG PLANNED CHAPTER TYPES
+    logger.info(f"[ADVENTURE FLOW] Planned chapter types: {state.planned_chapter_types}")
+    
     chapter_type = state.planned_chapter_types[current_chapter_number - 1]
     if not isinstance(chapter_type, ChapterType):
         chapter_type = ChapterType(chapter_type)
-    logger.debug(f"Next chapter type: {chapter_type}")
+    logger.info(f"[ADVENTURE FLOW] Next chapter type: {chapter_type}")
+    
+    # CHECK IF THIS IS THE FINAL CHAPTER
+    is_final_chapter = current_chapter_number >= state.story_length
+    logger.info(f"[ADVENTURE FLOW] Is final chapter (#{current_chapter_number} >= {state.story_length}): {is_final_chapter}")
 
     previous_chapter = state.chapters[-1]
     logger.debug("\n=== DEBUG: Previous Chapter Info ===")
