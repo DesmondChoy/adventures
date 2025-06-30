@@ -381,7 +381,21 @@
   * Produces more contextually relevant and detailed images by leveraging an LLM to intelligently merge various visual cues.
   * (Details in `wip/implemented/protagonist_inconsistencies.md` and `wip/implemented/characters_evolution_visual_inconsistencies.md`).
 
-### 19. LLM Factory Pattern for Cost Optimization
+### 19. Summary Screen Data Integrity Issues (DEBUGGING)
+- **Current Problem**: Despite multiple serialization and race condition fixes, summary screen still shows incomplete data
+- **Symptoms**: 
+  - 9 chapters instead of 10 (missing CONCLUSION)
+  - Placeholder questions instead of actual LESSON chapter questions
+  - Missing `planned_chapter_types` during state reconstruction
+  - All chapters stored as "story" type regardless of actual type during adventure
+- **Root Cause Analysis**: Issue appears to be in adventure progression logic, not state persistence
+- **Evidence**: Adventures stopping at Chapter 9 with `last chapter type (story): False` instead of proceeding to CONCLUSION
+- **Investigation Required**: 
+  - Story flow determination logic for CONCLUSION chapter generation
+  - LESSON chapter creation and question storage during adventures
+  - Chapter type preservation during the adventure progression (not just at summary)
+
+### 20. LLM Factory Pattern for Cost Optimization
 - **Architecture:** Centralized factory pattern for automatic model selection based on task complexity
 - **Implementation:** `app/services/llm/factory.py` with `LLMServiceFactory` class
 - **Model Assignment Strategy:**
@@ -407,9 +421,22 @@
   flash_service = LLMServiceFactory.create_flash()
   lite_service = LLMServiceFactory.create_flash_lite()
   ```
+- **Implementation Status:** ✅ **COMPLETED** with lazy instantiation pattern to prevent WebSocket timeouts
+- **Module-Level Issue Resolved:** Replaced direct factory instantiation with lazy loading pattern:
+  ```python
+  # Problematic (causing WebSocket timeouts):
+  llm_service = LLMServiceFactory.create_for_use_case("character_visual_processing")
+  
+  # Fixed (lazy instantiation):
+  def get_llm_service():
+      global _llm_service
+      if _llm_service is None:
+          _llm_service = LLMServiceFactory.create_for_use_case("character_visual_processing")
+      return _llm_service
+  ```
 - **Benefits:**
   * **Cost Reduction:** ~50% savings through strategic Flash Lite usage
   * **Quality Preservation:** Complex reasoning tasks maintain full Flash capabilities
   * **Centralized Configuration:** Easy to adjust model assignments
-  * **Backward Compatibility:** Existing code continues to work unchanged
+  * **WebSocket Stability:** Lazy instantiation prevents module-level initialization delays
   * **Maintainability:** Clear separation between cost optimization and business logic

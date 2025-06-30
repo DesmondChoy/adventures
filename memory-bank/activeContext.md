@@ -1,6 +1,6 @@
 # Active Context
 
-## Current Focus: Dual-Model LLM Cost Optimization (As of 2025-06-30)
+## Current Focus: Summary Screen Issues Debugging (As of 2025-06-30)
 
 ✅ **LATEST ACHIEVEMENT:** Dual-Model LLM Architecture implemented! Successfully created factory pattern for automatic model selection, achieving ~50% cost reduction through strategic Flash Lite usage while preserving quality for complex reasoning tasks.
 
@@ -195,6 +195,39 @@
         *   `app/static/js/uiManager.js` (created)
         *   `app/static/js/main.js` (created)
     *   **Benefits:** Significantly improved code organization, maintainability, and testability of the frontend JavaScript. Reduced global namespace pollution and established clear module boundaries.
+
+### 🔴 CRITICAL ISSUES IN PROGRESS (2025-06-30)
+
+**Summary Screen Data Loss Investigation:**
+After completing adventures, users are experiencing:
+- **Chapter Count Issue**: Summary shows 9 chapters instead of 10 (missing CONCLUSION chapter)
+- **Placeholder Questions**: Knowledge Gained section shows generic placeholder questions instead of actual questions asked during adventure
+
+**Debugging Attempts Made:**
+1. ✅ **Race Condition Fix**: Modified adventure completion flow to save complete state before sending navigation signals
+2. ✅ **Pydantic Serialization Fix**: Updated all `.dict()` calls to `.model_dump(mode='json')` for proper enum serialization
+3. ✅ **Validation Fix**: Updated AdventureState validation to allow 11 chapters (10 story + 1 summary)
+4. ✅ **Async Generator Fix**: Fixed broken async generator pattern in summary generation
+5. ✅ **WebSocket Stability**: Implemented lazy instantiation for LLM factory to prevent module-level timeout issues
+
+**Issues Still Persisting:**
+- Adventures still stopping at 9 chapters (last chapter type: "story", not "conclusion")
+- `planned_chapter_types` field still missing during state reconstruction despite serialization fixes
+- All chapters being stored as "story" type instead of mixed LESSON/STORY/CONCLUSION types
+- Adventure completion flow not reaching CONCLUSION chapter generation
+
+**Key Log Evidence:**
+```
+Derived is_complete based on last chapter type (story): False
+Updated state with 9 chapters and 9 summaries
+Missing planned_chapter_types, using default sequence
+```
+
+**Next Steps Required:**
+1. Investigate why adventures are stopping at Chapter 9 instead of proceeding to Chapter 10 (CONCLUSION)
+2. Debug why `planned_chapter_types` serialization is still failing
+3. Examine the story flow logic that determines when to generate CONCLUSION chapters
+4. Verify that LESSON chapters are being generated during adventures (not just STORY chapters)
 
 ### Immediate Next Steps & Priorities
 

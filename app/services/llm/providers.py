@@ -14,19 +14,22 @@ import logging
 
 logger = logging.getLogger("story_app")
 
+
 # Centralized Model Configuration
 class ModelConfig:
     """Centralized configuration for LLM models and their settings."""
-    
+
     # Gemini Models
     GEMINI_MODEL = "gemini-2.5-flash"  # Default for backward compatibility
     GEMINI_FLASH_MODEL = "gemini-2.5-flash"
-    GEMINI_FLASH_LITE_MODEL = "gemini-2.5-flash-lite-preview-06-17"  # Cost-optimized model
-    GEMINI_THINKING_BUDGET = 1024
-    
-    # OpenAI Models  
+    GEMINI_FLASH_LITE_MODEL = (
+        "gemini-2.5-flash-lite-preview-06-17"  # Cost-optimized model
+    )
+    GEMINI_THINKING_BUDGET = 512
+
+    # OpenAI Models
     OPENAI_MODEL = "gpt-4o-2024-08-06"
-    
+
     # Usage-specific model assignments
     STORY_GENERATION_MODEL = GEMINI_FLASH_MODEL
     IMAGE_SCENE_MODEL = GEMINI_FLASH_MODEL
@@ -35,13 +38,14 @@ class ModelConfig:
     CHARACTER_VISUAL_MODEL = GEMINI_FLASH_LITE_MODEL
     CHAPTER_SUMMARY_MODEL = GEMINI_FLASH_LITE_MODEL
     IMAGE_PROMPT_MODEL = GEMINI_FLASH_LITE_MODEL
-    
+
     @classmethod
     def get_gemini_config(cls) -> GenerateContentConfig:
         """Get Gemini configuration with thinking budget."""
         return GenerateContentConfig(
             thinking_config=ThinkingConfig(thinking_budget=cls.GEMINI_THINKING_BUDGET)
         )
+
 
 class OpenAIService(BaseLLMService):
     """OpenAI implementation of the LLM service."""
@@ -210,10 +214,10 @@ class OpenAIService(BaseLLMService):
                 else:
                     # If all regeneration attempts failed, fall back to reformatting
                     logger.warning(
-                    f"All {max_attempts} regeneration attempts failed, falling back to reformatting"
+                        f"All {max_attempts} regeneration attempts failed, falling back to reformatting"
                     )
                     reformatted_text = await reformat_text_with_paragraphs(
-                    full_response, 3, self
+                        full_response, 3, self
                     )
                     yield reformatted_text
                     logger.info("Sent reformatted text with paragraph formatting")
@@ -377,6 +381,7 @@ class OpenAIService(BaseLLMService):
             )
             raise  # Re-raise the exception after logging
 
+
 class GeminiService(BaseLLMService):
     """Google Gemini implementation of the LLM service."""
 
@@ -422,7 +427,7 @@ class GeminiService(BaseLLMService):
             response = self.client.models.generate_content(
                 model=self.model,
                 contents=combined_prompt,
-                config=ModelConfig.get_gemini_config()
+                config=ModelConfig.get_gemini_config(),
             )
 
             # Extract the text
@@ -458,7 +463,7 @@ class GeminiService(BaseLLMService):
             response = self.client.models.generate_content_stream(
                 model=self.model,
                 contents=combined_prompt,
-                config=ModelConfig.get_gemini_config()
+                config=ModelConfig.get_gemini_config(),
             )
 
             # First, collect a buffer to check if paragraphing is needed
@@ -513,7 +518,7 @@ class GeminiService(BaseLLMService):
                         retry_response = self.client.models.generate_content(
                             model=self.model,
                             contents=combined_prompt,
-                            config=ModelConfig.get_gemini_config()
+                            config=ModelConfig.get_gemini_config(),
                         )
                         regenerated_text = retry_response.text
 
@@ -595,7 +600,7 @@ class GeminiService(BaseLLMService):
             response = self.client.models.generate_content_stream(
                 model=self.model,
                 contents=combined_prompt,
-                config=ModelConfig.get_gemini_config()
+                config=ModelConfig.get_gemini_config(),
             )
 
             # First, collect a buffer to check if paragraphing is needed

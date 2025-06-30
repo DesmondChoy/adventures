@@ -2,6 +2,30 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-06-30: Summary Screen Issues Investigation (IN PROGRESS)
+- **Goal:** Resolve summary screen showing 9 chapters instead of 10 and placeholder questions instead of actual adventure questions.
+- **Problems Identified:**
+  1. **Chapter Count Discrepancy**: Adventures completing with 9 chapters instead of expected 10 (missing CONCLUSION chapter)
+  2. **Educational Content Loss**: Knowledge Gained section shows placeholder questions instead of actual questions asked during LESSON chapters
+  3. **State Serialization Issues**: `planned_chapter_types` field missing during reconstruction despite fixes
+  4. **Chapter Type Preservation**: All chapters being stored as "story" type instead of mixed types (LESSON/STORY/CONCLUSION)
+- **Debugging Attempts Completed:**
+  1. **Race Condition Resolution**: Modified `handle_reveal_summary()` to complete all state operations before sending navigation signals
+  2. **Pydantic V2 Serialization**: Updated all `.dict()` to `.model_dump(mode='json')` in WebSocket and choice processor files
+  3. **AdventureState Validation**: Enhanced chapter validation to allow 11 chapters (story_length + 1 for SUMMARY)
+  4. **Async Generator Pattern**: Fixed broken async generator usage in `summary_generator.py`
+  5. **WebSocket Stability**: Implemented lazy instantiation for LLM factory to prevent module-level initialization timeouts
+- **Files Modified:**
+  - `app/services/websocket/choice_processor.py` (race condition fix, serialization updates, lazy LLM instantiation)
+  - `app/services/websocket/summary_generator.py` (async generator fix)
+  - `app/routers/websocket_router.py` (Pydantic serialization updates)
+  - `app/models/story.py` (validation logic enhancement for 11-chapter support)
+- **Current Status**: **DEBUGGING IN PROGRESS** - Despite fixes, core issues persist with identical symptoms
+- **Key Discovery**: Adventure flow is not reaching CONCLUSION chapter generation, suggesting issue in story progression logic rather than state persistence
+- **Impact**: Users cannot access complete adventure summaries with correct chapter counts and educational questions
+
+## Recently Completed (Last 14 Days)
+
 ### 2025-06-30: Dual-Model LLM Cost Optimization
 - **Goal:** Implement cost-optimized LLM architecture using Gemini Flash Lite for simple processing tasks while preserving Flash for complex reasoning.
 - **Problem:** All LLM operations used expensive Gemini 2.5 Flash model regardless of task complexity, leading to unnecessary costs.

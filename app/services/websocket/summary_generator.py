@@ -142,11 +142,10 @@ async def generate_fallback_summary(state: AdventureState) -> str:
 
     # Generate the summary content
     summary_content = ""
-    response_generator = await llm_service.generate_with_prompt(
+    async for chunk in llm_service.generate_with_prompt(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
-    )
-    async for chunk in response_generator:
+    ):
         summary_content += chunk
 
     logger.info(

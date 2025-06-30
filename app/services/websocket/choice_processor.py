@@ -28,7 +28,15 @@ from .summary_generator import generate_summary_content, stream_summary_content
 logger = logging.getLogger("story_app")
 chapter_manager = ChapterManager()
 state_storage_service = StateStorageService()
-llm_service = LLMServiceFactory.create_for_use_case("character_visual_processing")
+# Lazy instantiation to avoid module-level factory creation
+_llm_service = None
+
+def get_llm_service():
+    """Get LLM service instance with lazy instantiation."""
+    global _llm_service
+    if _llm_service is None:
+        _llm_service = LLMServiceFactory.create_for_use_case("character_visual_processing")
+    return _llm_service
 
 # Lazy instantiation to avoid environment variable loading issues during import
 _telemetry_service = None
@@ -68,20 +76,38 @@ async def handle_reveal_summary(
             "Created placeholder response for CONCLUSION chapter with whitespace"
         )
 
-        await generate_conclusion_chapter_summary(
-            conclusion_chapter, state, websocket, connection_data
+        # Complete ALL state operations BEFORE sending navigation signal
+        conclusion_state_id = await generate_conclusion_chapter_summary(
+            conclusion_chapter, state, websocket, connection_data, send_ready_signal=False
         )
 
-    # Create and generate the SUMMARY chapter
-    summary_chapter = chapter_manager.create_summary_chapter(state)
-    summary_content = await generate_summary_content(state)
-    summary_chapter.content = summary_content
-    summary_chapter.chapter_content.content = summary_content
+        # Create and generate the SUMMARY chapter
+        summary_chapter = chapter_manager.create_summary_chapter(state)
+        summary_content = await generate_summary_content(state)
+        summary_chapter.content = summary_content
+        summary_chapter.chapter_content.content = summary_content
 
-    # Add the SUMMARY chapter to the state
-    state_manager.append_new_chapter(summary_chapter)
+        # Add the SUMMARY chapter to the state
+        state_manager.append_new_chapter(summary_chapter)
 
-    await stream_summary_content(summary_content, websocket)
+        # Save final complete state with all chapters
+        state_storage_service = StateStorageService()
+        adventure_id = connection_data.get("adventure_id") if connection_data else None
+        
+        final_state_id = await state_storage_service.store_state(
+            state.model_dump(mode='json'),
+            adventure_id=adventure_id,
+            user_id=connection_data.get("user_id") if connection_data else None,
+            explicit_is_complete=True,
+        )
+        
+        logger.info(f"Saved final complete state with {len(state.chapters)} chapters, ID: {final_state_id}")
+
+        # NOW send navigation signal after all state is saved
+        await websocket.send_json({"type": "summary_ready", "state_id": final_state_id})
+        
+        # Skip streaming to avoid WebSocket disconnection errors  
+        logger.info("Summary ready signal sent, skipping streaming to prevent disconnection errors")
 
     # Send the complete summary data
     await websocket.send_json(
@@ -116,7 +142,8 @@ async def generate_conclusion_chapter_summary(
     state: AdventureState,
     websocket: WebSocket,
     connection_data: Optional[Dict[str, Any]] = None,
-) -> None:
+    send_ready_signal: bool = True,
+) -> str:
     """Generate and store summary for the conclusion chapter."""
     try:
         logger.info(f"Generating summary for CONCLUSION chapter")
@@ -192,7 +219,7 @@ async def generate_conclusion_chapter_summary(
             # Update the existing record with is_complete=True
             # Update the existing record with is_complete=True
             state_id = await state_storage_service.store_state(
-                state.dict(),
+                state.model_dump(mode='json'),
                 adventure_id=adventure_id,
                 user_id=None,  # No authenticated user yet
                 explicit_is_complete=True,  # Mark as complete
@@ -203,15 +230,18 @@ async def generate_conclusion_chapter_summary(
         else:
             # Create a new record if no adventure_id is available
             state_id = await state_storage_service.store_state(
-                state.dict(),
+                state.model_dump(mode='json'),
                 explicit_is_complete=True,  # Mark as complete
             )
             logger.info(
                 f"Stored new state with ID: {state_id} (is_complete=True) after generating CONCLUSION chapter summary"
             )
 
-        # Include the state_id in the response to the client
-        await websocket.send_json({"type": "summary_ready", "state_id": state_id})
+        # Conditionally send ready signal based on parameter
+        if send_ready_signal:
+            await websocket.send_json({"type": "summary_ready", "state_id": state_id})
+        
+        return state_id  # Return state_id for caller to use
     except Exception as e:
         logger.error(f"Error generating chapter summary: {str(e)}", exc_info=True)
         if len(state.chapter_summaries) < conclusion_chapter.chapter_number:
@@ -219,6 +249,7 @@ async def generate_conclusion_chapter_summary(
                 f"Using fallback summary for chapter {conclusion_chapter.chapter_number}"
             )
             state.chapter_summaries.append("Chapter summary not available")
+        return None  # Return None if error occurs
 
 
 async def diagnose_character_visuals(chapter_content, existing_visuals=None):
@@ -264,7 +295,7 @@ async def diagnose_character_visuals(chapter_content, existing_visuals=None):
     try:
         logger.info("Calling LLM for character visual diagnostic")
         chunks = []
-        async for chunk in llm_service.generate_chapter_stream(
+        async for chunk in get_llm_service().generate_chapter_stream(
             story_config={},
             state=minimal_state,
             question=None,
@@ -609,7 +640,7 @@ Return ONLY a valid JSON with character names and descriptions.
             logger.info(
                 f"[CHAPTER {chapter_number}] Using non-streaming API for character visuals"
             )
-            response = await llm_service.generate_character_visuals_json(custom_prompt)
+            response = await get_llm_service().generate_character_visuals_json(custom_prompt)
 
             # Log the raw LLM response with distinctive markers
             logger.info(
