@@ -3,11 +3,9 @@ Chapter processing functionality for extracting and generating chapter summaries
 """
 
 import logging
-import asyncio
 from typing import Dict, Any, List
 
 from app.models.story import AdventureState, ChapterType
-from app.services.chapter_manager import ChapterManager
 from app.services.summary.helpers import ChapterTypeHelper
 
 logger = logging.getLogger("summary_service.chapter_processor")
@@ -180,38 +178,10 @@ class ChapterProcessor:
             )
             return summary_text
             
-        # Try to use ChapterManager to generate a proper summary if we have access to it
-        try:
-            # Create a new instance of ChapterManager
-            chapter_manager = ChapterManager()
-
-            # Check if we can use the async function
-            if asyncio.get_event_loop().is_running():
-                # We're in an async context, can directly use the async function
-                logger.info(
-                    f"Generating proper summary for chapter {chapter_number} using ChapterManager"
-                )
-                summary_result = asyncio.create_task(
-                    chapter_manager.generate_chapter_summary(chapter.content)
-                )
-                # Wait for the result (this is safe in an async context)
-                summary_result = asyncio.get_event_loop().run_until_complete(
-                    summary_result
-                )
-                if isinstance(summary_result, dict):
-                    summary_text = summary_result.get("summary", "")
-                    logger.info(
-                        f"Generated summary using ChapterManager: {summary_text[:50]}..."
-                    )
-                    return summary_text
-            else:
-                # We're not in an async context, fall back to content-based summary
-                logger.warning("Not in async context, cannot use ChapterManager")
-                
-        except Exception as e:
-            logger.warning(
-                f"Error generating summary with ChapterManager: {str(e)}"
-            )
+        # FIXED: Removed problematic ChapterManager async call that caused "This event loop is already running" errors
+        # The issue was calling run_until_complete() on an already running event loop
+        # Summary generation should happen during the adventure flow, not during summary display
+        logger.info(f"No existing summary for chapter {chapter_number}, using content-based fallback")
             
         # Generate simple summary from content (fallback)
         summary_text = (

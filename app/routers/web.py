@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from pydantic import BaseModel, Field
 from datetime import datetime
 import pandas as pd
@@ -473,3 +473,12 @@ async def abandon_adventure_api(
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Error abandoning adventure.")
+
+
+@router.get("/debug/localStorage-inspector", response_class=HTMLResponse)
+async def debug_localStorage_inspector(request: Request):
+    """Debug dashboard for localStorage inspection and corruption tracking."""
+    return templates.TemplateResponse(
+        "debug/localStorage-inspector.html",
+        {"request": request}
+    )

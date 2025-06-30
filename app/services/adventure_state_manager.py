@@ -744,7 +744,7 @@ class AdventureStateManager:
 
                 # For story chapters, ensure exactly 3 choices
                 if (
-                    chapter.get("chapter_type") == "story"
+                    chapter.get("chapter_type") == ChapterType.STORY
                     and len(chapter["chapter_content"]["choices"]) != 3
                 ):
                     logger.warning(
@@ -770,20 +770,72 @@ class AdventureStateManager:
                 "planned_chapter_types" not in stored_state
                 or not stored_state["planned_chapter_types"]
             ):
-                # Use ChapterType enum values for default sequence
-                stored_state["planned_chapter_types"] = [
-                    ChapterType.STORY,
-                    ChapterType.LESSON,
-                    ChapterType.STORY,
-                    ChapterType.LESSON,
-                    ChapterType.REFLECT,
-                    ChapterType.STORY,
-                    ChapterType.LESSON,
-                    ChapterType.STORY,
-                    ChapterType.LESSON,
-                    ChapterType.CONCLUSION,
-                ]
-                logger.warning("Missing planned_chapter_types, using default sequence")
+                # CORRUPTION FIX: If we have existing chapters but no planned_chapter_types,
+                # attempt to reconstruct the sequence from chapter content and types
+                if chapters and len(chapters) > 0:
+                    logger.warning(f"CORRUPTION DETECTED: Adventure has {len(chapters)} chapters but missing planned_chapter_types - attempting reconstruction")
+                    
+                    # Try to reconstruct planned_chapter_types by analyzing existing chapters
+                    reconstructed_types = []
+                    for i, chapter in enumerate(chapters):
+                        chapter_number = chapter.get('chapter_number', i + 1)
+                        chapter_content = chapter.get('content', '')
+                        chapter_question = chapter.get('question')
+                        current_type = chapter.get('chapter_type', 'story')
+                        
+                        # Determine correct type based on content analysis
+                        if chapter_number == stored_state.get('story_length', 10):
+                            # Last chapter should be CONCLUSION
+                            correct_type = ChapterType.CONCLUSION
+                            chapter['chapter_type'] = 'conclusion'
+                            logger.info(f"CORRUPTION FIX: Set chapter {chapter_number} to CONCLUSION")
+                        elif chapter_question is not None:
+                            # Has a question - should be LESSON
+                            correct_type = ChapterType.LESSON  
+                            chapter['chapter_type'] = 'lesson'
+                            logger.info(f"CORRUPTION FIX: Set chapter {chapter_number} to LESSON (has question)")
+                        elif 'reflect' in chapter_content.lower() or 'reflection' in chapter_content.lower():
+                            # Content suggests reflection - should be REFLECT
+                            correct_type = ChapterType.REFLECT
+                            chapter['chapter_type'] = 'reflect'
+                            logger.info(f"CORRUPTION FIX: Set chapter {chapter_number} to REFLECT (reflection content)")
+                        else:
+                            # Default to STORY
+                            correct_type = ChapterType.STORY
+                            chapter['chapter_type'] = 'story'
+                            if current_type != 'story':
+                                logger.info(f"CORRUPTION FIX: Set chapter {chapter_number} to STORY")
+                        
+                        reconstructed_types.append(correct_type)
+                    
+                    # Extend to full story length if needed
+                    story_length = stored_state.get('story_length', 10)
+                    while len(reconstructed_types) < story_length:
+                        if len(reconstructed_types) == story_length - 1:
+                            # Last position should be CONCLUSION
+                            reconstructed_types.append(ChapterType.CONCLUSION)
+                        else:
+                            # Fill remaining with STORY for now
+                            reconstructed_types.append(ChapterType.STORY)
+                    
+                    stored_state["planned_chapter_types"] = reconstructed_types
+                    logger.warning(f"CORRUPTION FIX: Reconstructed planned_chapter_types from {len(chapters)} existing chapters")
+                    logger.info(f"CORRUPTION FIX: Reconstructed sequence: {[ct.value for ct in reconstructed_types]}")
+                else:
+                    # Use ChapterType enum values for default sequence (no existing chapters)
+                    stored_state["planned_chapter_types"] = [
+                        ChapterType.STORY,
+                        ChapterType.LESSON,
+                        ChapterType.STORY,
+                        ChapterType.LESSON,
+                        ChapterType.REFLECT,
+                        ChapterType.STORY,
+                        ChapterType.LESSON,
+                        ChapterType.STORY,
+                        ChapterType.LESSON,
+                        ChapterType.CONCLUSION,
+                    ]
+                    logger.warning("Missing planned_chapter_types, using default sequence")
             else:
                 # Convert existing planned_chapter_types to ChapterType enum
                 planned_chapter_types = []

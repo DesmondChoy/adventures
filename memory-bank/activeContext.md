@@ -238,41 +238,38 @@
 
 #### **CURRENT STATUS (2025-06-30):**
 
-**⚠️ ISSUE PERSISTS** despite major fixes. Latest test logs show:
+**🎉 SUMMARY CORRUPTION LARGELY RESOLVED!** Major progress achieved through systematic debugging.
 
+**✅ CRITICAL FIXES SUCCESSFULLY IMPLEMENTED:**
+
+1. **localStorage Corruption Source Fixed** - Removed hardcoded `chapter_type: 'story'` from `main.js:82`
+2. **WebSocket Timeout Logic Fixed** - Eliminated problematic fallback that overwrote good database state  
+3. **Type Comparison Bug Fixed** - Fixed enum vs string comparison in `adventure_state_manager.py:747`
+4. **Frontend Syntax Error Fixed** - Resolved carousel-manager.js export conflict preventing choices
+5. **Chapter Creation Corruption Fixed** - Implemented corruption detection and repair system
+
+**📊 CURRENT TEST RESULTS:**
 ```
-[REVEAL SUMMARY] State has 10 chapters before processing  ✅ GOOD
-[All correct chapter types: STORY/LESSON/REFLECT/CONCLUSION] ✅ GOOD  
-Saved final complete state with 11 chapters ✅ GOOD
-Summary ready signal sent ✅ GOOD
---- THEN CORRUPTION OCCURS ---
-[STATE STORAGE] About to save state with 9 chapters ❌ BAD
-[All chapters now "story" type] ❌ BAD  
-Updated state with 9 chapters and 0 summaries ❌ BAD
+✅ Knowledge questions now extracted correctly from lesson chapters
+✅ No more localStorage corruption overwriting good database state
+✅ WebSocket timeout only fires on genuine failures (not after success)
+✅ Summary generation works via proper WebSocket flow
+✅ Choice functionality restored
+⚠️ Minor cosmetic issue: Chapter 11 (SUMMARY) showing in summary display
+⚠️ Separate issue: WebSocket connectivity timeouts during long chapter generation
 ```
 
-**🔍 CURRENT HYPOTHESIS**: Frontend REST API fallback is triggering and sending corrupted localStorage data
+#### **REMAINING MINOR ISSUES:**
 
-#### **IMMEDIATE NEXT DEBUGGING STEPS:**
+**Issue 1: Chapter 11 Summary Display (Low Priority)**
+- **Problem**: Summary page shows 11 chapters including internal SUMMARY chapter
+- **Expected**: Should only display adventure chapters 1-10 for user
+- **Impact**: Cosmetic issue, doesn't affect core functionality
 
-**Step 1: Disable REST API Fallback (COMPLETED)**
-- ✅ **DISABLED**: `fallbackToRestApi()` call in `app/static/js/main.js:190` 
-- 🎯 **REASON**: WebSocket path works correctly; fallback may be sending corrupted state from localStorage
-
-**Step 2: Test Fallback Fix**
-- 🔄 **ACTION NEEDED**: Run complete adventure and test "Take a Trip Down Memory Lane"
-- 📊 **EXPECT**: No more state corruption logs after WebSocket completion
-- ✅ **SUCCESS CRITERIA**: Summary shows 10 chapters and actual lesson questions
-
-**Step 3: If Issue Persists - localStorage Investigation**
-- 🔍 **INVESTIGATE**: Frontend localStorage state corruption
-- 🔍 **CHECK**: Browser developer tools for state data when clicking summary button
-- 🔍 **VERIFY**: stateManager.loadState() returns correct 10-chapter state
-
-**Step 4: If Still Persists - WebSocket Timing Investigation**  
-- 🔍 **INVESTIGATE**: WebSocket close event triggering unintended state saves
-- 🔍 **CHECK**: Background async operations saving state after summary completion
-- 🔍 **TRACE**: All state_storage_service.store_state() calls in logs
+**Issue 2: WebSocket Connectivity Timeouts (Separate Infrastructure Issue)**
+- **Problem**: WebSocket keepalive timeout during long chapter generation (Chapter 7+)
+- **Symptoms**: Connection drops, adventure skips chapters, requires refresh to resume
+- **Impact**: User experience interruption, but adventure state preserved and resumes correctly
 
 #### **ARCHITECTURAL LESSONS LEARNED:**
 
@@ -284,7 +281,21 @@ Updated state with 9 chapters and 0 summaries ❌ BAD
 
 ### Immediate Next Steps & Priorities
 
-1.  **Conflict Modal Intermittent Issue (Resolved but Monitoring - 2025-05-28)**
+1.  **Summary Chapter 11 Display Fix (Low Priority - 2025-06-30)**
+    *   **Goal:** Hide internal SUMMARY chapter (Chapter 11) from user-facing summary display
+    *   **Problem:** Summary page currently shows 11 chapters including the internally-generated SUMMARY chapter
+    *   **Expected:** Summary should only display the 10 adventure chapters (STORY/LESSON/REFLECT/CONCLUSION)
+    *   **Impact:** Cosmetic issue that doesn't affect functionality but may confuse users
+    *   **Location:** Likely in summary display logic in React frontend or summary data processing
+
+2.  **WebSocket Connectivity Stability (Infrastructure Enhancement - 2025-06-30)**
+    *   **Goal:** Improve WebSocket connection stability during long chapter generation
+    *   **Problem:** WebSocket keepalive timeouts during Chapter 7+ generation causing connection drops
+    *   **Symptoms:** Adventure skips chapters, requires page refresh to resume
+    *   **Investigation Areas:** WebSocket timeout configuration, keepalive settings, chunked content delivery
+    *   **Impact:** User experience interruption, though adventure state is preserved
+
+3.  **Conflict Modal Intermittent Issue (Resolved but Monitoring - 2025-05-28)**
     *   **Goal:** Monitor intermittent conflict modal display issues for Google authenticated users.
     *   **Problem:** Google authenticated users occasionally didn't see the conflict modal when attempting to start a new adventure while having an incomplete adventure.
     *   **Resolution Status:** 
