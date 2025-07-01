@@ -1,6 +1,8 @@
 # Active Context
 
-## Current Focus: Summary Screen Issues Debugging (As of 2025-06-30)
+## Current Focus: Post-Resolution Maintenance & Enhancement (As of 2025-07-01)
+
+🔧 **CURRENT WORK:** Chapter 11 Display Cosmetic Fix - Successfully resolved summary screen showing incorrect chapter numbers through comprehensive filtering of SUMMARY chapters from user display.
 
 ✅ **LATEST ACHIEVEMENT:** Dual-Model LLM Architecture implemented! Successfully created factory pattern for automatic model selection, achieving ~50% cost reduction through strategic Flash Lite usage while preserving quality for complex reasoning tasks.
 
@@ -11,6 +13,28 @@
 ✅ **PREVIOUS MILESTONE:** Frontend expectation alignment completed! Landing page now accurately represents the app's streaming-based, adaptive learning experience without misleading elements.
 
 ✅ **PREVIOUS MILESTONE:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
+
+### Current Work in Progress
+
+*   **Chapter 11 Display Cosmetic Fix - IN PROGRESS (2025-07-01):**
+    *   **Goal:** Resolve minor cosmetic issue where Chapter 11 (SUMMARY) appears in UI displays when only chapters 1-10 should be shown to users.
+    *   **Problem:** SUMMARY chapters are internal processing chapters but were appearing in user-facing displays (summary screen, modals).
+    *   **Implementation Status:**
+        *   ✅ **Backend Fix:** Modified `app/services/summary/chapter_processor.py` to filter out SUMMARY chapters from user display
+        *   ✅ **Frontend Fix:** Updated `app/static/js/uiManager.js` to show story length instead of SUMMARY chapter number
+        *   ✅ **Modal Fix:** Updated `app/routers/web.py` calculate_display_chapter_number() to exclude SUMMARY chapters
+        *   ✅ **Scalability Fix:** Replaced hardcoded fallback with dynamic `window.appConfig?.defaultStoryLength || 10`
+    *   **Testing Status:** 🧪 **NEEDS VERIFICATION** - Implementation complete, requires live testing to confirm fix works across all UI components
+    *   **Files Modified:**
+        *   `app/services/summary/chapter_processor.py` (filters SUMMARY chapters from user display)
+        *   `app/static/js/uiManager.js` (correct chapter number display for SUMMARY)
+        *   `app/routers/web.py` (modal display fixes)
+    *   **Remaining:** ⚠️ One template hardcode: `app/templates/components/scripts.html:7` still has `defaultStoryLength: 10`
+
+*   **AGENT.md Enhancement - COMPLETED (2025-07-01):**
+    *   **Goal:** Integrate critical implementation rules from `.clinerules` into AGENT.md for future session consistency.
+    *   **Implementation:** Added comprehensive sections covering state management, chapter requirements, agency implementation, dynamic content handling, image generation, and tool usage patterns.
+    *   **Impact:** Future sessions will have immediate access to critical project patterns and avoid common pitfalls.
 
 ### Recently Completed Milestones
 

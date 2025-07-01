@@ -113,8 +113,13 @@ class ChapterProcessor:
         except Exception as e:
             logger.error(f"Error ensuring CONCLUSION chapter: {str(e)}")
 
-        # Process each chapter in chapter number order
-        for chapter in sorted(state.chapters, key=lambda x: x.chapter_number):
+        # Process each chapter in chapter number order, excluding SUMMARY chapters from user display
+        user_chapters = [
+            chapter for chapter in state.chapters 
+            if chapter.chapter_type != ChapterType.SUMMARY
+        ]
+        
+        for chapter in sorted(user_chapters, key=lambda x: x.chapter_number):
             chapter_number = chapter.chapter_number
             logger.info(
                 f"Processing chapter {chapter_number} of type {chapter.chapter_type}"

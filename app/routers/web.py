@@ -87,7 +87,7 @@ def get_session_context(request: Request) -> dict:
 def calculate_display_chapter_number(state_data: dict) -> int:
     """
     Calculate the correct chapter number to display to the user.
-    This matches the logic used in the WebSocket router.
+    This matches the logic used in the WebSocket router and excludes SUMMARY chapters.
     """
     if not state_data or not isinstance(state_data, dict):
         return 1
@@ -96,11 +96,20 @@ def calculate_display_chapter_number(state_data: dict) -> int:
     if not isinstance(chapters, list) or len(chapters) == 0:
         return 1
 
-    # Default to next chapter number (internal tracking)
-    display_chapter_number = len(chapters) + 1
+    # Filter out SUMMARY chapters from user display (same as summary processor)
+    user_chapters = [
+        chapter for chapter in chapters 
+        if isinstance(chapter, dict) and chapter.get("chapter_type") != "summary"
+    ]
+    
+    if not user_chapters:
+        return 1
 
-    # Check if the last chapter has no response (will be re-sent)
-    last_chapter = chapters[-1] if chapters else None
+    # Default to next chapter number (internal tracking)
+    display_chapter_number = len(user_chapters) + 1
+
+    # Check if the last user-visible chapter has no response (will be re-sent)
+    last_chapter = user_chapters[-1] if user_chapters else None
     if last_chapter and isinstance(last_chapter, dict):
         # If the last chapter has no response, user will see this chapter
         if last_chapter.get("response") is None:
