@@ -5,7 +5,7 @@ Statistics processing functionality for calculating adventure statistics.
 import logging
 from typing import Dict, Any, List
 
-from app.models.story import AdventureState
+from app.models.story import AdventureState, ChapterType
 from app.services.summary.helpers import ChapterTypeHelper
 
 logger = logging.getLogger("summary_service.stats_processor")
@@ -41,12 +41,19 @@ class StatsProcessor:
             correct_answers = 1  # Assume correct for better user experience
             logger.info("Adjusted to minimum values: questions=1, correct=1")
 
-        # Calculate time spent based on chapter count (rough estimate)
-        estimated_minutes = len(state.chapters) * 3  # Assume ~3 minutes per chapter
+        # Count only user-visible chapters (excluding SUMMARY chapters)
+        user_chapters = [
+            chapter for chapter in state.chapters 
+            if chapter.chapter_type != ChapterType.SUMMARY
+        ]
+        chapters_completed = len(user_chapters)
+        
+        # Calculate time spent based on user-visible chapter count (rough estimate)
+        estimated_minutes = chapters_completed * 3  # Assume ~3 minutes per chapter
         time_spent = f"{estimated_minutes} mins"
 
         statistics = {
-            "chapters_completed": len(state.chapters),
+            "chapters_completed": chapters_completed,
             "questions_answered": total_questions,
             "time_spent": time_spent,
             "correct_answers": correct_answers,

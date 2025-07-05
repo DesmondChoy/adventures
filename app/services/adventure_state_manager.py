@@ -1244,9 +1244,13 @@ class AdventureStateManager:
             )
             logger.info("Added fallback question")
 
-        # Calculate statistics
+        # Calculate statistics - exclude SUMMARY chapters from user-visible count
+        user_chapters = [
+            chapter for chapter in state.chapters 
+            if chapter.chapter_type != ChapterType.SUMMARY
+        ]
         statistics = {
-            "chaptersCompleted": len(state.chapters),
+            "chaptersCompleted": len(user_chapters),
             "questionsAnswered": len(educational_questions),
             "timeSpent": "30 mins",  # This could be calculated from timestamps in the future
             "correctAnswers": sum(

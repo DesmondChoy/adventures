@@ -5,7 +5,7 @@ Main service class for managing adventure summaries.
 import logging
 from typing import Dict, Any, Optional, List
 
-from app.models.story import AdventureState
+from app.models.story import AdventureState, ChapterType
 from app.services.state_storage_service import StateStorageService
 from app.services.adventure_state_manager import AdventureStateManager
 from app.services.summary.exceptions import StateNotFoundError, SummaryGenerationError
@@ -145,7 +145,7 @@ class SummaryService:
                     }
                 ],
                 "statistics": {
-                    "chapters_completed": len(state.chapters) if state else 0,
+                    "chapters_completed": len([c for c in state.chapters if c.chapter_type != ChapterType.SUMMARY]) if state else 0,
                     "questions_answered": 1,
                     "time_spent": "30 mins",
                     "correct_answers": 1,
