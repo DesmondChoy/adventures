@@ -537,13 +537,29 @@ class AdventureStateManager:
         """Appends a new chapter to the AdventureState."""
         if self.state is None:
             raise ValueError("State not initialized.")
-        logger.debug(f"Appending new chapter: {chapter_data.chapter_number}")
+        
+        logger.info(f"[CHAPTER CREATION] Appending new chapter: {chapter_data.chapter_number}")
+        logger.info(f"[CHAPTER CREATION] Chapter type: {chapter_data.chapter_type}")
+        logger.info(f"[CHAPTER CREATION] Current chapters before append: {len(self.state.chapters)}")
+        logger.info(f"[CHAPTER CREATION] Current storytelling phase: {self.state.current_storytelling_phase}")
 
         # Track agency references in the new chapter
         self.update_agency_references(chapter_data)
 
         # Append the chapter to the state
         self.state.chapters.append(chapter_data)
+        
+        logger.info(f"[CHAPTER CREATION] Chapter appended! Total chapters now: {len(self.state.chapters)}")
+        
+        # CHECK IF ADVENTURE SHOULD BE COMPLETE
+        if len(self.state.chapters) >= self.state.story_length:
+            logger.info(f"[CHAPTER CREATION] Adventure reached target length ({len(self.state.chapters)}/{self.state.story_length})")
+            if chapter_data.chapter_type == ChapterType.CONCLUSION:
+                logger.info(f"[CHAPTER CREATION] Final chapter is CONCLUSION - adventure should be complete!")
+            else:
+                logger.warning(f"[CHAPTER CREATION] Final chapter is {chapter_data.chapter_type} instead of CONCLUSION!")
+        else:
+            logger.info(f"[CHAPTER CREATION] Adventure not complete yet ({len(self.state.chapters)}/{self.state.story_length})")
 
     async def reconstruct_state_from_storage(
         self, stored_state: Dict[str, Any]
@@ -728,7 +744,7 @@ class AdventureStateManager:
 
                 # For story chapters, ensure exactly 3 choices
                 if (
-                    chapter.get("chapter_type") == "story"
+                    chapter.get("chapter_type") == ChapterType.STORY
                     and len(chapter["chapter_content"]["choices"]) != 3
                 ):
                     logger.warning(
@@ -754,20 +770,72 @@ class AdventureStateManager:
                 "planned_chapter_types" not in stored_state
                 or not stored_state["planned_chapter_types"]
             ):
-                # Use ChapterType enum values for default sequence
-                stored_state["planned_chapter_types"] = [
-                    ChapterType.STORY,
-                    ChapterType.LESSON,
-                    ChapterType.STORY,
-                    ChapterType.LESSON,
-                    ChapterType.REFLECT,
-                    ChapterType.STORY,
-                    ChapterType.LESSON,
-                    ChapterType.STORY,
-                    ChapterType.LESSON,
-                    ChapterType.CONCLUSION,
-                ]
-                logger.warning("Missing planned_chapter_types, using default sequence")
+                # CORRUPTION FIX: If we have existing chapters but no planned_chapter_types,
+                # attempt to reconstruct the sequence from chapter content and types
+                if chapters and len(chapters) > 0:
+                    logger.warning(f"CORRUPTION DETECTED: Adventure has {len(chapters)} chapters but missing planned_chapter_types - attempting reconstruction")
+                    
+                    # Try to reconstruct planned_chapter_types by analyzing existing chapters
+                    reconstructed_types = []
+                    for i, chapter in enumerate(chapters):
+                        chapter_number = chapter.get('chapter_number', i + 1)
+                        chapter_content = chapter.get('content', '')
+                        chapter_question = chapter.get('question')
+                        current_type = chapter.get('chapter_type', 'story')
+                        
+                        # Determine correct type based on content analysis
+                        if chapter_number == stored_state.get('story_length', 10):
+                            # Last chapter should be CONCLUSION
+                            correct_type = ChapterType.CONCLUSION
+                            chapter['chapter_type'] = 'conclusion'
+                            logger.info(f"CORRUPTION FIX: Set chapter {chapter_number} to CONCLUSION")
+                        elif chapter_question is not None:
+                            # Has a question - should be LESSON
+                            correct_type = ChapterType.LESSON  
+                            chapter['chapter_type'] = 'lesson'
+                            logger.info(f"CORRUPTION FIX: Set chapter {chapter_number} to LESSON (has question)")
+                        elif 'reflect' in chapter_content.lower() or 'reflection' in chapter_content.lower():
+                            # Content suggests reflection - should be REFLECT
+                            correct_type = ChapterType.REFLECT
+                            chapter['chapter_type'] = 'reflect'
+                            logger.info(f"CORRUPTION FIX: Set chapter {chapter_number} to REFLECT (reflection content)")
+                        else:
+                            # Default to STORY
+                            correct_type = ChapterType.STORY
+                            chapter['chapter_type'] = 'story'
+                            if current_type != 'story':
+                                logger.info(f"CORRUPTION FIX: Set chapter {chapter_number} to STORY")
+                        
+                        reconstructed_types.append(correct_type)
+                    
+                    # Extend to full story length if needed
+                    story_length = stored_state.get('story_length', 10)
+                    while len(reconstructed_types) < story_length:
+                        if len(reconstructed_types) == story_length - 1:
+                            # Last position should be CONCLUSION
+                            reconstructed_types.append(ChapterType.CONCLUSION)
+                        else:
+                            # Fill remaining with STORY for now
+                            reconstructed_types.append(ChapterType.STORY)
+                    
+                    stored_state["planned_chapter_types"] = reconstructed_types
+                    logger.warning(f"CORRUPTION FIX: Reconstructed planned_chapter_types from {len(chapters)} existing chapters")
+                    logger.info(f"CORRUPTION FIX: Reconstructed sequence: {[ct.value for ct in reconstructed_types]}")
+                else:
+                    # Use ChapterType enum values for default sequence (no existing chapters)
+                    stored_state["planned_chapter_types"] = [
+                        ChapterType.STORY,
+                        ChapterType.LESSON,
+                        ChapterType.STORY,
+                        ChapterType.LESSON,
+                        ChapterType.REFLECT,
+                        ChapterType.STORY,
+                        ChapterType.LESSON,
+                        ChapterType.STORY,
+                        ChapterType.LESSON,
+                        ChapterType.CONCLUSION,
+                    ]
+                    logger.warning("Missing planned_chapter_types, using default sequence")
             else:
                 # Convert existing planned_chapter_types to ChapterType enum
                 planned_chapter_types = []
@@ -813,116 +881,28 @@ class AdventureStateManager:
             chapter_summaries = stored_state.get("chapter_summaries", [])
             summary_chapter_titles = stored_state.get("summary_chapter_titles", [])
 
-            # If chapter_summaries is empty but we have chapters, generate summaries
+            # REMOVED: Summary generation during state reconstruction
+            # State reconstruction should be read-only and never modify stored data
+            # All summaries should be generated during the adventure flow, not during reconstruction
             if (not chapter_summaries or len(chapter_summaries) == 0) and chapters:
                 logger.warning(
-                    "No chapter summaries found, generating default summaries"
+                    "No chapter summaries found during reconstruction - using empty lists. "
+                    "Summaries should have been generated during adventure flow."
                 )
                 chapter_summaries = []
                 summary_chapter_titles = []
 
-                for chapter in sorted(
-                    chapters, key=lambda x: x.get("chapter_number", 0)
-                ):
-                    chapter_number = chapter.get("chapter_number", 0)
-                    chapter_type = chapter.get("chapter_type", "story")
-                    content = chapter.get("content", "")
-
-                    # Generate a simple default summary from the first 100 characters
-                    summary_text = (
-                        f"Summary of chapter {chapter_number}: {content[:100]}..."
-                    )
-                    title = (
-                        f"Chapter {chapter_number}: {chapter_type.capitalize()} Chapter"
-                    )
-
-                    chapter_summaries.append(summary_text)
-                    summary_chapter_titles.append(title)
-
-                    logger.info(
-                        f"Generated default summary for chapter {chapter_number}"
-                    )
-
-                # Update stored state with generated summaries
-                stored_state["chapter_summaries"] = chapter_summaries
-                stored_state["summary_chapter_titles"] = summary_chapter_titles
-
-                logger.info(
-                    f"Generated {len(chapter_summaries)} default chapter summaries"
-                )
-
-            # Extract lesson questions if they don't exist
+            # REMOVED: Lesson question extraction during state reconstruction
+            # State reconstruction should be read-only and never modify stored data
+            # All lesson questions should be captured during the adventure flow, not during reconstruction
             lesson_questions = stored_state.get("lesson_questions", [])
 
             if (not lesson_questions or len(lesson_questions) == 0) and chapters:
-                logger.warning("No lesson questions found, extracting from chapters")
+                logger.warning(
+                    "No lesson questions found during reconstruction - using empty list. "
+                    "Questions should have been captured during adventure flow."
+                )
                 lesson_questions = []
-
-                for chapter in chapters:
-                    chapter_type = str(chapter.get("chapter_type", "")).lower()
-                    if (
-                        chapter_type == "lesson"
-                        and "question" in chapter
-                        and chapter["question"]
-                    ):
-                        question_data = chapter["question"]
-
-                        # Get response if available
-                        response = chapter.get("response", {})
-                        if response:
-                            is_correct = response.get("is_correct", False)
-                            chosen_answer = response.get("chosen_answer", "No answer")
-                        else:
-                            is_correct = False
-                            chosen_answer = "No answer recorded"
-
-                        # Find correct answer
-                        correct_answer = None
-                        for answer in question_data.get("answers", []):
-                            if answer.get("is_correct"):
-                                correct_answer = answer.get("text")
-                                break
-
-                        # Create question object
-                        question_obj = {
-                            "question": question_data.get(
-                                "question", "Unknown question"
-                            ),
-                            "answers": question_data.get("answers", []),
-                            "chosen_answer": chosen_answer,
-                            "is_correct": is_correct,
-                            "explanation": question_data.get("explanation", ""),
-                        }
-
-                        if correct_answer:
-                            question_obj["correct_answer"] = correct_answer
-
-                        lesson_questions.append(question_obj)
-                        logger.info(
-                            f"Extracted question from chapter: {question_obj['question']}"
-                        )
-
-                # If still no questions, add a fallback
-                if len(lesson_questions) == 0:
-                    logger.warning(
-                        "No questions found in any chapter, adding fallback question"
-                    )
-                    lesson_questions.append(
-                        {
-                            "question": "What did you learn from this adventure?",
-                            "answers": [
-                                {"text": "Many valuable lessons", "is_correct": True},
-                                {"text": "Nothing at all", "is_correct": False},
-                                {"text": "I'm not sure", "is_correct": False},
-                            ],
-                            "correct_answer": "Many valuable lessons",
-                            "explanation": "This adventure was designed to teach important concepts.",
-                        }
-                    )
-
-                # Update stored state with extracted questions
-                stored_state["lesson_questions"] = lesson_questions
-                logger.info(f"Extracted {len(lesson_questions)} lesson questions")
 
             # Create a valid state with all required fields
             valid_state = {
@@ -1264,9 +1244,13 @@ class AdventureStateManager:
             )
             logger.info("Added fallback question")
 
-        # Calculate statistics
+        # Calculate statistics - exclude SUMMARY chapters from user-visible count
+        user_chapters = [
+            chapter for chapter in state.chapters 
+            if chapter.chapter_type != ChapterType.SUMMARY
+        ]
         statistics = {
-            "chaptersCompleted": len(state.chapters),
+            "chaptersCompleted": len(user_chapters),
             "questionsAnswered": len(educational_questions),
             "timeSpent": "30 mins",  # This could be calculated from timestamps in the future
             "correctAnswers": sum(

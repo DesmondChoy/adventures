@@ -700,22 +700,11 @@ class ChapterManager:
             )
             logger.debug(f"Using LLM service for image scene: {llm.__class__.__name__}")
 
-            # For Gemini, use a direct approach instead of streaming
+            # For Gemini, use the LLM service instead of direct calls
             if is_gemini:
                 try:
-                    # Initialize the model with system prompt
-                    from google import generativeai as genai
-
-                    model = genai.GenerativeModel(
-                        model_name="gemini-2.0-flash",
-                        system_instruction="You are a helpful assistant that follows instructions precisely.",
-                    )
-
-                    # Generate content without streaming for image scene
-                    response = model.generate_content(custom_prompt)
-
-                    # Extract the text directly
-                    raw_scene = response.text
+                    # Use the LLM service for consistent API handling
+                    raw_scene = await llm.generate_character_visuals_json(custom_prompt)
                     logger.debug(
                         f"Direct Gemini response for image scene: '{raw_scene}'"
                     )
@@ -834,22 +823,11 @@ class ChapterManager:
             )
             logger.debug(f"Using LLM service: {llm.__class__.__name__}")
 
-            # For Gemini, use a direct approach instead of streaming
+            # For Gemini, use the LLM service instead of direct calls
             if is_gemini:
                 try:
-                    # Initialize the model with system prompt
-                    from google import generativeai as genai
-
-                    model = genai.GenerativeModel(
-                        model_name="gemini-2.0-flash",
-                        system_instruction="You are a helpful assistant that follows instructions precisely.",
-                    )
-
-                    # Generate content without streaming for summary
-                    response = model.generate_content(custom_prompt)
-
-                    # Extract the text directly
-                    raw_summary = response.text
+                    # Use the LLM service for consistent API handling
+                    raw_summary = await llm.generate_character_visuals_json(custom_prompt)
                     logger.debug(f"Direct Gemini response: '{raw_summary}'")
                 except Exception as e:
                     logger.error(f"Error with direct Gemini call: {str(e)}")

@@ -3,11 +3,9 @@ Chapter processing functionality for extracting and generating chapter summaries
 """
 
 import logging
-import asyncio
 from typing import Dict, Any, List
 
 from app.models.story import AdventureState, ChapterType
-from app.services.chapter_manager import ChapterManager
 from app.services.summary.helpers import ChapterTypeHelper
 
 logger = logging.getLogger("summary_service.chapter_processor")
@@ -115,8 +113,13 @@ class ChapterProcessor:
         except Exception as e:
             logger.error(f"Error ensuring CONCLUSION chapter: {str(e)}")
 
-        # Process each chapter in chapter number order
-        for chapter in sorted(state.chapters, key=lambda x: x.chapter_number):
+        # Process each chapter in chapter number order, excluding SUMMARY chapters from user display
+        user_chapters = [
+            chapter for chapter in state.chapters 
+            if chapter.chapter_type != ChapterType.SUMMARY
+        ]
+        
+        for chapter in sorted(user_chapters, key=lambda x: x.chapter_number):
             chapter_number = chapter.chapter_number
             logger.info(
                 f"Processing chapter {chapter_number} of type {chapter.chapter_type}"
@@ -180,38 +183,10 @@ class ChapterProcessor:
             )
             return summary_text
             
-        # Try to use ChapterManager to generate a proper summary if we have access to it
-        try:
-            # Create a new instance of ChapterManager
-            chapter_manager = ChapterManager()
-
-            # Check if we can use the async function
-            if asyncio.get_event_loop().is_running():
-                # We're in an async context, can directly use the async function
-                logger.info(
-                    f"Generating proper summary for chapter {chapter_number} using ChapterManager"
-                )
-                summary_result = asyncio.create_task(
-                    chapter_manager.generate_chapter_summary(chapter.content)
-                )
-                # Wait for the result (this is safe in an async context)
-                summary_result = asyncio.get_event_loop().run_until_complete(
-                    summary_result
-                )
-                if isinstance(summary_result, dict):
-                    summary_text = summary_result.get("summary", "")
-                    logger.info(
-                        f"Generated summary using ChapterManager: {summary_text[:50]}..."
-                    )
-                    return summary_text
-            else:
-                # We're not in an async context, fall back to content-based summary
-                logger.warning("Not in async context, cannot use ChapterManager")
-                
-        except Exception as e:
-            logger.warning(
-                f"Error generating summary with ChapterManager: {str(e)}"
-            )
+        # FIXED: Removed problematic ChapterManager async call that caused "This event loop is already running" errors
+        # The issue was calling run_until_complete() on an already running event loop
+        # Summary generation should happen during the adventure flow, not during summary display
+        logger.info(f"No existing summary for chapter {chapter_number}, using content-based fallback")
             
         # Generate simple summary from content (fallback)
         summary_text = (
@@ -245,98 +220,8 @@ class ChapterProcessor:
         logger.info(f"Generated title based on chapter type: {title}")
         return title
     
-    @staticmethod
-    async def process_stored_chapter_summaries(state_data: Dict[str, Any]) -> None:
-        """Process chapters to ensure all have summaries."""
-        # Sort chapters by chapter number to ensure correct order
-        sorted_chapters = sorted(
-            state_data.get("chapters", []), key=lambda x: x.get("chapter_number", 0)
-        )
-        
-        if not sorted_chapters:
-            return
-
-        # Import ChapterManager for summary generation
-        chapter_manager = ChapterManager()
-
-        for chapter in sorted_chapters:
-            chapter_number = chapter.get("chapter_number", 0)
-            chapter_type = str(chapter.get("chapter_type", "")).lower()
-
-            # Check if we need to generate a summary for this chapter
-            if len(state_data["chapter_summaries"]) < chapter_number:
-                logger.info(f"Missing summary for chapter {chapter_number} ({chapter_type})")
-
-                # Add placeholder summaries for any gaps
-                while len(state_data["chapter_summaries"]) < chapter_number - 1:
-                    state_data["chapter_summaries"].append("Chapter summary not available")
-                    # Also add placeholder titles
-                    if len(state_data["summary_chapter_titles"]) < len(state_data["chapter_summaries"]):
-                        state_data["summary_chapter_titles"].append(
-                            f"Chapter {len(state_data['summary_chapter_titles']) + 1}"
-                        )
-
-                # Generate summary for this chapter
-                try:
-                    await ChapterProcessor._generate_and_store_chapter_summary(
-                        chapter_manager, chapter, chapter_number, chapter_type, sorted_chapters, state_data
-                    )
-                except Exception as e:
-                    logger.error(f"Error generating summary for chapter {chapter_number}: {e}")
-                    # Add fallback summary and title
-                    state_data["chapter_summaries"].append(f"Summary for Chapter {chapter_number}")
-                    state_data["summary_chapter_titles"].append(
-                        f"Chapter {chapter_number}: {chapter_type.capitalize()}"
-                    )
-                    logger.info(f"Added fallback summary for chapter {chapter_number}")
-
-        logger.info(f"Processed {len(sorted_chapters)} chapters, ensuring all have summaries")
-        logger.info(f"Final chapter_summaries count: {len(state_data['chapter_summaries'])}")
-        logger.info(f"Final summary_chapter_titles count: {len(state_data['summary_chapter_titles'])}")
-    
-    @staticmethod 
-    async def _generate_and_store_chapter_summary(
-        chapter_manager, chapter, chapter_number, chapter_type, sorted_chapters, state_data
-    ):
-        """Generate and store a summary for a chapter."""
-        # Get choice context from next chapter's response if available
-        choice_text = None
-        choice_context = ""
-
-        # For non-conclusion chapters, try to find choice from next chapter
-        if chapter_type != "conclusion" and chapter_number < len(sorted_chapters):
-            next_chapter = sorted_chapters[chapter_number]
-            if next_chapter and next_chapter.get("response"):
-                response = next_chapter.get("response", {})
-                if response.get("choice_text"):
-                    choice_text = response.get("choice_text")
-                elif response.get("chosen_answer"):
-                    choice_text = response.get("chosen_answer")
-                    choice_context = (
-                        " (Correct answer)" if response.get("is_correct") else " (Incorrect answer)"
-                    )
-
-        # For conclusion chapter, use placeholder choice
-        if chapter_type == "conclusion":
-            choice_text = "End of story"
-            choice_context = ""
-            logger.info(f"Using placeholder choice for CONCLUSION chapter")
-
-        # Generate the summary
-        logger.info(f"Generating summary for chapter {chapter_number}")
-        summary_result = await chapter_manager.generate_chapter_summary(
-            chapter.get("content", ""), choice_text, choice_context
-        )
-
-        # Extract title and summary
-        title = summary_result.get(
-            "title", f"Chapter {chapter_number}: {chapter_type.capitalize()}"
-        )
-        summary = summary_result.get("summary", "Summary not available")
-
-        # Add to state data
-        state_data["chapter_summaries"].append(summary)
-        state_data["summary_chapter_titles"].append(title)
-
-        logger.info(f"Generated summary for chapter {chapter_number}: {summary[:50]}...")
-        logger.info(f"Generated title for chapter {chapter_number}: {title}")
+    # REMOVED: process_stored_chapter_summaries function
+    # This function was causing state corruption by modifying and saving state
+    # during summary display operations that should be read-only.
+    # All chapter summaries should be generated during the normal adventure flow,
+    # not during summary display.

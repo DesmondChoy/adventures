@@ -21,6 +21,8 @@ Think of yourself as writing a single exciting episode in a favorite TV show - t
 Your chapter should captivate young minds with vibrant imagery, age-appropriate language, and thrilling action that makes them feel like the hero of their own adventure. 
 Create just enough tension and wonder to keep young readers begging to continue the adventure in the next chapter.
 
+Limit each chapter to 4 paragraphs max. 
+
 # Story Elements
 - Setting: {settings} (described with wonder and child-friendly details)
 - Theme: {selected_theme} (presented in ways children can relate to)

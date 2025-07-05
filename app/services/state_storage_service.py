@@ -80,19 +80,62 @@ class StateStorageService:
             chapters = state_data.get("chapters", [])
             completed_chapter_count = len(chapters)
 
+            # LOG DETAILED STATE INFO BEFORE SAVING
+            logger.info(f"[STATE STORAGE] About to save state with {completed_chapter_count} chapters", extra={
+                "adventure_id": adventure_id,
+                "chapter_count": completed_chapter_count,
+                "chapters_preview": [{"type": ch.get("chapter_type", "unknown"), "number": ch.get("chapter_number", "unknown")} for ch in chapters[:5]]
+            })
+            
+            # Check for duplicate chapter types (corruption detection)
+            chapter_types = [ch.get("chapter_type") for ch in chapters if ch.get("chapter_type")]
+            type_counts = {}
+            for ch_type in chapter_types:
+                type_counts[ch_type] = type_counts.get(ch_type, 0) + 1
+            
+            duplicate_types = {k: v for k, v in type_counts.items() if v > 1}
+            if duplicate_types:
+                logger.warning(f"[STATE CORRUPTION] Duplicate chapter types detected: {duplicate_types}", extra={
+                    "adventure_id": adventure_id,
+                    "duplicate_types": duplicate_types,
+                    "total_chapters": completed_chapter_count
+                })
+            
+            # Log chapter content status
+            chapters_with_content = sum(1 for ch in chapters if ch.get("content"))
+            chapters_without_content = completed_chapter_count - chapters_with_content
+            if chapters_without_content > 0:
+                logger.warning(f"[STATE STORAGE] {chapters_without_content} chapters missing content", extra={
+                    "adventure_id": adventure_id,
+                    "chapters_with_content": chapters_with_content,
+                    "chapters_without_content": chapters_without_content
+                })
+            
+            for i, ch in enumerate(chapters):
+                ch_type = ch.get("chapter_type", "unknown")
+                ch_num = ch.get("chapter_number", "unknown")
+                has_content = bool(ch.get("content"))
+                logger.info(f"[STATE STORAGE] Chapter {i+1}: type={ch_type}, number={ch_num}, has_content={has_content}", extra={
+                    "adventure_id": adventure_id,
+                    "chapter_index": i,
+                    "chapter_type": ch_type,
+                    "chapter_number": ch_num,
+                    "has_content": has_content
+                })
+
             # Determine is_complete status
             if explicit_is_complete is not None:
                 is_complete = explicit_is_complete
-                logger.info(f"Using explicit_is_complete value: {is_complete}")
+                logger.info(f"[STATE STORAGE] Using explicit_is_complete value: {is_complete}")
             elif completed_chapter_count > 0:
                 last_chapter_type = chapters[-1].get("chapter_type", "").lower()
                 is_complete = last_chapter_type in ["conclusion", "summary"]
                 logger.info(
-                    f"Derived is_complete based on last chapter type ({last_chapter_type}): {is_complete}"
+                    f"[STATE STORAGE] Derived is_complete based on last chapter type ({last_chapter_type}): {is_complete}"
                 )
             else:
                 is_complete = False  # Default for new/empty adventures
-                logger.info(f"Defaulting is_complete to False for new/empty adventure.")
+                logger.info(f"[STATE STORAGE] Defaulting is_complete to False for new/empty adventure.")
 
             # Prepare the record for insertion/update
             record = {

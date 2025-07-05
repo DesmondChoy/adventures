@@ -2,11 +2,11 @@ from typing import List
 import logging
 
 from app.models.story import ChapterType, ChapterData, AdventureState
-from app.services.llm import LLMService
+from app.services.llm.factory import LLMServiceFactory
 from app.services.llm.prompt_engineering import build_summary_chapter_prompt
 
 logger = logging.getLogger("story_app")
-llm_service = LLMService()
+llm_service = LLMServiceFactory.create_for_use_case("summary_generation")
 
 
 async def generate_summary_content(state: AdventureState) -> str:

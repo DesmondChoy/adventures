@@ -265,7 +265,7 @@ class AdventureState(BaseModel):
 
     @field_validator("chapters")
     @classmethod
-    def validate_chapters(cls, chapters: List[ChapterData]) -> List[ChapterData]:
+    def validate_chapters(cls, chapters: List[ChapterData], info: ValidationInfo) -> List[ChapterData]:
         if not chapters:
             return chapters
 
@@ -276,10 +276,24 @@ class AdventureState(BaseModel):
         if chapter_numbers != expected_numbers:
             raise ValueError("Chapter numbers must be sequential starting from 1")
 
-        # Validate against story_length
-        if len(chapters) > cls.model_fields["story_length"].default:
-            raise ValueError(
-                f"Number of chapters cannot exceed story_length ({cls.model_fields['story_length'].default})"
-            )
+        # Get the actual story_length for this instance (not the default)
+        story_length = getattr(info.data, 'story_length', None) if info.data else None
+        if story_length is None:
+            story_length = cls.model_fields["story_length"].default  # Fallback to default
+
+        # Validate against story_length (allow one extra chapter for SUMMARY)
+        max_allowed_chapters = story_length + 1  # +1 for SUMMARY chapter
+        if len(chapters) > max_allowed_chapters:
+            # Check if the extra chapter is a SUMMARY chapter
+            if len(chapters) == story_length + 1:
+                last_chapter = chapters[-1]
+                if last_chapter.chapter_type != ChapterType.SUMMARY:
+                    raise ValueError(
+                        f"Chapter {len(chapters)} must be a SUMMARY chapter when exceeding story_length ({story_length})"
+                    )
+            else:
+                raise ValueError(
+                    f"Number of chapters cannot exceed story_length + 1 for SUMMARY (max: {max_allowed_chapters}, got: {len(chapters)})"
+                )
 
         return chapters

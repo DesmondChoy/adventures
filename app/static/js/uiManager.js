@@ -660,8 +660,12 @@ export function displayStatsWithSummaryButton(state) {
 export function displaySummaryComplete(state) {
     hideLoader();
     
-    // Update chapter number to show we're in the summary
-    updateProgress(state.current_chapter.chapter_number, state.stats.total_lessons);
+    // Update progress to show completed adventure (exclude SUMMARY chapter from display)
+    // If current chapter is SUMMARY type, show the story length instead of chapter number
+    const displayChapterNumber = state.current_chapter.chapter_type === 'summary' 
+        ? state.story_length || window.appConfig?.defaultStoryLength || 10 
+        : state.current_chapter.chapter_number;
+    updateProgress(displayChapterNumber, state.stats.total_lessons);
     
     // Add buttons at the bottom
     const buttonsHtml = `

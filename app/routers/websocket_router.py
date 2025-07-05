@@ -358,12 +358,12 @@ async def story_websocket(
                             f"Resuming adventure: Re-sending content for Chapter {chapter_to_display_data.chapter_number}"
                         )
                         resumption_content_dict = (
-                            chapter_to_display_data.chapter_content.dict()
+                            chapter_to_display_data.chapter_content.model_dump(mode='json')
                             if chapter_to_display_data.chapter_content
                             else {
                                 "content": chapter_to_display_data.content,
                                 "choices": [
-                                    c.dict()
+                                    c.model_dump(mode='json')
                                     for c in chapter_to_display_data.choices or []
                                 ],
                             }
@@ -477,8 +477,13 @@ async def story_websocket(
                             },
                         )
                         try:
+                            logger.info(f"[WEBSOCKET ROUTER] About to save state via WebSocket router")
+                            current_state_debug = state_manager.get_current_state()
+                            if current_state_debug:
+                                logger.info(f"[WEBSOCKET ROUTER] State has {len(current_state_debug.chapters)} chapters")
+                                logger.info(f"[WEBSOCKET ROUTER] Current phase: {current_state_debug.current_storytelling_phase}")
                             adventure_id = await state_storage_service.store_state(
-                                state.dict(),
+                                state.model_dump(mode='json'),
                                 user_id=connection_data.get("user_id"),
                                 lesson_topic=lesson_topic,
                             )
@@ -581,8 +586,13 @@ async def story_websocket(
                                 state_manager.get_current_state()
                             )
                             if current_state_for_completion:
+                                logger.info(f"[WEBSOCKET ROUTER] About to save state via WebSocket router")
+                                current_state_debug = state_manager.get_current_state()
+                                if current_state_debug:
+                                    logger.info(f"[WEBSOCKET ROUTER] State has {len(current_state_debug.chapters)} chapters")
+                                    logger.info(f"[WEBSOCKET ROUTER] Current phase: {current_state_debug.current_storytelling_phase}")
                                 await state_storage_service.store_state(
-                                    current_state_for_completion.dict(),
+                                    current_state_for_completion.model_dump(mode='json'),
                                     adventure_id=connection_data["adventure_id"],
                                     user_id=connection_data.get("user_id"),
                                     explicit_is_complete=False,
@@ -617,8 +627,11 @@ async def story_websocket(
                     try:
                         current_state = state_manager.get_current_state()
                         if current_state:
+                            logger.info(f"[WEBSOCKET ROUTER] About to save state via WebSocket router")
+                            logger.info(f"[WEBSOCKET ROUTER] State has {len(current_state.chapters)} chapters")
+                            logger.info(f"[WEBSOCKET ROUTER] Current phase: {current_state.current_storytelling_phase}")
                             await state_storage_service.store_state(
-                                current_state.dict(),
+                                current_state.model_dump(mode='json'),
                                 adventure_id=connection_data["adventure_id"],
                                 user_id=connection_data.get("user_id"),
                             )

@@ -27,7 +27,7 @@ project_root = os.path.abspath(os.path.join(script_dir, "../.."))
 sys.path.insert(0, project_root)
 
 # Import necessary components
-from app.services.llm import LLMService
+from app.services.llm.factory import LLMServiceFactory
 from app.services.llm.prompt_templates import SUMMARY_CHAPTER_PROMPT
 
 # Configure logging
@@ -37,7 +37,7 @@ logging.basicConfig(
 logger = logging.getLogger("chapter_summary_generator")
 
 # LLM service for generating summaries
-llm_service = LLMService()
+llm_service = LLMServiceFactory.create_for_use_case("chapter_summaries")
 
 
 class ChapterContentError(Exception):
@@ -126,10 +126,11 @@ async def generate_chapter_summary(
                 f"Attempting direct API call (attempt {retry + 1}/{max_retries})"
             )
             from google import generativeai as genai
+            from app.services.llm.providers import ModelConfig
 
             # Initialize the model with system prompt
             model = genai.GenerativeModel(
-                model_name="gemini-2.0-flash",
+                model_name=ModelConfig.GEMINI_MODEL,
                 system_instruction="You are a helpful assistant that follows instructions precisely.",
             )
 
@@ -181,10 +182,11 @@ async def generate_chapter_summary(
                 f"Attempting streaming approach (attempt {retry + 1}/{max_retries})"
             )
             chunks = []
-            async for chunk in llm_service.generate_with_prompt(
+            response_generator = await llm_service.generate_with_prompt(
                 system_prompt="You are a helpful assistant that follows instructions precisely.",
                 user_prompt=custom_prompt,
-            ):
+            )
+            async for chunk in response_generator:
                 chunks.append(chunk)
 
             response_text = "".join(chunks).strip()
