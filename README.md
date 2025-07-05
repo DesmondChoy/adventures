@@ -38,7 +38,7 @@ Learning Odyssey isn't just another educational app; it's a thoughtfully enginee
 
 ## Technical Snapshot: Engineered for Innovation
 
-The robust and scalable architecture of Learning Odyssey is designed for growth and continuous improvement. A Python/FastAPI backend ensures efficient AI integration and real-time responsiveness via WebSockets, supporting sophisticated narrative structures and learning flows. Supabase provides a flexible and secure cloud-based foundation for user data, persistent adventures, and telemetry. This modern stack allows for rapid iteration and the seamless incorporation of emerging AI capabilities.
+The robust and scalable architecture of Learning Odyssey is designed for growth and continuous improvement. A Python/FastAPI backend ensures efficient AI integration and real-time responsiveness via WebSockets, supporting sophisticated narrative structures and learning flows. The platform features a smart dual-model LLM architecture with factory pattern for cost optimization, automatically selecting between Gemini Flash and Flash Lite based on task complexity. Supabase provides a flexible and secure cloud-based foundation for user data, persistent adventures, and telemetry. This modern stack allows for rapid iteration and the seamless incorporation of emerging AI capabilities.
 
 ### Architecture Overview
 ```mermaid
@@ -57,12 +57,15 @@ graph TD
     CG <--> ASM
     ASM <--> AS[AdventureState]
     ASM <--> CM[Chapter Manager]
-    CM <--> LLM[LLM Service]
+    CM <--> LLMF[LLM Factory]
+    LLMF <--> LLM[LLM Service]
+    LLMF <--> LLML[LLM Lite Service]
     CM <--> DB[(Supabase DB)] %% Updated from (Database)
     IG <--> IMG[Image Generation Service]
     CM <--> SL[Story Loader]
     SL <--> SF[(Story Files)]
     LLM <--> PF[Paragraph Formatter]
+    LLML <--> PF
     
     %% React Summary Components
     Client <--> SR[Summary Router]
@@ -92,7 +95,9 @@ graph TD
     subgraph Core Services
         ASM
         CM
+        LLMF
         LLM
+        LLML
         IMG
         PF
     end
@@ -124,7 +129,9 @@ graph TD
 
 Learning Odyssey is a living project, constantly evolving to deliver a richer experience:
 
-*   **🚀 Latest: Enhanced AI Reasoning with Gemini 2.5 Flash:** Successfully upgraded to Gemini 2.5 Flash with centralized thinking budget configuration, delivering enhanced reasoning capabilities for story generation, image synthesis, and character development while maintaining code modularity.
+*   **🚀 Latest: Summary Page UX Fixes & Data Integrity:** Resolved critical user experience issues including non-functional summary page buttons, auto-resumption bypass problems, and backend chapter counting inconsistencies. Users can now seamlessly navigate from adventure completion to new adventure selection.
+*   **💰 Smart AI Cost Optimization:** Implemented dual-model LLM architecture achieving ~50% cost reduction through strategic use of Gemini Flash Lite for simple tasks (71% of operations) while preserving Gemini Flash for complex reasoning. Factory pattern ensures optimal model selection automatically.
+*   **🧠 Enhanced AI Reasoning with Gemini 2.5 Flash:** Successfully upgraded to Gemini 2.5 Flash with centralized thinking budget configuration, delivering enhanced reasoning capabilities for story generation, image synthesis, and character development while maintaining code modularity.
 *   **🎯 Future-Proof AI Integration:** Migrated to Google's unified `google-genai` SDK, ensuring access to the latest AI capabilities and improved stability while maintaining 100% backward compatibility.
 *   **🎉 Complete Supabase Integration - PRODUCTION READY:** Full implementation of user authentication (Google OAuth & Guest), persistent adventure state, comprehensive telemetry tracking, and robust adventure resumption with custom modal flows. All four phases completed with thorough testing and bug fixes.
 *   **Enhanced User Experience:** Custom modal system for adventure management, consistent chapter display across all components, and seamless resumption flows for both authenticated and guest users.
