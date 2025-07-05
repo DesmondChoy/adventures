@@ -2,7 +2,9 @@
 
 ## Current Focus: Post-Resolution Maintenance & Enhancement (As of 2025-07-05)
 
-✅ **LATEST ACHIEVEMENT:** Chapter 11 Display Issue FULLY RESOLVED! Fixed inconsistent chapter counting logic across multiple backend methods that were causing "Chapters Completed: 11" instead of 10.
+✅ **LATEST ACHIEVEMENT:** Summary Page Button Fixes FULLY RESOLVED! Fixed React app patch script to properly remove "Return Home" button, redirect "Start New Adventure" to carousel, and prevent auto-adventure resumption from localStorage.
+
+✅ **PREVIOUS ACHIEVEMENT:** Chapter 11 Display Issue FULLY RESOLVED! Fixed inconsistent chapter counting logic across multiple backend methods that were causing "Chapters Completed: 11" instead of 10.
 
 🔧 **PREVIOUS WORK:** Chapter 11 Display Cosmetic Fix - Successfully resolved summary screen showing incorrect chapter numbers through comprehensive filtering of SUMMARY chapters from user display.
 
@@ -17,6 +19,21 @@
 ✅ **PREVIOUS MILESTONE:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
 
 ### Current Work in Progress
+
+*   **Summary Page Button Fixes - FULLY RESOLVED (2025-07-05):**
+    *   **Goal:** Fix React app summary page buttons to remove "Return Home" and make "Start New Adventure" redirect properly to carousel selection.
+    *   **Root Causes Identified:**
+        *   **"Return Home" button persistence:** React app patch script was using complex hiding strategies instead of simple DOM removal
+        *   **Auto-adventure resumption:** localStorage `adventure_state` was persisting between sessions, causing automatic adventure restoration instead of carousel selection
+        *   **Wrong redirect target:** "Start New Adventure" was redirecting to landing page (`/`) instead of carousel page (`/select`)
+    *   **✅ FIXES COMPLETED:**
+        *   **Simplified button removal:** Replaced complex hiding logic with simple `button.remove()` to completely delete "Return Home" button from DOM
+        *   **Fixed redirect URL:** Updated "Start New Adventure" button to redirect to `/select` (carousel page) instead of root
+        *   **Added localStorage clearing:** Clear `adventure_state`, `summary_state_id`, and `summary_api_url` before redirect to ensure fresh start
+        *   **Continuous monitoring:** Added interval-based monitoring to remove any React-recreated "Return Home" buttons
+    *   **✅ VERIFICATION:** Live tested and confirmed "Return Home" button is completely removed, "Start New Adventure" works as clickable button redirecting to carousel
+    *   **Files Fixed:**
+        *   `app/static/summary-chapter/react-app-patch.js` (simplified and fixed button handling logic)
 
 *   **Chapter 11 Display Issue - FULLY RESOLVED (2025-07-05):**
     *   **Goal:** Resolve "Chapters Completed: 11" showing instead of 10 in summary screen.
