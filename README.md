@@ -130,7 +130,7 @@ graph TD
 Learning Odyssey is a living project, constantly evolving to deliver a richer experience:
 
 *   **🚀 Latest: Summary Page UX Fixes & Data Integrity:** Resolved critical user experience issues including non-functional summary page buttons, auto-resumption bypass problems, and backend chapter counting inconsistencies. Users can now seamlessly navigate from adventure completion to new adventure selection.
-*   **💰 Smart AI Cost Optimization:** Implemented dual-model LLM architecture achieving ~50% cost reduction through strategic use of Gemini Flash Lite for simple tasks (71% of operations) while preserving Gemini Flash for complex reasoning. Factory pattern ensures optimal model selection automatically.
+*   **💰 Smart AI Cost Optimization:** Implemented dual-model LLM architecture achieving ~50% cost reduction through strategic use of Gemini Flash Lite for simple tasks (75% of operations) while preserving Gemini Flash for complex reasoning. Factory pattern ensures optimal model selection automatically for most operations.
 *   **🧠 Enhanced AI Reasoning with Gemini 2.5 Flash:** Successfully upgraded to Gemini 2.5 Flash with centralized thinking budget configuration, delivering enhanced reasoning capabilities for story generation, image synthesis, and character development while maintaining code modularity.
 *   **🎯 Future-Proof AI Integration:** Migrated to Google's unified `google-genai` SDK, ensuring access to the latest AI capabilities and improved stability while maintaining 100% backward compatibility.
 *   **🎉 Complete Supabase Integration - PRODUCTION READY:** Full implementation of user authentication (Google OAuth & Guest), persistent adventure state, comprehensive telemetry tracking, and robust adventure resumption with custom modal flows. All four phases completed with thorough testing and bug fixes.
@@ -166,6 +166,9 @@ Learning Odyssey is a living project, constantly evolving to deliver a richer ex
     SUPABASE_SERVICE_KEY=your_supabase_service_key
     SUPABASE_JWT_SECRET=your_supabase_jwt_secret 
     # Ensure this JWT secret matches the one in your Supabase project settings (Auth > JWT Settings)
+    
+    # Application environment (development/production)
+    APP_ENVIRONMENT=development
     ```
 5.  Apply Supabase database migrations (if you're setting up the DB for the first time):
     ```bash
@@ -183,11 +186,14 @@ Learning Odyssey is a living project, constantly evolving to deliver a richer ex
 The project is organized into several key components:
 
 *   **Backend (`app/`)**: Contains the FastAPI application, including:
+    *   `auth/`: Authentication and JWT validation dependencies.
+    *   `middleware/`: Request/response middleware components.
     *   `models/`: Data structures like `AdventureState`.
     *   `routers/`: API and WebSocket endpoint definitions.
     *   `services/`: Core logic for LLMs, state management, content generation, Supabase interaction, etc.
     *   `static/`: Frontend assets (CSS, JS, images), including the React summary app.
     *   `templates/`: Jinja2 HTML templates.
+    *   `utils/`: Utility functions and shared components.
 *   **Content Sources (`app/data/`)**:
     *   `lessons/`: CSV files for educational content.
     *   `stories/`: YAML files defining story categories and narrative elements.
@@ -203,6 +209,12 @@ The project includes a testing framework to ensure reliability:
 *   **Test Coverage**: Includes chapter sequences, state transitions, and summary generation.
 *   **Running Tests**:
     ```bash
+    # Run all tests with pytest
+    pytest tests/
+    
+    # Run specific test file
+    pytest tests/test_summary_service.py
+    
     # Example: Run the complete adventure simulation
     python tests/simulations/generate_all_chapters.py
     ```
