@@ -419,6 +419,12 @@ export function appendStoryText(text) {
         // Apply the HTML content to the story container
         storyContent.innerHTML = htmlContent;
 
+        // Add drop cap to the first paragraph
+        const firstParagraph = storyContent.querySelector('p:first-child');
+        if (firstParagraph && firstParagraph.textContent.trim()) {
+            firstParagraph.classList.add('drop-cap');
+        }
+
         // Add click listeners to paragraphs
         addParagraphListeners();
 

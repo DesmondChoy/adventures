@@ -16,9 +16,11 @@
     height: 450px;
     position: relative;
     transform-style: preserve-3d;
-    background: white;
+    background: var(--color-paper-base);
     border-radius: 16px;
     padding: 20px;
+    border: 1px solid rgba(139, 120, 93, 0.15);
+    box-shadow: 0 4px 20px var(--color-paper-shadow);
 }
 
 @media (max-width: 768px) {
