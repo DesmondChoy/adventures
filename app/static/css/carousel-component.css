@@ -11,16 +11,16 @@
 /* Carousel Container and Base Structure */
 .carousel-container {
     perspective: 2000px;
-    margin: 32px auto 38px;
+    margin: 32px auto 60px;
     width: 400px;
     height: 450px;
     position: relative;
     transform-style: preserve-3d;
-    background: var(--color-paper-base);
+    background: var(--color-bg-secondary);
     border-radius: 16px;
     padding: 20px;
-    border: 1px solid rgba(139, 120, 93, 0.15);
-    box-shadow: 0 4px 20px var(--color-paper-shadow);
+    border: none;
+    box-shadow: none;
 }
 
 @media (max-width: 768px) {
@@ -28,7 +28,7 @@
         width: 320px;
         height: 360px;
         perspective: 1500px;
-        margin: 35px auto 35px;
+        margin: 35px auto 50px;
     }
 }
 
@@ -57,9 +57,9 @@
     height: 400px;
     left: 50%;
     margin-left: -150px;
-    background: linear-gradient(to top, rgba(255, 255, 255, 0.95), rgba(237, 233, 254, 0.95));
+    background: transparent;
     border-radius: 12px;
-    border: 2px solid rgba(79, 70, 229, 0.2);
+    border: none;
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -68,9 +68,9 @@
     padding: 0;
     transform-origin: center;
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    box-shadow: none;
     opacity: 0.3;
-    backdrop-filter: blur(8px);
+    backdrop-filter: none;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     will-change: transform, opacity, width, margin-left;
@@ -107,6 +107,10 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    background: var(--color-bg-secondary);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .carousel-card.selected .card-front {
@@ -129,11 +133,11 @@
     width: 320px;
     height: 415px;
     margin-left: -160px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    border: 2px solid rgba(79, 70, 229, 0.4);
-    background: linear-gradient(to top, rgba(255, 255, 255, 0.98), rgba(237, 233, 254, 0.98));
+    box-shadow: none;
+    border: none;
+    background: transparent;
     z-index: 1;
-    animation: cardGlow 3s ease-in-out infinite;
+    animation: none;
 }
 
 @media (max-width: 768px) {
@@ -146,33 +150,40 @@
 
 /* Card Content Styles */
 .carousel-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: rgb(79, 70, 229);
+    font-family: 'Crimson Text', Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
     margin-bottom: 16px;
     text-align: center;
     line-height: 1.4;
     width: 100%;
     padding: 0 12px;
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 0.3px rgba(0,0,0,0.1);
 }
 
 .carousel-description {
+    font-family: 'Crimson Text', Georgia, serif;
     font-size: 0.95rem;
+    font-weight: 400;
     color: #4B5563;
     text-align: center;
     overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 8;
     -webkit-box-orient: vertical;
-    line-height: 1.6;
+    line-height: 1.7;
     max-height: 240px;
     width: 100%;
     padding: 0 12px;
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 0.3px rgba(0,0,0,0.1);
 }
 
 @media (max-width: 768px) {
     .carousel-title {
-        font-size: 0.95rem;
+        font-size: 1.3rem;
         margin-bottom: 8px;
         padding: 0 6px;
     }
@@ -187,11 +198,16 @@
 
     .carousel-card.selected .card-back {
         padding: 20px 16px;
+        background: var(--color-bg-secondary);
+        border-radius: 12px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        margin: 8px;
     }
 
     /* Specific styles for active card when selected */
     .carousel-card.active.selected .carousel-title {
-        font-size: 0.85rem;
+        font-size: 1.2rem;
         margin-bottom: 4px;
         padding: 0 4px;
     }
@@ -206,7 +222,7 @@
 
     /* Regular selected card (non-active) */
     .carousel-card.selected .carousel-title {
-        font-size: 0.95rem;
+        font-size: 1.3rem;
         margin-bottom: 8px;
     }
 
@@ -244,10 +260,10 @@
     .carousel-nav button {
         width: 28px;
         height: 28px;
-        background: rgba(79, 70, 229, 0.95);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        background: rgba(13, 148, 136, 0.3);
+        box-shadow: none;
         opacity: 0.9;
-        backdrop-filter: blur(4px);
+        backdrop-filter: none;
     }
     
     .carousel-nav button svg {
@@ -257,7 +273,7 @@
 }
 
 .carousel-nav button {
-    background: rgba(79, 70, 229, 0.95);
+    background: rgba(13, 148, 136, 0.3);
     color: white;
     border: none;
     width: 36px;
@@ -268,15 +284,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
     pointer-events: auto;
-    backdrop-filter: blur(4px);
+    backdrop-filter: none;
 }
 
 .carousel-nav button:hover {
-    background: rgb(67, 56, 202);
+    background: rgba(15, 118, 110, 0.5);
     transform: scale(1.1);
-    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: none;
 }
 
 .carousel-nav button:active {
@@ -378,17 +394,6 @@
 }
 
 /* Animations */
-@keyframes cardGlow {
-    0% {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    }
-    50% {
-        box-shadow: 0 0 20px rgba(79, 70, 229, 0.4), 0 0 30px rgba(79, 70, 229, 0.2);
-    }
-    100% {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    }
-}
 
 @keyframes selectCard {
     0% { 

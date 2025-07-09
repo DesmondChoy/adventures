@@ -13,7 +13,7 @@
 }
 
 .modal-content {
-    background-color: var(--background-color, #fff); /* Use theme variable or default */
+    background-color: var(--background-color, rgba(253, 252, 247, 0.9)); /* Use theme variable or cream default */
     color: var(--text-color, #333); /* Use theme variable or default */
     padding: 30px;
     border-radius: 12px;
@@ -44,7 +44,7 @@
     margin-top: 20px;
     margin-bottom: 25px;
     padding: 15px;
-    background-color: var(--secondary-background-color, #f9f9f9); /* Slightly different background */
+    background-color: var(--secondary-background-color, rgba(253, 252, 247, 0.7)); /* Slightly different background */
     border-radius: 8px;
     border: 1px solid var(--border-color-light, #eee);
 }
@@ -134,7 +134,7 @@
     margin-top: 20px;
     margin-bottom: 25px;
     padding: 15px;
-    background-color: var(--secondary-background-color-light, #fdfdfd); /* Lighter than resume details */
+    background-color: var(--secondary-background-color-light, rgba(253, 252, 247, 0.9)); /* Lighter than resume details */
     border-radius: 8px;
     border: 1px solid var(--border-color-light, #eee);
 }
@@ -178,6 +178,6 @@
     --warning-color-dark: #e0a800;
     --danger-color: #dc3545;
     --danger-color-dark: #c82333;
-    --secondary-background-color-light: #fdfdfd;
+    --secondary-background-color-light: rgba(253, 252, 247, 0.9);
     --text-color-medium: #555;
 }

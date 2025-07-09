@@ -27,7 +27,8 @@
 
 .choice-card:hover {
     border-color: var(--color-accent-light);
-    background-color: rgba(79, 70, 229, 0.1); /* Very subtle indigo tint */
+    background-color: rgba(13, 148, 136, 0.1);
+    /* Very subtle teal tint */
 }
 
 .choice-card.selected {
@@ -61,7 +62,7 @@
 
 .gradient-primary-dark {
     background-image: linear-gradient(to bottom, var(--color-primary), var(--color-primary-dark));
-} 
+}
 
 /**
  * Modern Accents CSS
@@ -95,25 +96,17 @@ body::before {
 
 /* Enhanced story container with subtle depth */
 #storyContainer {
-    box-shadow: 
-        0 10px 30px -5px rgba(0, 0, 0, 0.05),
-        0 1px 3px rgba(0, 0, 0, 0.05),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(236, 233, 252, 0.5);
-    background: var(--color-bg-container);
-    backdrop-filter: blur(12px);
+    background: transparent;
     transition: all 0.4s ease;
 }
 
 /* Improved accent line at the top */
 #storyContainer::after {
     height: 4px;
-    background: linear-gradient(
-        to right, 
-        var(--color-accent-start), 
-        var(--color-primary), 
-        var(--color-accent-end)
-    );
+    background: linear-gradient(to right,
+            var(--color-accent-start),
+            var(--color-primary),
+            var(--color-accent-end));
     opacity: 0.8;
     box-shadow: 0 1px 2px rgba(79, 70, 229, 0.2);
 }
@@ -122,7 +115,7 @@ body::before {
 .choice-card {
     background: var(--color-bg-card);
     border-left: 3px solid var(--color-accent-medium);
-    box-shadow: 
+    box-shadow:
         0 4px 12px -2px rgba(0, 0, 0, 0.05),
         0 0 0 1px rgba(236, 233, 252, 0.5);
     position: relative;
@@ -136,76 +129,68 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.1),
-        rgba(255, 255, 255, 0)
-    );
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.1),
+            rgba(255, 255, 255, 0));
     z-index: 1;
     pointer-events: none;
 }
 
 .choice-card:hover {
     transform: translateY(-2px) scale(1.01);
-    box-shadow: 
+    box-shadow:
         0 8px 20px -4px rgba(0, 0, 0, 0.1),
         0 0 0 1px rgba(236, 233, 252, 0.7);
     border-left: 3px solid var(--color-primary);
 }
 
 .choice-card:hover::before {
-    background: linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.2),
-        rgba(255, 255, 255, 0.05)
-    );
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.2),
+            rgba(255, 255, 255, 0.05));
 }
 
 .choice-card.selected {
     border-left: 3px solid var(--color-primary);
     background: var(--color-bg-card-selected);
-    box-shadow: 
+    box-shadow:
         0 6px 16px -4px rgba(79, 70, 229, 0.2),
         0 0 0 1px rgba(79, 70, 229, 0.3);
 }
 
 /* Enhanced buttons with subtle gradients */
-.primary-button, 
+.primary-button,
 button.bg-indigo-600,
 button.w-full.flex.justify-center.py-2.px-4.border.border-transparent.rounded-md.shadow-sm.text-sm.font-medium.text-white.bg-indigo-600 {
-    background: linear-gradient(
-        to bottom,
-        var(--color-primary-light),
-        var(--color-primary)
-    );
-    box-shadow: 
-        0 2px 4px rgba(79, 70, 229, 0.2),
-        0 0 0 1px rgba(79, 70, 229, 0.1);
+    background: linear-gradient(to bottom,
+            var(--color-primary-light),
+            var(--color-primary));
+    box-shadow:
+        0 2px 4px rgba(13, 148, 136, 0.2),
+        0 0 0 1px rgba(13, 148, 136, 0.1);
     position: relative;
     overflow: hidden;
 }
 
-.primary-button:hover, 
+.primary-button:hover,
 button.bg-indigo-600:hover,
 button.w-full.flex.justify-center.py-2.px-4.border.border-transparent.rounded-md.shadow-sm.text-sm.font-medium.text-white.bg-indigo-600:hover {
-    background: linear-gradient(
-        to bottom,
-        var(--color-primary),
-        var(--color-primary-dark)
-    );
-    box-shadow: 
-        0 4px 8px rgba(79, 70, 229, 0.3),
-        0 0 0 1px rgba(79, 70, 229, 0.2);
+    background: linear-gradient(to bottom,
+            var(--color-primary),
+            var(--color-primary-dark));
+    box-shadow:
+        0 4px 8px rgba(13, 148, 136, 0.3),
+        0 0 0 1px rgba(13, 148, 136, 0.2);
     transform: translateY(-1px);
 }
 
-.primary-button:active, 
+.primary-button:active,
 button.bg-indigo-600:active,
 button.w-full.flex.justify-center.py-2.px-4.border.border-transparent.rounded-md.shadow-sm.text-sm.font-medium.text-white.bg-indigo-600:active {
     transform: translateY(1px);
-    box-shadow: 
-        0 1px 2px rgba(79, 70, 229, 0.2),
-        0 0 0 1px rgba(79, 70, 229, 0.1);
+    box-shadow:
+        0 1px 2px rgba(13, 148, 136, 0.2),
+        0 0 0 1px rgba(13, 148, 136, 0.1);
 }
 
 /* Button shine effect */
@@ -218,12 +203,10 @@ button.w-full.flex.justify-center.py-2.px-4.border.border-transparent.rounded-md
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.2),
-        transparent
-    );
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.2),
+            transparent);
     transition: 0.5s;
 }
 
@@ -235,40 +218,35 @@ button.w-full.flex.justify-center.py-2.px-4.border.border-transparent.rounded-md
 
 /* Enhanced carousel cards */
 .carousel-card {
-    background: var(--color-bg-carousel-card);
-    border: 2px solid var(--color-accent-light);
-    box-shadow: 
-        0 8px 20px rgba(0, 0, 0, 0.08),
-        0 0 0 1px rgba(236, 233, 252, 0.5);
+    background: transparent;
+    border: none;
+    box-shadow: none;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .carousel-card.active {
-    border: 2px solid var(--color-accent-medium);
-    background: var(--color-bg-carousel-card-active);
-    box-shadow: 
-        0 12px 24px rgba(0, 0, 0, 0.12),
-        0 0 0 1px rgba(79, 70, 229, 0.3),
-        0 0 20px rgba(79, 70, 229, 0.15);
+    border: none;
+    background: transparent;
+    box-shadow: none;
 }
 
 .carousel-card .card-back {
-    background: var(--color-bg-carousel-card-back);
+    background: transparent;
 }
 
 /* Enhanced carousel navigation */
 .carousel-nav button {
     background: var(--color-primary-gradient);
-    box-shadow: 
-        0 4px 8px rgba(79, 70, 229, 0.3),
-        0 0 0 1px rgba(79, 70, 229, 0.2);
+    box-shadow:
+        0 4px 8px rgba(13, 148, 136, 0.3),
+        0 0 0 1px rgba(13, 148, 136, 0.2);
 }
 
 .carousel-nav button:hover {
     background: var(--color-primary-dark-gradient);
-    box-shadow: 
-        0 6px 12px rgba(79, 70, 229, 0.4),
-        0 0 0 1px rgba(79, 70, 229, 0.3);
+    box-shadow:
+        0 6px 12px rgba(13, 148, 136, 0.4),
+        0 0 0 1px rgba(13, 148, 136, 0.3);
 }
 
 /* Enhanced header with subtle shadow */
@@ -279,9 +257,7 @@ h1.text-4xl {
 
 /* Enhanced header controls with paper fold effect */
 .header-controls {
-    background: var(--color-bg-header);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-    border-radius: 8px 8px 0 0;
+    background: transparent;
     position: relative;
 }
 
@@ -293,15 +269,13 @@ h1.text-4xl {
     left: 10%;
     right: 10%;
     height: 2px;
-    background: linear-gradient(
-        to right,
-        transparent 0%,
-        rgba(139, 120, 93, 0.1) 20%,
-        rgba(139, 120, 93, 0.2) 50%,
-        rgba(139, 120, 93, 0.1) 80%,
-        transparent 100%
-    );
-    box-shadow: 
+    background: linear-gradient(to right,
+            transparent 0%,
+            rgba(139, 120, 93, 0.1) 20%,
+            rgba(139, 120, 93, 0.2) 50%,
+            rgba(139, 120, 93, 0.1) 80%,
+            transparent 100%);
+    box-shadow:
         0 1px 2px rgba(139, 120, 93, 0.1),
         0 -1px 1px rgba(255, 255, 255, 0.3);
     border-radius: 2px;
@@ -310,7 +284,7 @@ h1.text-4xl {
 /* Enhanced font size controls */
 .font-size-controls {
     background: var(--color-bg-controls);
-    box-shadow: 
+    box-shadow:
         0 2px 6px rgba(0, 0, 0, 0.05),
         0 0 0 1px rgba(236, 233, 252, 0.5);
 }
@@ -352,9 +326,10 @@ h1.text-4xl {
         margin-left: 0;
         margin-bottom: 1.4em;
         transition: border-left-color 0.3s ease;
-        cursor: pointer; /* Add cursor pointer to indicate interactivity */
+        cursor: pointer;
+        /* Add cursor pointer to indicate interactivity */
     }
-    
+
     .markdown-content p:hover,
     .markdown-content p.active {
         border-left-color: var(--color-primary-light);
@@ -370,11 +345,20 @@ h1.text-4xl {
 
 /* Subtle animations for page elements */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-#introText, #storyCategoryScreen, #lessonTopicScreen {
+#introText,
+#storyCategoryScreen,
+#lessonTopicScreen {
     animation: fadeIn 0.5s ease-out forwards;
 }
 
@@ -384,7 +368,7 @@ h1.text-4xl {
         margin-top: 0;
         border-radius: 12px;
     }
-    
+
     .choice-card {
         margin-bottom: 16px;
     }
