@@ -73,24 +73,39 @@ function getRandomPhrase() {
     return phrase;
 }
 
-// Typewriter effect for phrase display
-function typewriterEffect(element, text, callback) {
-    element.textContent = '';
-    element.classList.remove('rainbow-gradient');
+// Instant phrase display with delayed rainbow gradient
+function displayPhrase(element, text, callback) {
+    element.textContent = text;
+    element.classList.remove('rainbow-gradient', 'fade-out');
+    element.classList.add('fade-in');
     
-    let index = 0;
-    function typeChar() {
-        if (index < text.length) {
-            element.textContent += text[index];
-            index++;
-            typewriterTimeout = setTimeout(typeChar, 50);
-        } else {
-            // Apply rainbow gradient after typing completes
+    // Start rainbow animation after 1 second
+    setTimeout(() => {
+        element.classList.add('rainbow-gradient');
+    }, 1000);
+    
+    if (callback) callback();
+}
+
+// Phrase display with fade transition effect
+function displayPhraseWithTransition(element, text, callback) {
+    // Fade out current phrase
+    element.classList.remove('rainbow-gradient', 'fade-in');
+    element.classList.add('fade-out');
+    
+    // After fade out completes, change text and fade in
+    setTimeout(() => {
+        element.textContent = text;
+        element.classList.remove('fade-out');
+        element.classList.add('fade-in');
+        
+        // Start rainbow animation after 1 second
+        setTimeout(() => {
             element.classList.add('rainbow-gradient');
-            if (callback) callback();
-        }
-    }
-    typeChar();
+        }, 1000);
+        
+        if (callback) callback();
+    }, 500); // Wait for fade-out to complete
 }
 
 // Start phrase rotation
@@ -104,13 +119,13 @@ function startPhraseRotation() {
     
     // Show first phrase immediately
     const firstPhrase = getRandomPhrase();
-    typewriterEffect(phraseElement, firstPhrase);
+    displayPhrase(phraseElement, firstPhrase);
     
-    // Set up 5-second rotation
+    // Set up 6-second rotation (1s delay + 5s animation)
     phraseInterval = setInterval(() => {
         const newPhrase = getRandomPhrase();
-        typewriterEffect(phraseElement, newPhrase);
-    }, 5000);
+        displayPhraseWithTransition(phraseElement, newPhrase);
+    }, 6000);
 }
 
 // Stop phrase rotation

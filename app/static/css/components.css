@@ -475,7 +475,7 @@
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    animation: rainbow-sweep 2s linear infinite;
+    animation: rainbow-sweep 8s linear infinite;
 }
 
 @keyframes rainbow-sweep {
@@ -485,6 +485,16 @@
     100% {
         background-position: -200% 0;
     }
+}
+
+.loading-phrase.fade-out {
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+}
+
+.loading-phrase.fade-in {
+    opacity: 1;
+    transition: opacity 0.5s ease-in;
 }
 
 @keyframes float {
