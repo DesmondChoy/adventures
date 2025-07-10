@@ -35,6 +35,98 @@ export function showError(message) {
 }
 
 // --- Loader Functions ---
+// Loading phrase management
+let loadingPhrases = [];
+let currentPhraseIndex = -1;
+let previousPhrase = '';
+let phraseInterval = null;
+let typewriterTimeout = null;
+
+// Fetch loading phrases from API
+async function fetchLoadingPhrases() {
+    try {
+        const response = await fetch('/api/loading-phrases');
+        const data = await response.json();
+        loadingPhrases = data.phrases || [];
+    } catch (error) {
+        console.error('Error fetching loading phrases:', error);
+        // Fallback phrases
+        loadingPhrases = [
+            "Thickening the plot...",
+            "Sprinkling magical dust...",
+            "Loading narrative momentum..."
+        ];
+    }
+}
+
+// Get random phrase excluding the previous one
+function getRandomPhrase() {
+    if (loadingPhrases.length === 0) return "Loading...";
+    if (loadingPhrases.length === 1) return loadingPhrases[0];
+    
+    let phrase;
+    do {
+        phrase = loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)];
+    } while (phrase === previousPhrase);
+    
+    previousPhrase = phrase;
+    return phrase;
+}
+
+// Typewriter effect for phrase display
+function typewriterEffect(element, text, callback) {
+    element.textContent = '';
+    element.classList.remove('rainbow-gradient');
+    
+    let index = 0;
+    function typeChar() {
+        if (index < text.length) {
+            element.textContent += text[index];
+            index++;
+            typewriterTimeout = setTimeout(typeChar, 50);
+        } else {
+            // Apply rainbow gradient after typing completes
+            element.classList.add('rainbow-gradient');
+            if (callback) callback();
+        }
+    }
+    typeChar();
+}
+
+// Start phrase rotation
+function startPhraseRotation() {
+    const phraseElement = document.getElementById('loadingPhrase');
+    if (!phraseElement) return;
+    
+    // Clear any existing intervals/timeouts
+    clearInterval(phraseInterval);
+    clearTimeout(typewriterTimeout);
+    
+    // Show first phrase immediately
+    const firstPhrase = getRandomPhrase();
+    typewriterEffect(phraseElement, firstPhrase);
+    
+    // Set up 5-second rotation
+    phraseInterval = setInterval(() => {
+        const newPhrase = getRandomPhrase();
+        typewriterEffect(phraseElement, newPhrase);
+    }, 5000);
+}
+
+// Stop phrase rotation
+function stopPhraseRotation() {
+    clearInterval(phraseInterval);
+    clearTimeout(typewriterTimeout);
+    phraseInterval = null;
+    typewriterTimeout = null;
+    
+    const phraseElement = document.getElementById('loadingPhrase');
+    if (phraseElement) {
+        phraseElement.textContent = '';
+        phraseElement.classList.remove('rainbow-gradient');
+    }
+}
+
 export function showLoader() {
     const overlay = document.getElementById('loaderOverlay');
     if (!overlay) {
@@ -45,6 +137,15 @@ export function showLoader() {
     // Force display to ensure it's visible
     overlay.style.display = 'flex';
     overlay.classList.remove('hidden');
+    
+    // Fetch phrases if not already loaded
+    if (loadingPhrases.length === 0) {
+        fetchLoadingPhrases().then(() => {
+            startPhraseRotation();
+        });
+    } else {
+        startPhraseRotation();
+    }
     
     // Use setTimeout to ensure the transition works
     setTimeout(() => {
@@ -58,6 +159,9 @@ export function hideLoader() {
         console.error('Loader overlay element not found!');
         return;
     }
+    
+    // Stop phrase rotation
+    stopPhraseRotation();
     
     overlay.classList.remove('active');
     

@@ -672,3 +672,59 @@ IMPORTANT: Even if you find only minimal descriptions, include them in the outpu
 
 Do not include any explanations, only return the JSON.
 """
+
+# Loading Phrases
+# ---------------
+# Funny, wacky phrases to display during chapter loading, inspired by The Sims
+LOADING_PHRASES = [
+    # Story-themed & Wacky
+    "Thickening the plot...",
+    "Sprinkling magical dust...",
+    "Consulting the wise narrator...",
+    "Polishing the adventure gems...",
+    "Weaving character destinies...",
+    "Untangling story threads...",
+    "Feeding plot bunnies...",
+    "Sharpening dramatic tension...",
+    "Seasoning the adventure soup...",
+    "Braiding narrative ribbons...",
+    "Fluffing character pillows...",
+    "Stirring the story cauldron...",
+    "Dusting off ancient prophecies...",
+    "Watering imagination seeds...",
+    "Knitting destiny sweaters...",
+    
+    # Meta-storytelling humor
+    "Teaching dragons proper etiquette...",
+    "Hiding plot twists in plain sight...",
+    "Adjusting protagonist courage levels...",
+    "Calibrating moral compass...",
+    "Buffering childhood wonder...",
+    "Bribing villains to show up on time...",
+    "Convincing heroes to wear pants...",
+    "Negotiating with stubborn plot devices...",
+    "Training sidekicks in proper quipping...",
+    "Organizing the villain's dramatic monologue...",
+    "Teaching wise mentors to speak in riddles...",
+    "Scheduling surprise encounters...",
+    "Debugging character motivations...",
+    "Installing common sense patches...",
+    "Upgrading protagonist's plot armor...",
+    
+    # Technical-sounding but story-focused
+    "Rendering imagination particles...",
+    "Optimizing character development...",
+    "Loading narrative momentum...",
+    "Synchronizing story timelines...",
+    "Compiling adventure sequences...",
+    "Initializing adventure protocols...",
+    "Defragmenting character backstories...",
+    "Updating friendship algorithms...",
+    "Compressing epic moments...",
+    "Downloading courage updates...",
+    "Refreshing magical elements...",
+    "Calculating dramatic timing...",
+    "Encrypting secret identities...",
+    "Parsing ancient wisdom...",
+    "Rebooting legendary artifacts...",
+]

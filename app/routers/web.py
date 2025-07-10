@@ -13,6 +13,7 @@ from app.data.story_loader import StoryLoader
 from app.services.state_storage_service import StateStorageService
 from app.auth.dependencies import get_current_user_id_optional, get_current_user_id
 from app.models.story import AdventureState
+from app.services.llm.prompt_templates import LOADING_PHRASES
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -482,6 +483,13 @@ async def abandon_adventure_api(
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Error abandoning adventure.")
+
+
+@router.get("/api/loading-phrases")
+async def get_loading_phrases():
+    """API endpoint to serve loading phrases for the loader component."""
+    import random
+    return {"phrases": LOADING_PHRASES}
 
 
 @router.get("/debug/localStorage-inspector", response_class=HTMLResponse)

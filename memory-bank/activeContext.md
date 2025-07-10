@@ -1,8 +1,10 @@
 # Active Context
 
-## Current Focus: Literary UI/UX Enhancement (As of 2025-07-08)
+## Current Focus: Loading Experience Enhancement (As of 2025-01-10)
 
-✅ **LATEST ACHIEVEMENT:** Literary Book-Like Visual Overhaul COMPLETED! Transformed the entire app interface from digital/web appearance to elegant book-like aesthetic with serif typography, paper textures, and sophisticated literary design elements perfect for kids' adventure stories.
+✅ **LATEST ACHIEVEMENT:** Loading Phrase System COMPLETED! Replaced static triangle spinner with engaging Sims-inspired loading phrases that stream in with typewriter effect and rainbow gradient animation.
+
+✅ **PREVIOUS ACHIEVEMENT:** Literary Book-Like Visual Overhaul COMPLETED! Transformed the entire app interface from digital/web appearance to elegant book-like aesthetic with serif typography, paper textures, and sophisticated literary design elements perfect for kids' adventure stories.
 
 ✅ **PREVIOUS ACHIEVEMENT:** Summary Page Button Fixes FULLY RESOLVED! Fixed React app patch script to properly remove "Return Home" button, redirect "Start New Adventure" to carousel, and prevent auto-adventure resumption from localStorage.
 
@@ -21,6 +23,38 @@
 ✅ **PREVIOUS MILESTONE:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
 
 ### Current Work in Progress
+
+*   **Loading Phrase System - COMPLETED (2025-01-10):**
+    *   **Goal:** Replace static triangle spinner with engaging, humorous loading phrases inspired by The Sims loading screens.
+    *   **User Experience Enhancement:**
+        *   **45 Unique Phrases:** Created three categories of funny, story-themed phrases:
+            *   **Story-themed & Wacky:** "Thickening the plot...", "Feeding plot bunnies...", "Knitting destiny sweaters..."
+            *   **Meta-storytelling humor:** "Teaching dragons proper etiquette...", "Convincing heroes to wear pants...", "Upgrading protagonist's plot armor..."
+            *   **Technical-sounding but story-focused:** "Rendering imagination particles...", "Defragmenting character backstories...", "Rebooting legendary artifacts..."
+        *   **Dynamic Display System:**
+            *   **Typewriter Effect:** Phrases stream in character by character (50ms per character)
+            *   **Rainbow Gradient Animation:** Moves across completed text for visual polish
+            *   **5-Second Rotation:** New phrase every 5 seconds with exclusion logic to prevent repetition
+            *   **Anti-Boredom Design:** Keeps users entertained during chapter loading instead of staring at static spinner
+    *   **Technical Implementation:**
+        *   **API Endpoint:** `/api/loading-phrases` serves all phrases from centralized storage
+        *   **Font Styling:** Uses same Crimson Text font as Learning Odyssey header (3.5rem, 600 weight) with black color for rainbow gradient visibility
+        *   **CSS Animations:** Custom rainbow gradient keyframes with smooth text effects
+        *   **JavaScript Logic:** Phrase fetching, rotation management, typewriter animation, and cleanup on loader hide
+        *   **Timing Integration:** Uses existing showLoader/hideLoader timing for seamless chapter transitions
+    *   **Files Modified:**
+        *   `app/services/llm/prompt_templates.py` (added LOADING_PHRASES constant with 45 phrases)
+        *   `app/routers/web.py` (added /api/loading-phrases endpoint)
+        *   `app/templates/components/loader.html` (removed spinner, added text element)
+        *   `app/static/css/components.css` (added phrase styling and rainbow gradient animation)
+        *   `app/static/js/uiManager.js` (implemented phrase rotation and typewriter effect logic)
+    *   **User Experience Impact:**
+        *   **Engaging Loading:** Transforms boring wait time into entertaining experience
+        *   **Brand Consistency:** Maintains story-themed humor that aligns with educational adventure concept
+        *   **Visual Polish:** Professional typewriter and gradient effects enhance perceived quality
+        *   **No Repetition:** Smart phrase exclusion keeps experience fresh across multiple chapter loads
+    *   **Result:** Complete replacement of static triangle spinner with dynamic, entertaining loading phrase system that keeps users engaged during chapter transitions.
+    *   **Impact:** Significantly enhanced loading experience that turns wait time into entertainment, reinforcing the app's playful, story-focused brand identity.
 
 *   **Literary Book-Like Visual Overhaul - COMPLETED (2025-07-08):**
     *   **Goal:** Transform the app from digital/web appearance to elegant book-like aesthetic perfect for kids' adventure stories.
