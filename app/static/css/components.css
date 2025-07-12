@@ -451,7 +451,7 @@
     font-family: 'Crimson Text', serif;
     font-weight: 600;
     font-size: 3.5rem;
-    color: #000;
+    color: #0d9488;
     letter-spacing: 0.05em;
     min-height: 1.2em;
     display: flex;
@@ -459,26 +459,23 @@
     justify-content: center;
 }
 
-.loading-phrase.rainbow-gradient {
+.loading-phrase.green-gradient {
     background: linear-gradient(
         45deg,
-        #ff0000,
-        #ff7f00,
-        #ffff00,
-        #00ff00,
-        #0000ff,
-        #4b0082,
-        #9400d3,
-        #ff0000
+        #0d9488,
+        #e5e7eb,
+        #0d9488,
+        #e5e7eb,
+        #0d9488
     );
     background-size: 200% 100%;
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    animation: rainbow-sweep 8s linear infinite;
+    animation: green-sweep 8s linear infinite;
 }
 
-@keyframes rainbow-sweep {
+@keyframes green-sweep {
     0% {
         background-position: 200% 0;
     }

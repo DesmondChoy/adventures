@@ -73,16 +73,11 @@ function getRandomPhrase() {
     return phrase;
 }
 
-// Instant phrase display with delayed rainbow gradient
+// Instant phrase display with immediate green gradient
 function displayPhrase(element, text, callback) {
     element.textContent = text;
-    element.classList.remove('rainbow-gradient', 'fade-out');
-    element.classList.add('fade-in');
-    
-    // Start rainbow animation after 1 second
-    setTimeout(() => {
-        element.classList.add('rainbow-gradient');
-    }, 1000);
+    element.classList.remove('green-gradient', 'fade-out');
+    element.classList.add('fade-in', 'green-gradient');
     
     if (callback) callback();
 }
@@ -90,19 +85,14 @@ function displayPhrase(element, text, callback) {
 // Phrase display with fade transition effect
 function displayPhraseWithTransition(element, text, callback) {
     // Fade out current phrase
-    element.classList.remove('rainbow-gradient', 'fade-in');
+    element.classList.remove('green-gradient', 'fade-in');
     element.classList.add('fade-out');
     
     // After fade out completes, change text and fade in
     setTimeout(() => {
         element.textContent = text;
         element.classList.remove('fade-out');
-        element.classList.add('fade-in');
-        
-        // Start rainbow animation after 1 second
-        setTimeout(() => {
-            element.classList.add('rainbow-gradient');
-        }, 1000);
+        element.classList.add('fade-in', 'green-gradient');
         
         if (callback) callback();
     }, 500); // Wait for fade-out to complete
@@ -121,11 +111,11 @@ function startPhraseRotation() {
     const firstPhrase = getRandomPhrase();
     displayPhrase(phraseElement, firstPhrase);
     
-    // Set up 6-second rotation (1s delay + 5s animation)
+    // Set up 5-second rotation
     phraseInterval = setInterval(() => {
         const newPhrase = getRandomPhrase();
         displayPhraseWithTransition(phraseElement, newPhrase);
-    }, 6000);
+    }, 5000);
 }
 
 // Stop phrase rotation
@@ -138,7 +128,7 @@ function stopPhraseRotation() {
     const phraseElement = document.getElementById('loadingPhrase');
     if (phraseElement) {
         phraseElement.textContent = '';
-        phraseElement.classList.remove('rainbow-gradient');
+        phraseElement.classList.remove('green-gradient');
     }
 }
 
