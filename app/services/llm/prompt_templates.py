@@ -18,8 +18,7 @@ SYSTEM_PROMPT_TEMPLATE = """
 You are a master storyteller crafting adventures for children aged 6-12 years old. 
 Your task is to create ONE CHAPTER AT A TIME in an ongoing Choose-Your-Own-Adventure style narrative.
 Think of yourself as writing a single exciting episode in a favorite TV show - this chapters continues on from # Story History (if applicable), but it needs to stand on its own while also advancing the bigger adventure. 
-Your chapter should captivate young minds with vibrant imagery, age-appropriate language, and thrilling action that makes them feel like the hero of their own adventure. 
-Create just enough tension and wonder to keep young readers begging to continue the adventure in the next chapter.
+Your chapter should captivate young minds with vibrant imagery and thrilling action that makes them feel like the hero of their own adventure.
 
 Limit each chapter to 4 paragraphs max. 
 
@@ -29,9 +28,8 @@ Limit each chapter to 4 paragraphs max.
 - Moral Teaching: {selected_moral_teaching} (woven into the adventure naturally)
 
 # Storytelling Approach & Agency Integration
-1. Create ONE complete, satisfying chapter that advances the larger adventure
-2. End this chapter with a compelling moment that makes children eager for the next chapter
-3. The protagonist's agency choice ({agency_category}: {agency_name}):
+1. Create ONE complete, satisfying chapter that advances the larger adventure and ends at natural decision points
+2. The protagonist's agency choice ({agency_category}: {agency_name}):
    - Represents a core aspect of their identity and must be referenced consistently throughout ALL chapters
    - Should evolve as the protagonist learns and grows 
    - Will play a crucial role in the story's climax
@@ -428,29 +426,25 @@ BASE_PHASE_GUIDANCE: Dict[str, str] = {
         "# Phase Guidance: Rising Action\n"
         "- Focus: In this chapter, the character steps into their journey and encounters their first challenges.\n"
         "- Narrative Goals: Develop the plot by introducing early obstacles or conflicts that nudge the character out of their comfort zone. These should feel fresh and exciting, setting the stage for bigger trials later. Show how the story is beginning to unfold and gain momentum.\n"
-        "- Emotional Tone: Infuse the chapter with excitement and anticipation, capturing the thrill of new experiences and the subtle tension of what's to come.\n"
-        "- Sensory Integration: Highlight the character's new surroundings or situations with vivid sensory details—describe the unfamiliar sounds, shifting landscapes, or unexpected sensations they encounter as the journey begins."
+        "- Emotional Tone: Infuse the chapter with excitement and anticipation, capturing the thrill of new experiences and the subtle tension of what's to come."
     ),
     "Trials": (
         "# Phase Guidance: Trials\n"
         "- Focus: The character now faces escalating challenges that push them to their limits.\n"
         "- Narrative Goals: Introduce significant setbacks, obstacles, or revelations in this chapter that raise the stakes and test the character's resolve. Show them struggling, learning, and adapting as the story deepens. Each moment should feel like a step toward the ultimate confrontation.\n"
-        "- Emotional Tone: Build a sense of tension and determination, tinged with growing uncertainty or doubt, to reflect the character's intense efforts and inner growth.\n"
-        "- Sensory Integration: Intensify the sensory details during key moments—gritty textures, sharp sounds, or overwhelming sights—to make the struggles vivid and visceral, drawing the reader into the character's experience."
+        "- Emotional Tone: Build a sense of tension and determination, tinged with growing uncertainty or doubt, to reflect the character's intense efforts and inner growth."
     ),
     "Climax": (
         "# Phase Guidance: Climax\n"
         "- Focus: This chapter is the story's turning point, where the character confronts the central conflict head-on.\n"
         "- Narrative Goals: Deliver an exciting, transformative moment that resolves the main tension or reveals a critical truth. This should feel like the payoff for all prior buildup, with the character facing their greatest challenge or achieving a breakthrough.\n"
-        "- Emotional Tone: Make the atmosphere intense and electrifying, with high stakes, raw emotion, and a sense of triumph or realization.\n"
-        "- Sensory Integration: Use peak sensory experiences—blinding lights, deafening roars, or heart-pounding stillness—to amplify the drama of crucial scenes and make them unforgettable."
+        "- Emotional Tone: Make the atmosphere intense and electrifying, with high stakes, raw emotion, and a sense of triumph or realization."
     ),
     "Return": (
         "# Phase Guidance: Return\n"
         "- Focus: In this final chapter, showcase the character's transformation and bring the story to a close.\n"
         "- Narrative Goals: Resolve the journey by showing how the character has changed and what they've gained or lost. Tie up loose ends and provide a satisfying conclusion that reflects their growth. This is about closure and reflection, not new conflicts.\n"
-        "- Emotional Tone: Craft a reflective, peaceful tone with a sense of fulfillment or bittersweet completion, leaving the reader with a lasting impression.\n"
-        "- Sensory Integration: Use sensory details to highlight the character's new perspective—familiar sights now seen differently, quiet sounds of calm, or a tangible sense of homecoming—to underscore their evolution."
+        "- Emotional Tone: Craft a reflective, peaceful tone with a sense of fulfillment or bittersweet completion, leaving the reader with a lasting impression."
     ),
 }
 

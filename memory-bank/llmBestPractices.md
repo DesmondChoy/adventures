@@ -48,6 +48,19 @@
 ### 3. Avoid System References
 * Never mention system components, pipelines, or other prompts
 * Don't reference technical implementation details
+
+### 4. Character Description Requirements (CRITICAL - NOT DUPLICATION)
+* **System-wide character descriptions are essential** for visual consistency in image generation
+* Character description rules in `SYSTEM_PROMPT_TEMPLATE` apply to ALL chapters, not just first chapter
+* **Why this appears like duplication but isn't:**
+  - `SYSTEM_PROMPT_TEMPLATE`: Ensures extractable character descriptions in every chapter
+  - `FIRST_CHAPTER_PROMPT`: Establishes initial protagonist foundation
+  - Each serves different purposes in the visual consistency pipeline
+* **Technical dependency:** 
+  - `CHARACTER_VISUAL_UPDATE_PROMPT` scans all chapter content for character descriptions
+  - Extracted descriptions stored in `state.character_visuals` for image generation
+  - Two-step image synthesis requires consistent character data across entire adventure
+* **Never remove character description rules from system prompt** - this would break visual continuity
 * GOOD: "Describe supporting characters when they first appear"
 * BAD: "Help CHARACTER_VISUAL_UPDATE_PROMPT track characters"
 

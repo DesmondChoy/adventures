@@ -395,7 +395,33 @@
   - LESSON chapter creation and question storage during adventures
   - Chapter type preservation during the adventure progression (not just at summary)
 
-### 20. LLM Factory Pattern for Cost Optimization
+### 20. System-Wide Character Description Pattern (CRITICAL UX)
+- **Purpose:** Ensures visual consistency across all chapters for image generation and character continuity
+- **Common Misconception:** The character description rules in `SYSTEM_PROMPT_TEMPLATE` (lines 42-45) may appear to duplicate guidance from `FIRST_CHAPTER_PROMPT`, but they serve a fundamentally different purpose
+- **Why This Is NOT Duplication:**
+  * **SYSTEM_PROMPT_TEMPLATE rules**: Apply to ALL chapter types (STORY, LESSON, REFLECT, CONCLUSION) to ensure every chapter provides extractable character descriptions
+  * **FIRST_CHAPTER_PROMPT guidance**: Establishes initial protagonist foundation only
+- **Visual Consistency Architecture:**
+  * Each chapter content is scanned for character descriptions using `CHARACTER_VISUAL_UPDATE_PROMPT`
+  * Descriptions are extracted and stored in `state.character_visuals` dictionary
+  * Two-step image synthesis process (`synthesize_image_prompt()`) combines these descriptions for consistent image generation
+  * New characters can be introduced in any chapter, requiring consistent visual detail extraction
+- **Implementation Details:**
+  ```python
+  # Character descriptions flow through entire system:
+  # 1. SYSTEM_PROMPT_TEMPLATE forces detailed descriptions in ALL chapters
+  # 2. CHARACTER_VISUAL_UPDATE_PROMPT extracts these descriptions
+  # 3. update_character_visuals() stores them in state.character_visuals
+  # 4. Image generation uses these for visual consistency
+  ```
+- **Critical Rule:** Never remove character description requirements from `SYSTEM_PROMPT_TEMPLATE` as this would break the visual consistency system that is core to the user experience
+- **Files Involved:**
+  * `app/services/llm/prompt_templates.py` - Character description rules
+  * `app/services/image_generation_service.py` - Two-step image synthesis
+  * `app/services/adventure_state_manager.py` - Character visual updates
+  * `app/services/websocket/choice_processor.py` - Character visual extraction
+
+### 21. LLM Factory Pattern for Cost Optimization
 - **Architecture:** Centralized factory pattern for automatic model selection based on task complexity
 - **Implementation:** `app/services/llm/factory.py` with `LLMServiceFactory` class
 - **Model Assignment Strategy:**

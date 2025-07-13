@@ -319,6 +319,23 @@ Learning Odyssey requires sequential chapter generation due to:
 - Graceful degradation
 - Image generation fallbacks
 
+## Key Architectural Decisions
+
+### 1. System-Wide Character Description Requirements (2025-01-13)
+- **Decision:** Keep character description rules in `SYSTEM_PROMPT_TEMPLATE` for ALL chapter types, not just first chapter
+- **Context:** During prompt optimization review, character description rules appeared to be duplication between `SYSTEM_PROMPT_TEMPLATE` and `FIRST_CHAPTER_PROMPT`
+- **Investigation:** Three parallel sub-agents analyzed the visual consistency system and found these rules are essential for ALL chapters
+- **Reasoning:**
+  * Visual consistency is core to user experience through AI-generated images
+  * Each chapter may introduce new characters or update existing character appearances
+  * `CHARACTER_VISUAL_UPDATE_PROMPT` extracts descriptions from every chapter for `state.character_visuals`
+  * Two-step image synthesis process requires consistent character descriptions across all chapters
+  * Breaking this chain would destroy visual continuity that users expect
+- **Alternative Considered:** Moving character description rules to `FIRST_CHAPTER_PROMPT` only
+- **Why Rejected:** Would break the visual consistency system by preventing character description extraction from chapters 2-10
+- **Impact:** Maintains high-quality visual experience with consistent character appearances throughout adventures
+- **Files Affected:** `app/services/llm/prompt_templates.py`, entire image generation pipeline
+
 ## Technical Impact
 
 ### Client-Side Requirements
