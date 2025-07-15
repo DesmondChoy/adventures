@@ -1,8 +1,10 @@
 # Active Context
 
-## Current Focus: Chapter Opening Enhancement (As of 2025-07-15)
+## Current Focus: Mobile Auto-Scroll Fix (As of 2025-07-15)
 
-✅ **LATEST ACHIEVEMENT:** Chapter Opening Diversification COMPLETED! Implemented Oracle-suggested improvements to eliminate repetitive "The" chapter beginnings and create more engaging, varied chapter openings that flow naturally from previous content.
+✅ **LATEST ACHIEVEMENT:** Mobile Auto-Scroll Issue RESOLVED! Fixed inconsistent auto-scroll behavior during story streaming on mobile devices by removing unreliable `storyContent.scrollTop` approach.
+
+✅ **PREVIOUS ACHIEVEMENT:** Chapter Opening Diversification COMPLETED! Implemented Oracle-suggested improvements to eliminate repetitive "The" chapter beginnings and create more engaging, varied chapter openings that flow naturally from previous content.
 
 ✅ **PREVIOUS ACHIEVEMENT:** Loading Phrase System with UX Refinements COMPLETED! Replaced static triangle spinner with engaging Sims-inspired loading phrases featuring instant display, fade transitions, and accessibility-optimized rainbow gradient animation.
 
@@ -25,6 +27,30 @@
 ✅ **PREVIOUS MILESTONE:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
 
 ### Current Work in Progress
+
+*   **Mobile Auto-Scroll Fix - COMPLETED (2025-07-15):**
+    *   **Goal:** Resolve inconsistent auto-scroll behavior during story streaming on mobile devices.
+    *   **Problem Identified:** User reported that during story streaming, sometimes the screen would automatically scroll down, sometimes it wouldn't, causing unpredictable user experience.
+    *   **Root Cause Analysis:** The auto-scroll code was applying `storyContent.scrollTop = storyContent.scrollHeight` but `storyContent` wasn't the actual scrollable element. On mobile, the scrollable element is typically the window or document body.
+    *   **Technical Investigation:**
+        *   **HTML Structure:** `storyContainer` (outer with `overflow: hidden`) contains `storyContent` (inner text div)
+        *   **Font Size Manager:** Listens to scroll events on `storyContainer`, not `storyContent`
+        *   **Inconsistent Behavior:** `storyContent.scrollTop` doesn't work reliably when `storyContent` itself isn't scrollable
+    *   **Solution Implemented:**
+        *   **Initial Fix:** Changed `storyContent.scrollTop = storyContent.scrollHeight` to `window.scrollTo(0, document.body.scrollHeight)` to use correct scrollable element
+        *   **Final Decision:** User preferred no auto-scroll behavior, so commented out the scroll code entirely
+        *   **Result:** Window now stays in place during story streaming, users can manually scroll if desired
+    *   **Technical Implementation:**
+        *   **Location:** Modified `appendStoryText` function in `app/static/js/uiManager.js` line 566
+        *   **Change:** Commented out auto-scroll code with descriptive comment
+        *   **Impact:** No unexpected scrolling behavior during streaming on any device
+    *   **Files Modified:**
+        *   `app/static/js/uiManager.js` (disabled auto-scroll in appendStoryText function)
+    *   **User Experience Impact:**
+        *   **Consistent Behavior:** No more unpredictable scrolling during story streaming
+        *   **User Control:** Users can manually scroll to read new content at their own pace
+        *   **Mobile Friendly:** Eliminates jarring auto-scroll behavior that was inconsistent on mobile
+    *   **Result:** Resolved inconsistent auto-scroll behavior by removing unreliable scroll mechanism, providing consistent user experience across all devices.
 
 *   **Chapter Opening Enhancement - COMPLETED (2025-07-15):**
     *   **Goal:** Eliminate repetitive "The" chapter beginnings and create more engaging, varied chapter openings that flow naturally from previous content.

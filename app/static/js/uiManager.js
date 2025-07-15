@@ -562,8 +562,8 @@ export function appendStoryText(text) {
         storyContent.textContent = streamBuffer;
     }
 
-    // Always scroll to bottom as text streams in
-    storyContent.scrollTop = storyContent.scrollHeight;
+    // Auto-scroll disabled - window stays in place during streaming
+    // window.scrollTo(0, document.body.scrollHeight);
 }
 
 // --- Choice and Image Functions ---

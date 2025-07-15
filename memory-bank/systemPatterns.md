@@ -241,7 +241,7 @@
   * `adventureStateManager.js`: Manages localStorage operations for adventure state persistence and client UUID generation
   * `webSocketManager.js`: Handles WebSocket connections, reconnection logic, URL construction, and message handling setup
   * `stateManager.js`: Manages adventure state operations, state transitions, and state manipulation functions
-  * `uiManager.js`: Consolidates all DOM manipulation, UI updates, story content rendering, choice display, and user interface functions
+  * `uiManager.js`: Consolidates all DOM manipulation, UI updates, story content rendering, choice display, and user interface functions (including story streaming with disabled auto-scroll)
   * `main.js`: Serves as the main entry point, coordinates all modules, handles application initialization, and manages global state
 
 - **Configuration Bridge** (`app/templates/components/scripts.html`)
@@ -495,3 +495,26 @@
   * **Seamless Reading Experience:** Natural transitions that feel like turning pages in a captivating book
 - **Implementation Status:** ✅ **COMPLETED** (2025-07-15)
 - **Files Modified:** `app/services/llm/prompt_templates.py` (updated SYSTEM_PROMPT_TEMPLATE with new chapter opening guidance)
+
+### 23. Mobile Auto-Scroll Behavior System
+- **Problem:** Inconsistent auto-scroll behavior during story streaming on mobile devices - sometimes scrolled, sometimes didn't
+- **Root Cause:** Auto-scroll code was applying `storyContent.scrollTop = storyContent.scrollHeight` but `storyContent` wasn't the actual scrollable element
+- **Technical Investigation:**
+  * **HTML Structure:** `storyContainer` (outer with `overflow: hidden`) contains `storyContent` (inner text div)
+  * **Font Size Manager:** Listens to scroll events on `storyContainer`, not `storyContent`
+  * **Mobile Behavior:** On mobile, scrollable element is typically window or document body
+  * **Inconsistent Results:** `storyContent.scrollTop` doesn't work reliably when `storyContent` itself isn't scrollable
+- **Solution Architecture:**
+  * **Initial Fix:** Changed to `window.scrollTo(0, document.body.scrollHeight)` to use correct scrollable element
+  * **Final Decision:** Disabled auto-scroll entirely to give users full control over reading pace
+  * **Implementation:** Commented out auto-scroll code in `appendStoryText` function
+- **Technical Details:**
+  * **Location:** `app/static/js/uiManager.js` line 566 in `appendStoryText` function
+  * **Change:** Replaced auto-scroll code with descriptive comment explaining the decision
+  * **Impact:** Eliminated all unexpected scrolling behavior during streaming on any device
+- **User Experience Impact:**
+  * **Consistent Behavior:** No more unpredictable scrolling during story streaming across all devices
+  * **User Control:** Users can manually scroll to read new content at their preferred pace
+  * **Mobile Friendly:** Eliminates jarring auto-scroll behavior that was inconsistent on mobile devices
+- **Implementation Status:** ✅ **COMPLETED** (2025-07-15)
+- **Files Modified:** `app/static/js/uiManager.js` (disabled auto-scroll in appendStoryText function)

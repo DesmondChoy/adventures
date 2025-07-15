@@ -2,6 +2,32 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-07-15: Mobile Auto-Scroll Fix - CONSISTENT UX BEHAVIOR ACHIEVED
+
+**✅ MOBILE SCROLLING INCONSISTENCY RESOLVED** through targeted auto-scroll mechanism removal.
+- **Goal:** Fix inconsistent auto-scroll behavior during story streaming on mobile devices.
+- **User Experience Problem:** During story streaming, sometimes the screen would automatically scroll down, sometimes it wouldn't, creating unpredictable and jarring user experience.
+- **Root Cause Investigation:**
+  - **HTML Structure Analysis:** `storyContainer` (outer with `overflow: hidden`) contains `storyContent` (inner text div)
+  - **Scroll Element Mismatch:** Auto-scroll code was applying `storyContent.scrollTop = storyContent.scrollHeight` but `storyContent` wasn't the actual scrollable element
+  - **Mobile Behavior:** On mobile, the scrollable element is typically the window or document body, not the content div
+  - **Inconsistent Results:** `storyContent.scrollTop` doesn't work reliably when `storyContent` itself isn't scrollable
+- **✅ SOLUTION IMPLEMENTED:**
+  - **Initial Fix:** Changed to `window.scrollTo(0, document.body.scrollHeight)` to use correct scrollable element
+  - **Final Decision:** User preferred no auto-scroll behavior, so disabled scroll code entirely
+  - **Result:** Window now stays in place during story streaming, giving users full control over reading pace
+- **✅ TECHNICAL IMPLEMENTATION:**
+  - **Location:** Modified `appendStoryText` function in `app/static/js/uiManager.js` line 566
+  - **Change:** Commented out auto-scroll code with descriptive comment explaining the decision
+  - **Impact:** Eliminated all unexpected scrolling behavior during streaming on any device
+- **Files Modified:**
+  - `app/static/js/uiManager.js` (disabled auto-scroll in appendStoryText function)
+- **User Experience Impact:**
+  - **Consistent Behavior:** No more unpredictable scrolling during story streaming across all devices
+  - **User Control:** Users can manually scroll to read new content at their preferred pace
+  - **Mobile Friendly:** Eliminates jarring auto-scroll behavior that was inconsistent on mobile devices
+- **Impact:** Resolved critical mobile UX issue, providing consistent and predictable behavior during story streaming
+
 ### 2025-07-10: Loading Phrase System - ENGAGING UX ENHANCEMENT COMPLETED
 
 **✅ LOADING EXPERIENCE TRANSFORMATION SUCCESSFUL** through Sims-inspired phrase system replacing static spinner.
