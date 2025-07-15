@@ -466,3 +466,32 @@
   * **Centralized Configuration:** Easy to adjust model assignments
   * **WebSocket Stability:** Lazy instantiation prevents module-level initialization delays
   * **Maintainability:** Clear separation between cost optimization and business logic
+
+### 22. Chapter Opening Enhancement System
+- **Problem:** Chapters consistently started with "The" making them formulaic and disengaging
+- **Oracle Analysis:** Identified that prompts lacked guidance on HOW to begin chapters, causing LLMs to default to safe "The..." patterns
+- **Architecture:** Contextual guidance system in `SYSTEM_PROMPT_TEMPLATE` rather than rigid rules
+- **Implementation Strategy:**
+  * **Replaced TV Episode Metaphor:** Changed from standalone episode approach to book chapter flow
+  * **Book Flow Emphasis:** "Think of yourself as writing the next chapter in a captivating book - each chapter should flow seamlessly from where the previous chapter left off"
+  * **Prioritized Opening Hook:** Moved opening guidance to first position as primary instruction
+  * **Expanded Opening Techniques:** Added environmental storytelling (Roald Dahl-inspired) and emotional hooks (J.K. Rowling-style atmosphere) alongside dialogue, action, sensory details, and character thoughts
+  * **Flexible Approach:** Provides multiple techniques rather than rigid rules
+- **Technical Details:**
+  * **Location:** `SYSTEM_PROMPT_TEMPLATE` in `app/services/llm/prompt_templates.py`
+  * **Scope:** Applied to all chapter types (story, lesson, reflect, conclusion) since system prompt is universal
+  * **Approach:** Contextual guidance rather than hard-coded restrictions
+- **Key Improvements:**
+  * **Primary Focus on Opening:** Opening hook guidance moved to first position, emphasizing it as the primary consideration
+  * **Flow-Based:** Emphasizes connection to previous chapter rather than standalone episodes
+  * **Engagement Focus:** Prioritizes reader engagement over formulaic structure
+  * **Expanded Technique Arsenal:** Added environmental storytelling and emotional hooks to existing techniques
+  * **Natural Transitions:** Encourages seamless flow from where previous chapter ended
+- **User Experience Impact:**
+  * **Immediate Hook Priority:** Opening hook is now the first consideration, ensuring every chapter starts with engagement
+  * **Diverse Chapter Openings:** Expanded toolkit including environmental storytelling and emotional hooks creates more varied beginnings
+  * **Better Flow:** Chapters feel more connected to previous content rather than episodic restarts
+  * **Enhanced Literary Quality:** More sophisticated techniques inspired by proven children's authors
+  * **Seamless Reading Experience:** Natural transitions that feel like turning pages in a captivating book
+- **Implementation Status:** ✅ **COMPLETED** (2025-07-15)
+- **Files Modified:** `app/services/llm/prompt_templates.py` (updated SYSTEM_PROMPT_TEMPLATE with new chapter opening guidance)

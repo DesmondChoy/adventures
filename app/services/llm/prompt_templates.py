@@ -10,17 +10,119 @@ chapter types and scenarios.
 import random
 from typing import Dict, Tuple, List
 
+# Names dictionary for protagonist diversity - Asian-focused
+PROTAGONIST_NAMES = [
+    # East Asian names (Chinese, Japanese, Korean)
+    "Kai",
+    "Yuki",
+    "Hana",
+    "Ryu",
+    "Mei",
+    "Taro",
+    "Sora",
+    "Lin",
+    "Jin",
+    "Yui",
+    "Chen",
+    "Akira",
+    "Mika",
+    "Hiro",
+    "Ling",
+    "Kenji",
+    "Yuki",
+    "Jun",
+    "Emi",
+    "Tai",
+    "Min",
+    "Sakura",
+    "Kyo",
+    "Nao",
+    "Lei",
+    "Ren",
+    "Yuna",
+    "Dae",
+    "Ai",
+    "Zen",
+    # Southeast Asian names (Thai, Vietnamese, Filipino, Indonesian, Malaysian)
+    "Aria",
+    "Kira",
+    "Maya",
+    "Lian",
+    "Niran",
+    "Siti",
+    "Ade",
+    "Bao",
+    "Citra",
+    "Dara",
+    "Elang",
+    "Fira",
+    "Gita",
+    "Hana",
+    "Indra",
+    "Jaya",
+    "Kirana",
+    "Luna",
+    "Nala",
+    "Putra",
+    # South Asian names (Indian, Pakistani, Bengali, Sri Lankan)
+    "Arjun",
+    "Priya",
+    "Ravi",
+    "Meera",
+    "Anish",
+    "Kavya",
+    "Dev",
+    "Nisha",
+    "Rohan",
+    "Asha",
+    "Kiran",
+    "Tara",
+    "Vikram",
+    "Shreya",
+    "Arun",
+    "Lila",
+    "Nikhil",
+    "Ria",
+    "Surya",
+    "Diya",
+    # Modern Asian-influenced names (cross-cultural appeal)
+    "Zara",
+    "Leo",
+    "Mia",
+    "Enzo",
+    "Aria",
+    "Felix",
+    "Luna",
+    "Oscar",
+    "Ivy",
+    "Hugo",
+    "Nora",
+    "Luca",
+    "Elena",
+    "Rafael",
+    "Sophia",
+    "Diego",
+    "Kiara",
+    "Mateo",
+    "Anya",
+    "Marcus",
+]
+
+
+def get_random_protagonist_name() -> str:
+    """Get a random protagonist name from the names dictionary."""
+    return random.choice(PROTAGONIST_NAMES)
+
+
 # System Prompt Template
 # ---------------------
 
 SYSTEM_PROMPT_TEMPLATE = """
 # Storyteller Role
-You are a master storyteller crafting adventures for children aged 6-12 years old. 
+Start each chapter with an engaging hook that flows naturally from the previous chapter - whether through dialogue, action, sensory details, character thoughts, environmental storytelling (let the setting tell part of the story), or emotional hooks that immediately draw readers into a feeling.
 Your task is to create ONE CHAPTER AT A TIME in an ongoing Choose-Your-Own-Adventure style narrative.
-Think of yourself as writing a single exciting episode in a favorite TV show - this chapters continues on from # Story History (if applicable), but it needs to stand on its own while also advancing the bigger adventure. 
-Your chapter should captivate young minds with vibrant imagery and thrilling action that makes them feel like the hero of their own adventure.
-
-Limit each chapter to 4 paragraphs max. 
+Think of yourself as writing the next chapter in a captivating book - each chapter should flow seamlessly from where the previous chapter left off, drawing the reader deeper into the unfolding adventure. 
+Your chapter should captivate young minds with vivid storytelling that makes them feel like the hero of their own adventure.
 
 # Story Elements
 - Setting: {settings} (described with wonder and child-friendly details)
@@ -67,6 +169,7 @@ FIRST_CHAPTER_PROMPT = """# Current Context
 1. Protagonist Description: {protagonist_description}
    - Use this description to establish a clear visual image of the protagonist
    - This forms the foundation of the character's appearance throughout the story
+   - The protagonist's name is {protagonist_name}
 
 2. Agency Decision: The chapter naturally and organically concludes with a situation where Agency Options are offered - each with the potential to shape the character's journey across all future chapters.
 
@@ -687,7 +790,6 @@ LOADING_PHRASES = [
     "Dusting off ancient prophecies...",
     "Watering imagination seeds...",
     "Knitting destiny sweaters...",
-    
     # Meta-storytelling humor
     "Teaching dragons proper etiquette...",
     "Hiding plot twists in plain sight...",
@@ -704,7 +806,6 @@ LOADING_PHRASES = [
     "Debugging character motivations...",
     "Installing common sense patches...",
     "Upgrading protagonist's plot armor...",
-    
     # Technical-sounding but story-focused
     "Rendering imagination particles...",
     "Optimizing character development...",
