@@ -64,6 +64,13 @@ async def handle_reveal_summary(
         logger.info(f"[REVEAL SUMMARY] Chapter {i+1}: type={ch.chapter_type}, number={ch.chapter_number}")
     logger.info(f"Current state has {len(state.chapters)} chapters")
     logger.info(f"Current chapter summaries: {len(state.chapter_summaries)}")
+    
+    # Wait for any pending summary tasks to complete before revealing summary
+    if state.pending_summary_tasks:
+        logger.info(f"[REVEAL SUMMARY] Waiting for {len(state.pending_summary_tasks)} pending summary tasks to complete")
+        await asyncio.gather(*state.pending_summary_tasks, return_exceptions=True)
+        state.pending_summary_tasks.clear()
+        logger.info("[REVEAL SUMMARY] All pending summary tasks completed")
 
     # Get the CONCLUSION chapter
     if state.chapters and state.chapters[-1].chapter_type == ChapterType.CONCLUSION:
@@ -882,8 +889,18 @@ async def process_non_start_choice(
     except Exception as tel_e:
         logger.error(f"Error logging 'choice_made' event: {tel_e}")
 
-    # Generate a chapter summary for the previous chapter
-    await generate_chapter_summary(previous_chapter, state)
+    # Generate a chapter summary for the previous chapter in background
+    logger.info(f"[PERFORMANCE] Starting background chapter summary for chapter {previous_chapter.chapter_number}")
+    task = asyncio.create_task(generate_chapter_summary_background(previous_chapter, state))
+    state.pending_summary_tasks.append(task)
+    
+    # Add error visibility callback
+    def _log_task_error(task: asyncio.Task) -> None:
+        if task.exception():
+            logger.error(f"Summary task crashed: {task.exception()}")
+    
+    task.add_done_callback(_log_task_error)
+    logger.info(f"[PERFORMANCE] Chapter summary task started in background, continuing with next chapter generation")
 
     # Update character visuals based on the completed chapter
     # DO NOT create a background task - this is critical visual information
@@ -1199,10 +1216,83 @@ async def process_story_response(
         logger.debug(f"Created story response: {story_response}")
 
 
+async def _store_summary_safe(
+    prev_chapter: ChapterData,
+    state: AdventureState,
+    title: str,
+    summary_text: str
+) -> None:
+    """
+    Safely write the summary/title to the shared state object.
+    Uses a lock to avoid races with other summary tasks.
+    """
+    async with state.summary_lock:
+        chap_idx = prev_chapter.chapter_number - 1
+        
+        # Pad lists if needed
+        while len(state.chapter_summaries) <= chap_idx:
+            state.chapter_summaries.append("Chapter summary not available")
+            if hasattr(state, "summary_chapter_titles"):
+                state.summary_chapter_titles.append(f"Chapter {len(state.summary_chapter_titles)+1}")
+        
+        # Store the actual summary and title
+        state.chapter_summaries[chap_idx] = summary_text
+        if hasattr(state, "summary_chapter_titles"):
+            state.summary_chapter_titles[chap_idx] = title
+        
+        logger.info(f"Stored summary for chapter {prev_chapter.chapter_number}: {summary_text}")
+        if hasattr(state, "summary_chapter_titles"):
+            logger.info(f"Stored title for chapter {prev_chapter.chapter_number}: {title}")
+
+
+async def generate_chapter_summary_background(
+    previous_chapter: ChapterData, state: AdventureState
+) -> None:
+    """Background task wrapper for chapter summary generation with error handling."""
+    try:
+        logger.info(f"[PERFORMANCE] Starting background chapter summary generation for chapter {previous_chapter.chapter_number}")
+        
+        # Extract the choice text and context from the response
+        choice_text = ""
+        choice_context = ""
+
+        if isinstance(previous_chapter.response, StoryResponse):
+            choice_text = previous_chapter.response.choice_text
+            # No additional context needed for STORY chapters
+        elif isinstance(previous_chapter.response, LessonResponse):
+            choice_text = previous_chapter.response.chosen_answer
+            choice_context = (
+                " (Correct answer)"
+                if previous_chapter.response.is_correct
+                else " (Incorrect answer)"
+            )
+
+        summary_result = await chapter_manager.generate_chapter_summary(
+            previous_chapter.content, choice_text, choice_context
+        )
+
+        # Extract title and summary from the result
+        title = summary_result.get("title", "Chapter Summary")
+        summary_text = summary_result.get("summary", "Summary not available")
+
+        await _store_summary_safe(previous_chapter, state, title, summary_text)
+        
+        logger.info(f"[PERFORMANCE] Completed background chapter summary generation for chapter {previous_chapter.chapter_number}")
+    except Exception as e:
+        logger.error(f"Background chapter summary generation failed for chapter {previous_chapter.chapter_number}: {e}")
+        # Ensure we have a fallback summary to prevent summary screen issues
+        async with state.summary_lock:
+            if len(state.chapter_summaries) < previous_chapter.chapter_number:
+                state.chapter_summaries.append("Chapter summary not available")
+                if hasattr(state, "summary_chapter_titles"):
+                    state.summary_chapter_titles.append(f"Chapter {previous_chapter.chapter_number}")
+        # Continue execution - don't let summary failures affect story flow
+
+
 async def generate_chapter_summary(
     previous_chapter: ChapterData, state: AdventureState
 ) -> None:
-    """Generate a summary for the previous chapter."""
+    """Generate a summary for the previous chapter (synchronous version for compatibility)."""
     try:
         logger.info(f"Generating summary for chapter {previous_chapter.chapter_number}")
 

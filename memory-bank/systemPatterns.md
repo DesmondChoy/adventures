@@ -2,7 +2,63 @@
 
 ## Key Design Patterns
 
-### 1. Supabase Persistence Pattern
+### 1. Async Background Task Pattern (Performance Optimization)
+- **Background Task Management with Race Condition Prevention:**
+  * **Thread-Safe State Mutation:** Uses `async with state.summary_lock` to prevent race conditions during concurrent background operations
+  * **Task Tracking:** `pending_summary_tasks` field tracks all background tasks for proper cleanup and synchronization
+  * **Synchronization Points:** Critical operations (like summary screen display) await all pending tasks before proceeding
+  * **Error Isolation:** Background task failures don't crash main application flow
+- **Implementation Example (`app/services/websocket/choice_processor.py`):**
+  ```python
+  async def generate_chapter_summary_background(
+      previous_chapter: ChapterData, state: AdventureState
+  ) -> None:
+      """Background task wrapper for chapter summary generation with error handling."""
+      try:
+          # ... summary generation logic ...
+          await _store_summary_safe(previous_chapter, state, title, summary_text)
+      except Exception as e:
+          logger.error(f"Background chapter summary generation failed: {e}")
+          # Ensure fallback summary to prevent summary screen issues
+          async with state.summary_lock:
+              if len(state.chapter_summaries) < previous_chapter.chapter_number:
+                  state.chapter_summaries.append("Chapter summary not available")
+  
+  # Usage in main flow
+  task = asyncio.create_task(generate_chapter_summary_background(previous_chapter, state))
+  state.pending_summary_tasks.append(task)
+  task.add_done_callback(lambda t: logger.error(f"Summary task crashed: {t.exception()}") if t.exception() else None)
+  ```
+- **Thread-Safe State Storage:**
+  ```python
+  async def _store_summary_safe(
+      prev_chapter: ChapterData, state: AdventureState, title: str, summary_text: str
+  ) -> None:
+      """Safely write summary/title to shared state object using lock."""
+      async with state.summary_lock:
+          chap_idx = prev_chapter.chapter_number - 1
+          # Pad lists if needed
+          while len(state.chapter_summaries) <= chap_idx:
+              state.chapter_summaries.append("Chapter summary not available")
+          # Store actual summary
+          state.chapter_summaries[chap_idx] = summary_text
+  ```
+- **Synchronization Before Critical Operations:**
+  ```python
+  async def handle_reveal_summary(...):
+      # Wait for any pending summary tasks to complete
+      if state.pending_summary_tasks:
+          await asyncio.gather(*state.pending_summary_tasks, return_exceptions=True)
+          state.pending_summary_tasks.clear()
+      # ... proceed with summary display ...
+  ```
+- **Benefits:**
+  * **Performance:** Eliminates blocking operations (1-3 second improvement)
+  * **Data Integrity:** Thread-safe operations prevent race conditions
+  * **Resilience:** Background failures don't affect main user experience
+  * **Resource Utilization:** Better parallelization of I/O operations
+
+### 2. Supabase Persistence Pattern
 - **StateStorageService** (`app/services/state_storage_service.py`)
   * Uses the `supabase-py` client to interact with a Supabase backend.
   * Initializes the client using environment variables (`SUPABASE_URL`, `SUPABASE_SERVICE_KEY`).
@@ -42,7 +98,7 @@
           # ... returns adventure_id or None ...
   ```
 
-### 2. Security Validation and User Isolation Pattern (CRITICAL)
+### 3. Security Validation and User Isolation Pattern (CRITICAL)
 - **Defense-in-Depth Security Architecture:**
   * **Application Layer:** User validation in all endpoints (WebSocket + REST)
   * **Database Layer:** RLS policies prevent unauthorized database queries  

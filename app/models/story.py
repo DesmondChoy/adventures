@@ -2,6 +2,8 @@ from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from typing import List, Dict, Any, Optional, Union, Literal
 from enum import Enum
 import re
+import asyncio
+from dataclasses import dataclass, field
 
 
 class ChapterType(str, Enum):
@@ -106,6 +108,8 @@ class ChapterData(BaseModel):
 
 class AdventureState(BaseModel):
     """Tracks progression and responses through the educational adventure."""
+    
+    model_config = {"arbitrary_types_allowed": True}
 
     current_chapter_id: str
     chapters: List[ChapterData] = []
@@ -170,6 +174,22 @@ class AdventureState(BaseModel):
         default_factory=dict,
         description="Additional metadata for tracking element consistency and plot development",
     )
+    
+    # Async summary generation support
+    pending_summary_tasks: List[asyncio.Task] = Field(
+        default_factory=list,
+        description="Background tasks for chapter summary generation",
+        exclude=True,  # Don't serialize these tasks
+        repr=False
+    )
+    
+    # We'll add the lock as a computed property to avoid serialization issues
+    @property
+    def summary_lock(self) -> asyncio.Lock:
+        """Get or create the summary lock for thread-safe summary generation."""
+        if not hasattr(self, '_summary_lock'):
+            self._summary_lock = asyncio.Lock()
+        return self._summary_lock
 
     @field_validator("selected_narrative_elements")
     @classmethod
