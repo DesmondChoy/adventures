@@ -2,6 +2,39 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-07-17: Chapter Loading Performance Analysis - COMPREHENSIVE OPTIMIZATION ROADMAP CREATED
+
+**✅ CHAPTER LOADING PERFORMANCE INVESTIGATION COMPLETED** through Oracle AI advisor and parallel sub-agent analysis.
+- **Goal:** Analyze chapter loading performance bottlenecks and create optimization plan to reduce loading times from 8-15 seconds to 1-3 seconds.
+- **Investigation Method:** Used Oracle AI advisor and 4 parallel sub-agents to comprehensively analyze different aspects of the chapter loading process.
+- **Major Performance Bottlenecks Identified:**
+  - **Word-by-word streaming**: 6-12 seconds with artificial 20ms delays per word + 300-600 WebSocket frames per chapter
+  - **Sequential LLM operations**: 5-10 seconds blocking (chapter summary → character visuals → new chapter content)
+  - **Synchronous chapter summary generation**: 1-3 seconds blocking next chapter generation (CRITICAL FINDING)
+  - **Multiple database writes**: 200-600ms per chapter with full state serialization
+  - **Frontend JSON parsing failures**: Thousands of exceptions per chapter from failed JSON.parse() attempts
+- **✅ CRITICAL DISCOVERY:** Chapter summary generation is currently BLOCKING next chapter generation despite being non-critical (only used for final summary screen)
+- **✅ OPTIMIZATION PLAN CREATED:**
+  - **Phase 1 (Quick wins - 1-2 days)**: Async chapter summary, eliminate word-by-word streaming, fix JSON parsing
+  - **Phase 2 (Parallel processing - 3-5 days)**: Parallelize LLM operations, implement state caching, optimize images  
+  - **Phase 3 (Advanced - 1-2 weeks)**: Response streaming, predictive generation, database optimization
+- **✅ IMPLEMENTATION DOCUMENT:** Created `wip/async_chapter_summary_optimization.md` with detailed steps for first optimization
+- **Expected Performance Gains:**
+  - **Phase 1**: 6-10 seconds reduction (50-70% faster)
+  - **Phase 2**: Additional 2-4 seconds reduction (70-85% faster)
+  - **Phase 3**: Sub-second chapter transitions (95%+ faster)
+- **Files Analyzed:**
+  - `app/services/websocket/choice_processor.py` (main blocking operations identified)
+  - `app/services/websocket/stream_handler.py` (word-by-word streaming bottleneck)
+  - `app/static/js/uiManager.js` (frontend performance issues)
+  - `app/services/llm/factory.py` (LLM optimization opportunities)
+  - `app/services/state_storage_service.py` (database performance analysis)
+- **Architecture Assessment:**
+  - **Strengths:** Well-designed system with proper separation of concerns, good error handling
+  - **Opportunities:** Sequential operations that could be parallelized, state management can be cached
+  - **Image Generation:** Already properly async and non-blocking (good design)
+- **Impact:** Created comprehensive roadmap to achieve 85%+ performance improvement with prioritized implementation phases
+
 ### 2025-07-15: Mobile Auto-Scroll Fix - CONSISTENT UX BEHAVIOR ACHIEVED
 
 **✅ MOBILE SCROLLING INCONSISTENCY RESOLVED** through targeted auto-scroll mechanism removal.

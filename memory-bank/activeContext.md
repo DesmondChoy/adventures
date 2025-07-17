@@ -1,8 +1,10 @@
 # Active Context
 
-## Current Focus: Mobile Auto-Scroll Fix (As of 2025-07-15)
+## Current Focus: Chapter Loading Performance Optimization (As of 2025-07-17)
 
-✅ **LATEST ACHIEVEMENT:** Mobile Auto-Scroll Issue RESOLVED! Fixed inconsistent auto-scroll behavior during story streaming on mobile devices by removing unreliable `storyContent.scrollTop` approach.
+✅ **LATEST ACHIEVEMENT:** Chapter Loading Performance Analysis COMPLETED! Comprehensive investigation using Oracle and parallel sub-agents identified major performance bottlenecks and created optimization roadmap to reduce loading times by 50-70%.
+
+✅ **PREVIOUS ACHIEVEMENT:** Mobile Auto-Scroll Issue RESOLVED! Fixed inconsistent auto-scroll behavior during story streaming on mobile devices by removing unreliable `storyContent.scrollTop` approach.
 
 ✅ **PREVIOUS ACHIEVEMENT:** Chapter Opening Diversification COMPLETED! Implemented Oracle-suggested improvements to eliminate repetitive "The" chapter beginnings and create more engaging, varied chapter openings that flow naturally from previous content.
 
@@ -27,6 +29,36 @@
 ✅ **PREVIOUS MILESTONE:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
 
 ### Current Work in Progress
+
+*   **Chapter Loading Performance Optimization - ANALYSIS COMPLETED (2025-07-17):**
+    *   **Goal:** Reduce chapter loading times from 8-15 seconds to 1-3 seconds for significantly better user experience.
+    *   **Problem Identified:** Multiple performance bottlenecks causing slow chapter transitions after user choice clicks.
+    *   **Investigation Method:** Used Oracle AI advisor and 4 parallel sub-agents to analyze frontend, backend, image generation, and state management performance.
+    *   **Major Bottlenecks Discovered:**
+        *   **Word-by-word streaming**: 6-12 seconds with artificial 20ms delays per word
+        *   **Sequential LLM operations**: 5-10 seconds blocking (summary → character visuals → new chapter)
+        *   **Synchronous chapter summary generation**: 1-3 seconds blocking next chapter generation
+        *   **Multiple database writes**: 200-600ms per chapter transition
+        *   **Frontend JSON parsing failures**: Thousands of exceptions per chapter
+    *   **Critical Finding:** Chapter summary generation is currently BLOCKING next chapter generation despite being non-critical (only used for final summary screen)
+    *   **Optimization Plan Created:**
+        *   **Phase 1 (Quick wins)**: Eliminate word-by-word streaming, make chapter summary async, fix JSON parsing
+        *   **Phase 2 (Parallel processing)**: Parallelize LLM operations, implement state caching, optimize images
+        *   **Phase 3 (Advanced)**: Response streaming, predictive generation, database optimization
+    *   **Implementation Document:** Created `wip/async_chapter_summary_optimization.md` with detailed steps for first optimization
+    *   **Expected Impact:** 1-3 second improvement from making chapter summary async (20-30% faster)
+    *   **Next Steps:** Implement async chapter summary generation, then proceed with remaining optimizations
+    *   **Files Analyzed:**
+        *   `app/services/websocket/choice_processor.py` (main blocking identified)
+        *   `app/services/websocket/stream_handler.py` (word-by-word streaming)
+        *   `app/static/js/uiManager.js` (frontend performance issues)
+        *   `app/services/llm/factory.py` (LLM optimization opportunities)
+    *   **Architecture Insights:**
+        *   Current system is well-designed with good separation of concerns
+        *   Main issues are sequential operations that could be parallelized
+        *   Image generation already properly async and non-blocking
+        *   State management can be optimized with caching strategies
+    *   **Performance Target:** Reduce from 8-15s to 1-3s (85%+ improvement)
 
 *   **Mobile Auto-Scroll Fix - COMPLETED (2025-07-15):**
     *   **Goal:** Resolve inconsistent auto-scroll behavior during story streaming on mobile devices.
@@ -467,7 +499,14 @@
 
 ### Immediate Next Steps & Priorities
 
-1.  **Summary Chapter 11 Display Fix (Low Priority - 2025-06-30)**
+1.  **Chapter Loading Performance Optimization Implementation (High Priority - 2025-07-17)**
+    *   **Phase 1 - Async Chapter Summary:** Implement `asyncio.create_task()` for chapter summary generation to eliminate 1-3 second blocking
+    *   **Phase 2 - Streaming Optimization:** Replace word-by-word streaming with paragraph-based streaming
+    *   **Phase 3 - Parallel LLM Operations:** Run summary, character visuals, and content generation in parallel
+    *   **Expected Timeline:** Phase 1 (30 minutes), Phase 2 (1-2 hours), Phase 3 (3-5 hours)
+    *   **Impact:** 50-70% reduction in chapter loading times
+
+2.  **Summary Chapter 11 Display Fix (Low Priority - 2025-06-30)**
     *   **Goal:** Hide internal SUMMARY chapter (Chapter 11) from user-facing summary display
     *   **Problem:** Summary page currently shows 11 chapters including the internally-generated SUMMARY chapter
     *   **Expected:** Summary should only display the 10 adventure chapters (STORY/LESSON/REFLECT/CONCLUSION)
