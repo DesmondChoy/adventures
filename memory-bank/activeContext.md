@@ -41,13 +41,10 @@
         *   **Multiple database writes**: 200-600ms per chapter transition
         *   **Frontend JSON parsing failures**: Thousands of exceptions per chapter
     *   **Critical Finding:** Chapter summary generation is currently BLOCKING next chapter generation despite being non-critical (only used for final summary screen)
-    *   **Optimization Plan Created:**
-        *   **Phase 1 (Quick wins)**: Eliminate word-by-word streaming, make chapter summary async, fix JSON parsing
-        *   **Phase 2 (Parallel processing)**: Parallelize LLM operations, implement state caching, optimize images
-        *   **Phase 3 (Advanced)**: Response streaming, predictive generation, database optimization
-    *   **Implementation Document:** Created `wip/async_chapter_summary_optimization.md` with detailed steps for first optimization
+    *   **Performance Analysis Findings:** Identified multiple bottlenecks with optimization opportunities (analysis only - not implementation decisions)
+    *   **Implementation Document:** Created `wip/async_chapter_summary_optimization.md` with detailed steps for async chapter summary optimization
     *   **Expected Impact:** 1-3 second improvement from making chapter summary async (20-30% faster)
-    *   **Next Steps:** Implement async chapter summary generation, then proceed with remaining optimizations
+    *   **Next Steps:** Implement async chapter summary generation (user-approved optimization)
     *   **Files Analyzed:**
         *   `app/services/websocket/choice_processor.py` (main blocking identified)
         *   `app/services/websocket/stream_handler.py` (word-by-word streaming)
@@ -55,10 +52,9 @@
         *   `app/services/llm/factory.py` (LLM optimization opportunities)
     *   **Architecture Insights:**
         *   Current system is well-designed with good separation of concerns
-        *   Main issues are sequential operations that could be parallelized
+        *   Chapter summary generation is blocking next chapter unnecessarily
         *   Image generation already properly async and non-blocking
-        *   State management can be optimized with caching strategies
-    *   **Performance Target:** Reduce from 8-15s to 1-3s (85%+ improvement)
+    *   **Approved Optimization:** Implement async chapter summary generation using asyncio.create_task()
 
 *   **Mobile Auto-Scroll Fix - COMPLETED (2025-07-15):**
     *   **Goal:** Resolve inconsistent auto-scroll behavior during story streaming on mobile devices.
@@ -499,12 +495,11 @@
 
 ### Immediate Next Steps & Priorities
 
-1.  **Chapter Loading Performance Optimization Implementation (High Priority - 2025-07-17)**
-    *   **Phase 1 - Async Chapter Summary:** Implement `asyncio.create_task()` for chapter summary generation to eliminate 1-3 second blocking
-    *   **Phase 2 - Streaming Optimization:** Replace word-by-word streaming with paragraph-based streaming
-    *   **Phase 3 - Parallel LLM Operations:** Run summary, character visuals, and content generation in parallel
-    *   **Expected Timeline:** Phase 1 (30 minutes), Phase 2 (1-2 hours), Phase 3 (3-5 hours)
-    *   **Impact:** 50-70% reduction in chapter loading times
+1.  **Async Chapter Summary Implementation (High Priority - 2025-07-17)**
+    *   **Goal:** Implement `asyncio.create_task()` for chapter summary generation to eliminate 1-3 second blocking
+    *   **Scope:** Single optimization - make chapter summary generation asynchronous
+    *   **Expected Timeline:** 30 minutes implementation
+    *   **Impact:** 1-3 second reduction in chapter loading times (20-30% faster)
 
 2.  **Summary Chapter 11 Display Fix (Low Priority - 2025-06-30)**
     *   **Goal:** Hide internal SUMMARY chapter (Chapter 11) from user-facing summary display

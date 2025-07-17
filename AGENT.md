@@ -70,7 +70,7 @@ Create additional files/folders within memory-bank/ when they help organize:
 ## One-Word Commands
 Quick shortcuts for common tasks:
 
-- `$update`: Update relevant documentation, including memory-bank folder, to reflect the changes made in this session. Do not include any opinionated changes e.g. if testing is not completed, do not declare changes are production-ready. When in doubt, ask the user for clarification.
+- `$update`: Update relevant documentation, including memory-bank folder, to reflect the changes made in this session. Do not include any opinionated changes e.g. if testing is not completed, do not declare changes are production-ready. When in doubt, ask the user for clarification. Do not put x number of hours/days to complete to a task unless it's requested for. 
 - `$commit`: Account for all the changes and implementations you made in this session and craft a concise, detailed `git commit` message. You must let the user review your commit message before submitting it.
 
 

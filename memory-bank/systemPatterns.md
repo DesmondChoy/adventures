@@ -519,20 +519,17 @@
 - **Implementation Status:** ✅ **COMPLETED** (2025-07-15)
 - **Files Modified:** `app/static/js/uiManager.js` (disabled auto-scroll in appendStoryText function)
 
-### 24. Chapter Loading Performance Optimization Pattern
-- **Problem:** Sequential processing of chapter operations causes significant loading delays (8-15 seconds)
-- **Root Cause Analysis:** Multiple blocking operations that could be parallelized
-- **Performance Bottlenecks Identified:**
+### 24. Async Chapter Summary Optimization Pattern
+- **Problem:** Chapter summary generation blocks next chapter generation by 1-3 seconds
+- **Root Cause Analysis:** Chapter summary is synchronous but non-critical (only used for final summary screen)
+- **Performance Impact:** 1-3 seconds unnecessary blocking before next chapter generation starts
+- **Critical Discovery:** Chapter summary generation blocks next chapter despite being non-critical
+- **Additional Bottlenecks Identified (Analysis Only):**
   * **Word-by-word streaming**: 6-12 seconds with artificial 20ms delays per word
   * **Sequential LLM calls**: Chapter summary → character visuals → new content (5-10 seconds)
-  * **Synchronous chapter summary**: 1-3 seconds blocking next chapter generation
   * **Multiple database writes**: 200-600ms per chapter with full state serialization
   * **Frontend JSON parsing failures**: Thousands of exceptions per chapter
-- **Critical Discovery:** Chapter summary generation blocks next chapter despite being non-critical
-- **Optimization Strategy:**
-  * **Phase 1 (Quick wins)**: Async chapter summary, eliminate word delays, fix JSON parsing
-  * **Phase 2 (Parallel processing)**: Parallelize LLM operations, implement state caching
-  * **Phase 3 (Advanced)**: Response streaming, predictive generation, database optimization
+- **Approved Optimization:** Make chapter summary generation asynchronous using asyncio.create_task()
 - **Implementation Approach:**
   ```python
   # BEFORE (blocking):
@@ -546,14 +543,11 @@
   await _update_character_visuals(state, chapter_content, state_manager)
   await generate_chapter(story_category, lesson_topic, state)
   ```
-- **Expected Performance Gains:**
-  * **Phase 1**: 50-70% faster (6-10 seconds reduction)
-  * **Phase 2**: 70-85% faster (additional 2-4 seconds)
-  * **Phase 3**: 95%+ faster (sub-second transitions)
+- **Expected Performance Gain:** 1-3 second reduction in chapter loading time (20-30% faster)
 - **Technical Details:**
   * **Location:** `app/services/websocket/choice_processor.py` line 886
   * **Change:** Replace `await generate_chapter_summary()` with `asyncio.create_task()`
   * **Safety:** Chapter summaries are non-critical, failures don't affect story flow
   * **Error Handling:** Background task wrapper with fallback summary generation
-- **Implementation Status:** 🔄 **IN PROGRESS** (Analysis completed 2025-07-17)
+- **Implementation Status:** 📋 **READY FOR IMPLEMENTATION** (Analysis completed 2025-07-17)
 - **Files Modified:** `wip/async_chapter_summary_optimization.md` (implementation plan created)

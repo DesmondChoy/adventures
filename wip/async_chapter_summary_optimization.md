@@ -8,14 +8,13 @@ The chapter summary generation process is currently **blocking** the next chapte
 **Current Sequential Flow:**
 1. User clicks choice button
 2. **BLOCKING**: Generate chapter summary (1-3 seconds)
-3. **BLOCKING**: Extract character visuals (1-3 seconds)  
-4. **BLOCKING**: Generate next chapter content (3-8 seconds)
+3. Extract character visuals 
+4. Generate next chapter content
 5. Stream content to user
 
 **Performance Impact:**
-- **Total blocking time**: 5-14 seconds before user sees new content
-- **Chapter summary delay**: 1-3 seconds of unnecessary waiting
-- **User experience**: Perceived slow loading between chapters
+- **Chapter summary delay**: 1-3 seconds of unnecessary waiting before next chapter generation starts
+- **User experience**: Slower chapter transitions
 
 ### Why This Optimization Matters
 - **Chapter summaries are non-critical** - only used for final summary screen
@@ -31,8 +30,8 @@ Convert synchronous chapter summary generation to asynchronous background task u
 **New Parallel Flow:**
 1. User clicks choice button
 2. **PARALLEL**: Start chapter summary generation (background)
-3. **BLOCKING**: Extract character visuals (1-3 seconds)
-4. **BLOCKING**: Generate next chapter content (3-8 seconds)
+3. Extract character visuals
+4. Generate next chapter content
 5. Stream content to user
 6. **BACKGROUND**: Summary completes and stores in state
 
@@ -123,32 +122,13 @@ logger.info(f"[PERFORMANCE] Chapter summary task started in background, continui
 - **Isolated change** - only affects task execution timing
 - **Existing error handling** - wrapped in try/catch with fallbacks
 - **Non-critical functionality** - summary failures don't break story flow
-- **No API changes** - internal implementation only
-
-### Potential Issues & Mitigations
-1. **Race conditions** - Summary might complete after user moves to next chapter
-   - **Mitigation:** State updates are atomic, order doesn't matter
-2. **Memory usage** - Background tasks consume memory
-   - **Mitigation:** Tasks are short-lived (1-3 seconds), minimal impact
-3. **Error visibility** - Background task errors might be missed
-   - **Mitigation:** Comprehensive logging and fallback summaries
 
 ## Testing Strategy
 
-### Unit Tests
-- Test background task creation and execution
-- Verify error handling in background wrapper
-- Confirm state updates work correctly
-
-### Integration Tests
-- Test full chapter flow with async summary
-- Verify summary appears in final summary screen
-- Test failure scenarios
-
-### Performance Tests
-- Measure chapter loading time before/after
-- Verify 1-3 second improvement
-- Monitor memory usage during background tasks
+- Test chapter flow end-to-end to ensure summary generation still works
+- Verify summaries appear in final summary screen
+- Measure chapter loading time improvement
+- Test error handling in background wrapper
 
 ## Expected Outcomes
 
@@ -159,37 +139,19 @@ logger.info(f"[PERFORMANCE] Chapter summary task started in background, continui
 
 ### Success Metrics
 - **Loading time reduction**: Measure time from choice click to content display
-- **Error rate**: Ensure no increase in chapter generation failures
 - **Summary completion**: Verify summaries still appear in final screen
 
 ## Rollback Plan
 
-### If Issues Arise
-1. **Immediate rollback** - Change `asyncio.create_task()` back to `await`
-2. **Partial rollback** - Keep background task but add `await` for debugging
-3. **Configuration toggle** - Add feature flag for async/sync modes
-
-### Monitoring
-- Track chapter loading performance metrics
-- Monitor background task completion rates
-- Watch for any summary-related errors
+If issues arise, simply change `asyncio.create_task()` back to `await` to restore original behavior.
 
 ## Implementation Timeline
 
-### Phase 1: Core Implementation (30 minutes)
+**Core Implementation (30 minutes):**
 - Add background task wrapper
 - Update choice processing flow
 - Add import and logging
-
-### Phase 2: Testing & Validation (1 hour)
 - Test chapter flow end-to-end
-- Verify summary generation still works
-- Check performance improvement
-
-### Phase 3: Deployment & Monitoring (ongoing)
-- Deploy to production
-- Monitor performance metrics
-- Track any issues or errors
 
 ## Conclusion
 
