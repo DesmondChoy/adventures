@@ -218,6 +218,9 @@ async def stream_chapter_content(
 
     # Stream chapter content
     await stream_text_content(content_to_stream, websocket)
+    
+    # Execute deferred summary tasks after streaming completes (Phase 1 streaming fix)
+    await execute_deferred_summary_tasks(state)
 
     # Also send choices separately for backward compatibility
     await websocket.send_json(
@@ -536,6 +539,25 @@ async def stream_text_content(content: str, websocket: WebSocket) -> None:
 
         await websocket.send_text("\n\n")
         await asyncio.sleep(PARAGRAPH_DELAY)
+
+
+async def execute_deferred_summary_tasks(state: AdventureState) -> None:
+    """Execute all deferred summary tasks after streaming completes (Phase 1 streaming fix)."""
+    if not state.deferred_summary_tasks:
+        return
+    
+    logger.info(f"[PERFORMANCE] Executing {len(state.deferred_summary_tasks)} deferred summary tasks after streaming completed")
+    
+    # Execute all deferred task factories
+    for task_factory in state.deferred_summary_tasks:
+        try:
+            task_factory()  # Create and start the background task
+        except Exception as e:
+            logger.error(f"Failed to execute deferred summary task: {e}")
+    
+    # Clear the deferred tasks list
+    state.deferred_summary_tasks.clear()
+    logger.info(f"[PERFORMANCE] All deferred summary tasks started, cleared deferred task list")
 
 
 async def send_chapter_data(

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator, ValidationInfo
-from typing import List, Dict, Any, Optional, Union, Literal
+from typing import List, Dict, Any, Optional, Union, Literal, Callable
 from enum import Enum
 import re
 import asyncio
@@ -180,6 +180,14 @@ class AdventureState(BaseModel):
         default_factory=list,
         description="Background tasks for chapter summary generation",
         exclude=True,  # Don't serialize these tasks
+        repr=False
+    )
+    
+    # Deferred task support for streaming delay fix
+    deferred_summary_tasks: List[Callable[[], Any]] = Field(
+        default_factory=list,
+        description="Deferred background tasks to start after streaming completes",
+        exclude=True,  # Don't serialize these callables
         repr=False
     )
     

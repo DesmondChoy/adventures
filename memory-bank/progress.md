@@ -2,6 +2,37 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-07-18: Streaming Delay Bug Investigation - MULTI-PHASE FIX IN PROGRESS
+
+**🔧 STREAMING DELAY BUG - PHASES 1+2 COMPLETED** with comprehensive root cause analysis and partial fix implementation.
+- **Goal:** Resolve 2-5 second pause after first word streams during chapter transitions.
+- **User Report:** After async optimization implementation, first word appears instantly then stalls 2-5 seconds before rest streams smoothly.
+- **Investigation Method:** Deployed 3 parallel sub-agents to analyze backend streaming, frontend handling, and async optimization impact.
+- **🔍 ROOT CAUSE ANALYSIS:**
+  - **Primary Issue:** Event loop contention between background LLM tasks and word-by-word streaming (20ms precision timing)
+  - **Secondary Issue:** Character visual extraction still running synchronously (1-3 second blocking LLM call)
+  - **Critical Issue:** Content generation collecting entire LLM response before streaming begins (1-3 second delay)
+- **✅ PHASE 1 IMPLEMENTED - Background Task Deferral:**
+  - **Modified Files:**
+    - `app/models/story.py` (added deferred_summary_tasks field for task factories)
+    - `app/services/websocket/choice_processor.py` (converted immediate tasks to deferred task factories)
+    - `app/services/websocket/stream_handler.py` (added execute_deferred_summary_tasks function)
+  - **Implementation:** Background summary tasks now start AFTER streaming completes instead of competing during streaming
+  - **Impact:** Eliminated event loop contention during precision streaming timing
+- **✅ PHASE 2 IMPLEMENTED - Character Visual Deferral:**
+  - **Modified Files:**
+    - `app/services/websocket/choice_processor.py` (added _update_character_visuals_background wrapper, deferred visual extraction)
+  - **Implementation:** Character visual extraction (1-3s LLM call) now runs in background after streaming
+  - **Impact:** Eliminated synchronous blocking operation before streaming starts
+- **📋 PHASE 3 DOCUMENTED - Content Generation Streaming Fix:**
+  - **Problem Identified:** `content_generator.py:172-178` collects entire LLM response before streaming (defeats streaming purpose)
+  - **Solution Designed:** Stream directly from LLM without intermediate collection
+  - **Implementation Plan:** Comprehensive documentation in `wip/async_chapter_summary_optimization.md`
+  - **Files to Modify:** `stream_handler.py` (~100 lines), `choice_processor.py` (~50 lines)
+  - **Expected Impact:** Eliminate 1-3 second content generation delay, resolve 2-5 second streaming pause
+- **Current Status:** Phases 1+2 completed but streaming delay persists due to content generation blocking
+- **Next Step:** Phase 3 implementation ready with detailed technical specifications
+
 ### 2025-07-17: Async Chapter Summary Optimization - PERFORMANCE BOTTLENECK ELIMINATED
 
 **✅ ASYNC CHAPTER SUMMARY OPTIMIZATION COMPLETED** using Oracle AI advisor analysis and thread-safe implementation.
@@ -630,6 +661,7 @@
 - **Supabase Integration:** Persistent state (Phase 2) and Telemetry (Phase 3) are now fully implemented and validated.
 - **Visual Consistency:** Core mechanisms for protagonist and NPC visual consistency and evolution are implemented, including improved prompt generation and character visual tracking.
 - **Modular Frontend:** ES6 module-based JavaScript architecture for improved maintainability and testability.
+- **Performance Optimization:** Async chapter summary generation implemented with deferred task execution for improved streaming performance.
 
 ### Recent Enhancements
 - (Many items previously listed here are now part of the completed Supabase or Visual Consistency epics above)
@@ -638,12 +670,19 @@
 - Standardized `STORY_COMPLETE` event logic (`wip/implemented/story_complete_event.md`).
 
 ### Known Issues
+- **Streaming Delay Bug (Critical - In Progress):** 2-5 second pause after first word streams during chapter transitions. Root cause identified as content generation blocking. Phases 1+2 completed, Phase 3 documented and ready for implementation.
 - **WebSocket Disconnection Error:** Navigating from adventure to summary page can cause `ConnectionClosedOK` errors in logs as the server attempts to send to a closed WebSocket. (Noted in `wip/implemented/summary_chapter_race_condition.md`)
 - **Resuming Chapter Image Display (Chapters 1-9):** Original images for resumed chapters (1-9) are not currently re-displayed. (Noted in `wip/supabase_integration.md`)
 
 ## Next Steps
 
-1.  **Evaluate Phase 4: User Authentication (Supabase Auth)**
+1.  **Complete Streaming Delay Bug Fix (High Priority)**
+    *   **Implement Phase 3:** Content generation streaming fix to eliminate 1-3 second blocking delay
+    *   **Files to Modify:** `stream_handler.py` (~100 lines), `choice_processor.py` (~50 lines)
+    *   **Implementation Plan:** Detailed in `wip/async_chapter_summary_optimization.md`
+    *   **Expected Impact:** Resolve 2-5 second streaming pause, achieve 50-70% faster chapter transitions
+
+2.  **Evaluate Phase 4: User Authentication (Supabase Auth)**
     *   Determine feasibility and plan for implementing optional user authentication (Google/Anonymous) using Supabase.
     *   Considerations: Frontend/backend logic, database schema changes, RLS policies.
 

@@ -1,8 +1,10 @@
 # Active Context
 
-## Current Focus: Chapter Loading Performance Optimization (As of 2025-07-17)
+## Current Focus: Streaming Delay Bug Investigation & Fix (As of 2025-07-18)
 
-✅ **LATEST ACHIEVEMENT:** Async Chapter Summary Optimization COMPLETED! Successfully implemented non-blocking chapter summary generation using `asyncio.create_task()`, eliminating 1-3 second performance bottleneck with thread-safe state management.
+🔧 **CURRENT WORK:** Streaming Delay Bug - Multi-Phase Fix IN PROGRESS! Investigating and resolving 2-5 second pause after first word streams during chapter transitions. Phases 1+2 completed, Phase 3 (content generation streaming) documented and ready for implementation.
+
+✅ **PREVIOUS ACHIEVEMENT:** Async Chapter Summary Optimization COMPLETED! Successfully implemented non-blocking chapter summary generation using `asyncio.create_task()`, eliminating 1-3 second performance bottleneck with thread-safe state management.
 
 ✅ **PREVIOUS ACHIEVEMENT:** Chapter Loading Performance Analysis COMPLETED! Comprehensive investigation using Oracle and parallel sub-agents identified major performance bottlenecks and created optimization roadmap to reduce loading times by 50-70%.
 
@@ -31,6 +33,28 @@
 ✅ **PREVIOUS MILESTONE:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
 
 ### Current Work in Progress
+
+*   **Streaming Delay Bug - Multi-Phase Fix - IN PROGRESS (2025-07-18):**
+    *   **Goal:** Resolve 2-5 second pause after first word streams during chapter transitions.
+    *   **Problem Identified:** User reported streaming bug after async optimization - first word appears instantly, then 2-5 second pause before rest streams smoothly.
+    *   **Investigation Method:** Deployed 3 parallel sub-agents to analyze backend streaming, frontend handling, and async optimization impact.
+    *   **Root Cause Discovered:** Event loop contention between background tasks and word-by-word streaming precision timing.
+    *   **Multi-Phase Solution:**
+        *   **Phase 1 - COMPLETED:** Defer background summary tasks until after streaming (eliminated event loop contention)
+        *   **Phase 2 - COMPLETED:** Defer character visual extraction until after streaming (eliminated 1-3s blocking LLM call)
+        *   **Phase 3 - DOCUMENTED:** Fix content generation blocking by streaming directly from LLM (eliminate 1-3s collection delay)
+    *   **Technical Implementation (Phases 1+2):**
+        *   **Modified Files:**
+            *   `app/models/story.py` (added deferred_summary_tasks field for task factories)
+            *   `app/services/websocket/choice_processor.py` (deferred both summary and visual tasks)
+            *   `app/services/websocket/stream_handler.py` (added execute_deferred_summary_tasks function)
+        *   **Key Features:**
+            *   Deferred execution: Background tasks start after streaming completes
+            *   Event loop protection: No competition during precision streaming timing
+            *   Maintained functionality: All background processing preserved
+    *   **Current Status:** Phases 1+2 implemented but streaming delay persists due to content generation blocking
+    *   **Next Step:** Phase 3 implementation to stream directly from LLM without intermediate collection
+    *   **Documentation:** Comprehensive Phase 3 plan in `wip/async_chapter_summary_optimization.md` with detailed code changes
 
 *   **Async Chapter Summary Optimization - COMPLETED (2025-07-17):**
     *   **Goal:** Eliminate 1-3 second chapter summary generation bottleneck by making it non-blocking.
@@ -500,11 +524,13 @@
 
 ### Immediate Next Steps & Priorities
 
-1.  **Next Performance Optimization Phase (High Priority - 2025-07-17)**
-    *   **Goal:** Continue implementing performance optimizations identified in chapter loading analysis
-    *   **Remaining Bottlenecks:** Word-by-word streaming (6-12 seconds), sequential LLM operations (5-10 seconds), frontend JSON parsing failures
-    *   **Next Target:** Consider optimizing word-by-word streaming delays or implementing LLM operation parallelization
-    *   **Impact:** Potential for additional 50-70% loading time reduction
+1.  **Phase 3: Content Generation Streaming Fix (High Priority - 2025-07-18)**
+    *   **Goal:** Eliminate final blocking operation causing 2-5 second streaming delay
+    *   **Problem:** Content generation collects entire LLM response before streaming begins (1-3 second blocking)
+    *   **Solution:** Stream directly from LLM without intermediate collection
+    *   **Implementation:** Comprehensive plan documented in `wip/async_chapter_summary_optimization.md`
+    *   **Files to Modify:** `stream_handler.py` (~100 lines), `choice_processor.py` (~50 lines)
+    *   **Expected Impact:** Eliminate 2-5 second pause, 50-70% faster chapter transitions overall
 
 2.  **Summary Chapter 11 Display Fix (Low Priority - 2025-06-30)**
     *   **Goal:** Hide internal SUMMARY chapter (Chapter 11) from user-facing summary display

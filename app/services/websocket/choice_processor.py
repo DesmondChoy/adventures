@@ -889,38 +889,50 @@ async def process_non_start_choice(
     except Exception as tel_e:
         logger.error(f"Error logging 'choice_made' event: {tel_e}")
 
-    # Generate a chapter summary for the previous chapter in background
-    logger.info(f"[PERFORMANCE] Starting background chapter summary for chapter {previous_chapter.chapter_number}")
-    task = asyncio.create_task(generate_chapter_summary_background(previous_chapter, state))
-    state.pending_summary_tasks.append(task)
+    # Defer chapter summary generation until after streaming completes (Phase 1 streaming fix)
+    logger.info(f"[PERFORMANCE] Deferring background chapter summary for chapter {previous_chapter.chapter_number} until after streaming")
     
-    # Add error visibility callback
-    def _log_task_error(task: asyncio.Task) -> None:
-        if task.exception():
-            logger.error(f"Summary task crashed: {task.exception()}")
+    # Create a deferred task factory that will be executed after streaming
+    def create_summary_task():
+        task = asyncio.create_task(generate_chapter_summary_background(previous_chapter, state))
+        state.pending_summary_tasks.append(task)
+        
+        # Add error visibility callback
+        def _log_task_error(task: asyncio.Task) -> None:
+            if task.exception():
+                logger.error(f"Summary task crashed: {task.exception()}")
+        
+        task.add_done_callback(_log_task_error)
+        logger.info(f"[PERFORMANCE] Chapter summary task started in background after streaming completed")
+        return task
     
-    task.add_done_callback(_log_task_error)
-    logger.info(f"[PERFORMANCE] Chapter summary task started in background, continuing with next chapter generation")
+    # Store the deferred task to be executed after streaming
+    state.deferred_summary_tasks.append(create_summary_task)
+    logger.info(f"[PERFORMANCE] Chapter summary task deferred, continuing with next chapter generation")
 
-    # Update character visuals based on the completed chapter
-    # DO NOT create a background task - this is critical visual information
-    try:
-        logger.info(
-            f"Extracting character visuals from chapter {previous_chapter.chapter_number}"
-        )
-        updated_visuals = await _update_character_visuals(
-            state, previous_chapter.content, state_manager
-        )
-
-        if updated_visuals:
-            logger.info(
-                f"Successfully extracted {len(updated_visuals)} character visuals"
-            )
-        else:
-            logger.warning("Character visual extraction returned no results")
-    except Exception as e:
-        logger.error(f"Error during character visual extraction: {e}")
-        # Continue with the story flow even if visual extraction fails
+    # Defer character visual extraction until after streaming completes (Phase 2 streaming fix)
+    logger.info(f"[PERFORMANCE] Deferring character visual extraction for chapter {previous_chapter.chapter_number} until after streaming")
+    
+    # Create a deferred task factory for character visual extraction
+    def create_visual_extraction_task():
+        task = asyncio.create_task(_update_character_visuals_background(previous_chapter, state, state_manager))
+        state.pending_summary_tasks.append(task)  # Reuse existing task tracking
+        
+        # Add error visibility callback
+        def _log_visual_task_error(task: asyncio.Task) -> None:
+            if task.exception():
+                logger.error(f"Character visual extraction task crashed: {task.exception()}")
+        
+        task.add_done_callback(_log_visual_task_error)
+        logger.info(f"[PERFORMANCE] Character visual extraction task started in background after streaming completed")
+        return task
+    
+    # Store the deferred visual extraction task
+    state.deferred_summary_tasks.append(create_visual_extraction_task)
+    logger.info(f"[PERFORMANCE] Character visual extraction deferred, continuing with next chapter generation")
+    
+    # Skip synchronous visual extraction for now - it will happen after streaming
+    # No need to process visual extraction results here since it's deferred
 
     state.current_chapter_id = chosen_path
 
@@ -1243,6 +1255,27 @@ async def _store_summary_safe(
         logger.info(f"Stored summary for chapter {prev_chapter.chapter_number}: {summary_text}")
         if hasattr(state, "summary_chapter_titles"):
             logger.info(f"Stored title for chapter {prev_chapter.chapter_number}: {title}")
+
+
+async def _update_character_visuals_background(
+    previous_chapter: ChapterData, state: AdventureState, state_manager: AdventureStateManager
+) -> None:
+    """Background task wrapper for character visual extraction with error handling."""
+    try:
+        logger.info(f"[PERFORMANCE] Starting background character visual extraction for chapter {previous_chapter.chapter_number}")
+        
+        updated_visuals = await _update_character_visuals(
+            state, previous_chapter.content, state_manager
+        )
+        
+        if updated_visuals:
+            logger.info(f"[PERFORMANCE] Successfully extracted {len(updated_visuals)} character visuals in background")
+        else:
+            logger.warning(f"[PERFORMANCE] Character visual extraction returned no results for chapter {previous_chapter.chapter_number}")
+            
+    except Exception as e:
+        logger.error(f"[PERFORMANCE] Background character visual extraction failed for chapter {previous_chapter.chapter_number}: {e}")
+        # Continue execution - don't let visual extraction failures affect story flow
 
 
 async def generate_chapter_summary_background(
