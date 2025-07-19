@@ -567,6 +567,7 @@ async def story_websocket(
                     chapter_content,
                     sampled_question,
                     is_story_complete,
+                    already_streamed,
                 ) = await process_choice(
                     state_manager=state_manager,
                     choice_data=choice_data,
@@ -621,6 +622,7 @@ async def story_websocket(
                     generated_chapter_content_model=chapter_content,
                     generated_sampled_question_dict=sampled_question,
                     is_resumption=False,
+                    already_streamed=already_streamed,
                 )
 
                 if connection_data["adventure_id"]:

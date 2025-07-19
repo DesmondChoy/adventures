@@ -10,10 +10,12 @@ from uuid import UUID
 from app.models.story import (
     ChapterType,
     ChapterContent,
+    ChapterData,
     AdventureState,
     StoryChoice,
 )  # Changed ChapterChoice to StoryChoice
 
+from app.services.adventure_state_manager import AdventureStateManager
 from .content_generator import clean_chapter_content
 from .image_generator import start_image_generation_tasks, process_image_tasks
 from app.services.telemetry_service import TelemetryService
@@ -59,6 +61,8 @@ async def stream_chapter_content(
     resumption_sampled_question_dict: Optional[Dict[str, Any]] = None,
     resumption_chapter_number: Optional[int] = None,
     resumption_chapter_type: Optional[ChapterType] = None,
+    # For live streaming bypass:
+    already_streamed: bool = False,  # New parameter
 ) -> None:
     """Stream chapter content and send chapter data to the client.
     Handles both new chapter generation and resumption of an existing chapter.
@@ -69,6 +73,12 @@ async def stream_chapter_content(
     current_chapter_type_to_send: ChapterType
     content_to_stream: str
     image_tasks: List[asyncio.Task] = []
+
+    if already_streamed:
+        logger.info("[PERFORMANCE] Content already live-streamed, skipping word-by-word streaming")
+        # Execute deferred tasks immediately since streaming is done
+        await execute_deferred_summary_tasks(state)
+        return
 
     if is_resumption:
         logger.info(
@@ -558,6 +568,152 @@ async def execute_deferred_summary_tasks(state: AdventureState) -> None:
     # Clear the deferred tasks list
     state.deferred_summary_tasks.clear()
     logger.info(f"[PERFORMANCE] All deferred summary tasks started, cleared deferred task list")
+
+
+async def stream_chapter_with_live_generation(
+    story_category: str,
+    lesson_topic: str, 
+    state: AdventureState,
+    websocket: WebSocket,
+    state_manager: AdventureStateManager
+) -> Tuple[str, Optional[dict], ChapterContent]:
+    """Stream chapter content directly from LLM without intermediate collection.
+    
+    This eliminates the 1-3 second blocking delay by streaming immediately
+    as chunks arrive from the LLM, rather than collecting the entire response first.
+    """
+    logger.info(f"[PERFORMANCE] Starting live streaming generation for chapter {len(state.chapters) + 1}")
+    
+    # Load story configuration
+    from .content_generator import load_story_config, load_lesson_question
+    story_config = await load_story_config(story_category)
+    
+    # Get chapter type and question
+    current_chapter_number = len(state.chapters) + 1
+    chapter_type = state.planned_chapter_types[current_chapter_number - 1]
+    if not isinstance(chapter_type, ChapterType):
+        chapter_type = ChapterType(chapter_type)
+    
+    question = None
+    if chapter_type == ChapterType.LESSON:
+        question = await load_lesson_question(lesson_topic, state)
+    
+    # Send chapter data first (for UI chapter number update)
+    await send_chapter_data(
+        "",  # Empty content initially
+        ChapterContent(content="", choices=[]),
+        chapter_type,
+        current_chapter_number,
+        question,
+        state,
+        websocket,
+    )
+    
+    # Stream directly from LLM - NO intermediate collection
+    accumulated_content = ""
+    chunk_count = 0
+    
+    logger.info(f"[PERFORMANCE] Starting immediate LLM streaming for chapter {current_chapter_number}")
+    
+    # Import here to avoid circular imports
+    from app.services.llm import LLMService
+    
+    try:
+        llm_service = LLMService()
+        async for chunk in llm_service.generate_chapter_stream(
+            story_config, state, question, None
+        ):
+            # Stream chunk immediately to user
+            await websocket.send_text(chunk)
+            accumulated_content += chunk
+            chunk_count += 1
+            
+            # Much smaller delay than word-by-word (5ms vs 20ms)
+            await asyncio.sleep(0.005)
+            
+        logger.info(f"[PERFORMANCE] Live streaming completed: {chunk_count} chunks, {len(accumulated_content)} chars")
+        
+    except Exception as e:
+        logger.error(f"[PERFORMANCE] Live streaming failed: {e}")
+        raise
+    
+    # Process content after streaming to extract choices
+    from .content_generator import extract_story_choices, clean_generated_content
+    
+    story_content = clean_generated_content(accumulated_content)
+    story_choices, cleaned_content = await extract_story_choices(
+        chapter_type, story_content, question, current_chapter_number
+    )
+    
+    # Stream the cleaned content WITHOUT choices to replace what was streamed
+    await websocket.send_json({
+        "type": "replace_content",
+        "content": cleaned_content
+    })
+    
+    # Send choices as separate message after streaming
+    await websocket.send_json({
+        "type": "choices",
+        "choices": [{"text": choice.text, "id": str(choice.next_chapter)} for choice in story_choices]
+    })
+    
+    # Return data for chapter creation
+    chapter_content = ChapterContent(content=cleaned_content, choices=story_choices)
+    
+    # Start image generation tasks for the new chapter
+    try:
+        from .image_generator import start_image_generation_tasks, process_image_tasks
+        
+        image_tasks = await start_image_generation_tasks(
+            current_chapter_number,
+            chapter_type,
+            chapter_content,
+            state,
+        )
+        logger.info(
+            f"Started {len(image_tasks)} image generation tasks for chapter {current_chapter_number}"
+        )
+        
+        # Process image tasks and send updates
+        if image_tasks:
+            await process_image_tasks(image_tasks, current_chapter_number, websocket)
+            logger.info(f"[PERFORMANCE] Image generation completed for chapter {current_chapter_number}")
+            
+    except Exception as e:
+        logger.error(
+            f"Error with image generation tasks: {str(e)}", exc_info=True
+        )
+    
+    logger.info(f"[PERFORMANCE] Post-streaming processing completed for chapter {current_chapter_number}")
+    
+    return cleaned_content, question, chapter_content
+
+
+async def create_and_append_chapter_direct(
+    chapter_content: ChapterContent,
+    chapter_type: ChapterType,
+    sampled_question: Optional[dict],
+    state: AdventureState,
+    state_manager: AdventureStateManager,
+) -> ChapterData:
+    """Create and append chapter without WebSocket streaming (already done)."""
+    
+    # Create chapter data
+    new_chapter = ChapterData(
+        chapter_number=len(state.chapters) + 1,
+        chapter_type=chapter_type,
+        content=chapter_content.content,
+        chapter_content=chapter_content,
+        question=sampled_question,
+    )
+    
+    # Add to state
+    state.chapters.append(new_chapter)
+    
+    # Note: State storage is handled by the WebSocket router flow
+    logger.info(f"Chapter {new_chapter.chapter_number} created and added to state")
+    
+    return new_chapter
 
 
 async def send_chapter_data(

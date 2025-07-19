@@ -784,7 +784,7 @@ async def process_non_start_choice(
     lesson_topic: str,
     websocket: WebSocket,
     connection_data: Optional[Dict[str, Any]] = None,
-) -> Tuple[Optional[ChapterContent], Optional[dict], bool]:
+) -> Tuple[Optional[ChapterContent], Optional[dict], bool, bool]:
     """Process a non-start choice from the user."""
     logger.info(f"[ADVENTURE FLOW] Processing non-start choice: {chosen_path}")
     logger.info(f"[ADVENTURE FLOW] Current state chapters: {len(state.chapters)}")
@@ -947,22 +947,49 @@ async def process_non_start_choice(
         new_chapter_number, state.story_length
     )
 
-    # Generate new chapter content
-    chapter_content, sampled_question = await generate_chapter(
-        story_category, lesson_topic, state
-    )
+    # Use live streaming generation instead of blocking collection
+    from .stream_handler import stream_chapter_with_live_generation, create_and_append_chapter_direct
+    
+    logger.info(f"[PERFORMANCE] Attempting live streaming for chapter {len(state.chapters) + 1}")
+    try:
+        content_to_stream, sampled_question, chapter_content = await stream_chapter_with_live_generation(
+            story_category, lesson_topic, state, websocket, state_manager
+        )
+        logger.info(f"[PERFORMANCE] Live streaming successful for chapter {len(state.chapters) + 1}")
+        
+        # Create and append chapter without additional streaming (already done)
+        new_chapter = await create_and_append_chapter_direct(
+            chapter_content, chapter_type, sampled_question, state, state_manager
+        )
+        
+        if not new_chapter:
+            return None, None, False, False
+            
+        # Check if story is complete - when we've reached the story length
+        is_story_complete = len(state.chapters) == state.story_length
+        
+        # Return with flag indicating content was already streamed live
+        return chapter_content, sampled_question, is_story_complete, True
+        
+    except Exception as e:
+        logger.error(f"[PERFORMANCE] Live streaming failed, falling back to traditional method: {e}")
+        
+        # Fallback to original blocking method
+        chapter_content, sampled_question = await generate_chapter(
+            story_category, lesson_topic, state
+        )
 
-    # Create and append new chapter
-    new_chapter = await create_and_append_chapter(
-        chapter_content, chapter_type, sampled_question, state_manager, websocket
-    )
-    if not new_chapter:
-        return None, None, False
+        # Create and append new chapter
+        new_chapter = await create_and_append_chapter(
+            chapter_content, chapter_type, sampled_question, state_manager, websocket
+        )
+        if not new_chapter:
+            return None, None, False, False
 
-    # Check if story is complete - when we've reached the story length
-    is_story_complete = len(state.chapters) == state.story_length
+        # Check if story is complete - when we've reached the story length
+        is_story_complete = len(state.chapters) == state.story_length
 
-    return chapter_content, sampled_question, is_story_complete
+        return chapter_content, sampled_question, is_story_complete, False
 
 
 async def process_start_choice(
@@ -970,7 +997,7 @@ async def process_start_choice(
     state_manager: AdventureStateManager,
     story_category: str,
     lesson_topic: str,
-) -> Tuple[Optional[ChapterContent], Optional[dict], bool]:
+) -> Tuple[Optional[ChapterContent], Optional[dict], bool, bool]:
     """Process the start choice (first chapter)."""
     # Calculate new chapter number and update story phase
     new_chapter_number = len(state.chapters) + 1
@@ -1019,7 +1046,9 @@ async def process_start_choice(
     # No need to process previous chapter for start choice
     is_story_complete = False
 
-    return chapter_content, sampled_question, is_story_complete
+    # Start choice uses traditional method (no live streaming available)
+    already_streamed = False
+    return chapter_content, sampled_question, is_story_complete, already_streamed
 
 
 async def process_lesson_response(

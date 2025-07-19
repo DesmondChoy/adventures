@@ -566,6 +566,38 @@ export function appendStoryText(text) {
     // window.scrollTo(0, document.body.scrollHeight);
 }
 
+export function replaceStoryContent(content) {
+    // Replace the entire stream buffer with the cleaned content
+    streamBuffer = content;
+    
+    const storyContent = document.getElementById('storyContent');
+    
+    try {
+        // Convert the content to HTML while preserving line breaks
+        const htmlContent = marked.parse(streamBuffer, {
+            breaks: true,
+            gfm: true
+        });
+
+        // Apply the HTML content to the story container
+        storyContent.innerHTML = htmlContent;
+
+        // Add drop cap to the first paragraph
+        const firstParagraph = storyContent.querySelector('p:first-child');
+        if (firstParagraph && firstParagraph.textContent.trim()) {
+            firstParagraph.classList.add('drop-cap');
+        }
+
+        // Add click listeners to paragraphs
+        addParagraphListeners();
+        
+    } catch (error) {
+        console.error('Error parsing markdown:', error);
+        // Fallback to plain text if markdown parsing fails
+        storyContent.textContent = streamBuffer;
+    }
+}
+
 // --- Choice and Image Functions ---
 export function updateChoiceWithImage(choiceIndex, imageData) {
     const choicesContainer = document.getElementById('choicesContainer');
@@ -811,6 +843,8 @@ export async function handleMessage(event) {
             displayChoices(data.choices);
         } else if (data.type === 'story') {
             appendStoryText(data.content);
+        } else if (data.type === 'replace_content') {
+            replaceStoryContent(data.content);
         } else if (data.type === 'story_complete') {
             // Check if we should show the summary button
             if (data.state && data.state.show_summary_button) {
