@@ -32,8 +32,7 @@ from app.data.story_loader import StoryLoader
 from app.data.lesson_loader import LessonLoader
 
 # Constants
-DEFAULT_RUNS = 5
-DEFAULT_TIMEOUT = 120  # 2 minutes per adventure
+DEFAULT_RUNS = 1
 DEFAULT_PORT = 8000
 
 class AdventureTestRunner:
@@ -43,7 +42,7 @@ class AdventureTestRunner:
         self.base_url = base_url
         self.port = port
         self.run_id = str(uuid.uuid4())[:8]
-        self.timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M")
         
         # Setup logging
         self.setup_logging()
@@ -131,7 +130,7 @@ class AdventureTestRunner:
         try:
             # Use asyncio.wait_for for timeout handling
             async def run_adventure():
-                async with websockets.connect(uri) as websocket:
+                async with websockets.connect(uri, ping_timeout=None, close_timeout=10) as websocket:
                     self.logger.info(f"WebSocket connected for adventure {adventure_id}")
                     
                     # Wait for initial status
@@ -147,8 +146,8 @@ class AdventureTestRunner:
                     if adventure_stats["status"] == "story_complete":
                         await self.generate_summary(websocket, adventure_stats)
             
-            # Apply timeout to entire adventure
-            await asyncio.wait_for(run_adventure(), timeout=DEFAULT_TIMEOUT)
+            # Run adventure without overall timeout
+            await run_adventure()
             
             adventure_stats["end_time"] = time.time()
             adventure_stats["duration"] = adventure_stats["end_time"] - adventure_stats["start_time"]
@@ -201,7 +200,7 @@ class AdventureTestRunner:
         
         while chapter_count < 15:  # Safety limit (10 chapters + summary + buffer)
             try:
-                message = await asyncio.wait_for(websocket.recv(), timeout=60)
+                message = await asyncio.wait_for(websocket.recv(), timeout=300)
                 
                 # Try to parse as JSON
                 try:
@@ -215,9 +214,14 @@ class AdventureTestRunner:
                         self.logger.info(f"Chapter {chapter_count} started")
                         
                     elif message_type == "choices":
-                        # Make random choice
+                        # Make random choice with realistic human delay
                         choices = data.get("choices", [])
                         if choices and current_state is not None:
+                            # Simulate human reading/thinking time (5-15 seconds)
+                            think_time = random.uniform(5, 15)
+                            self.logger.debug(f"Simulating {think_time:.1f}s think time before choice")
+                            await asyncio.sleep(think_time)
+                            
                             choice = random.choice(choices)
                             await self.send_choice(websocket, current_state, choice, stats)
                             

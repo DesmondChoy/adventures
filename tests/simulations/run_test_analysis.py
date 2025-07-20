@@ -216,9 +216,13 @@ def analyze_logs(log_file):
     """Analyze the test logs for issues."""
     print("\n🔍 Analyzing test logs for errors and anomalies...")
     
-    # Generate output file name
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    output_file = Path(f"logs/simulations/analysis_report_{timestamp}.txt")
+    # Extract run ID from log file name
+    log_file_name = Path(log_file).name
+    run_id = log_file_name.split('_')[-1].split('.')[0]  # Extract ID from filename
+    
+    # Generate output file name with same timestamp and run ID
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M")
+    output_file = Path(f"logs/simulations/analysis_report_{timestamp}_{run_id}.txt")
     
     # Build command for log analyzer
     cmd = [

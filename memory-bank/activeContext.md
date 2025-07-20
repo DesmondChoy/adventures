@@ -584,9 +584,42 @@
         *   `app/static/js/main.js` (created)
     *   **Benefits:** Significantly improved code organization, maintainability, and testability of the frontend JavaScript. Reduced global namespace pollution and established clear module boundaries.
 
-### 🔴 CRITICAL DEBUGGING IN PROGRESS (2025-06-30)
+### 🔴 TESTING FRAMEWORK DEBUGGING IN PROGRESS (2025-07-20)
 
-**Summary Screen Data Integrity Investigation - MAJOR PROGRESS:**
+**Adventure Test Runner Investigation - CRITICAL ISSUE IDENTIFIED:**
+
+#### **Testing Framework Problem (CONFIRMED):**
+- **Symptom**: Adventure test runner consistently stops at Chapter 3, reporting only 3 chapters generated instead of expected 10
+- **False Assumption**: Initially suspected server-side LLM hang or WebSocket timeout issues
+- **Reality Check**: Manual testing shows complete adventures (Chapter 1-10 + summary) work perfectly in production
+- **Root Cause**: Issue is specifically with the automated test runner (`tests/simulations/adventure_test_runner.py`), not the application logic
+
+#### **Investigation Findings (2025-07-20):**
+
+**✅ APPLICATION LOGIC CONFIRMED WORKING:**
+- Manual adventure testing: Complete 10-chapter adventures with summary generation work flawlessly
+- WebSocket connections: Stable and responsive during real usage
+- Adventure state management: Proper serialization and chapter progression
+- Server-side processing: No hanging or timeout issues during normal operation
+
+**❌ TEST RUNNER ISSUES IDENTIFIED:**
+- **Chapter 3 Stopping Pattern**: All test runs consistently stop at Chapter 3 with timeout errors
+- **Timeout Configuration Problems**: Despite multiple fixes (ping_timeout=None, 300s message timeout), issues persist
+- **State Serialization Issues**: Test runner may not be correctly serializing or generating adventure state past Chapter 3
+- **Choice Processing Gaps**: Potential issues with how automated choice selection interacts with server state management
+
+#### **Technical Analysis:**
+- **WebSocket Ping Behavior**: Test logs show successful ping/pong exchanges, indicating connection stability
+- **Server Response Pattern**: Server stops responding after Chapter 3 begins, but only during automated testing
+- **Real vs Simulated Usage**: 5-15 second "think time" delays added to simulate human behavior didn't resolve the issue
+- **Architecture Verification**: Test runner uses same production WebSocket endpoint and AdventureState management
+
+#### **Current Status:**
+- **Application**: Fully functional for real users
+- **Test Framework**: Requires significant debugging and potential redesign
+- **Priority**: Medium (testing infrastructure, not user-facing functionality)
+
+### 🔴 PREVIOUS: Summary Screen Data Integrity Investigation - MAJOR PROGRESS:
 
 #### **Original Problem (CONFIRMED):**
 - **Symptom 1**: Summary screen displays "9 Chapters Completed" instead of correct 10

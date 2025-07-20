@@ -164,7 +164,7 @@ class SimulationState(AdventureState):
     def save_to_file(self, filename=None):
         """Save the entire simulation state to a file."""
         if filename is None:
-            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M")
             filename = f"logs/simulations/simulation_state_{timestamp}_{run_id}.json"
 
         # Ensure directory exists
