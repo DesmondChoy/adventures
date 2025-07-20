@@ -110,6 +110,11 @@ class AdventureState:
     summary_chapter_titles: List[str]  # Titles for SUMMARY chapter
     lesson_questions: List[Dict[str, Any]]  # Educational questions
     
+    # Performance optimization fields
+    summary_lock: asyncio.Lock  # Thread-safe lock for background summary operations
+    pending_summary_tasks: List[asyncio.Task]  # Tracks background tasks for synchronization
+    deferred_summary_tasks: List[Callable]  # Task factories for deferred execution after streaming
+    
     # Tracking
     metadata: Dict[str, Any]  # Stores agency, challenge history, etc.
     chapters: List[ChapterData]

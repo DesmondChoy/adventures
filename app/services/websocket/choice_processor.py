@@ -997,8 +997,9 @@ async def process_start_choice(
     state_manager: AdventureStateManager,
     story_category: str,
     lesson_topic: str,
+    websocket: WebSocket,
 ) -> Tuple[Optional[ChapterContent], Optional[dict], bool, bool]:
-    """Process the start choice (first chapter)."""
+    """Process the start choice (first chapter) with live streaming."""
     # Calculate new chapter number and update story phase
     new_chapter_number = len(state.chapters) + 1
     chapter_type = state.planned_chapter_types[new_chapter_number - 1]
@@ -1010,45 +1011,95 @@ async def process_start_choice(
         new_chapter_number, state.story_length
     )
 
-    # Generate new chapter content
-    chapter_content, sampled_question = await generate_chapter(
-        story_category, lesson_topic, state
-    )
+    # Use live streaming generation instead of blocking collection
+    from .stream_handler import stream_chapter_with_live_generation, create_and_append_chapter_direct
+    
+    logger.info(f"[PERFORMANCE] Attempting live streaming for Chapter 1")
+    try:
+        content_to_stream, sampled_question, chapter_content = await stream_chapter_with_live_generation(
+            story_category, lesson_topic, state, websocket, state_manager
+        )
+        logger.info(f"[PERFORMANCE] Live streaming successful for Chapter 1")
+        
+        # Create and append chapter without additional streaming (already done)
+        new_chapter = await create_and_append_chapter_direct(
+            chapter_content, chapter_type, sampled_question, state, state_manager
+        )
+        
+        if not new_chapter:
+            return None, None, False, False
+            
+        # Defer character visual extraction to background (same as other chapters)
+        if new_chapter:
+            try:
+                logger.info("[PERFORMANCE] Deferring character visual extraction for Chapter 1 to background")
+                
+                # Create a deferred task factory for character visual extraction (same pattern as other chapters)
+                def create_visual_extraction_task():
+                    task = asyncio.create_task(_update_character_visuals_background(new_chapter, state, state_manager))
+                    state.pending_summary_tasks.append(task)  # Reuse existing task tracking
+                    
+                    # Add error visibility callback
+                    def _log_visual_task_error(task: asyncio.Task) -> None:
+                        if task.exception():
+                            logger.error(f"Chapter 1 visual extraction task crashed: {task.exception()}")
+                    
+                    task.add_done_callback(_log_visual_task_error)
+                    logger.info("[PERFORMANCE] Chapter 1 visual extraction task started in background after streaming completed")
+                    return task
+                
+                # Store the deferred visual extraction task
+                state.deferred_summary_tasks.append(create_visual_extraction_task)
+                logger.info("[PERFORMANCE] Chapter 1 visual extraction task deferred for Chapter 1")
+            except Exception as e:
+                logger.error(f"Error setting up deferred character visual extraction for Chapter 1: {e}")
+                # Continue with the story flow even if visual extraction setup fails
 
-    # Create and append new chapter
-    new_chapter = await create_and_append_chapter(
-        chapter_content, chapter_type, sampled_question, state_manager, None
-    )
+        # No need to process previous chapter for start choice
+        is_story_complete = False
+        
+        # Return with flag indicating content was already streamed live
+        return chapter_content, sampled_question, is_story_complete, True
+        
+    except Exception as e:
+        logger.error(f"[PERFORMANCE] Live streaming failed for Chapter 1, falling back to traditional method: {e}")
+        
+        # Fallback to original blocking method
+        chapter_content, sampled_question = await generate_chapter(
+            story_category, lesson_topic, state
+        )
 
-    if new_chapter:
-        # Extract character visuals from the first chapter content
-        # This needs to happen immediately for Chapter 1 since we need visuals for image generation
-        try:
-            logger.info("\nExtracting character visuals from Chapter 1 content")
-            updated_visuals = await _update_character_visuals(
-                state, new_chapter.content, state_manager
-            )
+        # Create and append new chapter
+        new_chapter = await create_and_append_chapter(
+            chapter_content, chapter_type, sampled_question, state_manager, None
+        )
 
-            if updated_visuals:
-                logger.info(
-                    f"Successfully extracted {len(updated_visuals)} character visuals from first chapter"
+        if new_chapter:
+            # Extract character visuals immediately (fallback behavior)
+            try:
+                logger.info("\nExtracting character visuals from Chapter 1 content (fallback)")
+                updated_visuals = await _update_character_visuals(
+                    state, new_chapter.content, state_manager
                 )
-            else:
-                logger.warning(
-                    "Character visual extraction from first chapter returned no results"
+
+                if updated_visuals:
+                    logger.info(
+                        f"Successfully extracted {len(updated_visuals)} character visuals from first chapter"
+                    )
+                else:
+                    logger.warning(
+                        "Character visual extraction from first chapter returned no results"
+                    )
+            except Exception as e:
+                logger.error(
+                    f"Error during character visual extraction from first chapter: {e}"
                 )
-        except Exception as e:
-            logger.error(
-                f"Error during character visual extraction from first chapter: {e}"
-            )
-            # Continue with the story flow even if visual extraction fails
+                # Continue with the story flow even if visual extraction fails
 
-    # No need to process previous chapter for start choice
-    is_story_complete = False
+        # No need to process previous chapter for start choice
+        is_story_complete = False
 
-    # Start choice uses traditional method (no live streaming available)
-    already_streamed = False
-    return chapter_content, sampled_question, is_story_complete, already_streamed
+        return chapter_content, sampled_question, is_story_complete, False
 
 
 async def process_lesson_response(

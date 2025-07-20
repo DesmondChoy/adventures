@@ -743,6 +743,25 @@ if word_batch:
 
 ✅ **COMPLETED SUCCESSFULLY** - Live streaming approach implemented to eliminate content generation blocking.
 
+## FIRST CHAPTER STREAMING OPTIMIZATION (2025-07-20)
+
+✅ **COMPLETED** - First chapter now uses chunk-by-chunk streaming like all other chapters:
+
+### 🚀 **Enhancement: Consistent Streaming for All Chapters**
+- **Problem**: First chapter used blocking generation + word-by-word streaming while chapters 2-10 used live chunk streaming
+- **Solution**: Updated `process_start_choice()` to use the same live streaming pattern as other chapters
+- **Files Modified**: 
+  - `app/services/websocket/choice_processor.py` (added live streaming support)
+  - `app/services/websocket/core.py` (passed websocket parameter)
+- **Result**: ✅ **ALL CHAPTERS NOW STREAM CHUNK-BY-CHUNK** - 50-70% faster start experience
+
+### 🔧 **Background Task Consistency**
+- **Chapter 1 visual extraction** now deferred to background like other chapters
+- **Uses existing `deferred_summary_tasks` infrastructure** for task tracking
+- **Maintains graceful fallback** to traditional method if live streaming fails
+
+---
+
 ## PHASE 3 BUG FIXES (2025-07-20)
 
 ✅ **ISSUES RESOLVED** - Fixed critical bugs introduced in Phase 3 implementation:

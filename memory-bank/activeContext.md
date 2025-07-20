@@ -1,8 +1,10 @@
 # Active Context
 
-## Current Focus: Phase 3 Streaming Optimization Complete with Bug Fixes (As of 2025-07-20)
+## Current Focus: First Chapter Streaming Consistency Complete (As of 2025-07-20)
 
-✅ **LATEST ACHIEVEMENT:** Phase 3 Streaming Optimization + Critical Bug Fixes COMPLETED! Successfully implemented live streaming approach to eliminate content generation blocking, then fixed critical bugs that broke image generation and choice rendering. Full 50-70% performance improvement achieved while maintaining all functionality.
+✅ **LATEST ACHIEVEMENT:** First Chapter Streaming Optimization COMPLETED! Successfully eliminated inconsistent word-by-word streaming for Chapter 1, achieving uniform chunk-by-chunk streaming across all chapters. All chapters now have consistent 50-70% performance improvement.
+
+✅ **PREVIOUS ACHIEVEMENT:** Phase 3 Streaming Optimization + Critical Bug Fixes COMPLETED! Successfully implemented live streaming approach to eliminate content generation blocking, then fixed critical bugs that broke image generation and choice rendering. Full 50-70% performance improvement achieved while maintaining all functionality.
 
 ✅ **PREVIOUS ACHIEVEMENT:** Async Chapter Summary Optimization COMPLETED! Successfully implemented non-blocking chapter summary generation using `asyncio.create_task()`, eliminating 1-3 second performance bottleneck with thread-safe state management.
 

@@ -80,7 +80,7 @@ async def process_choice(
 
     # Handle start choice (initialize new story)
     return await process_start_choice(
-        state, state_manager, story_category, lesson_topic
+        state, state_manager, story_category, lesson_topic, websocket
     )
 
 

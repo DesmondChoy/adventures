@@ -71,7 +71,7 @@ Create additional files/folders within memory-bank/ when they help organize:
 Quick shortcuts for common tasks:
 
 - `$update`: Update relevant documentation, including memory-bank folder, to reflect the changes made in this session. Do not include any opinionated changes e.g. if testing is not completed, do not declare changes are production-ready. When in doubt, ask the user for clarification. Do not put x number of hours/days to complete to a task unless it's requested for. 
-- `$commit`: Account for all the changes and implementations you made in this session and craft a concise, detailed `git commit` message. You must let the user review your commit message before submitting it.
+- `$commit`: Craft a concise, detailed `git commit` message. You must let the user review your commit message before submitting it.
 
 
 ## Core Workflows
@@ -122,11 +122,7 @@ Note: When triggered by **update memory bank**, I MUST review every memory bank 
 REMEMBER: After every memory reset, I begin completely fresh. The Memory Bank is my only link to previous work. It must be maintained with precision and clarity, as my effectiveness depends entirely on its accuracy.
 
 ## Commands
-- **Virtual Environment**: ALWAYS activate `.venv` before running Python commands: `.\.venv\Scripts\activate`
-- **Run dev server**: `.\.venv\Scripts\activate && uvicorn app.main:app --reload`
-- **Run tests**: `.\.venv\Scripts\activate && python -m pytest tests/` or `.\.venv\Scripts\activate && pytest tests/test_summary_service.py` (single test)
-- **Run simulations**: `.\.venv\Scripts\activate && python tests/simulations/generate_all_chapters.py`
-- **Type check**: Check imports manually (no formal type checker configured)
+- **Virtual Environment**: ALWAYS activate `.venv` before running Python commands
 
 ## Code Style & Patterns
 - **Imports**: Use absolute imports (`from app.services.summary import SummaryService`)
