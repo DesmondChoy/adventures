@@ -172,6 +172,53 @@ If issues arise, simply change `asyncio.create_task()` back to `await` to restor
 
 ---
 
+## LATEST ISSUES DISCOVERED (2025-07-20)
+
+### Chapter 9 Summary Missing Issue ❌
+
+**Problem:** Chapter 9 generates successfully but the summary doesn't appear in the final summary screen, showing "Chapter summary not available" instead.
+
+**Root Cause:** Summary generation race condition in deferred task management:
+- Chapter 9 summary is deferred to background processing but never executed
+- When Chapter 10 starts immediately after Chapter 9, the deferred task list is cleared before Chapter 9's summary can be generated
+- The summary generator silently skips Chapter 9, leaving only 7 summaries for 9 chapters
+
+**Evidence from Logs:**
+```
+Line 407: Updated state with 9 chapters and 7 summaries
+Lines 409-488: Only chapter 8 summary tasks are executed
+Lines 771-773: Chapter 9 summary deferred again but never executed
+```
+
+**Required Fix:**
+1. Make chapter summary generation atomic with respect to new-chapter streaming
+2. Use persistent queue that survives across streaming cycles
+3. Add post-save assertion to catch missing summaries immediately
+
+### Chapter 10 Content Duplication Issue ❌
+
+**Problem:** Chapter 10 shows repeated/duplicated content during streaming - appears to restart and repeat the same content within the same chapter.
+
+**Root Cause:** Stale client state updates triggering duplicate processing:
+- After Chapter 10 finishes streaming, client sends stale state update with old `current_chapter_id`
+- Server thinks Chapter 10 needs to be processed again
+- All post-processing tasks (image generation, summaries) run twice
+- User sees duplicated content chunks during second processing cycle
+
+**Evidence from Logs:**
+```
+Lines 775-1013: First streaming cycle completes
+Lines 1185-1345: Second "Starting image generation for Chapter 10"
+Line 1397: "current_chapter_id to: chapter_9_2" confirms rewind
+```
+
+**Required Fix:**
+1. Add version control or completion guards to prevent stale client updates
+2. Short-circuit updates when adventure is finished (CONCLUSION chapter)
+3. Make `update_chapters_from_client()` idempotent/version-guarded
+
+---
+
 ## POST-IMPLEMENTATION BUG: Streaming Delay Issue (2025-07-18)
 
 ### Problem Discovered
