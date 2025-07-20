@@ -78,9 +78,7 @@ class OpenAIService(BaseLLMService):
         )
         user_prompt = custom_prompt
 
-        logger.info("\n=== CHARACTER VISUAL JSON REQUEST (OpenAI) ===")
-        logger.info(f"User Prompt Excerpt:\n{user_prompt[:300]}...")
-        logger.info("========================\n")
+        logger.debug("CHARACTER VISUAL JSON REQUEST (OpenAI)")
 
         try:
             # Generate complete response in one call (no streaming)
@@ -416,9 +414,7 @@ class GeminiService(BaseLLMService):
         )
         user_prompt = custom_prompt
 
-        logger.info("\n=== CHARACTER VISUAL JSON REQUEST (Gemini) ===")
-        logger.info("User Prompt Excerpt:\n")
-        logger.info("========================\n")
+        logger.debug("CHARACTER VISUAL JSON REQUEST (Gemini)")
 
         try:
             # Generate complete response in one call (no streaming) using new API

@@ -680,10 +680,8 @@ class ChapterManager:
                 chapter_content=chapter_content,
                 character_visual_context=character_visual_context,
             )
-            logger.info("\n" + "=" * 50)
-            logger.info("IMAGE_SCENE_PROMPT SENT TO LLM:")
-            logger.info(f"{custom_prompt}")
-            logger.info("=" * 50 + "\n")
+            logger.debug("IMAGE_SCENE_PROMPT SENT TO LLM:")
+            logger.debug(f"{custom_prompt}")
 
             # We need to override the prompt engineering system
             # Create a minimal AdventureState-like object with just what we need
@@ -705,9 +703,6 @@ class ChapterManager:
                 try:
                     # Use the LLM service for consistent API handling
                     raw_scene = await llm.generate_character_visuals_json(custom_prompt)
-                    logger.debug(
-                        f"Direct Gemini response for image scene: '{raw_scene}'"
-                    )
                 except Exception as e:
                     logger.error(
                         f"Error with direct Gemini call for image scene: {str(e)}"
@@ -736,14 +731,8 @@ class ChapterManager:
                     chunks.append(chunk)
                 raw_scene = "".join(chunks)
 
-            logger.debug(f"Raw collected image scene before strip: '{raw_scene}'")
-            logger.debug(f"Raw collected image scene length: {len(raw_scene)}")
-
             # Strip whitespace
             scene = raw_scene.strip()
-            logger.debug(f"Stripped image scene length: {len(scene)}")
-
-            logger.info(f"Generated image scene: '{scene}'")
 
             # Ensure the scene is not empty - use a more robust check
             if not scene or len(scene) < 5:  # Consider very short scenes as empty too
