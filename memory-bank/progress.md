@@ -2,6 +2,32 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-07-20: Chapter Summary Race Condition Fixes - COMPLETED
+
+**✅ CHAPTER SUMMARY RACE CONDITION BUGS RESOLVED** - Two critical race condition issues affecting Chapter 9 summaries and Chapter 10 duplicate streaming.
+- **Goal:** Resolve missing Chapter 9 summaries and Chapter 10 duplicate streaming that appeared after completion.
+- **Problems Identified:**
+  - **Chapter 9:** Race conditions in deferred task management caused summary generation to fail, leaving Chapter 9 without summaries
+  - **Chapter 10:** First stream completion showed only "Take me home" button, then duplicate content streamed with correct buttons
+- **Root Causes:**
+  - **Chapter 9:** Async task coordination complexity in deferred summary task management
+  - **Chapter 10:** Live-streamed CONCLUSION chapters were being streamed again by `send_story_complete()` function
+- **Architecture-Aligned Solutions:**
+  - **On-Demand Summary Generation:** Implemented `ensure_all_summaries_exist()` to generate missing summaries when user requests summary screen
+  - **Duplicate Streaming Prevention:** Added `already_streamed` parameter to `send_story_complete()` to skip redundant streaming
+- **Implementation:**
+  - **Modified Files:**
+    - `app/services/websocket/summary_generator.py` (added ensure_all_summaries_exist function)
+    - `app/services/websocket/choice_processor.py` (integrated on-demand generation, fixed return values)
+    - `app/services/websocket/core.py` (added already_streamed parameter)
+    - `app/routers/websocket_router.py` (pass already_streamed flag)
+  - **Bug Fixes:** Import error, list vs dict usage, value unpacking error, chapter indexing
+- **Final Results:**
+  - ✅ **Chapter 9 summaries now generate reliably** using on-demand approach
+  - ✅ **Chapter 10 duplicate streaming eliminated** with smart completion flow
+  - ✅ **All race conditions resolved** without complex locking mechanisms
+  - ✅ **Graceful degradation** with fallback summaries for failed generation
+
 ### 2025-07-20: First Chapter Streaming Optimization - COMPLETED
 
 **✅ FIRST CHAPTER STREAMING CONSISTENCY ACHIEVED** - All chapters now use chunk-by-chunk streaming uniformly.

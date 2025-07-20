@@ -155,5 +155,78 @@ async def generate_fallback_summary(state: AdventureState) -> str:
     return summary_content
 
 
+async def ensure_all_summaries_exist(state: AdventureState) -> None:
+    """Ensure all chapters have summaries, generating missing ones on-demand.
+    
+    This function checks if any chapter summaries are missing and generates them
+    to avoid race conditions in deferred task management.
+    
+    Args:
+        state: The current adventure state
+    """
+    logger.info(f"Checking summaries for {len(state.chapters)} chapters")
+    
+    # chapter_summaries is a list, check if we have summaries for all chapters
+    missing_chapters = []
+    for chapter in state.chapters:
+        chapter_index = chapter.chapter_number - 1  # Convert to 0-based index
+        
+        # Check if we have a summary at this index
+        if (not state.chapter_summaries or 
+            len(state.chapter_summaries) <= chapter_index or 
+            not state.chapter_summaries[chapter_index]):
+            missing_chapters.append(chapter)
+            logger.info(f"Missing summary for chapter {chapter.chapter_number} (type: {chapter.chapter_type})")
+    
+    if not missing_chapters:
+        logger.info("All chapter summaries already exist")
+        return
+    
+    logger.info(f"Generating {len(missing_chapters)} missing summaries")
+    
+    # Generate missing summaries using the existing chapter manager function
+    from app.services.chapter_manager import ChapterManager
+    
+    for chapter in missing_chapters:
+        try:
+            # Use the existing chapter summary generation function
+            # For chapters without responses, provide defaults
+            chosen_choice = chapter.response.chosen_path if chapter.response else "story_progression"
+            choice_context = chapter.response.choice_text if chapter.response else ""
+            
+            summary_result = await ChapterManager.generate_chapter_summary(
+                chapter_content=chapter.content,
+                chosen_choice=chosen_choice,
+                choice_context=choice_context
+            )
+            
+            # Store in state (same format as regular summary generation)
+            chapter_index = chapter.chapter_number - 1  # Convert to 0-based index
+            
+            # Ensure the lists are large enough
+            while len(state.chapter_summaries) <= chapter_index:
+                state.chapter_summaries.append("")
+            while len(state.summary_chapter_titles) <= chapter_index:
+                state.summary_chapter_titles.append("")
+            
+            # Store the summary and title
+            state.chapter_summaries[chapter_index] = summary_result["summary"]
+            if "title" in summary_result:
+                state.summary_chapter_titles[chapter_index] = summary_result["title"]
+            
+            logger.info(f"Generated on-demand summary for chapter {chapter.chapter_number}")
+            
+        except Exception as e:
+            logger.error(f"Failed to generate summary for chapter {chapter.chapter_number}: {e}")
+            # Store a fallback summary
+            chapter_index = chapter.chapter_number - 1
+            
+            # Ensure the list is large enough for fallback
+            while len(state.chapter_summaries) <= chapter_index:
+                state.chapter_summaries.append("")
+            
+            state.chapter_summaries[chapter_index] = f"Chapter {chapter.chapter_number} summary (generated on-demand)"
+
+
 # Import stream_summary_content from stream_handler
 from .stream_handler import stream_summary_content  # noqa: F401

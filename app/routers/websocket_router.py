@@ -558,6 +558,7 @@ async def story_websocket(
                         websocket=websocket,
                         state=current_state,
                         connection_data=connection_data,
+                        already_streamed=False,
                     )
                     if "resumed_session_just_sent_chapter" in connection_data:
                         del connection_data["resumed_session_just_sent_chapter"]
@@ -609,6 +610,7 @@ async def story_websocket(
                         websocket=websocket,
                         state=state_manager.get_current_state(),
                         connection_data=connection_data,
+                        already_streamed=already_streamed,
                     )
                     continue
 

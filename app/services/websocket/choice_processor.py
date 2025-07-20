@@ -71,6 +71,10 @@ async def handle_reveal_summary(
         await asyncio.gather(*state.pending_summary_tasks, return_exceptions=True)
         state.pending_summary_tasks.clear()
         logger.info("[REVEAL SUMMARY] All pending summary tasks completed")
+    
+    # Ensure all chapter summaries exist (on-demand generation for missing ones)
+    from app.services.websocket.summary_generator import ensure_all_summaries_exist
+    await ensure_all_summaries_exist(state)
 
     # Get the CONCLUSION chapter
     if state.chapters and state.chapters[-1].chapter_type == ChapterType.CONCLUSION:
@@ -145,7 +149,7 @@ async def handle_reveal_summary(
         }
     )
 
-    return None, None, False
+    return None, None, False, False
 
 
 async def generate_conclusion_chapter_summary(

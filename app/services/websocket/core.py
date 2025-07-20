@@ -34,11 +34,11 @@ async def process_choice(
         connection_data: Optional connection-specific data including adventure_id
 
     Returns:
-        Tuple of (chapter_content, sampled_question, is_story_complete)
+        Tuple of (chapter_content, sampled_question, is_story_complete, already_streamed)
     """
     state = state_manager.get_current_state()
     if not state:
-        return None, None, False
+        return None, None, False, False
 
     # Extract choice information and debug state
     logger.debug(f"Raw choice_data: {choice_data}")
@@ -105,6 +105,7 @@ async def send_story_complete(
     websocket: WebSocket,
     state: AdventureState,
     connection_data: Optional[Dict[str, Any]] = None,
+    already_streamed: bool = False,
 ) -> None:
     """Send story completion data to the client.
 
@@ -112,6 +113,7 @@ async def send_story_complete(
         websocket: The WebSocket connection
         state: The current state
         connection_data: Optional connection-specific data including adventure_id
+        already_streamed: If True, skip streaming content as it was already live-streamed
     """
     from .stream_handler import stream_conclusion_content
     from .image_generator import start_image_generation_tasks, process_image_tasks
@@ -141,8 +143,9 @@ async def send_story_complete(
         logger.error(f"Error starting image generation tasks for CONCLUSION: {str(e)}")
         image_tasks = []  # Empty list as fallback
 
-    # Stream the content first
-    await stream_conclusion_content(final_chapter.content, websocket)
+    # Stream the content first (only if not already streamed)
+    if not already_streamed:
+        await stream_conclusion_content(final_chapter.content, websocket)
 
     # Then send the completion message with stats and a button to view the summary
     await websocket.send_json(

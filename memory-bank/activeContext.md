@@ -1,8 +1,10 @@
 # Active Context
 
-## Current Focus: First Chapter Streaming Consistency Complete (As of 2025-07-20)
+## Current Focus: Chapter Summary Race Condition Fixes Complete (As of 2025-07-20)
 
-✅ **LATEST ACHIEVEMENT:** First Chapter Streaming Optimization COMPLETED! Successfully eliminated inconsistent word-by-word streaming for Chapter 1, achieving uniform chunk-by-chunk streaming across all chapters. All chapters now have consistent 50-70% performance improvement.
+✅ **LATEST ACHIEVEMENT:** Chapter Summary Race Condition Fixes COMPLETED! Successfully resolved two critical race condition bugs affecting Chapter 9 summaries and Chapter 10 duplicate streaming, implementing architecture-aligned solutions that avoid complex locking mechanisms.
+
+✅ **PREVIOUS ACHIEVEMENT:** First Chapter Streaming Optimization COMPLETED! Successfully eliminated inconsistent word-by-word streaming for Chapter 1, achieving uniform chunk-by-chunk streaming across all chapters. All chapters now have consistent 50-70% performance improvement.
 
 ✅ **PREVIOUS ACHIEVEMENT:** Phase 3 Streaming Optimization + Critical Bug Fixes COMPLETED! Successfully implemented live streaming approach to eliminate content generation blocking, then fixed critical bugs that broke image generation and choice rendering. Full 50-70% performance improvement achieved while maintaining all functionality.
 
@@ -35,6 +37,41 @@
 ✅ **PREVIOUS MILESTONE:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
 
 ### Recently Completed Work
+
+*   **Chapter Summary Race Condition Fixes - COMPLETED (2025-07-20):**
+    *   **Goal:** Resolve two critical race condition bugs: Chapter 9 missing summaries and Chapter 10 duplicate streaming.
+    *   **Problem Identified:** 
+        *   **Chapter 9:** Race conditions in deferred task management caused summary generation to fail, leaving Chapter 9 without summaries in the final recap
+        *   **Chapter 10:** Duplicate content streaming where first stream showed wrong buttons, then same content streamed again with correct buttons
+    *   **Investigation Method:** Used 3 parallel sub-agents to analyze duplicate streaming paths, value unpacking errors, and completion flow logic
+    *   **Root Causes Discovered:**
+        *   **Chapter 9:** Async task coordination complexity caused summary generation tasks to be lost before completion
+        *   **Chapter 10:** Live-streamed CONCLUSION chapters were being streamed again by `send_story_complete()`, bypassing the `already_streamed` flag
+    *   **Architecture-Aligned Solutions:**
+        *   **On-Demand Summary Generation:** Instead of complex task coordination, implemented `ensure_all_summaries_exist()` to generate missing summaries when user requests summary screen
+        *   **Duplicate Streaming Prevention:** Added `already_streamed` parameter to `send_story_complete()` to skip redundant streaming for live-streamed content
+    *   **Technical Implementation:**
+        *   **Modified Files:**
+            *   `app/services/websocket/summary_generator.py` (added ensure_all_summaries_exist function)
+            *   `app/services/websocket/choice_processor.py` (integrated on-demand summary generation, fixed return value consistency)
+            *   `app/services/websocket/core.py` (added already_streamed parameter to send_story_complete)
+            *   `app/routers/websocket_router.py` (pass already_streamed flag to completion handler)
+        *   **Key Features:**
+            *   On-demand generation: Checks for missing summaries only when needed, generates using existing `ChapterManager.generate_chapter_summary()`
+            *   Smart completion flow: Prevents duplicate streaming by checking if content was already live-streamed
+            *   Consistent return values: Fixed "not enough values to unpack" error by ensuring all functions return 4-tuple
+            *   List-based storage: Corrected chapter_summaries usage as List[str] instead of Dict[str, str]
+    *   **Bug Fixes Included:**
+        *   Fixed import error for `ChapterManager.generate_chapter_summary()` static method
+        *   Fixed list vs dict usage error in chapter summary storage
+        *   Fixed value unpacking error where functions returned 3 values instead of expected 4
+        *   Corrected chapter summary indexing to use `chapter.chapter_number - 1`
+    *   **Architecture Benefits:**
+        *   Simplified approach: Avoids complex async task coordination and potential race conditions
+        *   Leverages existing patterns: Uses established chapter summary generation and storage methods
+        *   Fault-tolerant: Graceful degradation with fallback summaries if generation fails
+        *   Performance-aware: Only generates missing summaries, doesn't regenerate existing ones
+    *   **Final Status:** Both race condition bugs resolved, summary generation works reliably, no duplicate streaming
 
 *   **Phase 3 Streaming Optimization + Bug Fixes - COMPLETED (2025-07-20):**
     *   **Goal:** Resolve 2-5 second pause after first word streams during chapter transitions.
@@ -501,8 +538,11 @@
 ✅ WebSocket timeout only fires on genuine failures (not after success)
 ✅ Summary generation works via proper WebSocket flow
 ✅ Choice functionality restored
+✅ Chapter 9 summaries generate reliably with on-demand approach
+✅ Chapter 10 duplicate streaming eliminated
 ⚠️ Minor cosmetic issue: Chapter 11 (SUMMARY) showing in summary display
 ⚠️ Separate issue: WebSocket connectivity timeouts during long chapter generation
+⚠️ Minor issue: Repeated API calls to adventure-summary endpoint (performance optimization opportunity)
 ```
 
 #### **REMAINING MINOR ISSUES:**

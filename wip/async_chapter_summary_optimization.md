@@ -178,7 +178,7 @@ If issues arise, simply change `asyncio.create_task()` back to `await` to restor
 
 **Problem:** Chapter 9 generates successfully but the summary doesn't appear in the final summary screen, showing "Chapter summary not available" instead.
 
-**Root Cause:** Summary generation race condition in deferred task management:
+**Root Cause:** Race condition in deferred task management:
 - Chapter 9 summary is deferred to background processing but never executed
 - When Chapter 10 starts immediately after Chapter 9, the deferred task list is cleared before Chapter 9's summary can be generated
 - The summary generator silently skips Chapter 9, leaving only 7 summaries for 9 chapters
@@ -190,36 +190,65 @@ Lines 409-488: Only chapter 8 summary tasks are executed
 Lines 771-773: Chapter 9 summary deferred again but never executed
 ```
 
-**Required Fix: Make Summary Generation Race-Condition Safe**
+**SIMPLER ARCHITECTURE-ALIGNED FIX: On-Demand Summary Generation**
 
-**Files to Modify:**
-1. **`app/services/websocket/stream_handler.py`** (Lines 554-570)
-   - Replace `execute_deferred_summary_tasks()` with lock-protected, loop-until-empty version
-   - Use `state.summary_lock` to atomically pop tasks and prevent race conditions
-   - Add tasks to `state.pending_summary_tasks` for tracking
+**Why Fix Task Coordination When We Can Avoid It Entirely:**
+- AdventureState contains ALL chapter content - summaries can be generated from existing data
+- Summaries are only needed when user clicks "Take a Trip Down Memory Lane" 
+- Lazy generation is more robust than complex task coordination
+- Works regardless of what caused summaries to be missing (race conditions, bugs, server restarts, etc.)
 
-2. **`app/services/websocket/choice_processor.py`** (Multiple lines)
-   - Guard additions to `state.deferred_summary_tasks` with `summary_lock`
-   - Apply same fix for visual extraction tasks around line 931
+**Implementation (Single Function):**
 
-3. **`app/services/websocket/summary_generator.py`**
-   - Add `_flush_pending_summary_tasks()` function to wait for all background tasks
-   - Ensure all summaries complete before building final SUMMARY chapter
+1. **`app/services/websocket/summary_generator.py`** - Add missing summary detection and generation:
+```python
+async def ensure_all_summaries_exist(state: AdventureState) -> None:
+    """Generate any missing chapter summaries when actually needed for summary screen."""
+    for i, chapter in enumerate(state.chapters):
+        # Only generate summaries for story content chapters
+        if chapter.chapter_type in [ChapterType.STORY, ChapterType.LESSON, ChapterType.REFLECT]:
+            # Check if summary exists for this chapter
+            if i >= len(state.chapter_summaries) or not state.chapter_summaries[i]:
+                logger.info(f"Generating missing summary for chapter {i+1} ({chapter.chapter_type})")
+                
+                try:
+                    summary = await generate_chapter_summary(chapter, state)
+                    
+                    # Ensure list is long enough to hold this summary
+                    while len(state.chapter_summaries) <= i:
+                        state.chapter_summaries.append("")
+                    
+                    state.chapter_summaries[i] = summary
+                    logger.info(f"Successfully generated missing summary for chapter {i+1}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to generate summary for chapter {i+1}: {e}")
+                    # Add fallback summary to prevent gaps
+                    while len(state.chapter_summaries) <= i:
+                        state.chapter_summaries.append("")
+                    state.chapter_summaries[i] = f"Chapter {i+1} summary not available"
+```
 
-**Critical Implementation Details:**
-- **Atomic Operations**: Snapshot-then-clear pattern under lock prevents double execution
-- **Loop Until Empty**: Handle tasks added during execution to prevent silent drops
-- **Task Tracking**: Push created asyncio.Task objects to `pending_summary_tasks` list
+2. **`app/services/websocket/summary_generator.py`** - Call before building summary screen:
+```python
+async def handle_reveal_summary(state: AdventureState, websocket: WebSocket):
+    """Handle reveal summary request with missing summary detection."""
+    # Ensure all summaries exist before displaying summary screen
+    await ensure_all_summaries_exist(state)
+    
+    # Continue with existing summary generation logic
+    await generate_and_stream_summary_chapter(state, websocket)
+```
 
-**Risk Assessment:**
-- **Deadlock Prevention**: Run task factories outside the lock to avoid blocking on LLM calls
-- **Performance Impact**: SUMMARY chapter may block briefly (few hundred ms) waiting for background tasks
-- **Memory Management**: Add `prune_finished_tasks()` helper to prevent list growth
-
-**Testing Requirements:**
-- Rapid chapter generation test (1-10) to verify 9 summaries present
-- Race condition simulation with concurrent chapter clicks
-- Verify logs show "Executing N deferred summary tasks" for every chapter
+**Benefits:**
+- **Eliminates race conditions entirely** - no task coordination needed
+- **More robust** - handles ANY scenario that causes missing summaries
+- **Leverages existing architecture** - uses AdventureState as single source of truth  
+- **Idempotent and safe** - can run multiple times without issues
+- **Lazy generation** - only generates summaries when actually needed
+- **Defensive programming** - future-proof against other summary generation bugs
+- **Preserves performance** - no impact during adventure gameplay
+- **Minimal code changes** (~30 lines vs. complex task coordination)
 
 ### Chapter 10 Content Duplication Issue ❌
 
@@ -229,7 +258,6 @@ Lines 771-773: Chapter 9 summary deferred again but never executed
 - After Chapter 10 finishes streaming, client sends stale state update with old `current_chapter_id`
 - Server thinks Chapter 10 needs to be processed again
 - All post-processing tasks (image generation, summaries) run twice
-- User sees duplicated content chunks during second processing cycle
 
 **Evidence from Logs:**
 ```
@@ -238,60 +266,52 @@ Lines 1185-1345: Second "Starting image generation for Chapter 10"
 Line 1397: "current_chapter_id to: chapter_9_2" confirms rewind
 ```
 
-**Required Fix: Implement State Version Control and Completion Guards**
+**ARCHITECTURE-ALIGNED FIX: Simple Idempotency Guard**
 
-**Client-Side Changes:**
-1. **Frontend State Management** (`app/static/js/uiManager.js` or similar)
-   - Add `version` field to adventure state (monotonically increasing)
-   - Implement `bumpVersion()` on chapter completion
-   - Guard `sendProgress()` to prevent sending older versions
-   - Stop background heartbeat timers once chapter status === "done"
+**Why Full Versioning Is Over-Engineering:**
+- Server is sole writer of authoritative state
+- Supabase provides persistence layer
+- Only need to reject backwards progress
 
-**Server-Side Changes:**
-2. **`app/services/websocket/choice_processor.py`** 
-   - `update_chapters_from_client()` function: Add version comparison logic
-   - Reject updates where `incoming.version <= stored.version`
-   - Add completion guard: Skip processing if adventure `is_complete=True`
+**Implementation (Single Guard):**
 
-3. **`app/models/story.py`** (AdventureState)
-   - Add `state_version: int = 0` field
-   - Add `last_updated_at: datetime` for timestamp-based guards
-   - Implement version bumping on significant state changes
+1. **`app/models/story.py`** - Add simple monotonic counter:
+```python
+class AdventureState(BaseModel):
+    ...
+    server_revision: int = 0  # increments when server mutates state
+```
 
-4. **`app/services/websocket/websocket_router.py`**
-   - Add version header validation in WebSocket message handling
-   - Return early with "duplicate" status for stale updates
+2. **`app/services/websocket/choice_processor.py`** - Bump revision on chapter creation:
+```python
+# In create_and_append_chapter_direct() or similar
+state.server_revision += 1
+```
 
-**Database Schema Changes:**
-5. **Migration Required** (`supabase/migrations/`)
-   - Add `state_version INT NOT NULL DEFAULT 0` to adventures table
-   - Add `last_updated_at TIMESTAMP` for additional validation
-   - Create composite index on `(user_id, adventure_id, state_version)`
+3. **Update client state handler** - Add simple idempotency check:
+```python
+def update_chapters_from_client(incoming: dict, state: AdventureState):
+    if incoming.get("server_revision") is not None:
+        # Client should not send this
+        incoming.pop("server_revision", None)
 
-**Critical Implementation Details:**
-- **Version Strategy**: Increment on chapter completion, choice selection, and significant state changes
-- **Race Condition Handling**: Use database-level UPSERT with version checking
-- **Completion Guards**: Hard stop processing when `is_complete=True` or chapter type is CONCLUSION
-- **Heartbeat Prevention**: Stop client-side progress updates after chapter completes
+    # Guard against rewind
+    if incoming.get("current_chapter_id") == state.current_chapter_id:
+        logger.info("Stale progress update ignored (same chapter id).")
+        return
+```
 
-**Risk Assessment & Knock-On Effects:**
-- **Multi-Tab Scenarios**: Ensure highest version wins in concurrent usage
-- **Resume After Refresh**: Client must sync version from server on reload
-- **Mobile App Compatibility**: All clients need version field or server rejects updates
-- **Analytics Impact**: Progress tracking systems must handle version field
-- **Testing Mocks**: Update factory objects to include version field
-
-**Database Migration Considerations:**
-- **Backward Compatibility**: Set `state_version = 0` for existing adventures
-- **Deployment Order**: Run migration before deploying new server code
-- **Unique Constraints**: Maintain existing uniqueness while adding version
+**Benefits:**
+- No database migrations required
+- No client-side changes needed
+- Preserves existing heartbeat functionality
+- Minimal server-side changes (≈15 lines)
+- Leverages existing architecture patterns
 
 **Testing Requirements:**
-- Unit tests for stale version rejection in `update_chapters_from_client()`
-- Integration tests for Chapter 10 completion without duplication
-- Multi-tab concurrent completion scenarios  
-- Load testing with 10k parallel completions to verify DB guards
-- Manual QA: Network tab verification that no PATCH occurs after "done"
+- Rapid chapter progression test (verify no duplication)
+- Stale state update simulation
+- Chapter 10 completion without restart
 
 ---
 
