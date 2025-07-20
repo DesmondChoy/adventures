@@ -157,9 +157,11 @@
     * If a token is present, it's decoded and validated using `PyJWT` and the `SUPABASE_JWT_SECRET` environment variable.
     * The `sub` claim from the JWT payload is extracted as the `user_id`.
     * This `user_id` (as a `UUID` object) is stored in a `connection_data` dictionary associated with the WebSocket session.
+    * **Telemetry Timing (As of 2025-07-20):** `connection_data` also stores `current_chapter_start_time_ms` for engagement duration tracking, with persistent backup in `AdventureState.metadata` for connection restart resilience.
 - **Usage:**
   * The `user_id` from `connection_data` is used by services like `StateStorageService` (for associating adventures with users) and `TelemetryService` (for logging user-specific events).
   * This allows linking game state and telemetry data to authenticated users.
+  * **Duration Tracking:** `current_chapter_start_time_ms` measures user engagement time per chapter for analytics (stored as `event_duration_seconds` in Supabase telemetry).
 - **Error Handling:** Includes checks for missing tokens, missing JWT secret, expired tokens, and invalid tokens.
   ```python
   # Simplified example from websocket_router.py

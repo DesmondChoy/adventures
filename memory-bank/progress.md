@@ -2,6 +2,29 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-07-20: Telemetry Duration Tracking Fix - COMPLETED
+
+**✅ TELEMETRY ANALYTICS RELIABILITY ACHIEVED** - Successfully resolved "current_chapter_start_time_ms missing from connection_data" errors that caused null duration values in user engagement analytics.
+- **Goal:** Fix telemetry duration tracking failures that caused null values in Supabase analytics when websocket connections restarted.
+- **Problem Identified:** User engagement duration tracking failed when websocket connections restarted between chapters (network issues, page refresh, tab switching).
+- **Root Cause:** Chapter start times stored only in connection-specific `connection_data` dict which gets reset on each new websocket connection, but duration calculation expected timestamps from previous connection.
+- **Business Impact:** Duration tracking measures user engagement (time spent reading/interacting with each chapter) for analytics on reading patterns and content optimization.
+- **Solution Implemented:**
+  - **Dual Storage Approach:** Store chapter start times in both `connection_data` (active connections) and `AdventureState.metadata` (persistence)
+  - **Fallback Logic:** Duration calculation checks `connection_data` first, then adventure state metadata for reconnected sessions
+  - **Automatic Persistence:** Metadata saves to Supabase automatically when state is stored after each chapter
+- **Technical Implementation:**
+  - **Modified Files:**
+    - `app/services/websocket/stream_handler.py` (added persistent metadata storage: `state.metadata[f"chapter_{number}_start_time_ms"]`)
+    - `app/services/websocket/choice_processor.py` (added fallback logic to check adventure state metadata)
+  - **Database Integration:** Duration sent to Supabase `telemetry_events` table as `event_duration_seconds` for choice_made events
+  - **Error Handling:** Changed error to debug log since reconnection scenarios are expected user behavior
+- **Analytics Value:** 
+  - **User Engagement Metrics:** Track how long users spend on each chapter type (story, lesson, reflect, conclusion)
+  - **Content Optimization:** Identify chapters that engage users longer vs shorter attention spans
+  - **Behavioral Patterns:** Understand reading habits across different user segments
+- **Final Result:** Telemetry duration tracking now works reliably across websocket reconnections, ensuring complete user engagement analytics for business intelligence
+
 ### 2025-07-20: REFLECT Chapter Streaming Performance Fix - COMPLETED
 
 **✅ REFLECT CHAPTER STREAMING OPTIMIZATION ACHIEVED** - Successfully resolved performance bottleneck where REFLECT chapters fell back to slow word-by-word streaming.

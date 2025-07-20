@@ -833,21 +833,25 @@ async def process_non_start_choice(
 
     # Calculate event_duration_ms for 'choice_made'
     calculated_duration_ms: Optional[int] = None
+    start_time_ms = None
+    
+    # Try to get start time from connection_data first (for active connections)
     if connection_data and isinstance(connection_data, dict):
         start_time_ms = connection_data.pop("current_chapter_start_time_ms", None)
-        if start_time_ms is not None:
-            current_time_ms = int(time.time() * 1000)
-            calculated_duration_ms = current_time_ms - start_time_ms
-            logger.info(
-                f"Calculated time spent on chapter {previous_chapter.chapter_number}: {calculated_duration_ms} ms"
-            )
-        else:
-            logger.warning(
-                f"Could not find 'current_chapter_start_time_ms' in connection_data for chapter {previous_chapter.chapter_number}. Duration will be null."
-            )
+    
+    # If not in connection_data, try to get from adventure state metadata (for reconnected sessions)
+    if start_time_ms is None:
+        start_time_ms = state.metadata.get(f"chapter_{previous_chapter.chapter_number}_start_time_ms")
+        
+    if start_time_ms is not None:
+        current_time_ms = int(time.time() * 1000)
+        calculated_duration_ms = current_time_ms - start_time_ms
+        logger.info(
+            f"Calculated time spent on chapter {previous_chapter.chapter_number}: {calculated_duration_ms} ms"
+        )
     else:
-        logger.warning(
-            "'connection_data' not available or not a dict in choice_processor, cannot calculate duration."
+        logger.debug(
+            f"Chapter start time not available for chapter {previous_chapter.chapter_number}. Duration will be null (likely due to connection restart)."
         )
 
     calculated_duration_seconds: Optional[int] = None

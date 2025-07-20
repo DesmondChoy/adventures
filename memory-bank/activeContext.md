@@ -1,8 +1,10 @@
 # Active Context
 
-## Current Focus: REFLECT Chapter Streaming Performance Fix Complete (As of 2025-07-20)
+## Current Focus: Telemetry Duration Tracking Fix Complete (As of 2025-07-20)
 
-✅ **LATEST ACHIEVEMENT:** REFLECT Chapter Streaming Performance Fix COMPLETED! Successfully resolved performance issue where REFLECT chapters were falling back to slow word-by-word streaming instead of fast chunk-by-chunk streaming, reducing loading times from 10+ seconds back to 2-3 seconds.
+✅ **LATEST ACHIEVEMENT:** Telemetry Duration Tracking Fix COMPLETED! Successfully resolved "current_chapter_start_time_ms missing from connection_data" errors that caused null duration values in user engagement analytics by implementing persistent chapter start time storage across websocket reconnections.
+
+✅ **PREVIOUS ACHIEVEMENT:** REFLECT Chapter Streaming Performance Fix COMPLETED! Successfully resolved performance issue where REFLECT chapters were falling back to slow word-by-word streaming instead of fast chunk-by-chunk streaming, reducing loading times from 10+ seconds back to 2-3 seconds.
 
 ✅ **PREVIOUS ACHIEVEMENT:** Chapter Summary Race Condition Fixes COMPLETED! Successfully resolved two critical race condition bugs affecting Chapter 9 summaries and Chapter 10 duplicate streaming, implementing architecture-aligned solutions that avoid complex locking mechanisms.
 
@@ -39,6 +41,36 @@
 ✅ **PREVIOUS MILESTONE:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
 
 ### Recently Completed Work
+
+*   **Telemetry Duration Tracking Fix - COMPLETED (2025-07-20):**
+    *   **Goal:** Resolve "current_chapter_start_time_ms missing from connection_data" errors causing null duration values in telemetry
+    *   **Problem Identified:** User engagement duration tracking was failing when websocket connections restarted between chapters, causing null values in Supabase analytics
+    *   **Investigation Method:** Analyzed telemetry error logs and traced flow from stream_handler.py through choice_processor.py to identify connection_data reset issue
+    *   **Root Cause Discovered:**
+        *   Chapter start times stored only in connection-specific `connection_data` dict which gets reset on each new websocket connection
+        *   When users experience connection interruptions (network issues, page refresh, tab switching), `connection_data` loses `current_chapter_start_time_ms`
+        *   Duration calculation in choice_processor.py still expects the timestamp from previous connection, causing "missing from connection_data" errors
+    *   **Solution Implemented:**
+        *   **Dual Storage Approach:** Store chapter start times in both `connection_data` (for active connections) and `AdventureState.metadata` (for persistence)
+        *   **Fallback Logic:** Duration calculation checks `connection_data` first, then falls back to persistent storage from adventure state metadata
+        *   **Automatic Persistence:** Metadata gets saved to Supabase automatically when state is stored after each chapter
+    *   **Technical Implementation:**
+        *   **Modified Files:**
+            *   `app/services/websocket/stream_handler.py` (added persistent metadata storage alongside connection_data storage)
+            *   `app/services/websocket/choice_processor.py` (added fallback logic to check adventure state metadata)
+        *   **Key Features:**
+            *   Persistent timing: `state.metadata[f"chapter_{chapter_number}_start_time_ms"]` survives connection restarts
+            *   Backward compatibility: Existing connection_data approach continues to work for active connections
+            *   Graceful degradation: Changed error message to debug level since reconnection scenarios are expected
+    *   **Analytics Impact:**
+        *   **Telemetry Purpose:** Chapter start times measure user engagement - how long users spend reading/interacting with each chapter
+        *   **Business Value:** Analytics help understand reading patterns, content optimization opportunities, and user behavior across chapter types
+        *   **Database Storage:** Duration sent to Supabase `telemetry_events` table as `event_duration_seconds` for choice_made events
+    *   **Architecture Benefits:**
+        *   Robust engagement tracking: Duration calculation works even across network interruptions
+        *   Complete analytics data: No more missing duration values in telemetry for reconnected sessions
+        *   State persistence: Leverages existing AdventureState.metadata persistence mechanism
+    *   **Final Status:** Telemetry duration tracking now works reliably across websocket reconnections, ensuring complete user engagement analytics
 
 *   **REFLECT Chapter Streaming Performance Fix - COMPLETED (2025-07-20):**
     *   **Goal:** Resolve performance issue where REFLECT chapters were falling back to slow word-by-word streaming instead of fast chunk-by-chunk streaming.

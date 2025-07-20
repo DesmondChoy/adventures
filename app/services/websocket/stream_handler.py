@@ -300,8 +300,9 @@ async def stream_chapter_content(
         logger.error(f"Error logging 'chapter_viewed' event: {tel_e}")
 
     # Store chapter start time for duration calculation
+    current_time_ms = int(time.time() * 1000)
     if connection_data and isinstance(connection_data, dict):
-        connection_data["current_chapter_start_time_ms"] = int(time.time() * 1000)
+        connection_data["current_chapter_start_time_ms"] = current_time_ms
         logger.debug(
             f"Stored chapter start time for adventure_id {adventure_id}, chapter {current_chapter_number_to_send}"
         )
@@ -309,6 +310,9 @@ async def stream_chapter_content(
         logger.warning(
             f"'connection_data' not available or not a dict in stream_handler for adventure {adventure_id}, chapter {current_chapter_number_to_send}, cannot store chapter start time."
         )
+    
+    # Also store in adventure state metadata for persistence across connection restarts
+    state.metadata[f"chapter_{current_chapter_number_to_send}_start_time_ms"] = current_time_ms
 
 
 async def send_fallback_image(
