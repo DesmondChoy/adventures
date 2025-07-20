@@ -154,5 +154,53 @@ if __name__ == "__main__":
         except Exception as e:
             logger.error(f"Error during TelemetryService test: {e}")
 
+    async def get_adventure_total_duration(self, adventure_id: UUID) -> str:
+        """
+        Calculate total time spent on an adventure by summing choice_made event durations.
+        
+        Args:
+            adventure_id: UUID of the completed adventure
+            
+        Returns:
+            Formatted duration string (e.g., "15 mins", "1 min", "-- mins")
+        """
+        try:
+            result = self.supabase.table("telemetry_events")\
+                .select("event_duration_seconds")\
+                .eq("adventure_id", str(adventure_id))\
+                .eq("event_name", "choice_made")\
+                .execute()
+            
+            if not result.data:
+                logger.debug(f"No telemetry data found for adventure {adventure_id}")
+                return "-- mins"
+                
+            # Sum all durations, treating None/null as 0
+            total_seconds = sum(row.get("event_duration_seconds", 0) or 0 for row in result.data)
+            
+            if total_seconds == 0:
+                logger.debug(f"Zero total duration calculated for adventure {adventure_id}")
+                return "-- mins"
+                
+            # Convert to minutes, minimum 1 minute for any completed adventure
+            mins = max(1, round(total_seconds / 60))
+            return f"{mins} min{'s' if mins != 1 else ''}"
+            
+        except Exception as e:
+            logger.warning(f"Failed to calculate adventure duration for {adventure_id}: {e}")
+            return "-- mins"
+
     # asyncio.run(main()) # Comment out after testing
     pass
+
+
+# Lazy instantiation to avoid environment variable loading issues during import
+_telemetry_service = None
+
+
+def get_telemetry_service():
+    """Get or create the telemetry service instance."""
+    global _telemetry_service
+    if _telemetry_service is None:
+        _telemetry_service = TelemetryService()
+    return _telemetry_service

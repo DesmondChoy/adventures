@@ -715,8 +715,8 @@ def calculate_summary_statistics(state_data: Dict[str, Any]) -> Dict[str, Any]:
             f"Fallback statistics: {questions_answered} questions answered, {correct_answers} correct"
         )
 
-    # Use a standard time spent value (this could be calculated from timestamps in the future)
-    time_spent = "30 mins"
+    # Use a standard time spent value for simulations (actual implementation uses telemetry)
+    time_spent = "-- mins"
 
     # Ensure we don't have more correct answers than questions
     if correct_answers > questions_answered:

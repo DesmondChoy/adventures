@@ -342,7 +342,7 @@ async def test_summary_button_flow(
             logger.info("Successfully reconstructed state ✅")
 
             # Format the adventure summary data
-            summary_data = state_manager.format_adventure_summary_data(
+            summary_data = await state_manager.format_adventure_summary_data(
                 reconstructed_state
             )
             logger.info("Successfully formatted adventure summary data ✅")

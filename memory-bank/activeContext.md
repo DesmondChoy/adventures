@@ -1,8 +1,10 @@
 # Active Context
 
-## Current Focus: Telemetry Duration Tracking Fix Complete (As of 2025-07-20)
+## Current Focus: Actual Adventure Duration Implementation Complete (As of 2025-07-20)
 
-✅ **LATEST ACHIEVEMENT:** Telemetry Duration Tracking Fix COMPLETED! Successfully resolved "current_chapter_start_time_ms missing from connection_data" errors that caused null duration values in user engagement analytics by implementing persistent chapter start time storage across websocket reconnections.
+✅ **LATEST ACHIEVEMENT:** Actual Adventure Duration Implementation COMPLETED! Successfully replaced hardcoded "30 mins" values with real-time calculation from telemetry data, providing accurate user engagement metrics in the summary page.
+
+✅ **PREVIOUS ACHIEVEMENT:** Telemetry Duration Tracking Fix COMPLETED! Successfully resolved "current_chapter_start_time_ms missing from connection_data" errors that caused null duration values in user engagement analytics by implementing persistent chapter start time storage across websocket reconnections.
 
 ✅ **PREVIOUS ACHIEVEMENT:** REFLECT Chapter Streaming Performance Fix COMPLETED! Successfully resolved performance issue where REFLECT chapters were falling back to slow word-by-word streaming instead of fast chunk-by-chunk streaming, reducing loading times from 10+ seconds back to 2-3 seconds.
 
@@ -41,6 +43,47 @@
 ✅ **PREVIOUS MILESTONE:** Chapter numbering display issues fully resolved! All chapters now display correct numbers immediately when choices are made, ensuring consistent user experience throughout adventures.
 
 ### Recently Completed Work
+
+*   **Actual Adventure Duration Implementation - COMPLETED (2025-07-20):**
+    *   **Goal:** Replace hardcoded "30 mins" values in summary page with actual time spent calculated from telemetry data
+    *   **Problem Identified:** Both locations where adventure statistics are calculated used hardcoded "30 mins" value for time spent
+    *   **Locations Found:**
+        *   `app/services/summary/service.py` line 150: `"time_spent": "30 mins"`
+        *   `app/services/adventure_state_manager.py` line 1255: `"timeSpent": "30 mins"`
+    *   **Solution Implemented:**
+        *   **Added Duration Calculation Method:** Created `get_adventure_total_duration()` in `TelemetryService` to query Supabase telemetry data
+        *   **Database Query Approach:** Sums `event_duration_seconds` from `choice_made` events for completed adventures
+        *   **Robust Edge Case Handling:** Handles null values, missing data, database errors with graceful "-- mins" fallback
+        *   **Async Method Updates:** Made both statistics calculation methods async to support telemetry queries
+    *   **Technical Implementation:**
+        *   **New Method Added:** `TelemetryService.get_adventure_total_duration(adventure_id)` with null-safe summation
+        *   **Modified Files:**
+            *   `app/services/telemetry_service.py` (added duration calculation method and get_telemetry_service function)
+            *   `app/services/summary/service.py` (made async, added adventure_id parameter, integrated duration calculation)
+            *   `app/services/adventure_state_manager.py` (made async, added adventure_id parameter, integrated duration calculation)
+            *   `app/services/summary/stats_processor.py` (added time_spent parameter support)
+            *   `app/routers/summary_router.py` (updated to pass adventure_id and await async calls)
+            *   `tests/test_state_storage_reconstruction.py` (updated async method calls)
+            *   `tests/test_summary_button_flow.py` (updated async method calls)
+            *   `tests/simulations/generate_chapter_summaries.py` (updated hardcoded value to "-- mins")
+        *   **Key Features:**
+            *   Null-safe calculation: `(row.get("event_duration_seconds", 0) or 0)` handles missing/null values
+            *   Minimum duration: Returns at least "1 min" for completed adventures
+            *   Database failure handling: Returns "-- mins" on any telemetry errors
+            *   Format consistency: Returns formatted strings like "15 mins", "1 min", "-- mins"
+    *   **Edge Cases Handled:**
+        *   **Null Values:** SQL query and Python code both treat null as 0
+        *   **Missing Telemetry:** Returns "-- mins" when no data available
+        *   **Database Errors:** Graceful degradation with warning logs
+        *   **Zero Duration:** Returns "-- mins" for invalid zero-duration adventures
+        *   **Import Errors:** Fixed missing `get_telemetry_service` function in telemetry_service.py
+    *   **Architecture Benefits:**
+        *   Real user engagement data: Shows actual time spent reading and interacting
+        *   Analytics foundation: Enables data-driven content optimization insights
+        *   Robust failure handling: Never crashes summary page due to telemetry issues
+        *   Performance conscious: Only queries completed adventures when summary requested
+    *   **Testing Status:** Implementation complete, syntax validation passed, requires runtime testing to verify telemetry integration
+    *   **Final Status:** Hardcoded "30 mins" replaced with actual duration calculation from user telemetry data
 
 *   **Telemetry Duration Tracking Fix - COMPLETED (2025-07-20):**
     *   **Goal:** Resolve "current_chapter_start_time_ms missing from connection_data" errors causing null duration values in telemetry

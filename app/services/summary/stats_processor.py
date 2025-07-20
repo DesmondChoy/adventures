@@ -15,7 +15,7 @@ class StatsProcessor:
     """Processes adventure statistics."""
     
     @staticmethod
-    def calculate_adventure_statistics(state: AdventureState, questions: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def calculate_adventure_statistics(state: AdventureState, questions: List[Dict[str, Any]], time_spent: str = None) -> Dict[str, Any]:
         """Calculate adventure statistics with safety checks.
 
         Args:
@@ -48,9 +48,10 @@ class StatsProcessor:
         ]
         chapters_completed = len(user_chapters)
         
-        # Calculate time spent based on user-visible chapter count (rough estimate)
-        estimated_minutes = chapters_completed * 3  # Assume ~3 minutes per chapter
-        time_spent = f"{estimated_minutes} mins"
+        # Use provided time_spent or calculate fallback estimate
+        if time_spent is None:
+            estimated_minutes = chapters_completed * 3  # Assume ~3 minutes per chapter
+            time_spent = f"{estimated_minutes} mins"
 
         statistics = {
             "chapters_completed": chapters_completed,

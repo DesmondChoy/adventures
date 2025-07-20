@@ -229,7 +229,7 @@ async def get_adventure_summary(
 
         # Format the adventure state data for the React summary component
         logger.info("Formatting adventure summary data")
-        summary_data = summary_service.format_adventure_summary_data(adventure_state)
+        summary_data = await summary_service.format_adventure_summary_data(adventure_state, state_id)
 
         # Convert all keys from snake_case to camelCase at the API boundary
         camel_case_data = snake_to_camel_dict(summary_data)

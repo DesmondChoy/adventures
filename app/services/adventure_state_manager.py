@@ -11,6 +11,7 @@ from app.models.story import (
     ChapterContent,
 )
 from app.services.chapter_manager import ChapterManager
+from app.services.telemetry_service import get_telemetry_service
 
 logger = logging.getLogger("story_app")
 
@@ -949,7 +950,7 @@ class AdventureStateManager:
             logger.error(f"Error reconstructing state from storage: {str(e)}")
             return None
 
-    def format_adventure_summary_data(self, state: AdventureState) -> Dict[str, Any]:
+    async def format_adventure_summary_data(self, state: AdventureState, adventure_id: Optional[str] = None) -> Dict[str, Any]:
         """Format adventure state data for the React summary component.
 
         Args:
@@ -1249,10 +1250,20 @@ class AdventureStateManager:
             chapter for chapter in state.chapters 
             if chapter.chapter_type != ChapterType.SUMMARY
         ]
+        
+        # Calculate actual time spent if adventure_id is available
+        time_spent = "-- mins"
+        if adventure_id:
+            try:
+                from uuid import UUID
+                time_spent = await get_telemetry_service().get_adventure_total_duration(UUID(adventure_id))
+            except Exception as e:
+                logger.warning(f"Failed to get actual duration, using fallback: {e}")
+        
         statistics = {
             "chaptersCompleted": len(user_chapters),
             "questionsAnswered": len(educational_questions),
-            "timeSpent": "30 mins",  # This could be calculated from timestamps in the future
+            "timeSpent": time_spent,
             "correctAnswers": sum(
                 1 for q in educational_questions if q.get("isCorrect", False)
             ),

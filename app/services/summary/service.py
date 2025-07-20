@@ -8,6 +8,7 @@ from typing import Dict, Any, Optional, List
 from app.models.story import AdventureState, ChapterType
 from app.services.state_storage_service import StateStorageService
 from app.services.adventure_state_manager import AdventureStateManager
+from app.services.telemetry_service import get_telemetry_service
 from app.services.summary.exceptions import StateNotFoundError, SummaryGenerationError
 from app.services.summary.dto import AdventureSummaryDTO
 from app.services.summary.chapter_processor import ChapterProcessor
@@ -92,7 +93,7 @@ class SummaryService:
         """Ensures the last chapter is properly identified as a CONCLUSION chapter."""
         return self.chapter_processor.ensure_conclusion_chapter(state)
 
-    def format_adventure_summary_data(self, state: AdventureState) -> Dict[str, Any]:
+    async def format_adventure_summary_data(self, state: AdventureState, adventure_id: Optional[str] = None) -> Dict[str, Any]:
         """Transform AdventureState into formatted summary data.
 
         Args:
@@ -116,8 +117,17 @@ class SummaryService:
             )
             logger.info(f"Extracted {len(educational_questions)} educational questions")
 
+            # Calculate actual time spent if adventure_id is available
+            time_spent = "-- mins"
+            if adventure_id:
+                try:
+                    from uuid import UUID
+                    time_spent = await get_telemetry_service().get_adventure_total_duration(UUID(adventure_id))
+                except Exception as e:
+                    logger.warning(f"Failed to get actual duration, using fallback: {e}")
+            
             statistics = self.stats_processor.calculate_adventure_statistics(
-                state, educational_questions
+                state, educational_questions, time_spent=time_spent
             )
             logger.info(f"Calculated statistics: {statistics}")
 
@@ -147,7 +157,7 @@ class SummaryService:
                 "statistics": {
                     "chapters_completed": len([c for c in state.chapters if c.chapter_type != ChapterType.SUMMARY]) if state else 0,
                     "questions_answered": 1,
-                    "time_spent": "30 mins",
+                    "time_spent": time_spent if 'time_spent' in locals() else "-- mins",
                     "correct_answers": 1,
                 },
             }
