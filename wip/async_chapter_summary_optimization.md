@@ -190,10 +190,36 @@ Lines 409-488: Only chapter 8 summary tasks are executed
 Lines 771-773: Chapter 9 summary deferred again but never executed
 ```
 
-**Required Fix:**
-1. Make chapter summary generation atomic with respect to new-chapter streaming
-2. Use persistent queue that survives across streaming cycles
-3. Add post-save assertion to catch missing summaries immediately
+**Required Fix: Make Summary Generation Race-Condition Safe**
+
+**Files to Modify:**
+1. **`app/services/websocket/stream_handler.py`** (Lines 554-570)
+   - Replace `execute_deferred_summary_tasks()` with lock-protected, loop-until-empty version
+   - Use `state.summary_lock` to atomically pop tasks and prevent race conditions
+   - Add tasks to `state.pending_summary_tasks` for tracking
+
+2. **`app/services/websocket/choice_processor.py`** (Multiple lines)
+   - Guard additions to `state.deferred_summary_tasks` with `summary_lock`
+   - Apply same fix for visual extraction tasks around line 931
+
+3. **`app/services/websocket/summary_generator.py`**
+   - Add `_flush_pending_summary_tasks()` function to wait for all background tasks
+   - Ensure all summaries complete before building final SUMMARY chapter
+
+**Critical Implementation Details:**
+- **Atomic Operations**: Snapshot-then-clear pattern under lock prevents double execution
+- **Loop Until Empty**: Handle tasks added during execution to prevent silent drops
+- **Task Tracking**: Push created asyncio.Task objects to `pending_summary_tasks` list
+
+**Risk Assessment:**
+- **Deadlock Prevention**: Run task factories outside the lock to avoid blocking on LLM calls
+- **Performance Impact**: SUMMARY chapter may block briefly (few hundred ms) waiting for background tasks
+- **Memory Management**: Add `prune_finished_tasks()` helper to prevent list growth
+
+**Testing Requirements:**
+- Rapid chapter generation test (1-10) to verify 9 summaries present
+- Race condition simulation with concurrent chapter clicks
+- Verify logs show "Executing N deferred summary tasks" for every chapter
 
 ### Chapter 10 Content Duplication Issue ❌
 
@@ -212,10 +238,60 @@ Lines 1185-1345: Second "Starting image generation for Chapter 10"
 Line 1397: "current_chapter_id to: chapter_9_2" confirms rewind
 ```
 
-**Required Fix:**
-1. Add version control or completion guards to prevent stale client updates
-2. Short-circuit updates when adventure is finished (CONCLUSION chapter)
-3. Make `update_chapters_from_client()` idempotent/version-guarded
+**Required Fix: Implement State Version Control and Completion Guards**
+
+**Client-Side Changes:**
+1. **Frontend State Management** (`app/static/js/uiManager.js` or similar)
+   - Add `version` field to adventure state (monotonically increasing)
+   - Implement `bumpVersion()` on chapter completion
+   - Guard `sendProgress()` to prevent sending older versions
+   - Stop background heartbeat timers once chapter status === "done"
+
+**Server-Side Changes:**
+2. **`app/services/websocket/choice_processor.py`** 
+   - `update_chapters_from_client()` function: Add version comparison logic
+   - Reject updates where `incoming.version <= stored.version`
+   - Add completion guard: Skip processing if adventure `is_complete=True`
+
+3. **`app/models/story.py`** (AdventureState)
+   - Add `state_version: int = 0` field
+   - Add `last_updated_at: datetime` for timestamp-based guards
+   - Implement version bumping on significant state changes
+
+4. **`app/services/websocket/websocket_router.py`**
+   - Add version header validation in WebSocket message handling
+   - Return early with "duplicate" status for stale updates
+
+**Database Schema Changes:**
+5. **Migration Required** (`supabase/migrations/`)
+   - Add `state_version INT NOT NULL DEFAULT 0` to adventures table
+   - Add `last_updated_at TIMESTAMP` for additional validation
+   - Create composite index on `(user_id, adventure_id, state_version)`
+
+**Critical Implementation Details:**
+- **Version Strategy**: Increment on chapter completion, choice selection, and significant state changes
+- **Race Condition Handling**: Use database-level UPSERT with version checking
+- **Completion Guards**: Hard stop processing when `is_complete=True` or chapter type is CONCLUSION
+- **Heartbeat Prevention**: Stop client-side progress updates after chapter completes
+
+**Risk Assessment & Knock-On Effects:**
+- **Multi-Tab Scenarios**: Ensure highest version wins in concurrent usage
+- **Resume After Refresh**: Client must sync version from server on reload
+- **Mobile App Compatibility**: All clients need version field or server rejects updates
+- **Analytics Impact**: Progress tracking systems must handle version field
+- **Testing Mocks**: Update factory objects to include version field
+
+**Database Migration Considerations:**
+- **Backward Compatibility**: Set `state_version = 0` for existing adventures
+- **Deployment Order**: Run migration before deploying new server code
+- **Unique Constraints**: Maintain existing uniqueness while adding version
+
+**Testing Requirements:**
+- Unit tests for stale version rejection in `update_chapters_from_client()`
+- Integration tests for Chapter 10 completion without duplication
+- Multi-tab concurrent completion scenarios  
+- Load testing with 10k parallel completions to verify DB guards
+- Manual QA: Network tab verification that no PATCH occurs after "done"
 
 ---
 
