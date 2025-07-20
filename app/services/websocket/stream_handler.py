@@ -618,10 +618,17 @@ async def stream_chapter_with_live_generation(
     # Import here to avoid circular imports
     from app.services.llm import LLMService
     
+    # Get previous lessons for REFLECT chapters
+    previous_lessons = None
+    if chapter_type == ChapterType.REFLECT:
+        from .content_generator import collect_previous_lessons
+        previous_lessons = collect_previous_lessons(state)
+        logger.info(f"[PERFORMANCE] Retrieved {len(previous_lessons) if previous_lessons else 0} previous lessons for REFLECT chapter")
+    
     try:
         llm_service = LLMService()
         async for chunk in llm_service.generate_chapter_stream(
-            story_config, state, question, None
+            story_config, state, question, previous_lessons
         ):
             # Stream chunk immediately to user
             await websocket.send_text(chunk)

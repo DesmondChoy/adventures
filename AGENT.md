@@ -174,3 +174,44 @@ REMEMBER: After every memory reset, I begin completely fresh. The Memory Bank is
 - Implement graceful degradation for service failures
 - Use dependency injection for testability
 - Add verification points throughout critical paths
+
+## Code Implementation Guidelines (CRITICAL)
+
+### NEVER Make Assumptions - Always Verify First
+**Before writing ANY code that calls functions, imports, or references existing code:**
+
+1. **ALWAYS use search tools to verify function names and signatures BEFORE using them**
+   - Use `Grep` to find exact function definitions: `def function_name`
+   - Use `codebase_search_agent` to understand how functions are used elsewhere
+   - Use `Read` to examine the actual implementation and parameters
+
+2. **NEVER assume function names, even if they seem logical**
+   - Wrong: Assuming `get_previous_lessons()` exists 
+   - Right: Search for "previous_lessons" or "lesson" functions first
+   - Always verify import paths and module structure
+
+3. **ALWAYS check existing import patterns before adding new imports**
+   - Look at other files in the same directory for import examples
+   - Verify module structure with `list_directory` if needed
+   - Check that the function/class you're importing actually exists
+
+4. **ALWAYS verify parameter types and return values**
+   - Read function signatures and docstrings
+   - Check how the function is called elsewhere in the codebase
+   - Understand the expected data structures
+
+### Implementation Order (MANDATORY)
+1. **Search** → Find existing implementations
+2. **Read** → Understand the actual code structure  
+3. **Verify** → Check function signatures and usage patterns
+4. **Implement** → Write code based on verified information
+5. **Test** → Run diagnostics to catch errors early
+
+### Red Flags That Require Verification
+- Using any function name that "makes sense" but you haven't verified
+- Importing from modules without checking they exist
+- Assuming parameter types or return values
+- Copy-pasting patterns without understanding the context
+- Making changes that "should work" without verification
+
+**Remember: Assumptions lead to bugs. Verification prevents them.**
