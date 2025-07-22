@@ -809,15 +809,31 @@ class AdventureStateManager:
                         
                         reconstructed_types.append(correct_type)
                     
-                    # Extend to full story length if needed
+                    # If we can't reconstruct the full sequence properly, regenerate it
                     story_length = stored_state.get('story_length', 10)
-                    while len(reconstructed_types) < story_length:
-                        if len(reconstructed_types) == story_length - 1:
-                            # Last position should be CONCLUSION
-                            reconstructed_types.append(ChapterType.CONCLUSION)
-                        else:
-                            # Fill remaining with STORY for now
-                            reconstructed_types.append(ChapterType.STORY)
+                    if len(reconstructed_types) < story_length:
+                        logger.warning(f"CORRUPTION FIX: Could only reconstruct {len(reconstructed_types)}/{story_length} types - regenerating proper distribution")
+                        from app.services.chapter_manager import ChapterManager
+                        try:
+                            # Use proper chapter distribution instead of defaulting to STORY
+                            available_questions = 3  # Default minimum
+                            proper_types = ChapterManager.determine_chapter_types(story_length, available_questions)
+                            
+                            # Preserve any existing chapter types we successfully identified
+                            for i, existing_type in enumerate(reconstructed_types):
+                                if i < len(proper_types):
+                                    proper_types[i] = existing_type
+                            
+                            reconstructed_types = proper_types
+                            logger.warning(f"CORRUPTION FIX: Used proper chapter distribution: {[ct.value for ct in reconstructed_types]}")
+                        except Exception as e:
+                            logger.error(f"CORRUPTION FIX: Failed to generate proper types: {e}")
+                            # Fallback: extend with minimal valid sequence
+                            while len(reconstructed_types) < story_length:
+                                if len(reconstructed_types) == story_length - 1:
+                                    reconstructed_types.append(ChapterType.CONCLUSION)
+                                else:
+                                    reconstructed_types.append(ChapterType.STORY)
                     
                     stored_state["planned_chapter_types"] = reconstructed_types
                     logger.warning(f"CORRUPTION FIX: Reconstructed planned_chapter_types from {len(chapters)} existing chapters")

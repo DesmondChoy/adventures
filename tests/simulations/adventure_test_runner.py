@@ -179,12 +179,23 @@ class AdventureTestRunner:
     
     async def send_start_choice(self, websocket, stats: Dict[str, Any]):
         """Send the initial start choice."""
+        # Import here to avoid circular imports
+        from app.services.chapter_manager import ChapterManager
+        
+        # Generate proper chapter types for 10-chapter story
+        planned_types = ChapterManager.determine_chapter_types(
+            total_chapters=10, 
+            available_questions=3
+        )
+        # Convert ChapterType enums to strings for JSON serialization
+        planned_types_str = [chapter_type.value for chapter_type in planned_types]
+        
         start_message = {
             "state": {
                 "current_chapter_id": "start",
                 "story_length": 10,
                 "chapters": [],
-                "planned_chapter_types": [],
+                "planned_chapter_types": planned_types_str,
                 "metadata": {}
             },
             "choice": "start"
