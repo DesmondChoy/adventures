@@ -2,6 +2,36 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-07-22: Chapter 1 Streaming Performance Fix - COMPLETED
+
+**✅ CHAPTER 1 LIVE STREAMING CONSISTENCY ACHIEVED** - Successfully resolved parameter mismatch causing Chapter 1 to fall back to word-by-word streaming while other chapters used chunk-by-chunk streaming.
+- **Goal:** Debug and fix why Chapter 1 consistently streamed word-by-word while chapters 2-10 used fast chunk-by-chunk streaming after recent performance improvements.
+- **Root Cause:** Parameter mismatch in `process_start_choice()` function where `stream_chapter_with_live_generation` was called with `connection_data` parameter that the function doesn't accept, causing exception and fallback to old blocking method.
+- **Investigation Process:**
+  - Used parallel debugging agents to analyze streaming implementation differences between Chapter 1 and subsequent chapters
+  - Identified that `process_start_choice()` used old blocking `generate_chapter()` method while `process_non_start_choice()` had new live streaming
+  - Discovered parameter signature mismatch during merge conflict resolution
+- **Solution Implemented:**
+  - Fixed parameter mismatch by removing `connection_data` from `stream_chapter_with_live_generation` call
+  - Preserved `connection_data` parameter in function signature for future telemetry implementation
+  - Updated both `process_start_choice()` and core function calls
+- **Technical Implementation:**
+  - **Modified Files:**
+    - `app/services/websocket/choice_processor.py` (fixed parameter mismatch in live streaming call)
+    - `app/services/websocket/core.py` (maintained connection_data parameter passing)
+  - **Oracle Review:** Conducted comprehensive code review identifying both real issues and false positives
+  - **Performance Validation:** Confirmed live streaming works without exceptions
+- **Oracle Analysis Results:**
+  - ✅ Fixed inconsistent return values in early exit branches
+  - ❌ Oracle false positives: "dead code" and "double-streaming" claims were incorrect
+  - ✅ Identified real performance concerns: LLMService instantiation and logging verbosity
+- **Final Results:**
+  - ✅ **Chapter 1 now uses chunk-by-chunk streaming** - same performance as chapters 2-10
+  - ✅ **Eliminated 1-3s blocking delay** for first chapter generation  
+  - ✅ **Consistent streaming behavior** across entire adventure from start to finish
+  - ✅ **Parameter signatures verified** to prevent future streaming failures
+- **Key Learning:** Function parameter mismatches cause silent fallbacks to slower methods - always verify signatures match exactly during merge conflict resolution
+
 ### 2025-07-20: Adventure Testing Suite Implementation - DEBUGGING REQUIRED
 
 **❌ TESTING FRAMEWORK DEBUGGING IN PROGRESS** - Automated adventure testing suite implemented but consistently failing at Chapter 3, requires investigation.

@@ -1005,7 +1005,8 @@ async def process_start_choice(
     state_manager: AdventureStateManager,
     story_category: str,
     lesson_topic: str,
-    websocket: WebSocket,
+    websocket: Optional[WebSocket] = None,
+    connection_data: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Optional[ChapterContent], Optional[dict], bool, bool]:
     """Process the start choice (first chapter) with live streaming."""
     # Calculate new chapter number and update story phase
