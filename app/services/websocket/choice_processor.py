@@ -841,7 +841,10 @@ async def process_non_start_choice(
     
     # If not in connection_data, try to get from adventure state metadata (for reconnected sessions)
     if start_time_ms is None:
-        start_time_ms = state.metadata.get(f"chapter_{previous_chapter.chapter_number}_start_time_ms")
+        metadata_key = f"chapter_{previous_chapter.chapter_number}_start_time_ms"
+        start_time_ms = state.metadata.get(metadata_key)
+        if start_time_ms is None:
+            logger.warning(f"No start time found for chapter {previous_chapter.chapter_number}. Metadata keys: {list(state.metadata.keys())}")
         
     if start_time_ms is not None:
         current_time_ms = int(time.time() * 1000)

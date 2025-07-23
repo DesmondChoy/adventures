@@ -107,6 +107,55 @@ class TelemetryService:
             logger.error(f"Error logging telemetry event '{event_name}': {e}")
             # Depending on requirements, you might want to re-raise or handle differently
 
+    async def get_adventure_total_duration(self, adventure_id: UUID) -> str:
+        """
+        Calculate total time spent on an adventure by summing choice_made event durations.
+        
+        Args:
+            adventure_id: UUID of the completed adventure
+            
+        Returns:
+            Formatted duration string (e.g., "15 mins", "1 min", "-- mins")
+        """
+        try:
+            result = self.supabase.table("telemetry_events")\
+                .select("event_duration_seconds, timestamp")\
+                .eq("adventure_id", str(adventure_id))\
+                .eq("event_name", "choice_made")\
+                .order("timestamp")\
+                .execute()
+            
+            if not result.data:
+                logger.debug(f"No telemetry data found for adventure {adventure_id}")
+                return "-- mins"
+                
+            # Try to use stored durations first
+            total_seconds = sum(row.get("event_duration_seconds", 0) or 0 for row in result.data)
+            
+            # If no stored durations, calculate from timestamp differences
+            if total_seconds == 0 and len(result.data) > 1:
+                from datetime import datetime
+                timestamps = [datetime.fromisoformat(row["timestamp"].replace('Z', '+00:00')) for row in result.data]
+                
+                # Sum time differences between consecutive events
+                for i in range(1, len(timestamps)):
+                    diff_seconds = (timestamps[i] - timestamps[i-1]).total_seconds()
+                    total_seconds += diff_seconds
+                
+                logger.info(f"Calculated duration from timestamps: {total_seconds} seconds for adventure {adventure_id}")
+            
+            if total_seconds == 0:
+                logger.debug(f"Zero total duration calculated for adventure {adventure_id}")
+                return "-- mins"
+                
+            # Convert to minutes, minimum 1 minute for any completed adventure
+            mins = max(1, round(total_seconds / 60))
+            return f"{mins} min{'s' if mins != 1 else ''}"
+            
+        except Exception as e:
+            logger.warning(f"Failed to calculate adventure duration for {adventure_id}: {e}")
+            return "-- mins"
+
 
 # Example usage (for testing purposes, would be removed or placed in a test file)
 if __name__ == "__main__":
@@ -154,44 +203,7 @@ if __name__ == "__main__":
         except Exception as e:
             logger.error(f"Error during TelemetryService test: {e}")
 
-    async def get_adventure_total_duration(self, adventure_id: UUID) -> str:
-        """
-        Calculate total time spent on an adventure by summing choice_made event durations.
-        
-        Args:
-            adventure_id: UUID of the completed adventure
-            
-        Returns:
-            Formatted duration string (e.g., "15 mins", "1 min", "-- mins")
-        """
-        try:
-            result = self.supabase.table("telemetry_events")\
-                .select("event_duration_seconds")\
-                .eq("adventure_id", str(adventure_id))\
-                .eq("event_name", "choice_made")\
-                .execute()
-            
-            if not result.data:
-                logger.debug(f"No telemetry data found for adventure {adventure_id}")
-                return "-- mins"
-                
-            # Sum all durations, treating None/null as 0
-            total_seconds = sum(row.get("event_duration_seconds", 0) or 0 for row in result.data)
-            
-            if total_seconds == 0:
-                logger.debug(f"Zero total duration calculated for adventure {adventure_id}")
-                return "-- mins"
-                
-            # Convert to minutes, minimum 1 minute for any completed adventure
-            mins = max(1, round(total_seconds / 60))
-            return f"{mins} min{'s' if mins != 1 else ''}"
-            
-        except Exception as e:
-            logger.warning(f"Failed to calculate adventure duration for {adventure_id}: {e}")
-            return "-- mins"
-
     # asyncio.run(main()) # Comment out after testing
-    pass
 
 
 # Lazy instantiation to avoid environment variable loading issues during import

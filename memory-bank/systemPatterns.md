@@ -474,19 +474,29 @@
   * Produces more contextually relevant and detailed images by leveraging an LLM to intelligently merge various visual cues.
   * (Details in `wip/implemented/protagonist_inconsistencies.md` and `wip/implemented/characters_evolution_visual_inconsistencies.md`).
 
-### 19. Summary Screen Data Integrity Issues (DEBUGGING)
-- **Current Problem**: Despite multiple serialization and race condition fixes, summary screen still shows incomplete data
-- **Symptoms**: 
-  - 9 chapters instead of 10 (missing CONCLUSION)
-  - Placeholder questions instead of actual LESSON chapter questions
-  - Missing `planned_chapter_types` during state reconstruction
-  - All chapters stored as "story" type regardless of actual type during adventure
-- **Root Cause Analysis**: Issue appears to be in adventure progression logic, not state persistence
-- **Evidence**: Adventures stopping at Chapter 9 with `last chapter type (story): False` instead of proceeding to CONCLUSION
-- **Investigation Required**: 
-  - Story flow determination logic for CONCLUSION chapter generation
-  - LESSON chapter creation and question storage during adventures
-  - Chapter type preservation during the adventure progression (not just at summary)
+### 19. Telemetry Duration Tracking Pattern (CRITICAL)
+- **Problem**: "Time Spent" displays "-- mins" on adventure summary due to null duration values in telemetry events
+- **Root Cause**: Connection restarts cause chapter start times to be lost from both `connection_data` and `AdventureState.metadata`
+- **Data Flow Analysis**:
+  * **Chapter Start**: Time stored in `connection_data["current_chapter_start_time_ms"]` and `state.metadata[f"chapter_{number}_start_time_ms"]`
+  * **Connection Restart**: `connection_data` is lost, fallback should use `state.metadata`
+  * **Duration Calculation**: `choice_processor.py` looks for start time in both locations
+  * **Database Storage**: `choice_made` events logged with `event_duration_seconds: null` when start time unavailable
+  * **Summary Display**: `get_adventure_total_duration()` sums null values = 0 = "-- mins"
+- **Investigation Findings**:
+  * Telemetry service method indentation was fixed (method was inside `main()` function)
+  * Duration calculation logic is correct but metadata fallback mechanism has gaps
+  * Timestamp differences could work but would be inaccurate due to idle time between sessions
+- **Solutions Implemented**:
+  * Added targeted warning logging when start times are missing from metadata
+  * Created SQL migration to backfill historical null durations using timestamp differences (capped at 1 hour)
+  * Preserved existing accurate duration values while fixing historical data
+- **Files Involved**:
+  * `app/services/telemetry_service.py` - Duration aggregation and method indentation fix
+  * `app/services/websocket/choice_processor.py` - Duration calculation and metadata fallback
+  * `app/services/websocket/stream_handler.py` - Chapter start time storage
+  * `supabase/migrations/20250123_backfill_event_durations.sql` - Historical data fix
+- **Debugging Pattern**: Trace complete data flow from storage → calculation → display rather than assuming UI-layer problems
 
 ### 20. System-Wide Character Description Pattern (CRITICAL UX)
 - **Purpose:** Ensures visual consistency across all chapters for image generation and character continuity

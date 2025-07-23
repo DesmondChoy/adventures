@@ -3,7 +3,7 @@
 ## One-Word Commands
 Quick shortcuts for common tasks:
 
-- `$update`: Update documentation and memory-bank to reflect session changes. No opinionated remarks - ask for clarification when unsure.
+- `$update`: Update memory-bank to reflect session changes. No opinionated remarks - ask for clarification when unsure.
 - `$craft`: Create git commit message for session changes using conventional commit types (feat, docs, chore, etc). Do not commit - user reviews first.
 - `$review`: Use Oracle and remind it of the original objective, then review all changes made using all tools available. Check for opinionated changes, over-engineering, and opportunities for simplification or efficiency improvements. Present findings to user for decision.
 - `$parallel-x`: Run x sub-agents in parallel (not sequentially) where x is the number specified.
@@ -100,5 +100,11 @@ Quick shortcuts for common tasks:
 - Assuming parameter types or return values
 - Copy-pasting patterns without understanding the context
 - Making changes that "should work" without verification
+
+### Common Debugging Patterns
+- **Method Missing at Runtime**: Check indentation - methods inside functions won't be accessible on class instances
+- **AttributeError on Service Methods**: Verify method is properly indented within the class definition
+- **Telemetry/Duration Issues**: Connection restarts cause chapter start times to be lost, resulting in null duration values. Check metadata keys and consider timestamp-based backfilling for historical data
+- **Data Flow Tracing**: When debugging UI display issues, trace the complete data flow from storage → calculation → display rather than assuming the problem is at the UI layer
 
 **Remember: Assumptions lead to bugs. Verification prevents them.**
