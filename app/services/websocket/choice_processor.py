@@ -90,6 +90,26 @@ async def handle_reveal_summary(
         logger.info(
             "Created placeholder response for CONCLUSION chapter with whitespace"
         )
+        
+        # Log telemetry for conclusion chapter completion (matching regular chapter flow)
+        try:
+            adventure_id = connection_data.get("adventure_id") if connection_data else None
+            await get_telemetry_service().log_event(
+                event_name="choice_made",
+                adventure_id=UUID(adventure_id) if adventure_id else None,
+                user_id=connection_data.get("user_id") if connection_data else None,
+                metadata={
+                    "chapter_number": conclusion_chapter.chapter_number,
+                    "chosen_path": "reveal_summary",
+                    "choice_text": " ",
+                },
+                chapter_type=conclusion_chapter.chapter_type.value,
+                chapter_number=conclusion_chapter.chapter_number,
+                event_duration_seconds=None,  # Duration not tracked for conclusion
+            )
+            logger.info(f"Logged 'choice_made' event for CONCLUSION chapter: {conclusion_chapter.chapter_number}")
+        except Exception as tel_e:
+            logger.error(f"Error logging 'choice_made' event for CONCLUSION chapter: {tel_e}")
 
         # Complete ALL state operations BEFORE sending navigation signal
         conclusion_state_id = await generate_conclusion_chapter_summary(

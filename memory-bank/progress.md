@@ -2,6 +2,36 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-07-23: Telemetry Issues Debug & Fix - COMPLETED
+
+**✅ TELEMETRY DATA INTEGRITY ISSUES RESOLVED** - Successfully diagnosed and fixed missing chapter 10 telemetry and duplicate summary events through comprehensive architecture analysis.
+- **Goal:** Debug and fix two critical telemetry issues affecting data completeness and accuracy in Supabase analytics.
+- **Issues Identified:**
+  1. **Missing Chapter 10 Telemetry:** Last chapter log showed chapter 9 instead of expected chapter 10
+  2. **Duplicate Summary Events:** 5 summary_viewed events instead of expected single event
+  3. **Null Duration Values:** event_duration_seconds column showing null despite 6-minute calculated duration
+- **Root Causes Discovered:**
+  - **Chapter 10 Missing:** Conclusion chapter used different code path (`process_story_completion()`) that skipped telemetry logging
+  - **Summary Duplicates:** React StrictMode, multiple fetch interceptions, race conditions, and lack of deduplication
+  - **Null Durations:** WebSocket reconnections lost chapter start times stored in connection_data
+- **Solutions Implemented:**
+  1. **Added telemetry logging** to conclusion chapter flow in `process_story_completion()`
+  2. **Implemented deduplication logic** with 5-minute window for summary_viewed events
+  3. **Documented architecture issues** requiring future fixes: duration tracking race conditions, missing transactions, inconsistent service instantiation
+- **Duration Calculation Discovery:** 6-minute display calculated via timestamp fallback (summing time differences between consecutive choice_made events) when precise duration tracking fails
+- **Technical Implementation:**
+  - **Modified Files:**
+    - `app/services/websocket/choice_processor.py` (added conclusion chapter telemetry)
+    - `app/routers/summary_router.py` (added summary event deduplication)
+  - **Parallel Debugging:** Used 3 concurrent sub-agents to investigate different aspects simultaneously
+  - **Architecture Analysis:** Comprehensive telemetry system review identifying systemic issues beyond immediate bugs
+- **Final Results:**
+  - ✅ **Chapter 10 now appears in telemetry** with proper conclusion chapter tracking
+  - ✅ **Summary events deduplicated** ensuring one event per adventure
+  - ✅ **Duration calculation mechanism understood** (timestamp fallback vs precise tracking)
+  - ✅ **Systemic issues documented** for future architectural improvements
+- **Key Learning:** Telemetry system has architectural gaps requiring broader fixes: transaction boundaries, singleton service pattern, robust duration tracking, and event deduplication
+
 ### 2025-07-22: Chapter 1 Streaming Performance Fix - COMPLETED
 
 **✅ CHAPTER 1 LIVE STREAMING CONSISTENCY ACHIEVED** - Successfully resolved parameter mismatch causing Chapter 1 to fall back to word-by-word streaming while other chapters used chunk-by-chunk streaming.

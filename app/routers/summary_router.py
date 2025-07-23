@@ -198,32 +198,52 @@ async def get_adventure_summary(
         logger.info("Ensuring CONCLUSION chapter is properly identified")
         adventure_state = summary_service.ensure_conclusion_chapter(adventure_state)
 
-        # Log summary_viewed event
+        # Log summary_viewed event with deduplication
         if adventure_state:
             try:
-                event_metadata = {
-                    "story_category": adventure_state.metadata.get("story_category"),
-                    "lesson_topic": adventure_state.metadata.get("lesson_topic"),
-                    "client_uuid": adventure_state.metadata.get("client_uuid"),
-                    "chapters_in_summary": len(adventure_state.chapters)
-                    if adventure_state.chapters
-                    else 0,
-                }
-                event_metadata = {
-                    k: v for k, v in event_metadata.items() if v is not None
-                }
+                # Check if we've already logged a summary_viewed event for this adventure recently (within 5 minutes)
+                from datetime import datetime, timedelta
+                
+                recent_cutoff = datetime.now() - timedelta(minutes=5)
+                
+                # Query for recent summary_viewed events for this adventure
+                telemetry_service = get_telemetry_service()
+                recent_events = telemetry_service.supabase.table("telemetry_events").select("id").eq(
+                    "event_name", "summary_viewed"
+                ).eq(
+                    "adventure_id", state_id
+                ).gte(
+                    "timestamp", recent_cutoff.isoformat()
+                ).execute()
+                
+                if recent_events.data and len(recent_events.data) > 0:
+                    logger.info(
+                        f"Skipping 'summary_viewed' event for adventure ID: {state_id} - already logged recently ({len(recent_events.data)} events in last 5 mins)"
+                    )
+                else:
+                    event_metadata = {
+                        "story_category": adventure_state.metadata.get("story_category"),
+                        "lesson_topic": adventure_state.metadata.get("lesson_topic"),
+                        "client_uuid": adventure_state.metadata.get("client_uuid"),
+                        "chapters_in_summary": len(adventure_state.chapters)
+                        if adventure_state.chapters
+                        else 0,
+                    }
+                    event_metadata = {
+                        k: v for k, v in event_metadata.items() if v is not None
+                    }
 
-                await get_telemetry_service().log_event(
-                    event_name="summary_viewed",
-                    adventure_id=UUID(state_id) if state_id else None,
-                    user_id=user_id,  # Use the authenticated user_id
-                    metadata=event_metadata,
-                    chapter_type="summary",  # Added
-                    chapter_number=None,  # Added
-                )
-                logger.info(
-                    f"Logged 'summary_viewed' event for adventure ID: {state_id}"
-                )
+                    await telemetry_service.log_event(
+                        event_name="summary_viewed",
+                        adventure_id=UUID(state_id) if state_id else None,
+                        user_id=user_id,  # Use the authenticated user_id
+                        metadata=event_metadata,
+                        chapter_type="summary",  # Added
+                        chapter_number=None,  # Added
+                    )
+                    logger.info(
+                        f"Logged 'summary_viewed' event for adventure ID: {state_id}"
+                    )
             except Exception as tel_e:
                 logger.error(f"Error logging 'summary_viewed' event: {tel_e}")
 
