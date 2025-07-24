@@ -6,6 +6,7 @@
     <title>Learning Odyssey - Educational Adventures</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/resume-modal.css">
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         .glass {
@@ -24,6 +25,9 @@
         .btn-hover:hover {
             transform: translateY(-2px);
             transition: all 0.2s;
+        }
+        .crimson-text {
+            font-family: 'Crimson Text', Georgia, serif;
         }
     </style>
 </head>
@@ -62,22 +66,27 @@
                         Immersive Learning
                     </span>
 
-                    <h1 class="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 tracking-tight">
-                        Learning through 
-                        <span class="text-blue-600">adventures</span>
+                    <h1 class="crimson-text text-4xl sm:text-5xl md:text-6xl font-bold mb-4 tracking-tight">
+                        Explore infinite 
+                        <span class="text-blue-600">possibilities</span>
                     </h1>
 
-                    <p class="text-lg text-gray-600 mb-8 max-w-lg mx-auto md:mx-0">
-                        Choose your fantasy setting and educational topic. Start a 10-chapter journey where your choices shape the adventure. Learning has never been more magical.
-                    </p>
+                    <div class="crimson-text text-lg text-gray-600 mb-8 max-w-lg mx-auto md:mx-0 space-y-4">
+                        <p>Every adventure begins with YOUR choice of companion, artifact, profession, or special ability. Will you befriend a wise owl or craft a magical lantern? Command the elements or whisper to animals?</p>
+                        
+                        <p>Watch as your unique power evolves through an epic journey where your decisions shape the story and learning happens like magic.</p>
+                    </div>
 
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start mb-4">
-                        <button id="login-google" class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition btn-hover inline-block text-center">
-                            Login with Google
-                        </button>
-                        <button id="continue-guest" class="bg-gray-600 text-white px-6 py-3 rounded-md hover:bg-gray-700 transition btn-hover inline-block text-center">
-                            Continue as Guest
-                        </button>
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-3 text-center md:text-left">Begin your free adventure:</h3>
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+                            <button id="login-google" class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition btn-hover inline-block text-center">
+                                Login with Google
+                            </button>
+                            <button id="continue-guest" class="bg-gray-600 text-white px-6 py-3 rounded-md hover:bg-gray-700 transition btn-hover inline-block text-center">
+                                Continue as Guest
+                            </button>
+                        </div>
                     </div>
                     <p id="guest-warning" class="text-sm text-yellow-700 bg-yellow-100 border border-yellow-300 p-2 rounded-md hidden max-w-md mx-auto md:mx-0 text-center">
                         As a guest, your adventure progress is tied to this browser session. For persistent progress, please log in.
@@ -129,7 +138,7 @@
                         <div class="rounded-2xl relative shadow-xl">
                             <img
                                 src="/static/images/learning-adventure-library.png"
-                                alt="Magical Library Portal - Learning through Adventures"
+                                alt="Magical Library Portal - Explore Infinite Possibilities"
                                 class="w-full h-auto rounded-xl shadow-md"
                             />
                         </div>
