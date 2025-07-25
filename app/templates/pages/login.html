@@ -43,6 +43,54 @@
         #typewriter-cursor { 
             animation: blink 1s infinite; 
         }
+        
+        /* Professional Meteor Shower Animation */
+        .meteor {
+            position: absolute;
+            width: 400px;
+            height: 2px;
+            transform: rotate(-45deg);
+            background-image: linear-gradient(to right, #ffffff, #ffaa44, #ff8833, rgba(255, 136, 51, 0.6), rgba(255, 170, 68, 0.2), transparent);
+            z-index: 999999;
+            pointer-events: none;
+            opacity: 0; /* Start invisible */
+        }
+        
+        .meteor:before {
+            content: "";
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-top: -3px;
+            background: #ffffff;
+            box-shadow: 0 0 20px 5px #ffaa44, 0 0 40px 8px rgba(255, 170, 68, 0.6);
+        }
+        
+        @keyframes meteor {
+            0% {
+                opacity: 1;
+                margin-top: -300px;
+                margin-right: -300px;
+            }
+            12% {
+                opacity: 0;
+            }
+            15% {
+                margin-top: 300px;
+                margin-left: -600px;
+                opacity: 0;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
+        
+        .meteor-1 { top: 50px; left: 10%; animation: meteor 12s linear infinite 6s; }
+        .meteor-2 { top: 80px; left: 20%; animation: meteor 15s linear infinite 4s; }
+        .meteor-3 { top: 120px; left: 50%; animation: meteor 14s linear infinite 2s; }
+        .meteor-4 { top: 200px; left: 80%; animation: meteor 16s linear infinite 8s; }
+        .meteor-5 { top: 60px; left: 70%; animation: meteor 13s linear infinite 10s; }
     </style>
 </head>
 <body class="bg-gray-50 font-sans">
@@ -61,6 +109,13 @@
             </div>
         </div>
     </header>
+
+    <!-- Professional Meteor Shower -->
+    <div class="meteor meteor-1"></div>
+    <div class="meteor meteor-2"></div>
+    <div class="meteor meteor-3"></div>
+    <div class="meteor meteor-4"></div>
+    <div class="meteor meteor-5"></div>
 
     <!-- Hero Section -->
     <section class="relative min-h-screen bg-gradient-to-b from-white to-white flex items-center justify-center overflow-hidden pt-16">
@@ -776,6 +831,10 @@
         
         // Start typewriter effect after page loads
         setTimeout(typewriterEffect, 1000);
+        
+
+        
+
     </script>
 </body>
 </html>
