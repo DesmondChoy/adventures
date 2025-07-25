@@ -27,7 +27,7 @@
 
 .modal-header {
     font-family: var(--font-family-display, var(--font-family-sans-serif, sans-serif)); /* Use theme variable */
-    color: var(--primary-color, #007bff); /* Use theme variable or default */
+    color: var(--color-primary, #0d9488); /* Use teal theme variable */
     font-size: 1.8em;
     margin-top: 0;
     margin-bottom: 15px;
@@ -55,7 +55,7 @@
 }
 
 .adventure-details strong {
-    color: var(--primary-color-dark, #0056b3); /* Use theme variable or default */
+    color: var(--color-primary-dark, #0f766e); /* Use teal theme variable */
 }
 
 .modal-actions {
@@ -75,13 +75,13 @@
 }
 
 .modal-actions .primary-button {
-    background-color: var(--primary-button-background, var(--primary-color, #007bff));
+    background-color: var(--primary-button-background, var(--color-primary, #0d9488));
     color: var(--primary-button-text, #fff);
     border: none;
 }
 
 .modal-actions .primary-button:hover {
-    background-color: var(--primary-button-hover-background, var(--primary-color-dark, #0056b3));
+    background-color: var(--primary-button-hover-background, var(--color-primary-dark, #0f766e));
     transform: translateY(-1px);
 }
 
