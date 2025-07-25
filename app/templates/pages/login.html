@@ -29,6 +29,20 @@
         .crimson-text {
             font-family: 'Crimson Text', Georgia, serif;
         }
+        .hi { 
+            color: var(--color-primary, #0d9488); 
+            font-weight: bold; 
+        }
+        .typewriter-line { 
+            white-space: nowrap; 
+        }
+        @keyframes blink { 
+            0%, 50% { opacity: 1; } 
+            51%, 100% { opacity: 0; } 
+        }
+        #typewriter-cursor { 
+            animation: blink 1s infinite; 
+        }
     </style>
 </head>
 <body class="bg-gray-50 font-sans">
@@ -67,8 +81,8 @@
                         Learning Odyssey
                     </h1>
 
-                    <p class="inline-block mb-6 px-6 py-3 rounded-full text-xl sm:text-2xl font-bold" style="background-color: var(--color-accent-light, rgba(13, 148, 136, 0.05)); color: var(--color-primary, #0d9488);">
-                        Explore infinite possibilities
+                    <p class="crimson-text typewriter-line inline-block mb-6 px-5 py-3 rounded-full text-lg sm:text-xl font-bold" style="background-color: var(--color-accent-light, rgba(13, 148, 136, 0.05)); color: #374151;">
+                        <span id="typewriter-text">Quest through worlds that teach</span><span id="typewriter-cursor">|</span>
                     </p>
 
                     <div class="crimson-text text-lg text-gray-600 mb-8 max-w-lg mx-auto md:mx-0 space-y-4">
@@ -641,6 +655,127 @@
             if(guestLoginButton) guestLoginButton.disabled = true;
             // You could also inject an error message into the DOM here.
         }
+
+        // Typewriter effect
+        const phrases = [
+            "Quest Through <span class='hi'>Worlds That Teach</span>",
+            "Where Decisions <span class='hi'>Craft Knowledge</span>", 
+            "Epic Journeys, <span class='hi'>Real-World Learning</span>",
+            "Forge Paths, <span class='hi'>Reinforce</span> Understanding",
+            "Lead Adventures, <span class='hi'>Unlock Wisdom</span>"
+        ];
+        
+        let currentPhraseIndex = 0;
+        let currentCharIndex = 0;
+        let isTyping = true;
+        
+        const typewriterText = document.getElementById('typewriter-text');
+        const typewriterCursor = document.getElementById('typewriter-cursor');
+        
+        function typewriterEffect() {
+            const currentPhrase = phrases[currentPhraseIndex];
+            // Create a temporary div to get the plain text length for character counting
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = currentPhrase;
+            const plainText = tempDiv.textContent || tempDiv.innerText || '';
+            
+            if (isTyping) {
+                // Typing phase
+                if (currentCharIndex < plainText.length) {
+                    // Create substring of plain text and then apply HTML formatting
+                    const partialText = plainText.substring(0, currentCharIndex + 1);
+                    typewriterText.innerHTML = applyFormattingToPartialText(currentPhrase, partialText);
+                    currentCharIndex++;
+                    setTimeout(typewriterEffect, 50); // Typing speed
+                } else {
+                    // Finished typing, wait then start erasing
+                    setTimeout(() => {
+                        isTyping = false;
+                        typewriterEffect();
+                    }, 2000); // Pause before erasing
+                }
+            } else {
+                // Erasing phase
+                if (currentCharIndex > 0) {
+                    const partialText = plainText.substring(0, currentCharIndex - 1);
+                    typewriterText.innerHTML = applyFormattingToPartialText(currentPhrase, partialText);
+                    currentCharIndex--;
+                    setTimeout(typewriterEffect, 25); // Erasing speed (faster)
+                } else {
+                    // Finished erasing, move to next phrase
+                    currentPhraseIndex = (currentPhraseIndex + 1) % phrases.length;
+                    isTyping = true;
+                    setTimeout(typewriterEffect, 500); // Pause before typing next phrase
+                }
+            }
+        }
+        
+        function applyFormattingToPartialText(fullHtml, partialText) {
+            // If partial text is empty, return empty
+            if (!partialText) return '';
+            
+            // Create temp div to extract plain text from HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = fullHtml;
+            const fullPlainText = tempDiv.textContent || tempDiv.innerText || '';
+            
+            // If partial text matches or exceeds full text, return full HTML
+            if (partialText.length >= fullPlainText.length) {
+                return fullHtml;
+            }
+            
+            // Otherwise, we need to carefully reconstruct the HTML up to the partial text length
+            // For simplicity, we'll use a more direct approach
+            let result = '';
+            let charCount = 0;
+            let inTag = false;
+            let i = 0;
+            
+            while (i < fullHtml.length && charCount < partialText.length) {
+                const char = fullHtml[i];
+                
+                if (char === '<') {
+                    inTag = true;
+                    result += char;
+                } else if (char === '>') {
+                    inTag = false;
+                    result += char;
+                } else if (!inTag) {
+                    if (charCount < partialText.length) {
+                        result += char;
+                        charCount++;
+                    }
+                } else {
+                    result += char;
+                }
+                i++;
+            }
+            
+            // Close any open tags
+            const openTags = [];
+            let tempResult = result;
+            const tagRegex = /<(\/?)([\w\s="':;-]+)>/g;
+            let match;
+            
+            while ((match = tagRegex.exec(result)) !== null) {
+                if (!match[1]) { // Opening tag
+                    const tagName = match[2].split(' ')[0];
+                    openTags.push(tagName);
+                } else { // Closing tag
+                    openTags.pop();
+                }
+            }
+            
+            // Close remaining open tags
+            for (let j = openTags.length - 1; j >= 0; j--) {
+                result += `</${openTags[j]}>`;
+            }
+            
+            return result;
+        }
+        
+        // Start typewriter effect after page loads
+        setTimeout(typewriterEffect, 1000);
     </script>
 </body>
 </html>
