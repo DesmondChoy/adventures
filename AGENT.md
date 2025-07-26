@@ -7,6 +7,7 @@ Quick shortcuts for common tasks:
 - `$craft`: Create git commit message for session changes using conventional commit types (feat, docs, chore, etc). Do not commit - user reviews first.
 - `$review`: Use Oracle and remind it of the original objective, then review all changes made using all tools available. Check for opinionated changes, over-engineering, and opportunities for simplification or efficiency improvements. Present findings to user for decision.
 - `$parallel-x`: Run x sub-agents in parallel (not sequentially) where x is the number specified.
+- `$playwright`: Start server and use Playwright MCP for browser automation/visual verification. Steps: 1) `start cmd /k ".venv\Scripts\activate && python -m app.main"` 2) `mcp__playwright__browser_wait_for` (3 sec) 3) `mcp__playwright__browser_navigate` to `http://localhost:8000` 4) Use snapshot/screenshot/evaluate as needed.
 
 ## Commands
 - **Virtual Environment**: ALWAYS activate `.venv` before running Python commands
@@ -50,17 +51,6 @@ Quick shortcuts for common tasks:
 - **Rely on state structure**: Base logic on `AdventureState` fields, `ChapterType`, metadata
 - **Abstract testing**: Focus on state transitions, not specific LLM-generated text
 - **Use metadata**: Store extracted information in structured fields, avoid parsing free-form text
-
-### Image Generation
-- Use asynchronous processing with exponential backoff (5 retries)
-- Follow format: `"Colorful storybook illustration of this scene: [summary]. [Agency prefix] [name] ([details])"`
-- Category-specific prefixes: companions ("accompanied by"), professions ("is a"), abilities ("has power of"), artifacts ("wielding")
-
-### Tool Usage
-- Wrap `sys.executable` in subprocess calls (not hardcoded "python")
-- Implement graceful degradation for service failures
-- Use dependency injection for testability
-- Add verification points throughout critical paths
 
 ## Code Implementation Guidelines (CRITICAL)
 
