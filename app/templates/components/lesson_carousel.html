@@ -1,5 +1,6 @@
 <div id="lessonTopicScreen" class="max-w-md mx-auto rounded-xl overflow-hidden md:max-w-2xl p-6 hidden screen-transition" style="background-color: transparent;">
     <input type="hidden" id="lessonTopic" name="lessonTopic" required>
+    <div id="lesson-warning-container" class="warning-container" style="display: none;"></div>
     <div class="carousel-container">
         <div class="carousel" id="lessonCarousel">
             {% for topic in lesson_topics %}

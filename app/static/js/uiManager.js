@@ -34,6 +34,52 @@ export function showError(message) {
     }, 3000);
 }
 
+export function showCategoryWarning(message) {
+    const warningContainer = document.getElementById('category-warning-container');
+    const carouselContainer = document.querySelector('.carousel-container');
+    
+    if (warningContainer) {
+        warningContainer.textContent = message;
+        warningContainer.style.display = 'block';
+        
+        // Add class to carousel container to push it down
+        if (carouselContainer) {
+            carouselContainer.classList.add('warning-active');
+        }
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            warningContainer.style.display = 'none';
+            if (carouselContainer) {
+                carouselContainer.classList.remove('warning-active');
+            }
+        }, 3000);
+    }
+}
+
+export function showLessonWarning(message) {
+    const warningContainer = document.getElementById('lesson-warning-container');
+    const carouselContainer = document.querySelector('#lessonTopicScreen .carousel-container');
+    
+    if (warningContainer) {
+        warningContainer.textContent = message;
+        warningContainer.style.display = 'block';
+        
+        // Add class to carousel container to push it down
+        if (carouselContainer) {
+            carouselContainer.classList.add('warning-active');
+        }
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            warningContainer.style.display = 'none';
+            if (carouselContainer) {
+                carouselContainer.classList.remove('warning-active');
+            }
+        }, 3000);
+    }
+}
+
 // --- Loader Functions ---
 // Loading phrase management
 let loadingPhrases = [];
@@ -208,7 +254,7 @@ function handleChapterProgress(data) {
 // --- Navigation Functions ---
 export function goToLessonTopicScreen() {
     if (!selectedCategory) {
-        showError('Please select a story category to continue');
+        showCategoryWarning('Click on a card below to choose your adventure');
         return;
     }
     // Add hidden class to trigger transition
@@ -247,7 +293,7 @@ export async function startAdventure() {
     }
     
     if (!selectedLessonTopic) {
-        showError('Please select a lesson topic to begin');
+        showLessonWarning('Click on a card below to choose your lesson topic');
         return;
     }
 
