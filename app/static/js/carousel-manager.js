@@ -98,7 +98,13 @@ class Carousel {
     }, false);
     
     this.element.addEventListener('touchmove', (event) => {
-      event.preventDefault(); // Prevent scrolling while swiping
+      const currentX = event.touches[0].clientX;
+      const deltaX = Math.abs(currentX - touchStartX);
+      
+      // Only prevent default on real swipes (>10px movement)
+      if (deltaX > 10) {
+        event.preventDefault(); // Prevent scrolling while swiping
+      }
     }, false);
     
     this.element.addEventListener('touchend', (event) => {
@@ -110,12 +116,38 @@ class Carousel {
     // Add click handlers to cards
     const cards = this.element.getElementsByClassName('carousel-card');
     Array.from(cards).forEach(card => {
+      // Standard click handler
       card.addEventListener('click', () => {
         const value = card.dataset[this.dataAttribute];
         if (value) {
           this.select(value);
         }
       });
+      
+      // Touchend handler as backup for when click events fail
+      let cardTouchStartX = 0;
+      let cardTouchStartTime = 0;
+      
+      card.addEventListener('touchstart', (event) => {
+        cardTouchStartX = event.touches[0].clientX;
+        cardTouchStartTime = Date.now();
+      }, false);
+      
+      card.addEventListener('touchend', (event) => {
+        const cardTouchEndX = event.changedTouches[0].clientX;
+        const cardTouchEndTime = Date.now();
+        const swipeDistance = Math.abs(cardTouchEndX - cardTouchStartX);
+        const swipeThreshold = 50; // Same threshold as carousel swipe detection
+        
+        // Only trigger selection if user wasn't swiping
+        if (swipeDistance < swipeThreshold) {
+          event.preventDefault(); // Prevent synthetic click
+          const value = card.dataset[this.dataAttribute];
+          if (value) {
+            this.select(value);
+          }
+        }
+      }, false);
     });
   }
   

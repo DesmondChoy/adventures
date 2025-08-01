@@ -264,33 +264,48 @@ export function goToLessonTopicScreen() {
     
     // Wait for layout to settle after removing hidden class
     requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-    // Get total lesson topics from global config
-    const totalLessonTopics = window.appConfig?.totalLessonTopics || 0;
-    
-    // Initialize the lesson carousel with our Carousel class
-    window.lessonCarousel = new Carousel({
-    elementId: 'lessonCarousel',
-    itemCount: totalLessonTopics,
-    dataAttribute: 'topic',
-    inputId: 'lessonTopic',
-    onSelect: (topic) => {
-    selectedLessonTopic = topic;
-    }
-    });
-    
-    // Force reposition for lesson carousel if dimensions were wrong during init
-    setTimeout(() => {
-        if (window.lessonCarousel && typeof window.lessonCarousel.reposition === 'function') {
-            window.lessonCarousel.reposition();
-        }
-    }, 100);
-    
-        // Update the keyboard navigation to include the lesson carousel
+        requestAnimationFrame(() => {
+            // Get total lesson topics from global config
+            const totalLessonTopics = window.appConfig?.totalLessonTopics || 0;
+            
+            console.log('[LESSON CAROUSEL] Initializing with', totalLessonTopics, 'topics');
+            console.log('[LESSON CAROUSEL] Current window.lessonCarousel:', window.lessonCarousel);
+            
+            // Only initialize if not already initialized or if current instance is invalid
+            if (!window.lessonCarousel || typeof window.lessonCarousel.reposition !== 'function') {
+                try {
+                    // Initialize the lesson carousel with our Carousel class
+                    window.lessonCarousel = new Carousel({
+                        elementId: 'lessonCarousel',
+                        itemCount: totalLessonTopics,
+                        dataAttribute: 'topic',
+                        inputId: 'lessonTopic',
+                        onSelect: (topic) => {
+                            selectedLessonTopic = topic;
+                        }
+                    });
+                    console.log('[LESSON CAROUSEL] Successfully created Carousel instance:', window.lessonCarousel);
+                } catch (error) {
+                    console.error('[LESSON CAROUSEL] Error creating Carousel instance:', error);
+                    showError('Failed to initialize lesson carousel. Please refresh the page.');
+                    return;
+                }
+            } else {
+                console.log('[LESSON CAROUSEL] Using existing instance');
+            }
+            
+            // Force reposition for lesson carousel if dimensions were wrong during init
+            setTimeout(() => {
+                if (window.lessonCarousel && typeof window.lessonCarousel.reposition === 'function') {
+                    window.lessonCarousel.reposition();
+                }
+            }, 100);
+            
+            // Update the keyboard navigation to include the lesson carousel
             setupCarouselKeyboardNavigation([window.categoryCarousel, window.lessonCarousel]);
             
             // Fix mobile-specific active card scaling if needed
-            if (window.innerWidth <= 768) {
+            if (window.innerWidth <= 768 && window.lessonCarousel && typeof window.lessonCarousel.fixMobileActiveCardScaling === 'function') {
                 window.lessonCarousel.fixMobileActiveCardScaling();
             }
         });
@@ -1004,6 +1019,9 @@ export async function resetApplicationState() {
     Array.from(cards).forEach(card => {
         card.classList.remove('selected', 'selecting', 'active');
     });
+    
+    // Clear lesson carousel instance
+    window.lessonCarousel = null;
     
     // Re-initialize the category carousel with our Carousel class
     const totalCategories = window.appConfig?.totalCategories || 0;
