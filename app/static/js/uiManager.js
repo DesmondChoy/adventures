@@ -262,27 +262,39 @@ export function goToLessonTopicScreen() {
     // Remove hidden class to trigger transition
     document.getElementById('lessonTopicScreen').classList.remove('hidden');
     
+    // Wait for layout to settle after removing hidden class
+    requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
     // Get total lesson topics from global config
     const totalLessonTopics = window.appConfig?.totalLessonTopics || 0;
     
     // Initialize the lesson carousel with our Carousel class
     window.lessonCarousel = new Carousel({
-        elementId: 'lessonCarousel',
-        itemCount: totalLessonTopics,
-        dataAttribute: 'topic',
-        inputId: 'lessonTopic',
-        onSelect: (topic) => {
-            selectedLessonTopic = topic;
-        }
+    elementId: 'lessonCarousel',
+    itemCount: totalLessonTopics,
+    dataAttribute: 'topic',
+    inputId: 'lessonTopic',
+    onSelect: (topic) => {
+    selectedLessonTopic = topic;
+    }
     });
     
-    // Update the keyboard navigation to include the lesson carousel
-    setupCarouselKeyboardNavigation([window.categoryCarousel, window.lessonCarousel]);
+    // Force reposition for lesson carousel if dimensions were wrong during init
+    setTimeout(() => {
+        if (window.lessonCarousel && typeof window.lessonCarousel.reposition === 'function') {
+            window.lessonCarousel.reposition();
+        }
+    }, 100);
     
-    // Fix mobile-specific active card scaling if needed
-    if (window.innerWidth <= 768) {
-        window.lessonCarousel.fixMobileActiveCardScaling();
-    }
+        // Update the keyboard navigation to include the lesson carousel
+            setupCarouselKeyboardNavigation([window.categoryCarousel, window.lessonCarousel]);
+            
+            // Fix mobile-specific active card scaling if needed
+            if (window.innerWidth <= 768) {
+                window.lessonCarousel.fixMobileActiveCardScaling();
+            }
+        });
+    });
 }
 
 export async function startAdventure() {

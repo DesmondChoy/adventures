@@ -34,6 +34,12 @@ class Carousel {
     this.element = document.getElementById(this.elementId);
     this.inputElement = document.getElementById(this.inputId);
     
+    // Register this instance for global tracking
+    if (!window.carouselInstances) {
+      window.carouselInstances = {};
+    }
+    window.carouselInstances[this.elementId] = this;
+    
     // Initialize
     this.init();
   }
@@ -49,7 +55,10 @@ class Carousel {
     
     // Position cards in 3D space
     const cards = this.element.getElementsByClassName('carousel-card');
-    const radius = 400;
+    
+    // Calculate dynamic radius based on card count to prevent overlap
+    const cardWidth = cards.length > 0 ? cards[0].offsetWidth : 300;
+    const radius = this.itemCount > 1 ? (cardWidth / 2) / Math.tan(Math.PI / this.itemCount) : 400;
     
     try {
       for (let i = 0; i < cards.length; i++) {
@@ -149,9 +158,12 @@ class Carousel {
   updateActiveCard() {
     const cards = this.element.getElementsByClassName('carousel-card');
     Array.from(cards).forEach((card, index) => {
-      card.classList.remove('active');
       if (index === this.currentIndex) {
         card.classList.add('active');
+        card.style.willChange = 'transform';
+      } else {
+        card.classList.remove('active');
+        card.style.willChange = 'auto';
       }
     });
   }
@@ -161,24 +173,35 @@ class Carousel {
    * @param {string} value - The value to select
    */
   select(value) {
-    this.selectedValue = value;
-    
-    if (this.inputElement) {
-      this.inputElement.value = value;
-    }
-    
-    // Remove selected class from all cards and add to the chosen one
     const cards = this.element.getElementsByClassName('carousel-card');
-    Array.from(cards).forEach(card => {
-      card.classList.remove('selected', 'selecting');
-      if (card.dataset[this.dataAttribute] === value) {
-        card.classList.add('selected', 'selecting');
-        setTimeout(() => card.classList.remove('selecting'), 300);
-      }
-    });
+    const targetCard = Array.from(cards).find(card => card.dataset[this.dataAttribute] === value);
     
-    // Call the onSelect callback
-    this.onSelect(value);
+    if (targetCard) {
+      // Check if the card is already selected - if so, toggle it off
+      if (targetCard.classList.contains('selected')) {
+        targetCard.classList.remove('selected', 'selecting');
+        this.selectedValue = '';
+        if (this.inputElement) {
+          this.inputElement.value = '';
+        }
+      } else {
+        // Remove selected class from all cards and add to the chosen one
+        Array.from(cards).forEach(card => {
+          card.classList.remove('selected', 'selecting');
+        });
+        
+        targetCard.classList.add('selected', 'selecting');
+        setTimeout(() => targetCard.classList.remove('selecting'), 300);
+        
+        this.selectedValue = value;
+        if (this.inputElement) {
+          this.inputElement.value = value;
+        }
+        
+        // Call the onSelect callback
+        this.onSelect(value);
+      }
+    }
   }
   
   /**
@@ -221,6 +244,82 @@ class Carousel {
       activeCard.classList.add('active');
     }
   }
+  
+  /**
+   * Reposition the carousel - recalculates radius and card positions
+   * This serves as a fallback mechanism to fix 3D positioning if initial calculation fails
+   * Can be called manually from console to force re-calculation of card transforms
+   */
+  reposition() {
+    if (!this.element) {
+      console.error(`Carousel element with ID "${this.elementId}" not found!`);
+      return false;
+    }
+    
+    const cards = this.element.getElementsByClassName('carousel-card');
+    if (cards.length === 0) {
+      console.warn('No carousel cards found to reposition');
+      return false;
+    }
+    
+    console.log(`Repositioning carousel "${this.elementId}" with ${cards.length} cards...`);
+    
+    try {
+      // Force layout recalculation by temporarily showing element if hidden
+      const wasHidden = this.element.offsetParent === null;
+      let originalDisplay = null;
+      
+      if (wasHidden) {
+        originalDisplay = this.element.style.display;
+        this.element.style.display = 'block';
+        this.element.style.visibility = 'hidden';
+      }
+      
+      // Get current card dimensions (force recalculation)
+      const firstCard = cards[0];
+      firstCard.style.transform = 'none'; // Temporarily remove transform
+      const cardWidth = firstCard.offsetWidth;
+      firstCard.style.transform = ''; // Restore transform
+      
+      console.log(`Card width: ${cardWidth}px, Item count: ${this.itemCount}`);
+      
+      // Recalculate radius using the same logic as init()
+      const calculatedRadius = this.itemCount > 1 ? (cardWidth / 2) / Math.tan(Math.PI / this.itemCount) : 400;
+      const minRadius = (cardWidth / 2) / Math.tan(Math.PI / 5);
+      const hardMinimum = 400;
+      const radius = Math.max(calculatedRadius, minRadius, hardMinimum);
+      
+      console.log(`Calculated radius: ${calculatedRadius.toFixed(2)}px, Min radius: ${minRadius.toFixed(2)}px, Final radius: ${radius}px`);
+      
+      // Apply new transforms to all cards
+      for (let i = 0; i < cards.length; i++) {
+        const angle = (i * this.rotationAngle);
+        const newTransform = `rotateY(${angle}deg) translateZ(${radius}px)`;
+        cards[i].style.transform = newTransform;
+        cards[i].style.visibility = 'visible';
+        console.log(`Card ${i}: angle=${angle}deg, transform=${newTransform}`);
+      }
+      
+      // Restore original display state if we modified it
+      if (wasHidden && originalDisplay !== null) {
+        this.element.style.display = originalDisplay;
+        this.element.style.visibility = '';
+      }
+      
+      // Reapply current rotation
+      this.element.style.transform = `translate(-50%, -50%) rotateY(${this.currentRotation}deg)`;
+      
+      // Update active card
+      this.updateActiveCard();
+      
+      console.log(`Carousel "${this.elementId}" repositioned successfully`);
+      return true;
+      
+    } catch (error) {
+      console.error(`Error during carousel reposition:`, error);
+      return false;
+    }
+  }
 }
 
 /**
@@ -241,9 +340,121 @@ function setupCarouselKeyboardNavigation(carousels) {
   });
 }
 
-// Export for ES6 modules
-export { Carousel, setupCarouselKeyboardNavigation };
+/**
+ * Global convenience functions for debugging and testing
+ */
 
-// Also make available globally for onclick handlers
+/**
+ * Reposition all carousels on the page
+ * Useful for fixing flat carousels after layout changes
+ * @returns {Object} Results of repositioning attempts
+ */
+function repositionAllCarousels() {
+  console.log('🔄 Repositioning all carousels...');
+  const results = {
+    attempted: 0,
+    successful: 0,
+    failed: 0,
+    details: []
+  };
+  
+  // Find all carousel elements
+  const carouselElements = document.querySelectorAll('[class*="carousel-container"] .carousel, .carousel');
+  
+  carouselElements.forEach((element, index) => {
+    const carouselId = element.id || `carousel-${index}`;
+    results.attempted++;
+    
+    // Try to find the carousel instance
+    if (window.carouselInstances && window.carouselInstances[carouselId]) {
+      const carousel = window.carouselInstances[carouselId];
+      const success = carousel.reposition();
+      if (success) {
+        results.successful++;
+        results.details.push(`✅ ${carouselId}: repositioned successfully`);
+      } else {
+        results.failed++;
+        results.details.push(`❌ ${carouselId}: reposition failed`);
+      }
+    } else {
+      results.failed++;
+      results.details.push(`❌ ${carouselId}: no carousel instance found`);
+    }
+  });
+  
+  console.log(`📊 Results: ${results.successful}/${results.attempted} carousels repositioned successfully`);
+  results.details.forEach(detail => console.log(detail));
+  
+  return results;
+}
+
+/**
+ * Reposition a specific carousel by ID
+ * @param {string} carouselId - The ID of the carousel to reposition
+ * @returns {boolean} Success status
+ */
+function repositionCarousel(carouselId) {
+  console.log(`🔄 Repositioning carousel "${carouselId}"...`);
+  
+  if (window.carouselInstances && window.carouselInstances[carouselId]) {
+    const carousel = window.carouselInstances[carouselId];
+    const success = carousel.reposition();
+    if (success) {
+      console.log(`✅ Carousel "${carouselId}" repositioned successfully`);
+    } else {
+      console.log(`❌ Carousel "${carouselId}" reposition failed`);
+    }
+    return success;
+  } else {
+    console.error(`❌ Carousel instance "${carouselId}" not found`);
+    console.log('Available carousels:', Object.keys(window.carouselInstances || {}));
+    return false;
+  }
+}
+
+/**
+ * Debug carousel positioning by logging current state
+ * @param {string} carouselId - The ID of the carousel to debug
+ */
+function debugCarousel(carouselId) {
+  console.log(`🔍 Debugging carousel "${carouselId}"...`);
+  
+  const element = document.getElementById(carouselId);
+  if (!element) {
+    console.error(`❌ Carousel element "${carouselId}" not found`);
+    return;
+  }
+  
+  const cards = element.getElementsByClassName('carousel-card');
+  console.log(`📋 Carousel "${carouselId}" debug info:`);
+  console.log(`  - Element:`, element);
+  console.log(`  - Card count: ${cards.length}`);
+  console.log(`  - Element dimensions: ${element.offsetWidth}x${element.offsetHeight}`);
+  console.log(`  - Element transform:`, element.style.transform || 'none');
+  console.log(`  - Element visibility:`, window.getComputedStyle(element).visibility);
+  console.log(`  - Element display:`, window.getComputedStyle(element).display);
+  
+  if (cards.length > 0) {
+    console.log(`  - Card dimensions: ${cards[0].offsetWidth}x${cards[0].offsetHeight}`);
+    Array.from(cards).forEach((card, i) => {
+      console.log(`  - Card ${i} transform:`, card.style.transform || 'none');
+    });
+  }
+  
+  if (window.carouselInstances && window.carouselInstances[carouselId]) {
+    const carousel = window.carouselInstances[carouselId];
+    console.log(`  - Current rotation: ${carousel.currentRotation}deg`);
+    console.log(`  - Current index: ${carousel.currentIndex}`);
+    console.log(`  - Rotation angle: ${carousel.rotationAngle}deg`);
+  }
+}
+
+// Export for ES6 modules
+export { Carousel, setupCarouselKeyboardNavigation, repositionAllCarousels, repositionCarousel, debugCarousel };
+
+// Also make available globally for onclick handlers and console testing
 window.Carousel = Carousel;
 window.setupCarouselKeyboardNavigation = setupCarouselKeyboardNavigation;
+window.repositionAllCarousels = repositionAllCarousels;
+window.repositionCarousel = repositionCarousel;
+window.debugCarousel = debugCarousel;

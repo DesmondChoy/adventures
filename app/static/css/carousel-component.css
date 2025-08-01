@@ -104,15 +104,14 @@
     justify-content: flex-start;
     padding: 0;
     transform-origin: center;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
     box-shadow: none;
     opacity: 0.3;
     backdrop-filter: none;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
-    will-change: transform, opacity, width, margin-left;
+    will-change: transform, opacity;
     transform-style: preserve-3d;
-    perspective: 1000px;
 }
 
 @media (max-width: 768px) {
@@ -120,6 +119,8 @@
         width: 200px;
         height: 267px;
         margin-left: -100px;
+        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        will-change: transform, opacity;
     }
 }
 
@@ -135,6 +136,7 @@
 
 .carousel-card .card-front {
     transform: rotateY(0deg);
+    z-index: 2;
 }
 
 .carousel-card .card-back {
@@ -148,14 +150,17 @@
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(0, 0, 0, 0.08);
+    z-index: 1;
 }
 
 .carousel-card.selected .card-front {
     transform: rotateY(-180deg);
+    z-index: 1;
 }
 
 .carousel-card.selected .card-back {
     transform: rotateY(0deg);
+    z-index: 2;
 }
 
 .card-image {
@@ -167,9 +172,7 @@
 
 .carousel-card.active {
     opacity: 1;
-    width: 320px;
-    height: 415px;
-    margin-left: -160px;
+    transform: scale(1.06) translateZ(0);
     box-shadow: none;
     border: none;
     background: transparent;
@@ -179,9 +182,7 @@
 
 @media (max-width: 768px) {
     .carousel-card.active {
-        width: 240px;
-        height: 320px;
-        margin-left: -120px;
+        transform: scale(1.2) translateZ(0);
     }
 }
 
@@ -239,7 +240,7 @@
         border-radius: 12px;
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.15);
         border: 1px solid rgba(0, 0, 0, 0.1);
-        margin: 8px;
+        transform: rotateY(0deg) scale(0.95);
     }
 
     /* Specific styles for active card when selected */

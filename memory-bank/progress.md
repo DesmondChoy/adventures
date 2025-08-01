@@ -2,6 +2,61 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-08-01: Carousel 3D Effect & Performance Optimization - PARTIALLY RESOLVED
+
+**🔧 CAROUSEL FLIP TOGGLE & PERFORMANCE IMPROVEMENTS COMPLETED** - Fixed card flip toggle functionality and optimized animation performance, but lesson carousel 3D container effect remains unresolved.
+
+- **Goal:** 1) Enable carousel cards to toggle flip state each time clicked (instead of only flipping once), and 2) Fix frame drops and rendering issues during flip animations. Secondary goal: Align lesson carousel 3D appearance with story carousel.
+
+- **✅ PRIMARY OBJECTIVES ACHIEVED:**
+  1. **Toggle Flip Functionality:** Modified JavaScript `select()` method to toggle card state instead of always adding 'selected' class
+  2. **Performance Optimization:** Replaced layout-affecting CSS transitions with GPU-optimized transforms, eliminated layout thrashing
+  3. **Z-Fighting Fix:** Added explicit z-index management to fix "clipping halfway" rendering issue during card flips
+  4. **Animation Consistency:** Applied optimizations to both desktop and mobile for consistent performance
+
+- **🔧 ATTEMPTED FIXES FOR LESSON CAROUSEL 3D APPEARANCE:**
+  - **Root Cause Identified:** Oracle analysis revealed lesson carousel initializes while hidden (display:none), causing offsetWidth=0 and radius calculation to fail, resulting in flat appearance
+  - **Multiple Solutions Attempted:**
+    1. **Minimum Radius Logic:** Added minimum radius calculation based on 5+ items (broke story carousel by forcing all to 400px)
+    2. **Timing Fixes:** Implemented setTimeout delays and requestAnimationFrame waiting (insufficient for layout completion)
+    3. **Fallback Width Logic:** Added robust fallback when offsetWidth=0 (affected both carousels)
+    4. **Targeted Reposition:** Added reposition() method specifically for lesson carousel after initialization
+
+- **❌ LESSON CAROUSEL 3D EFFECT STILL UNRESOLVED:**
+  - **Current State:** Story carousel displays beautiful 3D container with rounded background and depth
+  - **Problem Persists:** Lesson carousel appears as flat 2D image despite identical HTML structure and CSS classes
+  - **Technical Analysis:** Both carousels use identical `.carousel-container`, `.carousel-card` CSS classes and JavaScript initialization
+  - **Oracle Findings:** Issue stems from initialization timing - lesson carousel created while screen transition active, causing dimension calculations to fail
+
+- **✅ TECHNICAL IMPLEMENTATION COMPLETED:**
+  - **Modified Files:**
+    - `app/static/css/carousel-component.css` (GPU-optimized transitions, z-index fixes, removed layout-affecting properties)
+    - `app/static/js/carousel-manager.js` (toggle flip logic, dynamic radius calculation, reposition method)
+    - `app/static/js/uiManager.js` (timing improvements for lesson carousel initialization)
+  - **Performance Optimizations:**
+    - Replaced `transition: all` with GPU-friendly `transform` and `opacity` only
+    - Eliminated width/height/margin changes that caused layout thrashing
+    - Added z-index layering to prevent face-fighting during 90° rotation
+    - Used `scale()` transforms instead of layout-affecting size changes
+
+- **✅ FINAL RESULTS ACHIEVED:**
+  - ✅ **Card flip toggle works perfectly** - click repeatedly to flip back and forth on both carousels
+  - ✅ **Animation performance optimized** - no more frame drops or rendering issues during flips
+  - ✅ **Story carousel 3D effect preserved** - maintains beautiful rounded container with depth
+  - ❌ **Lesson carousel 3D effect unresolved** - still appears flat despite identical styling
+
+- **📋 DEBUGGING APPROACHES ATTEMPTED:**
+  - **Oracle AI Analysis:** Comprehensive architecture review identified timing and dimension calculation issues
+  - **Parallel Debugging:** Used 3 concurrent sub-agents to fix radius calculation, timing, and create reposition method
+  - **Live Browser Testing:** Confirmed styling identical between carousels, verified initialization differences
+  - **Multiple Timing Solutions:** setTimeout, requestAnimationFrame, and reposition callback methods tested
+
+- **🎯 REMAINING ISSUE:** Lesson carousel displays as flat 2D image instead of 3D container despite sharing identical CSS classes and HTML structure with working story carousel. Root cause is initialization while screen transition active, but current timing fixes insufficient.
+
+- **Key Learning:** Animation performance issues resolved through GPU optimization, but complex initialization timing problems require deeper investigation of element visibility and layout timing during screen transitions.
+
+## Recently Completed (Last 14 Days)
+
 ### 2025-07-24: Landing Page Copy & Typography Enhancement - COMPLETED
 
 **✅ LANDING PAGE REDESIGNED WITH ENGAGING COPY & CHAPTER TYPOGRAPHY** - Successfully transformed generic landing page into compelling, specific copy that showcases actual game features while implementing consistent typography with chapter content.
