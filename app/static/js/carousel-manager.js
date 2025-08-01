@@ -83,12 +83,15 @@ class Carousel {
    * Set up event listeners for the carousel
    */
   setupEventListeners() {
-    // Add touch event handling
+    // Add touch event handling with momentum
     let touchStartX = 0;
+    let touchStartTime = 0;
     let touchEndX = 0;
+    let touchEndTime = 0;
     
     this.element.addEventListener('touchstart', (event) => {
       touchStartX = event.touches[0].clientX;
+      touchStartTime = Date.now();
       // Hide swipe tip on first touch
       const swipeTip = document.querySelector('.swipe-tip');
       if (swipeTip) swipeTip.style.display = 'none';
@@ -100,7 +103,8 @@ class Carousel {
     
     this.element.addEventListener('touchend', (event) => {
       touchEndX = event.changedTouches[0].clientX;
-      this.handleSwipe(touchStartX, touchEndX);
+      touchEndTime = Date.now();
+      this.handleMomentumSwipe(touchStartX, touchEndX, touchStartTime, touchEndTime);
     }, false);
     
     // Add click handlers to cards
@@ -116,7 +120,76 @@ class Carousel {
   }
   
   /**
-   * Handle swipe gestures
+   * Handle momentum-based swipe gestures
+   * @param {number} startX - Starting X position
+   * @param {number} endX - Ending X position
+   * @param {number} startTime - Starting timestamp
+   * @param {number} endTime - Ending timestamp
+   */
+  handleMomentumSwipe(startX, endX, startTime, endTime) {
+    const swipeDistance = endX - startX;
+    const swipeTime = Math.max(endTime - startTime, 1); // Prevent division by zero
+    const velocity = Math.abs(swipeDistance) / swipeTime; // pixels per millisecond
+    
+    const swipeThreshold = 50; // Minimum distance for a swipe
+    const minVelocity = 0.1; // Minimum velocity threshold
+    
+    if (Math.abs(swipeDistance) > swipeThreshold && velocity > minVelocity) {
+      const direction = swipeDistance > 0 ? 'prev' : 'next';
+      
+      // Calculate momentum based on velocity
+      // Fast swipes (>0.8 px/ms) get multiple rotations with deceleration
+      // Medium swipes (0.3-0.8 px/ms) get 1-2 rotations 
+      // Slow swipes (<0.3 px/ms) get single rotation
+      
+      let rotationCount = 1;
+      if (velocity > 0.8) {
+        rotationCount = Math.min(Math.floor(velocity * 2), 5); // Cap at 5 rotations
+      } else if (velocity > 0.3) {
+        rotationCount = Math.min(Math.floor(velocity * 3), 2);
+      }
+      
+      this.rotateMomentum(direction, rotationCount, velocity);
+    }
+  }
+  
+  /**
+   * Handle momentum rotation with deceleration
+   * @param {string} direction - Direction to rotate ('next' or 'prev')
+   * @param {number} rotationCount - Number of rotations to perform
+   * @param {number} velocity - Initial velocity for timing calculations
+   */
+  rotateMomentum(direction, rotationCount, velocity) {
+    let rotationsCompleted = 0;
+    
+    const performRotation = () => {
+      if (rotationsCompleted >= rotationCount) return;
+      
+      this.rotate(direction);
+      rotationsCompleted++;
+      
+      // Calculate delay for next rotation (deceleration)
+      // Start fast, slow down over time
+      const progress = rotationsCompleted / rotationCount;
+      const baseDelay = 150; // Base delay in ms
+      const maxDelay = 400; // Maximum delay for final rotations
+      
+      // Exponential deceleration curve
+      const delay = baseDelay + (maxDelay - baseDelay) * Math.pow(progress, 2);
+      
+      // Add some randomness for natural feel (±20ms)
+      const jitter = (Math.random() - 0.5) * 40;
+      const finalDelay = Math.max(delay + jitter, 50);
+      
+      setTimeout(performRotation, finalDelay);
+    };
+    
+    // Start the momentum rotation sequence
+    performRotation();
+  }
+  
+  /**
+   * Handle basic swipe gestures (fallback)
    * @param {number} startX - Starting X position
    * @param {number} endX - Ending X position
    */

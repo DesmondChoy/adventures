@@ -2,6 +2,38 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-08-01: Mobile Carousel Momentum Swipe Implementation - COMPLETED
+
+**✅ MOMENTUM-BASED SWIPE GESTURES SUCCESSFULLY IMPLEMENTED** - Added physics-based momentum system to carousel swiping that responds to swipe velocity with realistic deceleration.
+
+- **Goal:** Implement velocity-responsive carousel swiping where aggressive swipes cause cards to spin faster and gradually slow down.
+
+- **🔧 TECHNICAL IMPLEMENTATION:**
+  - **Velocity Tracking:** Captures swipe distance and time to calculate pixels per millisecond velocity
+  - **Momentum Scaling:** Fast swipes (>0.8 px/ms) trigger up to 5 card rotations, medium swipes (0.3-0.8 px/ms) get 1-2 rotations
+  - **Deceleration Physics:** Exponential curve for realistic slowdown with 150ms initial delay increasing to 400ms
+  - **Natural Feel:** Added timing randomness (±20ms jitter) for organic momentum behavior
+
+- **🎯 MOMENTUM ALGORITHM:**
+  - **Velocity Categories:**
+    - Fast swipes (>0.8 px/ms): 2-5 rotations with deceleration
+    - Medium swipes (0.3-0.8 px/ms): 1-2 rotations
+    - Slow swipes (<0.3 px/ms): Single rotation
+  - **Deceleration Formula:** `delay = baseDelay + (maxDelay - baseDelay) * progress²`
+  - **Rotation Timing:** Each subsequent rotation gets progressively longer delays for realistic physics
+
+- **✅ FILES MODIFIED:**
+  - **`app/static/js/carousel-manager.js`** (enhanced touch event handling, added momentum calculation and rotation sequencing)
+
+- **✅ FINAL RESULTS ACHIEVED:**
+  - ✅ **Velocity-responsive swiping** - aggressive swipes trigger multiple fast rotations
+  - ✅ **Realistic deceleration** - momentum gradually slows down with exponential timing
+  - ✅ **Natural feel** - timing jitter prevents mechanical repetition
+  - ✅ **Mobile optimization** - enhanced touch gesture recognition for smooth interaction
+  - ✅ **Backward compatibility** - fallback to single rotation for edge cases
+
+- **Impact:** Mobile carousel interaction now feels responsive and natural, with physics-based momentum that matches user gesture intensity.
+
 ### 2025-08-01: Carousel 3D Effect Implementation - FULLY RESOLVED
 
 **✅ LESSON CAROUSEL 3D EFFECT SUCCESSFULLY IMPLEMENTED** - Fixed geometry calculation and visibility issues to achieve consistent 3D appearance across both story and lesson carousels.
