@@ -20,6 +20,8 @@ class Carousel {
     // Configuration
     this.elementId = options.elementId;
     this.itemCount = options.itemCount;
+    // Use at least 5 slots for geometry so carousels with 2-4 items don't look flat
+    this.effectiveCount = Math.max(this.itemCount, 5);
     this.dataAttribute = options.dataAttribute;
     this.inputId = options.inputId;
     this.onSelect = options.onSelect || function() {};
@@ -27,7 +29,7 @@ class Carousel {
     // State
     this.currentRotation = 0;
     this.currentIndex = 0;
-    this.rotationAngle = 360 / this.itemCount;
+    this.rotationAngle = 360 / this.effectiveCount;
     this.selectedValue = '';
     
     // DOM Elements
@@ -58,7 +60,7 @@ class Carousel {
     
     // Calculate dynamic radius based on card count to prevent overlap
     const cardWidth = cards.length > 0 ? cards[0].offsetWidth : 300;
-    const radius = this.itemCount > 1 ? (cardWidth / 2) / Math.tan(Math.PI / this.itemCount) : 400;
+    const radius = (cardWidth / 2) / Math.tan(Math.PI / this.effectiveCount);
     
     try {
       for (let i = 0; i < cards.length; i++) {
@@ -284,12 +286,10 @@ class Carousel {
       console.log(`Card width: ${cardWidth}px, Item count: ${this.itemCount}`);
       
       // Recalculate radius using the same logic as init()
-      const calculatedRadius = this.itemCount > 1 ? (cardWidth / 2) / Math.tan(Math.PI / this.itemCount) : 400;
-      const minRadius = (cardWidth / 2) / Math.tan(Math.PI / 5);
-      const hardMinimum = 400;
-      const radius = Math.max(calculatedRadius, minRadius, hardMinimum);
+      const calculatedRadius = (cardWidth / 2) / Math.tan(Math.PI / this.effectiveCount);
+      const radius = calculatedRadius;
       
-      console.log(`Calculated radius: ${calculatedRadius.toFixed(2)}px, Min radius: ${minRadius.toFixed(2)}px, Final radius: ${radius}px`);
+      console.log(`Calculated radius: ${calculatedRadius.toFixed(2)}px, Final radius: ${radius}px`);
       
       // Apply new transforms to all cards
       for (let i = 0; i < cards.length; i++) {
