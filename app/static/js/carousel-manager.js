@@ -141,10 +141,13 @@ class Carousel {
         
         // Only trigger selection if user wasn't swiping
         if (swipeDistance < swipeThreshold) {
-          event.preventDefault(); // Prevent synthetic click
-          const value = card.dataset[this.dataAttribute];
-          if (value) {
-            this.select(value);
+          // Don't preventDefault if there's an inline onclick handler - let it handle the click
+          if (!card.onclick) {
+            event.preventDefault(); // Prevent synthetic click only if no inline onclick
+            const value = card.dataset[this.dataAttribute];
+            if (value) {
+              this.select(value);
+            }
           }
         }
       }, false);

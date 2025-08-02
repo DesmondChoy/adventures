@@ -1025,15 +1025,19 @@ export async function resetApplicationState() {
     
     // Re-initialize the category carousel with our Carousel class
     const totalCategories = window.appConfig?.totalCategories || 0;
-    window.categoryCarousel = new Carousel({
-        elementId: 'categoryCarousel',
-        itemCount: totalCategories,
-        dataAttribute: 'category',
-        inputId: 'storyCategory',
-        onSelect: (categoryId) => {
-            selectedCategory = categoryId;
-        }
-    });
+    
+    // Only initialize if not already initialized or if current instance is invalid
+    if (!window.categoryCarousel || typeof window.categoryCarousel.reposition !== 'function') {
+        window.categoryCarousel = new Carousel({
+            elementId: 'categoryCarousel',
+            itemCount: totalCategories,
+            dataAttribute: 'category',
+            inputId: 'storyCategory',
+            onSelect: (categoryId) => {
+                selectedCategory = categoryId;
+            }
+        });
+    }
     
     // Set up global keyboard navigation
     setupCarouselKeyboardNavigation([window.categoryCarousel]);
