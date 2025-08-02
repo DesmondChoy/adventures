@@ -4,7 +4,7 @@
     <div class="carousel-container">
         <div class="carousel" id="lessonCarousel">
             {% for topic in lesson_topics %}
-            <div class="carousel-card" data-topic="{{ topic }}" onclick="window.lessonCarousel && window.lessonCarousel.select ? window.lessonCarousel.select('{{ topic }}') : console.warn('lessonCarousel not ready')">
+            <div class="carousel-card" data-topic="{{ topic }}">
                 <div class="card-face card-front">
                     <img src="/static/images/lessons/{{ topic }}.jpg" alt="{{ topic }}" class="card-image">
                 </div>
@@ -22,12 +22,12 @@
             {% endfor %}
         </div>
         <div class="carousel-nav">
-            <button type="button" onclick="window.lessonCarousel && window.lessonCarousel.rotate ? window.lessonCarousel.rotate('prev') : console.warn('lessonCarousel not ready')" aria-label="Previous">
+            <button type="button" onclick="window.lessonCarousel.rotate('prev')" aria-label="Previous">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                     <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                 </svg>
             </button>
-            <button type="button" onclick="window.lessonCarousel && window.lessonCarousel.rotate ? window.lessonCarousel.rotate('next') : console.warn('lessonCarousel not ready')" aria-label="Next">
+            <button type="button" onclick="window.lessonCarousel.rotate('next')" aria-label="Next">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                     <path d="M8.59 7.41L10 6l6 6-6 6-1.41-1.41L13.17 12z"/>
                 </svg>
