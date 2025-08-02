@@ -7,7 +7,7 @@ Quick shortcuts for common tasks:
 - `$craft`: Create git commit message for session changes using conventional commit types (feat, docs, chore, etc). Do not commit - user reviews first.
 - `$review`: Use Oracle and remind it of the original objective, then review all changes made using all tools available. Check for opinionated changes, over-engineering, and opportunities for simplification or efficiency improvements. Present findings to user for decision.
 - `$parallel-x`: Run x sub-agents in parallel (not sequentially) where x is the number specified.
-- `$playwright`: Start server and use Playwright MCP for browser automation/visual verification. Steps: 1) `start cmd /k ".venv\Scripts\activate && python -m app.main"` 2) `mcp__playwright__browser_wait_for` (3 sec) 3) `mcp__playwright__browser_navigate` to `http://localhost:8000` 4) Use snapshot/screenshot/evaluate as needed.
+- `$playwright`: Start server and use Playwright MCP for browser automation/visual verification to iterative develop/test your code implementations. Steps: 1) `start cmd /k ".venv\Scripts\activate && python -m app.main"` 2) `mcp__playwright__browser_wait_for` (3 sec) 3) `mcp__playwright__browser_navigate` to `http://localhost:8000` 4) Use snapshot/screenshot/evaluate as needed. 
 
 ## Commands
 - **Virtual Environment**: ALWAYS activate `.venv` before running Python commands
