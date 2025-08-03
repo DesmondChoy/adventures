@@ -2,6 +2,36 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-08-03: Adventure Display Name Enhancement - COMPLETED
+
+**✅ ADVENTURE DISPLAY NAMES IMPROVED** - Successfully replaced file-based adventure IDs with proper display names from YAML files and refactored code for better maintainability.
+
+- **Goal:** Change adventure display names from file IDs (`festival_of_lights_and_colors`, `enchanted_forest_tales`) to proper names from YAML files ("Festival of Lights & Colors", "Enchanted Forest Tales").
+
+- **🔧 SOLUTION IMPLEMENTED:**
+  - **YAML Name Integration:** Added `get_display_name()` method to `StoryLoader` class to read `name` field from YAML files
+  - **Shared Helper Function:** Created `_adventure_data_to_resume()` helper to eliminate 45+ lines of duplicate code between API endpoints  
+  - **API Response Updates:** Both `/api/user/current-adventure` and `/api/adventure/active_by_client_uuid/{client_uuid}` now return proper display names
+  - **Code Quality Improvements:** Reduced verbose logging, simplified error handling, and improved type safety
+
+- **✅ TECHNICAL IMPLEMENTATION:**
+  - **Modified Files:**
+    - `app/data/story_loader.py` (added get_display_name method)
+    - `app/routers/web.py` (added shared helper, updated API responses, reduced code duplication)
+  - **Code Quality:** Eliminated duplicate logic, improved maintainability, and simplified error handling
+  - **Type Safety:** Fixed typing issues with optional parameters
+
+- **✅ FINAL RESULTS ACHIEVED:**
+  - ✅ **Adventure names now display properly** - "Festival of Lights & Colors" instead of `festival_of_lights_and_colors`
+  - ✅ **Code duplication eliminated** - 45+ lines of duplicate logic replaced with shared helper function
+  - ✅ **Better maintainability** - Display name logic centralized in StoryLoader class
+  - ✅ **Improved performance** - Reduced code complexity and simplified API responses
+  - ✅ **Type safety enhanced** - Fixed typing issues with optional parameters
+
+- **Key Learning:** Moving helper functions into appropriate service classes and extracting shared logic significantly improves code maintainability while keeping the same functionality.
+
+## Recently Completed (Last 14 Days)
+
 ### 2025-08-03: Story Carousel Mobile Touch Event Conflict Resolution - COMPLETED
 
 **✅ STORY CAROUSEL MOBILE CARD CLICKING ISSUE RESOLVED** - Fixed complex mobile touch event interference with inline onclick handlers preventing card flips on real mobile devices.

@@ -101,3 +101,19 @@ class StoryLoader:
         """
         all_stories = self.load_all_stories()
         return list(all_stories["story_categories"].keys())
+
+    def get_display_name(self, category_id: str) -> str:
+        """Get the display name from the YAML file for a story category.
+        
+        Args:
+            category_id: The story category ID (file name without extension)
+            
+        Returns:
+            The display name from the YAML file, or the ID if name not found
+        """
+        story_data = self.get_story_category(category_id)
+        if story_data and "name" in story_data:
+            return story_data["name"]
+        
+        # Fallback to the category ID if we can't get the display name
+        return category_id
