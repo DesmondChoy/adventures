@@ -174,11 +174,45 @@
 .carousel-card.active {
     opacity: 1;
     transform: scale(1.06) translateZ(0);
-    box-shadow: none;
     border: none;
     background: transparent;
     z-index: 1;
-    animation: none;
+    animation: emeraldBreath 2s ease-in-out infinite, gentleWiggle 4s ease-in-out infinite;
+}
+
+@keyframes emeraldBreath {
+    0%, 100% {
+        box-shadow: 
+            0 0 10px rgba(139, 69, 219, 0.2),
+            0 0 20px rgba(139, 69, 219, 0.3),
+            0 0 30px rgba(139, 69, 219, 0.2),
+            0 0 40px rgba(167, 139, 250, 0.1);
+        filter: drop-shadow(0 0 8px rgba(139, 69, 219, 0.2)) brightness(1);
+    }
+    50% {
+        box-shadow: 
+            0 0 20px rgba(139, 69, 219, 0.6),
+            0 0 40px rgba(139, 69, 219, 0.5),
+            0 0 60px rgba(139, 69, 219, 0.4),
+            0 0 80px rgba(167, 139, 250, 0.3),
+            0 0 100px rgba(167, 139, 250, 0.2);
+        filter: drop-shadow(0 0 20px rgba(139, 69, 219, 0.5)) brightness(1.05);
+    }
+}
+
+@keyframes gentleWiggle {
+    0%, 100% {
+        filter: hue-rotate(0deg) drop-shadow(0 0 12px rgba(139, 69, 219, 0.3));
+    }
+    25% {
+        filter: hue-rotate(2deg) drop-shadow(0 0 15px rgba(139, 69, 219, 0.4));
+    }
+    50% {
+        filter: hue-rotate(0deg) drop-shadow(0 0 18px rgba(139, 69, 219, 0.5));
+    }
+    75% {
+        filter: hue-rotate(-2deg) drop-shadow(0 0 15px rgba(139, 69, 219, 0.4));
+    }
 }
 
 @media (max-width: 768px) {

@@ -2,6 +2,52 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2025-08-04: Active Carousel Card Visual Enhancement - COMPLETED
+
+**✅ PURPLE/VIOLET GLOWING ANIMATION SUCCESSFULLY IMPLEMENTED** - Active carousel card now features an elegant breathing glow effect that prompts user interaction while maintaining layout integrity.
+
+- **Goal:** Add visual enhancement to active carousel card to make it more prominent and encourage user clicks.
+
+- **🔍 DESIGN EVOLUTION PROCESS:**
+  - **Initial Implementation:** Golden glow effect with pseudo-elements causing layout displacement
+  - **Color Optimization:** Changed from golden (poor contrast with cream background) to emerald green, then to purple/violet for optimal magical theme alignment
+  - **Animation Enhancement:** Upgraded from static glow to dynamic breathing and shimmer effects
+  - **Layout Fix:** Resolved transform conflicts with 3D carousel positioning by using filter-only animations
+
+- **🔧 TECHNICAL IMPLEMENTATION:**
+  - **Animation System:** Dual-animation approach using `emeraldBreath` (2s cycle) and `gentleWiggle` (4s cycle)
+  - **Visual Effects:** Multi-layered box-shadow with breathing intensity, filter effects for depth and color shimmer
+  - **Layout Compatibility:** Removed transform-based animations to preserve 3D carousel geometry
+  - **Performance Optimization:** Used hardware-accelerated CSS filters and box-shadow for smooth animation
+
+- **✅ FINAL IMPLEMENTATION DETAILS:**
+  - **Purple/Violet Color Palette:** 
+    - Primary: `rgba(139, 69, 219, ...)` (violet-500)
+    - Highlights: `rgba(167, 139, 250, ...)` (violet-400)
+  - **Animation Features:**
+    - Breathing glow intensity (0.2 to 0.6 opacity range)
+    - Brightness variations (1.0 to 1.05) for enhanced depth
+    - Subtle hue rotation (-2° to +2°) for living color shimmer
+    - Multi-layered drop-shadow effects for ethereal quality
+
+- **✅ CROSS-PLATFORM TESTING:**
+  - **Desktop Compatibility:** Verified proper glow effect and carousel positioning on desktop browsers
+  - **Mobile Responsiveness:** Confirmed animation scales appropriately for mobile viewports
+  - **3D Layout Integrity:** Ensured side cards maintain correct 3D circular positioning
+  - **Animation Performance:** Smooth 60fps animations without jank or layout shifts
+
+- **✅ FINAL RESULTS ACHIEVED:**
+  - ✅ **Prominent visual cue** - Purple/violet glow clearly indicates active card
+  - ✅ **Excellent contrast** - Vibrant visibility against cream background
+  - ✅ **Magical theme alignment** - Purple fits fantasy adventure aesthetic perfectly
+  - ✅ **Breathing animation** - Living, organic feel that draws attention
+  - ✅ **Layout preservation** - No interference with 3D carousel positioning
+  - ✅ **Cross-platform consistency** - Works identically on desktop and mobile
+
+- **Key Learning:** Filter-based animations (box-shadow, drop-shadow, brightness, hue-rotate) provide rich visual effects without interfering with JavaScript-managed 3D transforms, enabling complex animations while preserving layout integrity.
+
+## Recently Completed (Last 14 Days)
+
 ### 2025-08-03: Adventure Display Name Enhancement - COMPLETED
 
 **✅ ADVENTURE DISPLAY NAMES IMPROVED** - Successfully replaced file-based adventure IDs with proper display names from YAML files and refactored code for better maintainability.
