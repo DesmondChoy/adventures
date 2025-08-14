@@ -38,7 +38,7 @@
 /* Carousel Container and Base Structure */
 .carousel-container {
     perspective: 2000px;
-    margin: 32px auto 60px;
+    margin: 45px auto 20px;
     width: 400px;
     height: 450px;
     position: relative;
@@ -59,14 +59,17 @@
 @media (max-width: 768px) {
     .carousel-container {
         width: 320px;
-        height: 360px;
+        height: 330px; /* reduce overall block height to pull button closer */
         perspective: 1500px;
-        margin: 35px auto 50px;
+        margin: 42px auto 0; /* minimal bottom whitespace */
+        padding: 8px 12px 2px; /* minimal internal spacing */
     }
     
     .carousel-container.warning-active {
         margin-top: 60px !important;
     }
+    /* tighten space between carousel and the green button on mobile */
+    #storyCategoryScreen .mt-4 { margin-top: -12px !important; }
 }
 
 .carousel {
@@ -84,7 +87,8 @@
 
 @media (max-width: 768px) {
     .carousel {
-        height: 340px;
+        height: 320px; /* match reduced container height */
+        /* inherit default centering (top: 50%) */
     }
 }
 
