@@ -261,6 +261,12 @@ export function goToLessonTopicScreen() {
     document.getElementById('storyCategoryScreen').classList.add('hidden');
     // Remove hidden class to trigger transition
     document.getElementById('lessonTopicScreen').classList.remove('hidden');
+
+    // Announce step change for screen readers
+    const stepRegion = document.getElementById('step-aria');
+    if (stepRegion) {
+        stepRegion.textContent = 'Step 2 of 2: Choose Topic';
+    }
     
     // Wait for layout to settle after removing hidden class
     requestAnimationFrame(() => {
@@ -282,6 +288,18 @@ export function goToLessonTopicScreen() {
                         inputId: 'lessonTopic',
                         onSelect: (topic) => {
                             selectedLessonTopic = topic;
+                            const btn = document.getElementById('lesson-start-btn');
+                            if (btn) {
+                                if (topic) {
+                                    btn.disabled = false;
+                                    btn.classList.remove('cursor-not-allowed');
+                                    btn.textContent = `Start adventure with "${topic}"`;
+                                } else {
+                                    btn.disabled = true;
+                                    btn.classList.add('cursor-not-allowed');
+                                    btn.textContent = 'Start adventure';
+                                }
+                            }
                         }
                     });
                     console.log('[LESSON CAROUSEL] Successfully created Carousel instance:', window.lessonCarousel);

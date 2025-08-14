@@ -17,7 +17,9 @@ import {
     setSelectedCategory,
     setSelectedLessonTopic,
     clearStreamBuffer,
-    clearActiveParagraphs
+    clearActiveParagraphs,
+    goToLessonTopicScreen,
+    startAdventure
 } from './uiManager.js';
 
 // Global application state
@@ -40,8 +42,19 @@ if (!window.appConfig) {
 // Initialize WebSocket connection
 export function initWebSocket() {
     showLoader();
-    if (!authManager || !authManager.accessToken) {
-        // console.warn('[FrontendWS Log 2] In initWebSocket: AuthManager or AccessToken is missing initially.'); // Kept as warn
+    if (!authManager) {
+        console.error('initWebSocket: authManager missing');
+    }
+
+    // Ensure wsManager exists (defensive)
+    if (!window.appState.wsManager) {
+        try {
+            window.appState.wsManager = new WebSocketManager(authManager);
+        } catch (e) {
+            console.error('initWebSocket: failed to instantiate WebSocketManager:', e);
+            hideLoader();
+            return;
+        }
     }
 
     const websocketUrl = window.appState.wsManager.getWebSocketUrl();
@@ -248,6 +261,18 @@ function initializeCarousels() {
         inputId: 'storyCategory',
         onSelect: (categoryId) => {
             setSelectedCategory(categoryId);
+            const btn = document.getElementById('category-continue-btn');
+            if (btn) {
+                if (categoryId) {
+                    btn.disabled = false;
+                    btn.classList.remove('cursor-not-allowed');
+                    btn.textContent = `Continue with "${categoryId.replaceAll('_',' ')}"`;
+                } else {
+                    btn.disabled = true;
+                    btn.classList.add('cursor-not-allowed');
+                    btn.textContent = 'Continue';
+                }
+            }
         }
     });
 
@@ -364,3 +389,5 @@ window.addEventListener('beforeunload', function () {
 // Expose functions to global scope for onclick handlers
 window.resetApplicationState = resetApplicationState;
 window.viewAdventureSummary = viewAdventureSummary;
+window.goToLessonTopicScreen = goToLessonTopicScreen;
+window.startAdventure = startAdventure;

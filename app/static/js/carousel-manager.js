@@ -290,17 +290,24 @@ class Carousel {
       // Check if the card is already selected - if so, toggle it off
       if (targetCard.classList.contains('selected')) {
         targetCard.classList.remove('selected', 'selecting');
+        targetCard.setAttribute('aria-selected', 'false');
         this.selectedValue = '';
         if (this.inputElement) {
           this.inputElement.value = '';
         }
+        // Clear selection state from all cards' aria attributes
+        Array.from(cards).forEach(card => card.setAttribute('aria-selected', 'false'));
+        // Notify deselection so UI can disable buttons
+        this.onSelect('');
       } else {
         // Remove selected class from all cards and add to the chosen one
         Array.from(cards).forEach(card => {
           card.classList.remove('selected', 'selecting');
+          card.setAttribute('aria-selected', 'false');
         });
         
         targetCard.classList.add('selected', 'selecting');
+        targetCard.setAttribute('aria-selected', 'true');
         setTimeout(() => targetCard.classList.remove('selecting'), 300);
         
         this.selectedValue = value;
