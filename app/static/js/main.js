@@ -239,6 +239,16 @@ export async function viewAdventureSummary() {
     }
 }
 
+// Utility: convert string to Title Case (handles spaces, underscores, hyphens)
+function toTitleCase(str) {
+    return (str || '')
+        .replace(/[_-]+/g, ' ')
+        .split(' ')
+        .filter(Boolean)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+}
+
 // Initialize carousels
 function initializeCarousels() {
     const carouselElement = document.getElementById('categoryCarousel');
@@ -266,8 +276,8 @@ function initializeCarousels() {
                 if (categoryId) {
                     btn.disabled = false;
                     btn.classList.remove('cursor-not-allowed');
-                    btn.textContent = `Continue with "${categoryId.replaceAll('_',' ')}"`;
-                } else {
+                    btn.textContent = `Continue with "${toTitleCase(categoryId)}"`;
+                    } else {
                     btn.disabled = true;
                     btn.classList.add('cursor-not-allowed');
                     btn.textContent = 'Continue';

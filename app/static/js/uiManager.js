@@ -13,6 +13,16 @@ let activeParagraphs = new Set(); // Store active paragraph indices
 let selectedCategory = '';
 let selectedLessonTopic = '';
 
+// Utility: convert string to Title Case (handles spaces, underscores, hyphens)
+function toTitleCase(str) {
+    return (str || '')
+        .replace(/[_-]+/g, ' ')
+        .split(' ')
+        .filter(Boolean)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+}
+
 // Initialize marked.js with custom options
 marked.setOptions({
     breaks: true,  // Enable line breaks
@@ -291,9 +301,9 @@ export function goToLessonTopicScreen() {
                             const btn = document.getElementById('lesson-start-btn');
                             if (btn) {
                                 if (topic) {
-                                    btn.disabled = false;
-                                    btn.classList.remove('cursor-not-allowed');
-                                    btn.textContent = `Start adventure with "${topic}"`;
+                                btn.disabled = false;
+                                btn.classList.remove('cursor-not-allowed');
+                                btn.textContent = `Start adventure with "${toTitleCase(topic)}"`;
                                 } else {
                                     btn.disabled = true;
                                     btn.classList.add('cursor-not-allowed');
@@ -1053,6 +1063,18 @@ export async function resetApplicationState() {
             inputId: 'storyCategory',
             onSelect: (categoryId) => {
                 selectedCategory = categoryId;
+                const btn = document.getElementById('category-continue-btn');
+                if (btn) {
+                    if (categoryId) {
+                        btn.disabled = false;
+                        btn.classList.remove('cursor-not-allowed');
+                        btn.textContent = `Continue with \"${toTitleCase(categoryId)}\"`;
+                    } else {
+                        btn.disabled = true;
+                        btn.classList.add('cursor-not-allowed');
+                        btn.textContent = 'Continue';
+                    }
+                }
             }
         });
     }
