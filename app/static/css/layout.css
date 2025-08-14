@@ -130,6 +130,8 @@ body {
     #storyContainer {
         margin-top: 0;
         background: transparent;
+        /* restore default bottom padding */
+        padding-bottom: 40px;
     }
 
     .swipe-tip {

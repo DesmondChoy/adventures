@@ -8,29 +8,12 @@
     };
 </script>
 
-<!-- Global functions that need to be accessible from onclick handlers -->
-<script>
-    // These functions will be set by the main module
-    window.goToLessonTopicScreen = function() {
-        console.warn('goToLessonTopicScreen not yet loaded');
-    };
-    
-    window.startAdventure = function() {
-        console.warn('startAdventure not yet loaded');
-    };
-</script>
+<!-- Global functions will be attached by main.js after modules load to avoid duplicate instances -->
 
 <!-- Carousel manager module (needs to be loaded before main.js) -->
-<script type="module" src="{{ url_for('static', path='js/carousel-manager.js') }}"></script>
+<script type="module" src="{{ url_for('static', path='js/carousel-manager.js') }}?v=20250814d"></script>
 
 <!-- Main application module (ES6 module) -->
-<script type="module" src="{{ url_for('static', path='js/main.js') }}"></script>
+<script type="module" src="{{ url_for('static', path='js/main.js') }}?v=20250814d"></script>
 
-<!-- Expose navigation functions to global scope for template onclick handlers -->
-<script type="module">
-    import { goToLessonTopicScreen, startAdventure } from '/static/js/uiManager.js';
-    
-    // Make functions available globally for onclick handlers
-    window.goToLessonTopicScreen = goToLessonTopicScreen;
-    window.startAdventure = startAdventure;
-</script>
+<!-- Navigation functions are attached by main.js to avoid duplicate module instances -->

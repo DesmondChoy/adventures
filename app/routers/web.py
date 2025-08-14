@@ -41,19 +41,9 @@ def load_story_data() -> Dict[str, Any]:
         all_stories = story_loader.load_all_stories()
         story_categories = all_stories.get("story_categories", {})
 
-        logger.info(
-            "Loaded story data",
-            extra={
-                "categories_type": str(type(story_categories)),
-                "categories_count": len(story_categories) if story_categories else 0,
-                "categories": list(story_categories.keys()) if story_categories else [],
-                "elements_per_category": {
-                    cat: list(details.keys())
-                    for cat, details in story_categories.items()
-                }
-                if story_categories
-                else {},
-            },
+        logger.debug(
+            f"Loaded {len(story_categories)} story categories",
+            extra={"categories": list(story_categories.keys())} if story_categories else {},
         )
         return story_categories
     except Exception as e:
@@ -85,7 +75,44 @@ def get_session_context(request: Request) -> dict:
     }
 
 
-def calculate_display_chapter_number(state_data: dict) -> int:
+def _adventure_data_to_resume(adventure_data: dict) -> Optional[AdventureResumeDetails]:
+    """Convert adventure data dict to AdventureResumeDetails model.
+    
+    Args:
+        adventure_data: Dictionary containing adventure data from storage
+        
+    Returns:
+        AdventureResumeDetails model or None if data is invalid
+    """
+    if not adventure_data:
+        return None
+    
+    # Validate required fields
+    required_fields = ["id", "story_category", "lesson_topic", "updated_at"]
+    if not all(adventure_data.get(field) for field in required_fields):
+        return None
+    
+    # Calculate current chapter for display
+    state_data = adventure_data.get("state_data")
+    current_chapter_num = calculate_display_chapter_number(state_data)
+    
+    # Get display name from YAML
+    story_loader = StoryLoader()
+    story_display_name = story_loader.get_display_name(adventure_data["story_category"])
+    
+    return AdventureResumeDetails(
+        adventure_id=adventure_data["id"],
+        story_category=story_display_name,
+        lesson_topic=adventure_data["lesson_topic"],
+        current_chapter=current_chapter_num,
+        total_chapters=adventure_data.get(
+            "total_chapters", AdventureState.model_fields["story_length"].default
+        ),
+        last_updated=adventure_data["updated_at"],
+    )
+
+
+def calculate_display_chapter_number(state_data: dict | None) -> int:
     """
     Calculate the correct chapter number to display to the user.
     This matches the logic used in the WebSocket router and excludes SUMMARY chapters.
@@ -297,58 +324,15 @@ async def get_user_current_adventure_api(
         )
 
         if adventure_data:
-            # Calculate current_chapter for display using the new function
-            state_data = adventure_data.get("state_data")
-            current_chapter_num = calculate_display_chapter_number(state_data)
-
-            # Validate required fields before creating the response
-            adventure_id = adventure_data.get("id")
-            story_category = adventure_data.get("story_category")
-            lesson_topic = adventure_data.get("lesson_topic")
-            updated_at = adventure_data.get("updated_at")
-
-            if not adventure_id:
+            adventure_details = _adventure_data_to_resume(adventure_data)
+            if not adventure_details:
                 logger.error(
-                    "Adventure missing required 'id' field in /api/user/current-adventure",
+                    "Adventure data missing required fields in /api/user/current-adventure",
                     extra=context,
                 )
                 return CurrentAdventureAPIResponse(adventure=None)
-
-            if not story_category:
-                logger.error(
-                    "Adventure missing required 'story_category' field in /api/user/current-adventure",
-                    extra=context,
-                )
-                return CurrentAdventureAPIResponse(adventure=None)
-
-            if not lesson_topic:
-                logger.error(
-                    "Adventure missing required 'lesson_topic' field in /api/user/current-adventure",
-                    extra=context,
-                )
-                return CurrentAdventureAPIResponse(adventure=None)
-
-            try:
-                adventure_details = AdventureResumeDetails(
-                    adventure_id=adventure_id,  # FIXED: Changed from "adventure_id" to "id"
-                    story_category=story_category,
-                    lesson_topic=lesson_topic,
-                    current_chapter=current_chapter_num,
-                    total_chapters=adventure_data.get(
-                        "total_chapters", AdventureState.model_fields["story_length"].default
-                    ),  # Use configurable default
-                    last_updated=updated_at,
-                )
-                response = CurrentAdventureAPIResponse(adventure=adventure_details)
-                return response
-
-            except Exception as model_error:
-                logger.error(
-                    f"Error creating AdventureResumeDetails model in /api/user/current-adventure: {model_error}",
-                    extra={**context, "error": str(model_error)},
-                    exc_info=True,
-                )
-                return CurrentAdventureAPIResponse(adventure=None)
+            
+            return CurrentAdventureAPIResponse(adventure=adventure_details)
 
         logger.info(
             f"No adventure found for user {user_id} in /api/user/current-adventure, returning null",
@@ -358,8 +342,8 @@ async def get_user_current_adventure_api(
 
     except Exception as e:
         logger.error(
-            f"Error fetching current adventure for user {user_id} in /api/user/current-adventure: {str(e)}",
-            extra={**context, "error": str(e), "error_type": type(e).__name__},
+            f"Error fetching current adventure for user {user_id}: {str(e)}",
+            extra={**context, "error": str(e)},
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Error fetching current adventure.")
@@ -398,30 +382,14 @@ async def get_active_adventure_by_client_uuid_api(
         )
 
         if adventure_data:
-            # Calculate current_chapter for display using the new function
-            state_data = adventure_data.get("state_data")
-            current_chapter_num = calculate_display_chapter_number(state_data)
-
-            adventure_id = adventure_data.get("id")
-            story_category = adventure_data.get("story_category")
-            lesson_topic = adventure_data.get("lesson_topic")
-            updated_at = adventure_data.get("updated_at")
-
-            if not all([adventure_id, story_category, lesson_topic, updated_at]):
+            adventure_details = _adventure_data_to_resume(adventure_data)
+            if not adventure_details:
                 logger.error(
                     f"Adventure for client_uuid {client_uuid} missing required fields in /api/adventure/active_by_client_uuid.",
                     extra=context,
                 )
                 return CurrentAdventureAPIResponse(adventure=None)
-
-            adventure_details = AdventureResumeDetails(
-                adventure_id=adventure_id,
-                story_category=story_category,
-                lesson_topic=lesson_topic,
-                current_chapter=current_chapter_num,
-                total_chapters=adventure_data.get("total_chapters", AdventureState.model_fields["story_length"].default),
-                last_updated=updated_at,
-            )
+            
             return CurrentAdventureAPIResponse(adventure=adventure_details)
 
         logger.info(
@@ -432,8 +400,8 @@ async def get_active_adventure_by_client_uuid_api(
 
     except Exception as e:
         logger.error(
-            f"Error fetching active adventure for client_uuid {client_uuid} in /api/adventure/active_by_client_uuid: {str(e)}",
-            extra={**context, "error": str(e), "error_type": type(e).__name__},
+            f"Error fetching active adventure for client_uuid {client_uuid}: {str(e)}",
+            extra={**context, "error": str(e)},
             exc_info=True,
         )
         raise HTTPException(

@@ -30,7 +30,7 @@ async def periodic_cleanup():
     """Run cleanup of expired states periodically."""
     while True:
         try:
-            await state_storage_service.cleanup_expired()
+            await state_storage_service.cleanup_expired_adventures()
         except Exception as e:
             logger.error(f"Error in periodic cleanup: {e}")
 

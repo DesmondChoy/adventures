@@ -1,10 +1,27 @@
 <div id="storyCategoryScreen" class="max-w-md mx-auto rounded-xl overflow-hidden md:max-w-2xl p-6 screen-transition" style="background-color: transparent;">
+    <!-- Step indicator -->
+    <div class="mb-4 flex items-center gap-2 text-sm text-gray-600" aria-label="Adventure setup steps">
+        <div class="flex items-center gap-2">
+            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-white font-semibold" style="background-color: var(--color-primary);">1</span>
+            <span class="font-medium" style="color: var(--color-text-dark);">Choose world</span>
+        </div>
+        <span class="mx-1">→</span>
+        <div class="flex items-center gap-2 opacity-70">
+            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full font-semibold" style="border: 1px solid var(--color-accent-strong); color: var(--color-text-dark);">2</span>
+            <span>Choose topic</span>
+        </div>
+    </div>
+
+    <h2 class="text-xl font-semibold text-gray-900">Choose your world</h2>
+    <p class="text-sm text-gray-600 mt-1">Pick a world to shape the tone and setting of your adventure.</p>
+
     <input type="hidden" id="storyCategory" name="storyCategory" required>
     <div class="swipe-tip">Swipe to explore <span class="hand">➜</span></div>
+    <div id="category-warning-container" class="warning-container" style="display: none;"></div>
     <div class="carousel-container">
-        <div class="carousel" id="categoryCarousel">
+        <div class="carousel" id="categoryCarousel" role="listbox" aria-label="Story worlds">
             {% for category_id, category_data in story_categories.items() %}
-            <div class="carousel-card" data-category="{{ category_id }}" onclick="window.categoryCarousel.select('{{ category_id }}')">
+            <div class="carousel-card" role="option" aria-selected="false" tabindex="0" data-category="{{ category_id }}" onclick="window.categoryCarousel.select('{{ category_id }}')">
                 <div class="card-face card-front">
                     <img src="/static/images/stories/{{ category_id }}.jpg" alt="{{ category_data.name }}" class="card-image">
                 </div>
@@ -28,8 +45,15 @@
             </button>
         </div>
     </div>
-    <button onclick="goToLessonTopicScreen()"
-            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-        Confirm Your Adventure
-    </button>
+    <div class="mt-4">
+        <button id="category-continue-btn" onclick="goToLessonTopicScreen()" disabled
+                class="primary-button w-full flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium text-white cursor-not-allowed disabled:opacity-60 focus:outline-none"
+                style="background: var(--color-primary-gradient);"
+        >
+            Continue
+        </button>
+
+    </div>
+
+    <div id="step-aria" aria-live="polite" class="sr-only"></div>
 </div>

@@ -498,7 +498,58 @@
   * `supabase/migrations/20250123_backfill_event_durations.sql` - Historical data fix
 - **Debugging Pattern**: Trace complete data flow from storage → calculation → display rather than assuming UI-layer problems
 
-### 20. System-Wide Character Description Pattern (CRITICAL UX)
+### 20. Cross-Platform Touch Event Compatibility Pattern (CRITICAL MOBILE)
+- **Problem:** Mobile touch events can interfere with click handlers, creating platform-specific functionality gaps
+- **Core Challenge:** `preventDefault()` in touch event handlers blocks ALL subsequent click events, including inline onclick handlers
+- **Real-World Impact:** Interactive elements work on desktop and Playwright simulation but fail on actual mobile devices
+- **Smart Touch Event Handling (`carousel-manager.js`):**
+  * **Conditional preventDefault**: Only call `preventDefault()` when no inline onclick handler exists
+  * **Handler Detection**: Check for `card.onclick` presence before blocking default touch behavior
+  * **Hybrid Compatibility**: Support both inline onclick (desktop) and addEventListener (mobile) simultaneously
+  ```javascript
+  card.addEventListener('touchend', (event) => {
+    const swipeDistance = Math.abs(cardTouchEndX - cardTouchStartX);
+    const swipeThreshold = 50;
+    
+    // Only trigger selection if user wasn't swiping
+    if (swipeDistance < swipeThreshold) {
+      // Don't preventDefault if there's an inline onclick handler - let it handle the click
+      if (!card.onclick) {
+        event.preventDefault(); // Prevent synthetic click only if no inline onclick
+        const value = card.dataset[this.dataAttribute];
+        if (value) {
+          this.select(value);
+        }
+      }
+      // If card.onclick exists, let the inline handler fire naturally
+    }
+  }, false);
+  ```
+- **Cross-Platform Testing Strategy:**
+  * **Desktop Testing**: Verify click events work with mouse interactions
+  * **Mobile Simulation**: Test with Playwright mobile viewport for basic functionality
+  * **Real Device Testing**: Critical - Playwright click simulation bypasses touch event handling
+  * **Touch Event Debugging**: Use real mobile browsers with developer tools to debug touch conflicts
+- **Implementation Guidelines:**
+  * **Prefer JavaScript addEventListener**: More reliable across platforms than inline onclick
+  * **Fallback Support**: When inline onclick is required, implement smart preventDefault logic
+  * **Event Handler Unification**: Consider migrating to single event handling pattern for consistency
+  * **Touch Gesture Distinction**: Always check swipe distance before triggering tap actions
+- **Benefits:**
+  * **Universal Compatibility**: Same code works on desktop, mobile, and automated testing
+  * **Performance Optimization**: Prevents unnecessary event blocking and handler conflicts
+  * **User Experience**: Consistent interaction behavior across all devices and platforms
+  * **Maintainability**: Single codebase handles multiple interaction paradigms
+- **Key Files:**
+  * `app/static/js/carousel-manager.js` - Smart preventDefault implementation
+  * `app/templates/components/category_carousel.html` - Inline onclick handlers
+  * `app/templates/components/lesson_carousel.html` - JavaScript-only handlers
+- **Debugging Lessons:**
+  * Touch event `preventDefault()` is a common cause of mobile-specific interaction failures
+  * Playwright testing cannot catch real mobile touch event conflicts
+  * Always test interactive features on actual mobile devices during development
+
+### 21. System-Wide Character Description Pattern (CRITICAL UX)
 - **Purpose:** Ensures visual consistency across all chapters for image generation and character continuity
 - **Common Misconception:** The character description rules in `SYSTEM_PROMPT_TEMPLATE` (lines 42-45) may appear to duplicate guidance from `FIRST_CHAPTER_PROMPT`, but they serve a fundamentally different purpose
 - **Why This Is NOT Duplication:**

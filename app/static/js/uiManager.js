@@ -13,6 +13,16 @@ let activeParagraphs = new Set(); // Store active paragraph indices
 let selectedCategory = '';
 let selectedLessonTopic = '';
 
+// Utility: convert string to Title Case (handles spaces, underscores, hyphens)
+function toTitleCase(str) {
+    return (str || '')
+        .replace(/[_-]+/g, ' ')
+        .split(' ')
+        .filter(Boolean)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+}
+
 // Initialize marked.js with custom options
 marked.setOptions({
     breaks: true,  // Enable line breaks
@@ -32,6 +42,52 @@ export function showError(message) {
         toast.classList.add('hide');
         setTimeout(() => toast.remove(), 300);
     }, 3000);
+}
+
+export function showCategoryWarning(message) {
+    const warningContainer = document.getElementById('category-warning-container');
+    const carouselContainer = document.querySelector('.carousel-container');
+    
+    if (warningContainer) {
+        warningContainer.textContent = message;
+        warningContainer.style.display = 'block';
+        
+        // Add class to carousel container to push it down
+        if (carouselContainer) {
+            carouselContainer.classList.add('warning-active');
+        }
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            warningContainer.style.display = 'none';
+            if (carouselContainer) {
+                carouselContainer.classList.remove('warning-active');
+            }
+        }, 3000);
+    }
+}
+
+export function showLessonWarning(message) {
+    const warningContainer = document.getElementById('lesson-warning-container');
+    const carouselContainer = document.querySelector('#lessonTopicScreen .carousel-container');
+    
+    if (warningContainer) {
+        warningContainer.textContent = message;
+        warningContainer.style.display = 'block';
+        
+        // Add class to carousel container to push it down
+        if (carouselContainer) {
+            carouselContainer.classList.add('warning-active');
+        }
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            warningContainer.style.display = 'none';
+            if (carouselContainer) {
+                carouselContainer.classList.remove('warning-active');
+            }
+        }, 3000);
+    }
 }
 
 // --- Loader Functions ---
@@ -208,35 +264,80 @@ function handleChapterProgress(data) {
 // --- Navigation Functions ---
 export function goToLessonTopicScreen() {
     if (!selectedCategory) {
-        showError('Please select a story category to continue');
+        showCategoryWarning('Click on a card below to choose your adventure');
         return;
     }
     // Add hidden class to trigger transition
     document.getElementById('storyCategoryScreen').classList.add('hidden');
     // Remove hidden class to trigger transition
     document.getElementById('lessonTopicScreen').classList.remove('hidden');
-    
-    // Get total lesson topics from global config
-    const totalLessonTopics = window.appConfig?.totalLessonTopics || 0;
-    
-    // Initialize the lesson carousel with our Carousel class
-    window.lessonCarousel = new Carousel({
-        elementId: 'lessonCarousel',
-        itemCount: totalLessonTopics,
-        dataAttribute: 'topic',
-        inputId: 'lessonTopic',
-        onSelect: (topic) => {
-            selectedLessonTopic = topic;
-        }
-    });
-    
-    // Update the keyboard navigation to include the lesson carousel
-    setupCarouselKeyboardNavigation([window.categoryCarousel, window.lessonCarousel]);
-    
-    // Fix mobile-specific active card scaling if needed
-    if (window.innerWidth <= 768) {
-        window.lessonCarousel.fixMobileActiveCardScaling();
+
+    // Announce step change for screen readers
+    const stepRegion = document.getElementById('step-aria');
+    if (stepRegion) {
+        stepRegion.textContent = 'Step 2 of 2: Choose Topic';
     }
+    
+    // Wait for layout to settle after removing hidden class
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            // Get total lesson topics from global config
+            const totalLessonTopics = window.appConfig?.totalLessonTopics || 0;
+            
+            console.log('[LESSON CAROUSEL] Initializing with', totalLessonTopics, 'topics');
+            console.log('[LESSON CAROUSEL] Current window.lessonCarousel:', window.lessonCarousel);
+            
+            // Only initialize if not already initialized or if current instance is invalid
+            if (!window.lessonCarousel || typeof window.lessonCarousel.reposition !== 'function') {
+                try {
+                    // Initialize the lesson carousel with our Carousel class
+                    window.lessonCarousel = new Carousel({
+                        elementId: 'lessonCarousel',
+                        itemCount: totalLessonTopics,
+                        dataAttribute: 'topic',
+                        inputId: 'lessonTopic',
+                        onSelect: (topic) => {
+                            selectedLessonTopic = topic;
+                            const btn = document.getElementById('lesson-start-btn');
+                            if (btn) {
+                                if (topic) {
+                                btn.disabled = false;
+                                btn.classList.remove('cursor-not-allowed');
+                                btn.textContent = `Start adventure with "${toTitleCase(topic)}"`;
+                                } else {
+                                    btn.disabled = true;
+                                    btn.classList.add('cursor-not-allowed');
+                                    btn.textContent = 'Start adventure';
+                                }
+                            }
+                        }
+                    });
+                    console.log('[LESSON CAROUSEL] Successfully created Carousel instance:', window.lessonCarousel);
+                } catch (error) {
+                    console.error('[LESSON CAROUSEL] Error creating Carousel instance:', error);
+                    showError('Failed to initialize lesson carousel. Please refresh the page.');
+                    return;
+                }
+            } else {
+                console.log('[LESSON CAROUSEL] Using existing instance');
+            }
+            
+            // Force reposition for lesson carousel if dimensions were wrong during init
+            setTimeout(() => {
+                if (window.lessonCarousel && typeof window.lessonCarousel.reposition === 'function') {
+                    window.lessonCarousel.reposition();
+                }
+            }, 100);
+            
+            // Update the keyboard navigation to include the lesson carousel
+            setupCarouselKeyboardNavigation([window.categoryCarousel, window.lessonCarousel]);
+            
+            // Fix mobile-specific active card scaling if needed
+            if (window.innerWidth <= 768 && window.lessonCarousel && typeof window.lessonCarousel.fixMobileActiveCardScaling === 'function') {
+                window.lessonCarousel.fixMobileActiveCardScaling();
+            }
+        });
+    });
 }
 
 export async function startAdventure() {
@@ -247,7 +348,7 @@ export async function startAdventure() {
     }
     
     if (!selectedLessonTopic) {
-        showError('Please select a lesson topic to begin');
+        showLessonWarning('Click on a card below to choose your lesson topic');
         return;
     }
 
@@ -947,17 +1048,36 @@ export async function resetApplicationState() {
         card.classList.remove('selected', 'selecting', 'active');
     });
     
+    // Clear lesson carousel instance
+    window.lessonCarousel = null;
+    
     // Re-initialize the category carousel with our Carousel class
     const totalCategories = window.appConfig?.totalCategories || 0;
-    window.categoryCarousel = new Carousel({
-        elementId: 'categoryCarousel',
-        itemCount: totalCategories,
-        dataAttribute: 'category',
-        inputId: 'storyCategory',
-        onSelect: (categoryId) => {
-            selectedCategory = categoryId;
-        }
-    });
+    
+    // Only initialize if not already initialized or if current instance is invalid
+    if (!window.categoryCarousel || typeof window.categoryCarousel.reposition !== 'function') {
+        window.categoryCarousel = new Carousel({
+            elementId: 'categoryCarousel',
+            itemCount: totalCategories,
+            dataAttribute: 'category',
+            inputId: 'storyCategory',
+            onSelect: (categoryId) => {
+                selectedCategory = categoryId;
+                const btn = document.getElementById('category-continue-btn');
+                if (btn) {
+                    if (categoryId) {
+                        btn.disabled = false;
+                        btn.classList.remove('cursor-not-allowed');
+                        btn.textContent = `Continue with \"${toTitleCase(categoryId)}\"`;
+                    } else {
+                        btn.disabled = true;
+                        btn.classList.add('cursor-not-allowed');
+                        btn.textContent = 'Continue';
+                    }
+                }
+            }
+        });
+    }
     
     // Set up global keyboard navigation
     setupCarouselKeyboardNavigation([window.categoryCarousel]);

@@ -534,20 +534,7 @@ class StateStorageService:
             )
             return 0
 
-    async def cleanup_expired(self) -> int:
-        """
-        DEPRECATED: This method previously deleted adventures older than 1 hour.
-        It is replaced by `cleanup_expired_adventures` which marks them as complete after 30 days.
-        Keeping the method signature for now to avoid breaking calls if any, but it will do nothing.
-        Consider removing this method in a future refactor.
 
-        Returns:
-            int: Always 0.
-        """
-        logger.warning(
-            "DEPRECATED: `cleanup_expired` was called. This method no longer deletes records. Use `cleanup_expired_adventures`."
-        )
-        return 0
 
     async def _abandon_all_incomplete_adventures(self, user_id: UUID) -> bool:
         """

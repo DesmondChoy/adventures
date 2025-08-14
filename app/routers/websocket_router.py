@@ -419,7 +419,12 @@ async def story_websocket(
             })
 
         while True:
-            data = await websocket.receive_json()
+            try:
+                data = await websocket.receive_json()
+            except (RuntimeError, WebSocketDisconnect):
+                logger.info("WebSocket client disconnected during receive")
+                break
+            
             validated_state = data.get("state")
             choice_data = data.get("choice")
 
