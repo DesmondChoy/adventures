@@ -527,3 +527,10 @@
 .loader-container {
     display: none;
 }
+
+/* Selection screen primary action buttons: match intro primary size */
+#category-continue-btn,
+#lesson-start-btn {
+    font-size: 1.5rem !important; /* same as intro primary (24px) */
+    line-height: 1.4 !important;
+}

@@ -198,12 +198,19 @@ label.text-sm {
 
 /* Intro text styles */
 #introText p {
-    font-family: var(--font-primary);
+    font-family: var(--font-reading);
     font-weight: 500;
 }
 
-#introText p.text-xl {
-    font-size: var(--font-size-xl);
+#introText {
+    /* Increase intro block sizes */
+    font-size: 1.125rem; /* secondary line */
+}
+#introText .text-xl {
+    font-size: 1.5rem; /* primary line */
+}
+#introText p:not(.text-xl) {
+    font-size: 1.125rem;
 }
 
 /* Choice buttons typography - matching streaming text exactly */
@@ -326,4 +333,29 @@ label.text-sm {
 .markdown-content strong {
     font-weight: 700;
     color: var(--color-text-dark);
+}
+
+/* Selection page typography overrides */
+/* Make all text in selection screens use the reading font */
+#storyCategoryScreen,
+#lessonTopicScreen {
+    font-family: var(--font-reading);
+}
+/* Ensure elements that normally force Andika use Crimson Text here */
+#storyCategoryScreen .font-medium,
+#lessonTopicScreen .font-medium {
+    font-family: var(--font-reading);
+}
+/* Targeted size increases for selection screens */
+#storyCategoryScreen .mb-4.text-sm,
+#lessonTopicScreen .mb-4.text-sm {
+    font-size: 1rem; /* step indicator line */
+}
+#storyCategoryScreen .text-xl,
+#lessonTopicScreen .text-xl {
+    font-size: 1.5rem; /* section headings */
+}
+#storyCategoryScreen p.text-sm,
+#lessonTopicScreen p.text-sm {
+    font-size: 1rem; /* helper text */
 }
