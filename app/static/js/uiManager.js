@@ -983,6 +983,15 @@ export async function handleMessage(event) {
             if (['adventure_loaded', 'adventure_status', 'chapter_update'].includes(data.type)) {
                 handleChapterProgress(data);
             }
+
+            // Ensure viewport is at the top when a new chapter starts or an adventure loads
+            if (data.type === 'chapter_update' || data.type === 'adventure_loaded') {
+                try {
+                    window.scrollTo(0, 0);
+                } catch (e) {
+                    // no-op
+                }
+            }
         } else {
             // For any other message types, hide the loader as a fallback
             hideLoader();

@@ -41,6 +41,11 @@
     pointer-events: none;
 }
 
+/* Prevent scroll anchoring from nudging the viewport during streaming */
+#storyContent {
+    overflow-anchor: none;
+}
+
 /* Create the curved-down effect at the top edges */
 #storyContainer::before {
     content: "";
