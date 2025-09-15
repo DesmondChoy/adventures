@@ -545,6 +545,14 @@
                             alert(`Could not abandon previous adventure: ${error.message}. Proceeding to new selection.`);
                         }
                     }
+                    // Critical: ensure we truly start fresh on /select by clearing any local/session state
+                    try {
+                        localStorage.removeItem('adventure_state');
+                    } catch (e) { /* noop */ }
+                    try {
+                        sessionStorage.removeItem('resume_story_category');
+                        sessionStorage.removeItem('resume_lesson_topic');
+                    } catch (e) { /* noop */ }
                     hideResumeModal();
                     redirectToSelectPage();
                 });

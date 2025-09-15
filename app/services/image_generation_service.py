@@ -20,7 +20,7 @@ class ImageGenerationService:
 
     def __init__(self):
         """Initialize Gemini service with the specified model."""
-        self.model_name = "imagen-3.0-generate-002"
+        self.model_name = "imagen-4.0-generate-001"
 
         # First try to load from environment variables
         api_key = os.getenv("GOOGLE_API_KEY")
@@ -139,7 +139,9 @@ class ImageGenerationService:
                             )
                             raise
 
-                logger.warning(f"No images generated for prompt (attempt {attempt + 1}/{retries + 1})")
+                logger.warning(
+                    f"No images generated for prompt (attempt {attempt + 1}/{retries + 1})"
+                )
                 # If we got a response but no images, increment attempt and try again
                 attempt += 1
                 last_error = ValueError(
@@ -164,9 +166,7 @@ class ImageGenerationService:
                     time.sleep(backoff_time)
 
         # If we reach here, all attempts failed
-        logger.error(
-            f"All {retries + 1} image generation attempts failed for prompt"
-        )
+        logger.error(f"All {retries + 1} image generation attempts failed for prompt")
         if last_error:
             logger.error(f"Last error: {type(last_error).__name__}: {str(last_error)}")
 
@@ -244,16 +244,18 @@ class ImageGenerationService:
             logger.info(f"Scene Description: {image_scene_description}")
             logger.info(f"Protagonist Description: {protagonist_description}")
             logger.info(f"Story Visual Sensory Detail: {story_visual_sensory_detail}")
-            
+
             # Log agency details if available
             if agency_details:
                 logger.info("Agency Details:")
                 logger.info(f"- Category: {agency_details.get('category', 'N/A')}")
                 logger.info(f"- Name: {agency_details.get('name', 'N/A')}")
-                logger.info(f"- Visual Details: {agency_details.get('visual_details', 'N/A')}")
+                logger.info(
+                    f"- Visual Details: {agency_details.get('visual_details', 'N/A')}"
+                )
             else:
                 logger.info("Agency Details: None")
-            
+
             # Log character visuals
             logger.info("Character Visuals:")
             if character_visuals and len(character_visuals) > 0:
@@ -286,6 +288,7 @@ class ImageGenerationService:
 
             # Use Flash Lite for image prompt synthesis
             from app.services.llm.factory import LLMServiceFactory
+
             llm = LLMServiceFactory.create_for_use_case("image_prompt_synthesis")
 
             # Check if we're using Gemini or OpenAI
@@ -300,11 +303,11 @@ class ImageGenerationService:
                     # Use unified genai client with new API
                     system_prompt = "You are a helpful assistant that follows instructions precisely."
                     combined_prompt = f"{system_prompt}\n\n{meta_prompt}"
-                    
+
                     response = self.client.models.generate_content(
                         model=llm.model,  # Use the Flash Lite model from the factory
                         contents=combined_prompt,
-                        config=ModelConfig.get_gemini_config()
+                        config=ModelConfig.get_gemini_config(),
                     )
 
                     # Extract the text directly
@@ -355,17 +358,17 @@ class ImageGenerationService:
             logger.info("\n=== SYNTHESIZED IMAGE PROMPT ===")
             logger.info(synthesized_prompt)
             logger.info("===============================\n")
-            
+
             return synthesized_prompt
 
         except Exception as e:
             logger.error(f"Error synthesizing image prompt: {str(e)}")
             # Return a fallback prompt
             fallback_prompt = f"Colorful storybook illustration of this scene: {image_scene_description}. Protagonist: {protagonist_description}. Agency: {agency_details.get('visual_details', '')}. Atmosphere: {story_visual_sensory_detail}."
-            
+
             # Log this fallback prompt too
             logger.info("\n=== USING ERROR FALLBACK IMAGE PROMPT ===")
             logger.info(fallback_prompt)
             logger.info("========================================\n")
-            
+
             return fallback_prompt
