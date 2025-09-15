@@ -8,6 +8,13 @@
     <link rel="stylesheet" href="/static/css/resume-modal.css">
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Preload hero image with responsive hints -->
+    <link rel="preload" as="image"
+          href="/static/images/optimized/learning-adventure-library@1024.webp"
+          imagesrcset="/static/images/optimized/learning-adventure-library@1024.webp 1024w"
+          imagesizes="(min-width: 1024px) 50vw, 90vw"
+          fetchpriority="high" />
+
     <style>
         .glass {
             background: rgba(255, 255, 255, 0.7);
@@ -205,11 +212,20 @@
                     <div class="relative">
                         <div class="absolute inset-0 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl transform rotate-3 scale-95 opacity-70"></div>
                         <div class="rounded-2xl relative shadow-xl">
-                            <img
-                                src="/static/images/learning-adventure-library.png"
-                                alt="Magical Library Portal - Explore Infinite Possibilities"
-                                class="w-full h-auto rounded-xl shadow-md"
-                            />
+                            <picture>
+                                <source type="image/webp"
+                                        srcset="/static/images/optimized/learning-adventure-library@1024.webp 1024w"
+                                        sizes="(min-width: 1024px) 50vw, 90vw">
+                                <img
+                                    src="/static/images/learning-adventure-library.png"
+                                    alt="Magical Library Portal - Explore Infinite Possibilities"
+                                    class="w-full h-auto rounded-xl shadow-md"
+                                    loading="eager"
+                                    fetchpriority="high"
+                                    decoding="async"
+                                    width="1024" height="1024"
+                                />
+                            </picture>
                         </div>
                     </div>
                 </div>
@@ -233,7 +249,7 @@
                     <h3 class="text-xl font-semibold mb-3">Choose Your Adventure</h3>
                     <p class="text-gray-600">Select from multiple fantasy settings and educational topics that interest you.</p>
                     <div class="mt-6">
-                        <img src="/static/images/adventure-selection.png" alt="Magical forest scene with cute characters and mushrooms showing adventure selection interface" class="mx-auto rounded-lg shadow-md w-64 h-auto object-contain">
+                        <img src="/static/images/adventure-selection.png" alt="Magical forest scene with cute characters and mushrooms showing adventure selection interface" class="mx-auto rounded-lg shadow-md w-64 h-auto object-contain" loading="lazy" decoding="async" width="256">
                         <p class="text-sm text-gray-500 mt-2 italic">Choose your path through personalized adventures</p>
                     </div>
                 </div>
@@ -245,7 +261,7 @@
                     <h3 class="text-xl font-semibold mb-3">Make Decisions</h3>
                     <p class="text-gray-600">Your choices shape the story and determine what educational content you'll encounter.</p>
                     <div class="mt-6">
-                        <img src="/static/images/red-green-portal.png" alt="Character making a choice between two magical portals" class="mx-auto rounded-lg shadow-md w-64 h-auto object-contain">
+                        <img src="/static/images/red-green-portal.png" alt="Character making a choice between two magical portals" class="mx-auto rounded-lg shadow-md w-64 h-auto object-contain" loading="lazy" decoding="async" width="256">
                         <p class="text-sm text-gray-500 mt-2 italic">Your decisions create unique narrative paths</p>
                     </div>
                 </div>
@@ -257,7 +273,7 @@
                     <h3 class="text-xl font-semibold mb-3">Learn & Explore</h3>
                     <p class="text-gray-600">Absorb educational content naturally as you progress through your personalized adventure.</p>
                     <div class="mt-6">
-                        <img src="/static/images/monster-encounter.png" alt="Child character with owl companion facing a green dragon in a magical forest" class="mx-auto rounded-lg shadow-md w-64 h-auto object-contain">
+                        <img src="/static/images/monster-encounter.png" alt="Child character with owl companion facing a green dragon in a magical forest" class="mx-auto rounded-lg shadow-md w-64 h-auto object-contain" loading="lazy" decoding="async" width="256">
                         <p class="text-sm text-gray-500 mt-2 italic">Educational content woven into thrilling adventures</p>
                     </div>
                 </div>

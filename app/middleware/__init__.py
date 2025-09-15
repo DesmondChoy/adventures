@@ -5,6 +5,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from .request_id import RequestIDMiddleware
 from .logging import LoggingMiddleware
+from .cache_control import CacheControlMiddleware
 import os
 
 
@@ -14,6 +15,8 @@ def get_middleware_stack():
     """
     return [
         Middleware(ProxyHeadersMiddleware, trusted_hosts="*"),
+        # Add aggressive caching for static assets to speed up repeat views
+        Middleware(CacheControlMiddleware),
         Middleware(
             SessionMiddleware,
             secret_key=os.getenv("SECRET_KEY", "your-secret-key-here"),
