@@ -47,9 +47,9 @@ graph TD
     LP[localStorage/Supabase Auth]
     Client <--> LP
 
-    WR[Web Router (/select &amp; resume)]
-    WSR[WebSocket Router]
-    SR[Summary Router (/adventure/*)]
+    WR["Web Router (/select and resume)"]
+    WSR["WebSocket Router"]
+    SR["Summary Router (/adventure/*)"]
 
     Client <--> WR
     Client <--> WSR
