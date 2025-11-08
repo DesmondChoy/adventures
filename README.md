@@ -43,86 +43,79 @@ The robust and scalable architecture of Learning Odyssey is designed for growth 
 ### Architecture Overview
 ```mermaid
 graph TD
-    Client[Web Client] <--> WSR[WebSocket Router]
-    WSR <--> WSC[WebSocket Core]
-    
-    %% WebSocket Service Components
-    WSC <--> CP[Choice Processor]
-    WSC <--> CG[Content Generator]
-    WSC <--> SH[Stream Handler]
-    WSC <--> IG[Image Generator]
-    WSC <--> SG[Summary Generator]
-    
-    CP <--> ASM[Adventure State Manager]
-    CG <--> ASM
-    ASM <--> AS[AdventureState]
-    ASM <--> CM[Chapter Manager]
-    CM <--> LLMF[LLM Factory]
-    LLMF <--> LLM[LLM Service]
-    LLMF <--> LLML[LLM Lite Service]
-    CM <--> DB[(Supabase DB)] %% Updated from (Database)
-    IG <--> IMG[Image Generation Service]
-    CM <--> SL[Story Loader]
-    SL <--> SF[(Story Files)]
-    LLM <--> PF[Paragraph Formatter]
-    LLML <--> PF
-    
-    %% React Summary Components
-    Client <--> SR[Summary Router]
-    SR <--> RSUM[React Summary App]
-    SR <--> SAPI[Summary API]
-    SAPI <--> SGEN[Summary Generator]
-    SGEN <--> AS
+    Client[Web Client]
+    LP[localStorage/Supabase Auth]
+    Client <--> LP
 
-    subgraph Client Side
-        LP[localStorage/Supabase Auth] <--> CSM[Client Auth/State Manager] %% Updated
-        CSM <--> Client
-    end
+    WR[Web Router (/select & resume)]
+    WSR[WebSocket Router]
+    SR[Summary Router (/adventure/*)]
 
-    subgraph Core State
-        AS
-    end
+    Client <--> WR
+    Client <--> WSR
+    Client <--> SR
 
     subgraph WebSocket Services
-        WSC
-        CP
-        CG
-        SH
-        IG
-        SG
+        WSR --> WSC[WebSocket Core]
+        WSC --> CP[Choice Processor]
+        WSC --> CG[Content Generator]
+        WSC --> SH[Stream Handler]
+        WSC --> IG[Image Generator]
+        WSC --> SG[Summary Generator]
     end
 
-    subgraph Core Services
-        ASM
-        CM
-        LLMF
-        LLM
-        LLML
-        IMG
-        PF
+    CP --> ASM[Adventure State Manager]
+    CG --> ASM
+    ASM --> AS[AdventureState]
+    ASM --> CM[Chapter Manager]
+    CM --> LLMF[LLM Service Factory]
+    LLMF --> LLM[Gemini Flash]
+    LLMF --> LLML[Gemini Flash Lite]
+    CM --> SL[Story Loader]
+    IG --> IMG[Image Generation Service]
+
+    subgraph Summary Experience
+        SR --> RSUM[React Summary App]
+        SR --> SAPI[Summary API]
+        RSUM <--> SAPI
+        SAPI --> SUMS[Summary Service]
     end
+
+    SUMS --> ASM
+    SUMS --> AS
+
+    subgraph Persistence & Analytics
+        SSS[StateStorageService]
+        TS[TelemetryService]
+        DB[(Supabase: adventures + telemetry)]
+    end
+
+    WR <--> SSS
+    WSR <--> SSS
+    SUMS <--> SSS
+    WSR --> TS
+    SUMS --> TS
+    TS --> DB
+    SSS <--> DB
 
     subgraph Content Sources
-        CSV[lessons/*.csv] --> CM
-        LLM --> CM
-        IMG --> IG
-        SF --> SL
+        CSV[(lessons/*.csv)]
+        SF[(story_categories.yaml)]
     end
-    
-    subgraph React Summary
-        RSUM
-        SAPI
-        SGEN
-    end
-    
+
+    CSV --> CM
+    SF --> SL
+    WR --> SL
+
     subgraph Templates
         BL[Base Layout]
         PC[Page Components]
         UI[UI Components]
-        Client --> BL
-        BL --> PC
-        PC --> UI
     end
+
+    WR --> BL
+    BL --> PC
+    PC --> UI
 ```
 
 ## Recent Enhancements: Continual Evolution
@@ -144,12 +137,12 @@ Learning Odyssey is a living project, constantly evolving to deliver a richer ex
 ## Setup (For Developers)
 
 1.  Clone the repository.
-2.  Create and activate a virtual environment:
+2.  Create and activate the `.venv` virtual environment (required for all Python commands):
     ```bash
-    python -m venv venv
-    source venv/bin/activate  # Linux/Mac
+    python -m venv .venv
+    source .venv/bin/activate  # Linux/Mac
     # or
-    .\venv\Scripts\activate  # Windows
+    .\.venv\Scripts\activate  # Windows
     ```
 3.  Install dependencies:
     ```bash
