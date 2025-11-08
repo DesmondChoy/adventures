@@ -20,6 +20,7 @@ from app.init_data import sample_question
 logger = logging.getLogger("story_app")
 llm_service = LLMService()
 chapter_manager = ChapterManager()
+MAX_CHAPTER_GENERATION_ATTEMPTS = 3
 
 
 def clean_chapter_content(content: str) -> str:
@@ -76,19 +77,22 @@ async def generate_chapter(
     if chapter_type == ChapterType.LESSON:
         question = await load_lesson_question(lesson_topic, state)
 
-    # Generate story content
-    story_content = await generate_story_content(story_config, state, question, previous_lessons)
-
-    # Extract choices based on chapter type and get cleaned content without choices section
-    story_choices, cleaned_content = await extract_story_choices(chapter_type, story_content, question, current_chapter_number)
+    chapter_content = await generate_chapter_content_with_retries(
+        story_config=story_config,
+        state=state,
+        chapter_type=chapter_type,
+        question=question,
+        current_chapter_number=current_chapter_number,
+        previous_lessons=previous_lessons,
+    )
 
     # Debug output for choices
     logger.debug("\n=== DEBUG: Story Choices ===")
-    for i, choice in enumerate(story_choices, 1):
+    for i, choice in enumerate(chapter_content.choices, 1):
         logger.debug(f"Choice {i}: {choice.text} (next_chapter: {choice.next_chapter})")
     
     # Return cleaned content (without choices section) in the ChapterContent
-    return ChapterContent(content=cleaned_content, choices=story_choices), question
+    return chapter_content, question
 
 
 async def load_story_config(story_category: str) -> Dict[str, Any]:
@@ -185,6 +189,42 @@ async def generate_story_content(
         logger.error(f"Error message: {str(e)}")
         logger.error("===============================\n")
         raise
+
+
+async def generate_chapter_content_with_retries(
+    story_config: Dict[str, Any],
+    state: AdventureState,
+    chapter_type: ChapterType,
+    question: Optional[Dict[str, Any]],
+    current_chapter_number: int,
+    previous_lessons: Optional[List[LessonResponse]] = None,
+    max_attempts: int = MAX_CHAPTER_GENERATION_ATTEMPTS,
+) -> ChapterContent:
+    """Generate chapter content, retrying until valid choices are produced."""
+    attempt_error: Optional[Exception] = None
+
+    for attempt in range(1, max_attempts + 1):
+        story_content = await generate_story_content(
+            story_config, state, question, previous_lessons or []
+        )
+        try:
+            story_choices, cleaned_content = await extract_story_choices(
+                chapter_type, story_content, question, current_chapter_number
+            )
+            return ChapterContent(content=cleaned_content, choices=story_choices)
+        except Exception as exc:
+            attempt_error = exc
+            logger.warning(
+                "Chapter generation attempt %s/%s failed choice validation: %s",
+                attempt,
+                max_attempts,
+                exc,
+            )
+
+    raise ValueError(
+        "Failed to generate chapter content with valid choices after "
+        f"{max_attempts} attempts"
+    ) from attempt_error
 
 
 def clean_generated_content(content: str) -> str:
@@ -308,15 +348,11 @@ async def extract_regular_choices(
             raise ValueError("No choices found in story content")
 
         if len(choices) != 3:
-            logger.warning(
-                f"Expected 3 choices but found {len(choices)}. Raw choices text:"
+            logger.error(
+                f"Expected exactly 3 choices but found {len(choices)}. Raw choices text:"
             )
-            logger.warning(choices_text)
-            # If we found at least one choice, use what we have rather than failing
-            if choices:
-                logger.info("Proceeding with available choices")
-            else:
-                raise ValueError("Must have at least one valid choice")
+            logger.error(choices_text)
+            raise ValueError("Story chapters must end with exactly 3 choices")
 
         story_choices = [
             StoryChoice(
@@ -329,14 +365,7 @@ async def extract_regular_choices(
         return story_choices, clean_content
     except Exception as e:
         logger.error(f"Error parsing choices: {e}")
-        fallback_choices = [
-            StoryChoice(
-                text=f"Continue with option {i + 1}",
-                next_chapter=f"chapter_{current_chapter_number}_{i}",
-            )
-            for i in range(3)
-        ]
-        return fallback_choices, clean_content
+        raise
 
 
 def parse_choice_text(choices_text: str) -> List[str]:
