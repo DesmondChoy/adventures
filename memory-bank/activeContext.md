@@ -2,7 +2,9 @@
 
 ## Current Focus: Actual Adventure Duration Implementation Complete (As of 2025-07-20)
 
-✅ **LATEST ACHIEVEMENT:** Actual Adventure Duration Implementation COMPLETED! Successfully replaced hardcoded "30 mins" values with real-time calculation from telemetry data, providing accurate user engagement metrics in the summary page.
+✅ **LATEST ACHIEVEMENT (2025-02-14):** Story Chapter Validation Hardening COMPLETED! Added choice parsing enforcement plus retry-based generation so only chapters with three authentic choices are streamed, eliminating duplicate chapter rendering caused by malformed LLM output.
+
+✅ **PREVIOUS ACHIEVEMENT:** Actual Adventure Duration Implementation COMPLETED! Successfully replaced hardcoded "30 mins" values with real-time calculation from telemetry data, providing accurate user engagement metrics in the summary page.
 
 ✅ **PREVIOUS ACHIEVEMENT:** Telemetry Duration Tracking Fix COMPLETED! Successfully resolved "current_chapter_start_time_ms missing from connection_data" errors that caused null duration values in user engagement analytics by implementing persistent chapter start time storage across websocket reconnections.
 
