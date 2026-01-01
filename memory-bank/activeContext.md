@@ -1,8 +1,12 @@
 # Active Context
 
-## Current Focus: WebSocket Reconnection Fix Verified (As of 2026-01-01)
+## Current Focus: Production Carousel & Cache Fixes (As of 2026-01-01)
 
-✅ **LATEST ACHIEVEMENT (2026-01-01):** WebSocket Reconnection Fix for Resumed Adventures VERIFIED! End-to-end Playwright testing confirmed the fix works - resumed adventures now properly process choice button clicks without "Reconnecting..." errors. The fix exposed `makeChoice` globally and removed problematic dynamic imports that were resetting `window.appState`.
+✅ **LATEST ACHIEVEMENT (2026-01-01):** Production Carousel Click Bug FIXED! Root cause identified - ES6 modules were being loaded twice with different URLs (direct `<script type="module">` with version string vs import from main.js without version string), creating two separate `Carousel` classes. The carousel instance used one class while `window.Carousel` was another, causing prototype mismatch and click handlers not firing.
+
+✅ **LATEST ACHIEVEMENT (2026-01-01):** Cache Invalidation System IMPLEMENTED! Added version strings to all CSS/JS files in base.html, reduced cache-control from 1 year (immutable) to 1 day (revalidatable), and documented deployment process in CLAUDE.md.
+
+✅ **PREVIOUS ACHIEVEMENT (2026-01-01):** WebSocket Reconnection Fix for Resumed Adventures VERIFIED! End-to-end Playwright testing confirmed the fix works - resumed adventures now properly process choice button clicks without "Reconnecting..." errors. The fix exposed `makeChoice` globally and removed problematic dynamic imports that were resetting `window.appState`.
 
 ✅ **PREVIOUS ACHIEVEMENT (2026-01-01):** Image Spillover Race Condition FIXED! Chapter images no longer persist during transitions - implemented displayed-chapter lock mechanism and robust image hiding on `chapter_update` messages.
 

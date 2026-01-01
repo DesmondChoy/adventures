@@ -6,11 +6,12 @@ from starlette.responses import Response
 class CacheControlMiddleware(BaseHTTPMiddleware):
     """Adds Cache-Control headers for static assets to improve repeat load times.
 
-    - Applies long-lived caching to paths under `/static/` except for `.html` files.
-    - Leaves other responses unchanged.
+    - Applies caching to paths under `/static/` except for `.html` files.
+    - Uses 1-day cache to balance performance with update freshness.
+    - Does NOT use 'immutable' to allow browsers to revalidate on updates.
     """
 
-    def __init__(self, app, max_age: int = 31536000):  # 1 year
+    def __init__(self, app, max_age: int = 86400):  # 1 day (allows revalidation)
         super().__init__(app)
         self.max_age = max_age
 
@@ -18,10 +19,11 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
         response: Response = await call_next(request)
         path = request.url.path
         if path.startswith("/static/") and not path.endswith(".html"):
-            # Favor immutable caching for fingerprinted or rarely changing assets
+            # Use version query strings for cache busting (e.g., ?v=20260101b)
+            # Without 'immutable', browsers will check for updates after max_age expires
             response.headers.setdefault(
                 "Cache-Control",
-                f"public, max-age={self.max_age}, immutable",
+                f"public, max-age={self.max_age}",
             )
         return response
 

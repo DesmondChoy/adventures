@@ -22,6 +22,21 @@ uvicorn app.main:app --reload
 pip install -r requirements.txt
 ```
 
+### Deployment: Cache Busting
+When deploying code changes (especially JS/CSS), update version strings to force cache invalidation:
+
+**Files with version strings:**
+- `app/templates/base.html` - CSS files and `font-size-manager.js`
+- `app/templates/components/scripts.html` - ES6 module (`main.js`)
+
+**Version format:** `?v=YYYYMMDDC` (date + letter increment)
+- Example: `?v=20260101a` → `?v=20260101b` → `?v=20260102a`
+
+**Update all version strings when:**
+- Modifying any JavaScript file
+- Modifying any CSS file
+- Fixing bugs that users might have cached
+
 ## Architecture Overview
 
 ### Core Flow

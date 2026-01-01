@@ -13,10 +13,30 @@ uvicorn app.main:app --reload
 ## Test Flow
 
 1. Navigate to `http://localhost:8000/select`
-2. Select a story category and lesson topic
-3. Progress through all 10 chapters by clicking choices
-4. Click "Memory Lane" to view the summary
-5. Verify summary shows actual adventure data
+2. Verify carousel is working (see Selection Screen Checklist below)
+3. Select a story category and lesson topic
+4. Progress through all 10 chapters by clicking choices
+5. Click "Memory Lane" to view the summary
+6. Verify summary shows actual adventure data
+
+## Selection Screen Checklist
+
+**Complete ALL items before selecting a story category.**
+
+After page loads, verify each item:
+
+- [ ] **Carousel is visible** - Both story category and lesson topic carousels render with cards
+- [ ] **Carousel rotates** - Left/right arrow buttons rotate carousel horizontally (cycle through cards)
+- [ ] **Cards are clickable** - Clicking a carousel card selects it (visual feedback: card highlights or changes state)
+- [ ] **Selection registers** - Selected category/topic updates the UI (e.g., "Begin Adventure" button enables)
+- [ ] **No console errors** - Check `browser_console_messages` for JavaScript errors (especially ES6 module issues)
+
+**If any checkbox fails, STOP immediately and debug. Do not proceed to start an adventure.**
+
+Common carousel issues:
+- Cards visible but not clickable → Check for duplicate ES6 module instances (see `scripts.html` comments)
+- Carousel not showing → Check for stale cached JavaScript (update version strings in `base.html`)
+- Rotation not working → Check carousel-manager.js initialization and Carousel class exports
 
 ## Anomaly Handling
 
@@ -99,6 +119,9 @@ Monitor throughout the test:
 
 | Symptom | Likely Cause | Fix |
 |---------|--------------|-----|
+| Carousel cards not clickable | ES6 modules loaded twice (duplicate Carousel classes) | Ensure only `main.js` loads modules in `scripts.html`; don't load modules directly |
+| Carousel not showing | Stale cached JavaScript | Update version strings in `base.html` and `scripts.html` |
+| Carousel rotation not working | Carousel class not initialized | Check `carousel-manager.js` exports and `main.js` imports |
 | Previous chapter's image showing | `chapter_update` not hiding image container | Check `uiManager.js` hides image on `chapter_update` |
 | Summary shows placeholder data | Race condition - fetch not patched in time | Refresh page; verify `patchReactFetch()` is called immediately on script load |
 | Buttons unresponsive after idle | WebSocket disconnected silently | Check reconnection logic in `webSocketManager.js` |
