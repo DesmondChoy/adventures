@@ -13,6 +13,7 @@ let activeParagraphs = new Set(); // Store active paragraph indices
 let selectedCategory = '';
 let selectedLessonTopic = '';
 let currentChapterChoices = []; // Store current chapter's choices for state preservation
+let minExpectedImageChapter = 1; // Minimum chapter number we'll accept images for (prevents stale images)
 
 // Utility: convert string to Title Case (handles spaces, underscores, hyphens)
 function toTitleCase(str) {
@@ -534,6 +535,25 @@ export async function startAdventure() {
     // Update UI - add hidden class to trigger transitions
     document.getElementById('lessonTopicScreen').classList.add('hidden');
     document.getElementById('introText').classList.add('hidden');
+
+    // Clear any previous adventure's image before showing story container
+    const prevImageContainer = document.getElementById('chapterImageContainer');
+    if (prevImageContainer) {
+        prevImageContainer.classList.add('hidden');
+        const prevImg = prevImageContainer.querySelector('img');
+        if (prevImg) {
+            prevImg.src = '';
+            prevImg.alt = '';
+        }
+    }
+
+    // Reset expected image chapter for new adventure
+    minExpectedImageChapter = 1;
+
+    // Clear previous story content
+    document.getElementById('storyContent').textContent = '';
+    document.getElementById('choicesContainer').innerHTML = '';
+
     // Remove hidden class to trigger transition
     document.getElementById('storyContainer').classList.remove('hidden');
 
@@ -576,6 +596,11 @@ export function addParagraphListeners() {
 
 export function appendStoryText(text) {
     const storyContent = document.getElementById('storyContent');
+    
+    // Safeguard: Ensure previous chapter image is hidden when new text starts streaming
+    if (streamBuffer === '') {
+        hideChapterImage();
+    }
     
     // Decode HTML entities without using innerHTML/textContent which can strip quotes
     const decodedText = text
@@ -669,6 +694,9 @@ export function appendStoryText(text) {
 }
 
 export function replaceStoryContent(content) {
+    // Safeguard: Ensure previous chapter image is hidden when content is replaced
+    hideChapterImage();
+
     // Replace the entire stream buffer with the cleaned content
     streamBuffer = content;
     
@@ -1015,16 +1043,16 @@ export async function handleMessage(event) {
             updateChoiceWithImage(data.choice_index, data.image_data);
         } else if (data.type === 'chapter_image_update') {
             // Handle image updates for chapters
-            // Only show image if it matches the currently displayed chapter
-            // (prevents late-arriving images from previous chapters showing up)
+            // Only show image if it matches the currently displayed chapter AND
+            // is >= the minimum expected chapter (prevents stale images after choice click)
             const currentChapterEl = document.getElementById('current-chapter');
             const currentChapter = currentChapterEl ? parseInt(currentChapterEl.textContent, 10) : 0;
-            console.log(`[IMAGE DEBUG] chapter_image_update received: image for chapter ${data.chapter_number}, current chapter is ${currentChapter}`);
-            if (data.chapter_number === currentChapter) {
+            console.log(`[IMAGE DEBUG] chapter_image_update received: image for chapter ${data.chapter_number}, current chapter is ${currentChapter}, min expected is ${minExpectedImageChapter}`);
+            if (data.chapter_number === currentChapter && data.chapter_number >= minExpectedImageChapter) {
                 console.log(`[IMAGE DEBUG] Showing image for chapter ${data.chapter_number}`);
                 updateChapterImage(data.chapter_number, data.image_data);
             } else {
-                console.log(`[IMAGE DEBUG] Ignoring image for chapter ${data.chapter_number}, currently on chapter ${currentChapter}`);
+                console.log(`[IMAGE DEBUG] Ignoring image for chapter ${data.chapter_number} (current: ${currentChapter}, min expected: ${minExpectedImageChapter})`);
             }
         } else if (data.type === 'summary_start') {
             // Clear content for summary
@@ -1116,7 +1144,21 @@ export async function resetApplicationState() {
     // Clear content
     document.getElementById('storyContent').textContent = '';
     document.getElementById('choicesContainer').innerHTML = '';
-    
+
+    // Hide and clear the chapter image container
+    const imageContainer = document.getElementById('chapterImageContainer');
+    if (imageContainer) {
+        imageContainer.classList.add('hidden');
+        const img = imageContainer.querySelector('img');
+        if (img) {
+            img.src = '';
+            img.alt = '';
+        }
+    }
+
+    // Reset expected image chapter
+    minExpectedImageChapter = 1;
+
     // Reset progress
     updateProgress(1, '-');
     
@@ -1210,6 +1252,38 @@ export function getCurrentChapterChoices() {
 // Clear current chapter choices (called when starting new chapter)
 export function clearCurrentChapterChoices() {
     currentChapterChoices = [];
+}
+
+// Advance to next expected chapter for image filtering
+// Called when user makes a choice to prevent stale images from previous chapter
+export function advanceExpectedImageChapter(nextChapter) {
+    minExpectedImageChapter = nextChapter;
+    console.log(`[IMAGE DEBUG] Advanced expected image chapter to ${nextChapter}`);
+}
+
+// Reset expected image chapter (called when starting fresh adventure)
+export function resetExpectedImageChapter() {
+    minExpectedImageChapter = 1;
+}
+
+// Helper to hide and reset chapter image
+export function hideChapterImage() {
+    const imageContainer = document.getElementById('chapterImageContainer');
+    if (imageContainer) {
+        if (!imageContainer.classList.contains('hidden')) {
+            console.log('[UI FIX] Hiding visible image container');
+            imageContainer.classList.add('hidden');
+        }
+        
+        // Also ensure the image inside is reset to prevent flash
+        const img = imageContainer.querySelector('img');
+        if (img) {
+            img.classList.remove('show');
+            // We don't clear src here to avoid broken image icon if it's shown again quickly,
+            // but we might want to if we are sure we are changing chapters.
+            // For now, just removing 'show' and hiding container is enough.
+        }
+    }
 }
 
 // Helper function to remove resume_adventure_id from URL without reload

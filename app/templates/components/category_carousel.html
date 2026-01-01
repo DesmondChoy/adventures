@@ -21,7 +21,7 @@
     <div class="carousel-container">
         <div class="carousel" id="categoryCarousel" role="listbox" aria-label="Story worlds">
             {% for category_id, category_data in story_categories.items() %}
-            <div class="carousel-card" role="option" aria-selected="false" tabindex="0" data-category="{{ category_id }}" onclick="window.categoryCarousel.select('{{ category_id }}')">
+            <div class="carousel-card" role="option" aria-selected="false" tabindex="0" data-category="{{ category_id }}">
                 <div class="card-face card-front">
                     <img src="/static/images/stories/{{ category_id }}.jpg" alt="{{ category_data.name }}" class="card-image">
                 </div>

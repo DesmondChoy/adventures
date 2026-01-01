@@ -20,6 +20,8 @@ import {
     clearActiveParagraphs,
     getCurrentChapterChoices,
     clearCurrentChapterChoices,
+    advanceExpectedImageChapter,
+    hideChapterImage,
     goToLessonTopicScreen,
     startAdventure
 } from './uiManager.js';
@@ -114,6 +116,12 @@ export function makeChoice(choiceId, choiceText) {
 
         // Don't call updateProgress here - let the backend handle chapter display updates
 
+        // CRITICAL: Advance image chapter and hide container BEFORE sending message
+        // This prevents race condition where server responds with stale image before these lines run
+        const nextChapter = currentChapter.length + 2; // +1 for 0-based, +1 for next chapter
+        advanceExpectedImageChapter(nextChapter);
+        hideChapterImage();
+
         // Send state and choice data to server
         window.appState.wsManager.sendMessage({
             state: updatedState,
@@ -130,10 +138,6 @@ export function makeChoice(choiceId, choiceText) {
 
         // Clear stored choices for next chapter
         clearCurrentChapterChoices();
-
-        // Hide the chapter image container for the new chapter
-        // It will be shown again when the new image is ready
-        document.getElementById('chapterImageContainer').classList.add('hidden');
     }
 }
 
