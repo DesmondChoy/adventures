@@ -21,6 +21,7 @@ import {
     getCurrentChapterChoices,
     clearCurrentChapterChoices,
     advanceExpectedImageChapter,
+    resetDisplayedImageChapter,
     hideChapterImage,
     goToLessonTopicScreen,
     startAdventure
@@ -120,6 +121,7 @@ export function makeChoice(choiceId, choiceText) {
         // This prevents race condition where server responds with stale image before these lines run
         const nextChapter = currentChapter.length + 2; // +1 for 0-based, +1 for next chapter
         advanceExpectedImageChapter(nextChapter);
+        resetDisplayedImageChapter(); // Allow next chapter's image to be shown
         hideChapterImage();
 
         // Send state and choice data to server

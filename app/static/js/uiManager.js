@@ -14,6 +14,7 @@ let selectedCategory = '';
 let selectedLessonTopic = '';
 let currentChapterChoices = []; // Store current chapter's choices for state preservation
 let minExpectedImageChapter = 1; // Minimum chapter number we'll accept images for (prevents stale images)
+let displayedImageChapter = 0; // Track which chapter's image is currently displayed (prevents regression)
 
 // Utility: convert string to Title Case (handles spaces, underscores, hyphens)
 function toTitleCase(str) {
@@ -547,8 +548,9 @@ export async function startAdventure() {
         }
     }
 
-    // Reset expected image chapter for new adventure
+    // Reset image tracking for new adventure
     minExpectedImageChapter = 1;
+    displayedImageChapter = 0;
 
     // Clear previous story content
     document.getElementById('storyContent').textContent = '';
@@ -781,16 +783,26 @@ export function updateChoiceWithImage(choiceIndex, imageData) {
 }
 
 export function updateChapterImage(chapterNumber, imageData) {
+    // Solution 4: Only update if this is a newer or equal chapter (prevents regression)
+    if (displayedImageChapter > 0 && chapterNumber < displayedImageChapter) {
+        console.log(`[IMAGE DEBUG] Rejecting image for chapter ${chapterNumber} - already showed chapter ${displayedImageChapter}`);
+        return;
+    }
+
+    // Update the displayed image chapter tracker
+    displayedImageChapter = chapterNumber;
+    console.log(`[IMAGE DEBUG] Displaying image for chapter ${chapterNumber}, updated displayedImageChapter to ${displayedImageChapter}`);
+
     const imageContainer = document.getElementById('chapterImageContainer');
     const image = document.getElementById('chapterImage');
-    
+
     // Set the image source
     image.src = `data:image/jpeg;base64,${imageData}`;
     image.alt = `Illustration for Chapter ${chapterNumber}`;
-    
+
     // Show the container
     imageContainer.classList.remove('hidden');
-    
+
     // Add fade-in animation
     image.classList.add('fade-in');
     setTimeout(() => {
@@ -1043,16 +1055,15 @@ export async function handleMessage(event) {
             updateChoiceWithImage(data.choice_index, data.image_data);
         } else if (data.type === 'chapter_image_update') {
             // Handle image updates for chapters
-            // Only show image if it matches the currently displayed chapter AND
-            // is >= the minimum expected chapter (prevents stale images after choice click)
-            const currentChapterEl = document.getElementById('current-chapter');
-            const currentChapter = currentChapterEl ? parseInt(currentChapterEl.textContent, 10) : 0;
-            console.log(`[IMAGE DEBUG] chapter_image_update received: image for chapter ${data.chapter_number}, current chapter is ${currentChapter}, min expected is ${minExpectedImageChapter}`);
-            if (data.chapter_number === currentChapter && data.chapter_number >= minExpectedImageChapter) {
-                console.log(`[IMAGE DEBUG] Showing image for chapter ${data.chapter_number}`);
+            // Solution 1: Remove DOM dependency - only use minExpectedImageChapter for filtering
+            // This prevents race conditions where DOM state is unreliable during transitions
+            // Solution 4: updateChapterImage also enforces chapter progression lock
+            console.log(`[IMAGE DEBUG] chapter_image_update received: image for chapter ${data.chapter_number}, min expected is ${minExpectedImageChapter}, displayed is ${displayedImageChapter}`);
+            if (data.chapter_number >= minExpectedImageChapter) {
+                console.log(`[IMAGE DEBUG] Passing image for chapter ${data.chapter_number} to updateChapterImage`);
                 updateChapterImage(data.chapter_number, data.image_data);
             } else {
-                console.log(`[IMAGE DEBUG] Ignoring image for chapter ${data.chapter_number} (current: ${currentChapter}, min expected: ${minExpectedImageChapter})`);
+                console.log(`[IMAGE DEBUG] Ignoring stale image for chapter ${data.chapter_number} (min expected: ${minExpectedImageChapter})`);
             }
         } else if (data.type === 'summary_start') {
             // Clear content for summary
@@ -1156,8 +1167,9 @@ export async function resetApplicationState() {
         }
     }
 
-    // Reset expected image chapter
+    // Reset image tracking
     minExpectedImageChapter = 1;
+    displayedImageChapter = 0;
 
     // Reset progress
     updateProgress(1, '-');
@@ -1264,6 +1276,13 @@ export function advanceExpectedImageChapter(nextChapter) {
 // Reset expected image chapter (called when starting fresh adventure)
 export function resetExpectedImageChapter() {
     minExpectedImageChapter = 1;
+}
+
+// Reset displayed image chapter (called when starting fresh adventure or when clicking choice)
+// This allows the next chapter's image to be displayed
+export function resetDisplayedImageChapter() {
+    displayedImageChapter = 0;
+    console.log('[IMAGE DEBUG] Reset displayedImageChapter to 0');
 }
 
 // Helper to hide and reset chapter image
