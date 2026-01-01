@@ -299,14 +299,36 @@ if (data.chapter_number === currentChapterState.expectingImageForChapter) {
 
 To verify the fix:
 
-1. [ ] Start fresh adventure
-2. [ ] Click choice buttons IMMEDIATELY after content finishes streaming (before image loads)
-3. [ ] Verify background stays blank during transition
-4. [ ] Repeat for all 10 chapters
+1. [x] Start fresh adventure
+2. [x] Click choice buttons IMMEDIATELY after content finishes streaming (before image loads)
+3. [x] Verify background stays blank during transition
+4. [x] Repeat for all 10 chapters
 5. [ ] Test rapid clicking (multiple chapters in quick succession)
 6. [ ] Test with slow network (simulate delayed image delivery)
-7. [ ] Verify image eventually appears for current chapter
-8. [ ] Check browser console for `[IMAGE DEBUG]` logs showing rejections
+7. [x] Verify image eventually appears for current chapter
+8. [x] Check browser console for `[IMAGE DEBUG]` logs showing rejections
+
+### Test Results (2026-01-01)
+
+**Full 10-chapter adventure completed successfully with Playwright MCP.**
+
+| Chapter | Transition | Image Container | Image Loaded | Notes |
+|---------|------------|-----------------|--------------|-------|
+| 1→2 | ✅ | Hidden | ✅ Ch.2 | Guardian choice |
+| 2→3 | ✅ | Hidden | ✅ Ch.3 | LESSON (Venus rotation) |
+| 3→4 | ✅ | Hidden | ✅ Ch.4 | REFLECT |
+| 4→5 | ✅ | Hidden | ✅ Ch.5 | STORY |
+| 5→6 | ✅ | Hidden | ✅ Ch.6 | LESSON (Galaxy spirals) |
+| 6→7 | ✅ | Hidden | ✅ Ch.7 | REFLECT |
+| 7→8 | ✅ | Hidden | ✅ Ch.8 | LESSON (Astronaut floating) |
+| 8→9 | ✅ | Hidden | ✅ Ch.9 | STORY |
+| 9→10 | ✅ | Hidden | ✅ Ch.10 | CONCLUSION - **No WebSocket issue!** |
+
+**Summary screen**: Initially showed placeholder data due to WebSocket timeout (8 seconds). After page refresh, displayed correct data:
+- Chapters Completed: 10
+- Questions Answered: 3 (100% correct)
+- All chapter summaries meaningful
+- All lesson explanations present
 
 ## Debug Logging
 
@@ -330,71 +352,9 @@ The two-layer defense now works as:
 
 ---
 
-## NEW ISSUE: WebSocket Reconnection Failure (Chapter 9→10)
+## Related Issues
 
-**Status: UNRESOLVED - Needs Investigation**
-
-**Date Observed:** 2026-01-01 during testing of the image spillover fix
-
-### Problem Description
-
-When attempting to advance from Chapter 9 to Chapter 10, clicking a choice button triggers:
-1. Button shows `[active]` state (clicked)
-2. Loader appears ("Organizing the villain's dramatic monologue...")
-3. **"Reconnecting..."** message appears
-4. WebSocket fails to reconnect
-5. Page remains stuck on Chapter 9 content
-6. Refreshing the page restores Chapter 9 but clicking any choice repeats the failure
-
-### Observed Behavior
-
-```
-Timeline:
-1. Page loads Chapter 9 successfully (content + choices visible)
-2. User clicks choice button
-3. Button becomes [active], loader shows
-4. "Reconnecting..." appears
-5. After ~30 seconds, still shows "Reconnecting..."
-6. Page refresh: Chapter 9 loads again, same failure on choice click
-7. Repeated 3+ times with same result
-```
-
-### Expected Behavior
-
-- Adventure state is persisted in Supabase
-- On reconnect, backend should reconstruct story state from database
-- Choice should be processed, Chapter 10 (CONCLUSION) should stream
-- If connection drops during choice processing, reconnect should resume
-
-### Potential Causes
-
-1. **Recent changes to image state management** - The `resetDisplayedImageChapter()` call in `makeChoice()` may interfere with state sent to backend
-2. **State reconstruction failure** - Backend may not properly reconstruct Chapter 9 state on reconnect
-3. **WebSocket message not being sent** - The choice message may fail to send before connection drops
-4. **Backend error processing Chapter 9→10 transition** - CONCLUSION chapter generation may fail silently
-
-### Files to Investigate
-
-- `app/static/js/main.js` - `makeChoice()` function, state sent to server
-- `app/static/js/webSocketManager.js` - Reconnection logic
-- `app/services/websocket/choice_processor.py` - Backend choice handling
-- `app/services/adventure_state_manager.py` - State reconstruction from Supabase
-
-### Relationship to Image Spillover Fix
-
-The image spillover fix added these calls in `makeChoice()`:
-```javascript
-advanceExpectedImageChapter(nextChapter);
-resetDisplayedImageChapter(); // NEW - might this affect state?
-hideChapterImage();
-```
-
-The `resetDisplayedImageChapter()` call is purely client-side and shouldn't affect backend state. However, investigate if any timing issues were introduced.
-
-### Next Steps
-
-1. [ ] Check backend logs during the failed transition attempt
-2. [ ] Verify WebSocket message is actually being sent (network tab)
-3. [ ] Check if Supabase state is being updated correctly
-4. [ ] Test Chapter 9→10 transition without the image spillover fix changes
-5. [ ] Review `choice_processor.py` for Chapter 9/STORY → Chapter 10/CONCLUSION handling
+- **WebSocket Reconnection Failure (Resumed Adventures)**: See `wip/websocket_reconnection_resumed_adventures.md`
+  - Observed during testing of this fix
+  - Only affects resumed adventures, not fresh ones
+  - Chapter 9→10 transition fails with "Reconnecting..." error

@@ -889,7 +889,8 @@ export async function displayChoices(choices) {
         button.appendChild(contentWrapper);
 
         button.onclick = async (e) => {
-            const { makeChoice } = await import('./main.js');
+            // Use globally-exposed makeChoice to avoid dynamic import issues
+            // Dynamic imports may create new module instances that reset window.appState
             const storyWebSocket = window.appState?.storyWebSocket;
 
             // If connection is not open, attempt to reconnect before proceeding
@@ -943,7 +944,7 @@ export async function displayChoices(choices) {
             const selectedButton = e.target.closest('button');
             selectedButton.classList.add('selected');
 
-            makeChoice(choice.id, choice.text);
+            window.makeChoice(choice.id, choice.text);
         };
         
         choicesContainer.appendChild(button);
@@ -1084,7 +1085,39 @@ export async function handleMessage(event) {
             if (data.adventure_id && window.appState?.wsManager) {
                 window.appState.wsManager.setAdventureId(data.adventure_id);
             }
-            
+
+            // CRITICAL: When resuming an adventure, save state to localStorage
+            // This ensures page refreshes can properly resume the adventure
+            // Without this, localStorage is empty after modal resume, causing initWebSocket() to not be called
+            // Only do this if localStorage doesn't already have valid state (avoid overwriting real chapter data)
+            if (data.type === 'adventure_loaded' && data.story_category && data.lesson_topic) {
+                const existingState = stateManager.loadState();
+                const hasValidState = existingState?.chapters?.length > 0 &&
+                                      existingState?.storyCategory &&
+                                      existingState?.lessonTopic;
+
+                if (!hasValidState) {
+                    const currentChapter = data.current_chapter || 1;
+                    // Create a minimal chapter entry so the resume condition passes
+                    // The actual content will be streamed and displayed via other message types
+                    const placeholderChapters = [];
+                    for (let i = 0; i < currentChapter; i++) {
+                        placeholderChapters.push({
+                            chapter_number: i + 1,
+                            content: '', // Content will be re-streamed on resume
+                            chapter_content: { content: '', choices: [] }
+                        });
+                    }
+                    manageState('update', {
+                        storyCategory: data.story_category,
+                        lessonTopic: data.lesson_topic,
+                        chapters: placeholderChapters,
+                        story_length: data.total_chapters || 10
+                    });
+                    console.log('[WS] Saved adventure state to localStorage for resume persistence');
+                }
+            }
+
             // Use consolidated function for all chapter progress messages
             if (['adventure_loaded', 'adventure_status', 'chapter_update'].includes(data.type)) {
                 handleChapterProgress(data);

@@ -28,12 +28,15 @@ import {
 } from './uiManager.js';
 
 // Global application state
-window.appState = {
-    authManager: authManager,
-    stateManager: stateManager,
-    wsManager: null,
-    storyWebSocket: null
-};
+// Guard against re-initialization if module is re-imported
+if (!window.appState || !window.appState.wsManager) {
+    window.appState = {
+        authManager: authManager,
+        stateManager: stateManager,
+        wsManager: null,
+        storyWebSocket: null
+    };
+}
 
 // Global configuration (will be set from template data)
 // Don't overwrite if it already exists
@@ -414,3 +417,4 @@ window.resetApplicationState = resetApplicationState;
 window.viewAdventureSummary = viewAdventureSummary;
 window.goToLessonTopicScreen = goToLessonTopicScreen;
 window.startAdventure = startAdventure;
+window.makeChoice = makeChoice;

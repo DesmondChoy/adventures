@@ -99,6 +99,11 @@ export class WebSocketManager {
         const websocketUrl = this.getWebSocketUrl(); // This will now use sessionStorage if resuming
         try {
             this.connection = new WebSocket(websocketUrl);
+            // CRITICAL: Sync window.appState.storyWebSocket with the new connection
+            // Without this, choice button clicks check the old (closed) WebSocket
+            if (window.appState) {
+                window.appState.storyWebSocket = this.connection;
+            }
             this.setupConnectionHandlers();
             this.reconnectAttempts++;
         } catch (e) {

@@ -22,9 +22,7 @@ class ModelConfig:
     # Gemini Models
     GEMINI_MODEL = "gemini-2.5-flash"  # Default for backward compatibility
     GEMINI_FLASH_MODEL = "gemini-2.5-flash"
-    GEMINI_FLASH_LITE_MODEL = (
-        "gemini-2.5-flash-lite-preview-06-17"  # Cost-optimized model
-    )
+    GEMINI_FLASH_LITE_MODEL = "gemini-2.5-flash-lite"  # Cost-optimized model
     GEMINI_THINKING_BUDGET = 512
 
     # OpenAI Models

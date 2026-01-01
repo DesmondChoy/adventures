@@ -358,6 +358,10 @@ async def story_websocket(
                     "adventure_id": connection_data["adventure_id"],
                     "current_chapter": display_chapter_number,
                     "total_chapters": total_chapters,
+                    # Include story_category and lesson_topic for frontend state persistence
+                    # This ensures localStorage is populated on resume, enabling page refreshes
+                    "story_category": story_category,
+                    "lesson_topic": lesson_topic,
                 }
             )
             logger.info(

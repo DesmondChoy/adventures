@@ -1,8 +1,14 @@
 # Active Context
 
-## Current Focus: Actual Adventure Duration Implementation Complete (As of 2025-07-20)
+## Current Focus: WebSocket Reconnection Fix Verified (As of 2026-01-01)
 
-✅ **LATEST ACHIEVEMENT (2025-02-14):** Story Chapter Validation Hardening COMPLETED! Added choice parsing enforcement plus retry-based generation so only chapters with three authentic choices are streamed, eliminating duplicate chapter rendering caused by malformed LLM output.
+✅ **LATEST ACHIEVEMENT (2026-01-01):** WebSocket Reconnection Fix for Resumed Adventures VERIFIED! End-to-end Playwright testing confirmed the fix works - resumed adventures now properly process choice button clicks without "Reconnecting..." errors. The fix exposed `makeChoice` globally and removed problematic dynamic imports that were resetting `window.appState`.
+
+✅ **PREVIOUS ACHIEVEMENT (2026-01-01):** Image Spillover Race Condition FIXED! Chapter images no longer persist during transitions - implemented displayed-chapter lock mechanism and robust image hiding on `chapter_update` messages.
+
+✅ **PREVIOUS ACHIEVEMENT (2026-01-01):** System Stability & UI Resilience ENHANCED! WebSocket keep-alive (ping/pong), auto-reconnection logic, state preservation during reconnections, and summary page data loading race condition fix.
+
+✅ **PREVIOUS ACHIEVEMENT (2025-11-08):** Story Chapter Validation Hardening COMPLETED! Added choice parsing enforcement plus retry-based generation so only chapters with three authentic choices are streamed, eliminating duplicate chapter rendering caused by malformed LLM output.
 
 ✅ **PREVIOUS ACHIEVEMENT:** Actual Adventure Duration Implementation COMPLETED! Successfully replaced hardcoded "30 mins" values with real-time calculation from telemetry data, providing accurate user engagement metrics in the summary page.
 

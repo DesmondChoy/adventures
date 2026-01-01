@@ -2,6 +2,142 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2026-01-01: WebSocket Reconnection Fix Verification - CONFIRMED
+
+**✅ WEBSOCKET RECONNECTION FIX VERIFIED WORKING** - Resumed adventures now properly process choice button clicks without "Reconnecting..." errors.
+
+- **Goal:** Verify the fix documented in `wip/implemented/websocket_reconnection_resumed_adventures.md` resolves the WebSocket reconnection failure on resumed adventures.
+
+- **Test Procedure Executed:**
+  1. Started fresh adventure (Festival of Lights & Colors + Farm Animals)
+  2. Progressed to Chapter 2 (LESSON chapter)
+  3. Refreshed page to trigger adventure resumption from localStorage/Supabase
+  4. Clicked choice button to verify no "Reconnecting..." error
+  5. Continued adventure through Chapters 3 and 4
+
+- **✅ Test Results:**
+  - Adventure successfully resumed at Chapter 2 after page refresh
+  - Choice button click processed correctly - no "Reconnecting..." error
+  - Adventure progressed normally to Chapters 3 and 4
+  - All per-chapter checklist items passed (counter, background, loader, streaming, choices, image, console)
+
+- **Root Cause (Fixed):**
+  - Dynamic import `await import('./main.js')` in button onclick handler was re-evaluating the module
+  - This reset `window.appState` to initial values with `wsManager: null` and `storyWebSocket: null`
+  - Fix: Exposed `makeChoice` globally and removed dynamic import from onclick handler
+
+- **Fix Implementation Details:**
+  1. `app/static/js/main.js`: Added `window.makeChoice = makeChoice` to expose function globally
+  2. `app/static/js/uiManager.js`: Removed dynamic import, now uses `window.makeChoice()`
+  3. `app/templates/components/scripts.html`: Added module preloading with version strings for cache busting
+
+- **Verification Method:** Playwright MCP end-to-end testing following `tests/playwright_testing.md` protocols
+
+### 2026-01-01: Gemini Flash Lite Model Update - STAGED
+
+**🔧 MODEL VERSION UPDATE** - Updated Gemini Flash Lite from preview to stable version.
+
+- **Change:** Updated `GEMINI_FLASH_LITE_MODEL` from `gemini-2.5-flash-lite-preview-06-17` to `gemini-2.5-flash-lite`
+- **Reason:** Preview model returned 404 errors during testing
+- **File:** `app/services/llm/providers.py`
+- **Status:** Staged but not yet committed
+
+### 2026-01-01: Image Spillover Race Condition Fix - COMPLETED
+
+**✅ CHAPTER IMAGE DISPLAY RACE CONDITIONS RESOLVED** - Fixed previous chapter images persisting during new chapter transitions.
+
+- **Goal:** Prevent previous chapter images from "spilling over" and appearing in the background when a new chapter starts loading.
+
+- **Problem Identified:** When clicking a choice button to advance chapters, the previous chapter's image would remain visible during the loading phase and while new chapter text streamed, only disappearing when the new chapter's image loaded.
+
+- **🔧 SOLUTION IMPLEMENTED:**
+  - **Displayed-Chapter Lock:** Added `displayedImageChapter` tracking to guard image updates
+  - **Expected Chapter Tracking:** Added `expectedImageChapter` to advance on choice click
+  - **Robust Image Hiding:** Image container is explicitly hidden on `chapter_update` messages
+  - **DOM-Independent Filtering:** Removed reliance on DOM state for image filtering
+  - **Reset on Transitions:** Image tracking resets on choice, start, and reset flows
+
+- **✅ TECHNICAL IMPLEMENTATION:**
+  - **Modified Files:**
+    - `app/static/js/uiManager.js` (image tracking logic, `chapter_update` hiding)
+    - `app/static/js/main.js` (reset image tracking on adventure start)
+  - **Documentation Created:**
+    - `tests/playwright_testing.md` (comprehensive testing checklist)
+    - `wip/implemented/image_spillover_race_condition.md` (investigation details)
+
+- **✅ FINAL RESULTS:**
+  - ✅ Background is blank when new chapter starts loading
+  - ✅ Previous chapter images don't persist during transitions
+  - ✅ Only current chapter images display after loading
+  - ✅ Proper image tracking across all chapter types
+
+### 2026-01-01: System Stability & UI Resilience - COMPLETED
+
+**✅ WEBSOCKET STABILITY AND STATE PRESERVATION ENHANCED** - Implemented comprehensive fixes for connection management, state preservation, and UI race conditions.
+
+- **Goal:** Resolve multiple stability issues including WebSocket timeouts, connection drops, and UI race conditions.
+
+- **🔧 IMPLEMENTATIONS:**
+  1. **WebSocket Keep-Alive (Ping/Pong):**
+     - Backend sends periodic ping messages to prevent connection timeouts
+     - Client responds with pong to maintain connection during idle periods
+     - Prevents timeouts during long inactivity periods (>30s)
+
+  2. **Auto-Reconnection Logic:**
+     - Client detects when connection is lost on user interaction
+     - Automatic reconnection attempt with exponential backoff
+     - "Reconnecting..." message displayed during reconnection
+
+  3. **State Preservation During Reconnections:**
+     - Chapter choices preserved in adventure state
+     - State persists to localStorage for recovery
+     - Prevents data loss when connections restart
+
+  4. **Summary Page Data Loading Fix:**
+     - Patched fetch immediately on script load
+     - Prevents race condition where fetch occurs before patch is ready
+
+- **✅ TECHNICAL IMPLEMENTATION:**
+  - **Modified Files:**
+    - `app/routers/websocket_router.py` (ping/pong keep-alive)
+    - `app/services/adventure_state_manager.py` (state preservation)
+    - `app/static/js/main.js` (reconnection logic, global makeChoice exposure)
+    - `app/static/js/uiManager.js` (UI handling for reconnection states)
+    - `app/static/js/webSocketManager.js` (connection sync)
+    - `app/static/summary-chapter/react-app-patch.js` (immediate fetch patch)
+
+- **✅ FINAL RESULTS:**
+  - ✅ WebSocket connections stay alive during idle periods
+  - ✅ Automatic reconnection on connection drop
+  - ✅ State preserved across reconnections
+  - ✅ Summary page loads data reliably
+
+### 2025-11-08: Story Chapter Validation Hardening - COMPLETED
+
+**✅ THREE-CHOICE CHAPTER VALIDATION IMPLEMENTED** - Added strict choice parsing enforcement with retry-based generation to ensure chapters always have exactly three valid choices.
+
+- **Goal:** Eliminate duplicate chapter rendering caused by malformed LLM output that lacked proper three-choice endings.
+
+- **Problem Identified:** LLM sometimes generated story chapters without exactly 3 choices, causing rendering issues and inconsistent user experience.
+
+- **🔧 SOLUTION IMPLEMENTED:**
+  - **Retry-Aware Generation:** Chapters retry generation up to 3 times if choice validation fails
+  - **Strict Choice Validation:** Content only streams after valid three-choice ending passes parsing
+  - **No Padding Fallback:** Removed previous approach of padding missing choices with defaults
+
+- **✅ TECHNICAL IMPLEMENTATION:**
+  - **Modified Files:**
+    - `app/services/websocket/content_generator.py` (retry logic, validation)
+    - `app/services/websocket/stream_handler.py` (validated content streaming)
+    - `tests/test_choice_extraction.py` (regression test for missing choices)
+    - Renamed `AGENT.md` to `AGENTS.md` for consistency
+
+- **✅ FINAL RESULTS:**
+  - ✅ Only chapters with exactly 3 valid choices are streamed
+  - ✅ Eliminates duplicate chapter rendering from malformed output
+  - ✅ Robust retry mechanism ensures quality output
+  - ✅ Regression test prevents future breakage
+
 ### 2025-08-04: Active Carousel Card Visual Enhancement - COMPLETED
 
 **✅ PURPLE/VIOLET GLOWING ANIMATION SUCCESSFULLY IMPLEMENTED** - Active carousel card now features an elegant breathing glow effect that prompts user interaction while maintaining layout integrity.

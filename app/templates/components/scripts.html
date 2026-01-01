@@ -10,10 +10,15 @@
 
 <!-- Global functions will be attached by main.js after modules load to avoid duplicate instances -->
 
-<!-- Carousel manager module (needs to be loaded before main.js) -->
-<script type="module" src="{{ url_for('static', path='js/carousel-manager.js') }}?v=20250814d"></script>
+<!-- Preload all modules with version strings to ensure cache busting -->
+<script type="module" src="{{ url_for('static', path='js/uiManager.js') }}?v=20260101a"></script>
+<script type="module" src="{{ url_for('static', path='js/stateManager.js') }}?v=20260101a"></script>
+<script type="module" src="{{ url_for('static', path='js/adventureStateManager.js') }}?v=20260101a"></script>
+<script type="module" src="{{ url_for('static', path='js/webSocketManager.js') }}?v=20260101a"></script>
+<script type="module" src="{{ url_for('static', path='js/authManager.js') }}?v=20260101a"></script>
+<script type="module" src="{{ url_for('static', path='js/carousel-manager.js') }}?v=20260101a"></script>
 
 <!-- Main application module (ES6 module) -->
-<script type="module" src="{{ url_for('static', path='js/main.js') }}?v=20250814d"></script>
+<script type="module" src="{{ url_for('static', path='js/main.js') }}?v=20260101a"></script>
 
 <!-- Navigation functions are attached by main.js to avoid duplicate module instances -->
