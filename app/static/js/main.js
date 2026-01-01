@@ -267,6 +267,12 @@ function toTitleCase(str) {
 
 // Initialize carousels
 function initializeCarousels() {
+    // Guard: prevent re-initialization if carousel already exists
+    // This prevents duplicate click handlers which cause select/deselect toggle bug
+    if (window.categoryCarousel && typeof window.categoryCarousel.reposition === 'function') {
+        return;
+    }
+
     const carouselElement = document.getElementById('categoryCarousel');
 
     if (!carouselElement) {
