@@ -233,7 +233,17 @@ class AdventureStateManager:
 
                             # For story chapters, ensure we have exactly 3 choices
                             if existing_chapter.chapter_type == ChapterType.STORY:
-                                # If no choices found, try parsing from content
+                                # If no choices from client, check if existing chapter has valid choices
+                                # (Supabase is source of truth - preserve choices that were stored)
+                                if len(choices) == 0 and existing_chapter.chapter_content and existing_chapter.chapter_content.choices:
+                                    existing_choices_count = len(existing_chapter.chapter_content.choices)
+                                    if existing_choices_count > 0:
+                                        logger.debug(
+                                            f"Client sent empty choices for chapter {chapter_number}, preserving {existing_choices_count} existing choices from Supabase"
+                                        )
+                                        choices = existing_chapter.chapter_content.choices
+
+                                # If still no choices, try parsing from content
                                 if len(choices) == 0:
                                     content_str = content
                                     choices_match = re.search(
@@ -257,7 +267,7 @@ class AdventureStateManager:
                                                 )
                                             )
 
-                                # If still don't have exactly 3 choices, generate defaults
+                                # If still don't have exactly 3 choices, generate defaults as last resort
                                 if len(choices) != 3:
                                     logger.warning(
                                         f"Story chapter {chapter_number} has {len(choices)} choices, generating defaults"

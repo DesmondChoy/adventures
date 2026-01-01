@@ -1,4 +1,5 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+import asyncio
 import logging
 import os
 import jwt  # PyJWT
@@ -18,6 +19,32 @@ from app.services.websocket_service import (
 
 router = APIRouter()
 logger = logging.getLogger("story_app")
+
+# WebSocket keep-alive configuration
+PING_INTERVAL_SECONDS = 30  # Send ping every 30 seconds
+
+
+async def websocket_ping_task(websocket: WebSocket, stop_event: asyncio.Event):
+    """Send periodic ping messages to keep the WebSocket connection alive.
+
+    This prevents the connection from being closed by proxies or browsers
+    due to inactivity, especially when users are reading/deciding on choices.
+    """
+    try:
+        while not stop_event.is_set():
+            await asyncio.sleep(PING_INTERVAL_SECONDS)
+            if stop_event.is_set():
+                break
+            try:
+                await websocket.send_json({"type": "ping"})
+                logger.debug("Sent WebSocket ping")
+            except Exception as e:
+                logger.debug(f"Failed to send ping, connection likely closed: {e}")
+                break
+    except asyncio.CancelledError:
+        logger.debug("Ping task cancelled")
+    except Exception as e:
+        logger.debug(f"Ping task error: {e}")
 
 
 def get_display_chapter_number(state) -> int:
@@ -412,11 +439,16 @@ async def story_websocket(
             default_story_length = AdventureState.model_fields["story_length"].default
             
             await websocket.send_json({
-                "type": "adventure_status", 
+                "type": "adventure_status",
                 "status": "new",
                 "current_chapter": 1,
                 "total_chapters": default_story_length
             })
+
+        # Start WebSocket keep-alive ping task
+        ping_stop_event = asyncio.Event()
+        ping_task = asyncio.create_task(websocket_ping_task(websocket, ping_stop_event))
+        logger.debug("Started WebSocket ping task for keep-alive")
 
         while True:
             try:
@@ -424,7 +456,12 @@ async def story_websocket(
             except (RuntimeError, WebSocketDisconnect):
                 logger.info("WebSocket client disconnected during receive")
                 break
-            
+
+            # Handle ping/pong for keep-alive
+            if data.get("type") == "pong":
+                logger.debug("Received WebSocket pong")
+                continue
+
             validated_state = data.get("state")
             choice_data = data.get("choice")
 
@@ -665,3 +702,15 @@ async def story_websocket(
             await websocket.close(code=1011)  # Internal Server Error
         except Exception:
             pass  # Ignore errors during close if connection already broken
+    finally:
+        # Clean up ping task when connection closes
+        if 'ping_stop_event' in locals():
+            ping_stop_event.set()
+            logger.debug("Signaled ping task to stop")
+        if 'ping_task' in locals() and not ping_task.done():
+            ping_task.cancel()
+            try:
+                await ping_task
+            except asyncio.CancelledError:
+                pass
+            logger.debug("Ping task cleaned up")

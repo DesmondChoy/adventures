@@ -18,6 +18,8 @@ import {
     setSelectedLessonTopic,
     clearStreamBuffer,
     clearActiveParagraphs,
+    getCurrentChapterChoices,
+    clearCurrentChapterChoices,
     goToLessonTopicScreen,
     startAdventure
 } from './uiManager.js';
@@ -89,6 +91,8 @@ export function makeChoice(choiceId, choiceText) {
         const currentChapter = existingState.chapters || [];
 
         // Create new chapter data with complete structure
+        // Preserve the current chapter's choices for state reconstruction on reconnect
+        const preservedChoices = getCurrentChapterChoices();
         const newChapter = {
             chapter_number: currentChapter.length + 1,
             content: document.getElementById('storyContent').textContent,
@@ -99,7 +103,7 @@ export function makeChoice(choiceId, choiceText) {
             },
             chapter_content: {
                 content: document.getElementById('storyContent').textContent,
-                choices: [] // Empty choices since this is a completed chapter
+                choices: preservedChoices // Preserve choices for state reconstruction
             }
         };
 
@@ -123,6 +127,9 @@ export function makeChoice(choiceId, choiceText) {
         // Clear UI for next chapter
         document.getElementById('storyContent').textContent = '';
         document.getElementById('choicesContainer').innerHTML = '';
+
+        // Clear stored choices for next chapter
+        clearCurrentChapterChoices();
 
         // Hide the chapter image container for the new chapter
         // It will be shown again when the new image is ready

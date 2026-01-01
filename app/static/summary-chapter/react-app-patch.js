@@ -9,29 +9,38 @@
  */
 
 (function() {
+    // Get state_id from URL IMMEDIATELY - don't wait for events
+    // This is critical to patch fetch before React makes its first API call
+    function getStateIdFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const values = urlParams.getAll('state_id');
+        return values.length > 0 ? values[0] : null;
+    }
+
     // Function to patch the React app's fetch function
     function patchReactFetch() {
         console.log('[DEBUG] Patching React app fetch function');
-        
-        // Get the state ID from localStorage (set by summary-state-handler.js)
-        let stateId = localStorage.getItem('summary_state_id');
-        console.log('[DEBUG] State ID from localStorage:', stateId);
-        
+
+        // Try URL first (most reliable), then localStorage as fallback
+        let stateId = getStateIdFromUrl() || localStorage.getItem('summary_state_id');
+        console.log('[DEBUG] State ID (URL or localStorage):', stateId);
+
         if (!stateId) {
-            console.log('[DEBUG] No state ID found in localStorage, not patching fetch');
+            console.log('[DEBUG] No state ID found, not patching fetch');
             return;
         }
-        
+
         // Clean up the state ID in case it contains multiple values
         if (stateId.includes(',')) {
             console.log('[DEBUG] State ID contains multiple values:', stateId);
             stateId = stateId.split(',')[0].trim();
             console.log('[DEBUG] Using first value:', stateId);
-            // Update localStorage with the clean value
-            localStorage.setItem('summary_state_id', stateId);
         }
-        
-        console.log('[DEBUG] Found state ID in localStorage:', stateId);
+
+        // Store in localStorage for consistency
+        localStorage.setItem('summary_state_id', stateId);
+
+        console.log('[DEBUG] Found state ID:', stateId);
         
         // Try to find the fetch function in the React app
         // This is a bit hacky, but it's the best we can do without modifying the React app directly
@@ -188,4 +197,10 @@
     
     // Log that the patch script has loaded
     console.log('[DEBUG] React app patch script loaded with button fixes');
+
+    // CRITICAL: Patch fetch IMMEDIATELY when script loads
+    // This ensures fetch is patched before React makes its first API call
+    // Don't wait for events - read state_id directly from URL
+    console.log('[DEBUG] Attempting immediate fetch patch on script load');
+    patchReactFetch();
 })();

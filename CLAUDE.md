@@ -17,22 +17,6 @@ source .venv/bin/activate
 uvicorn app.main:app --reload
 ```
 
-### Testing
-```bash
-# Run all tests
-pytest tests/
-
-# Run specific test file
-pytest tests/test_summary_service.py
-
-# Run with verbose output
-pytest tests/ -v
-
-# Run adventure simulation (end-to-end test)
-python tests/simulations/generate_all_chapters.py
-python tests/simulations/generate_all_chapters.py --category "enchanted_forest_tales" --topic "Singapore History"
-```
-
 ### Dependencies
 ```bash
 pip install -r requirements.txt
@@ -157,17 +141,87 @@ Story chapters MUST have exactly 3 choices. The system uses `generate_chapter_co
 
 ## Testing Guidelines
 
-### What to Test
+### Manual Testing with Playwright MCP
+
+Use the Playwright MCP server for end-to-end testing. Launch the dev server first, then navigate through a complete adventure.
+
+```bash
+# Terminal 1: Start the dev server
+source .venv/bin/activate
+uvicorn app.main:app --reload
+
+# Terminal 2: Use Playwright MCP via Claude Code to test
+```
+
+#### Test Flow
+1. Navigate to `http://localhost:8000/select`
+2. Select a story category and lesson topic
+3. Progress through all 10 chapters by clicking choices
+4. Click "Memory Lane" to view the summary
+5. Verify summary shows actual adventure data
+
+#### Critical Checkpoints
+
+**Image Behavior (Check at EVERY chapter transition)**
+- Wait for content to fully stream before checking for image
+- Image should appear AFTER text content completes (allow 5-10 seconds after content)
+- Verify image alt text matches current chapter: `"Illustration for Chapter X"`
+- Previous chapter's image must NOT be visible when new chapter starts
+- If image doesn't appear, check console for errors
+
+**Chapter Transitions**
+- Chapter counter should update immediately when new chapter starts (e.g., "Chapter 3 of 10")
+- Old content should be cleared before new content streams
+- All 3 choice buttons should be visible and clickable after content streams
+- No JavaScript errors in console during transitions
+
+**Content Streaming**
+- Allow 30 seconds for chapter content to fully stream
+- Text should appear progressively (word-by-word or chunk-by-chunk)
+- Loader should appear during generation and hide when content starts streaming
+
+**Summary Screen Validation**
+- Verify "Chapters Completed" shows total number of chapters
+- Verify "Questions Answered" shows `3`
+- All 10 chapter summaries should have meaningful titles (not "Chapter 1: The Beginning" placeholder)
+- All 3 lesson questions should show actual questions from the adventure
+- Each question should show user's answer and explanation
+- If placeholder data appears (rare), refresh the page - this indicates a race condition in `react-app-patch.js`
+
+**WebSocket Stability**
+- Watch for timeout errors in console (especially after idle periods)
+- If connection drops, the app should attempt reconnection
+- After reconnection, state should be preserved
+
+#### Common Issues and Debugging
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| Previous chapter's image showing | `chapter_update` not hiding image container | Check `uiManager.js` hides image on `chapter_update` |
+| Summary shows placeholder data | Race condition - fetch not patched in time | Refresh page; verify `patchReactFetch()` is called immediately on script load |
+| Buttons unresponsive after idle | WebSocket disconnected silently | Check reconnection logic in `webSocketManager.js` |
+| Image never appears | Image generation failed or timed out | Check backend logs for Imagen API errors |
+| Content doesn't stream | LLM generation failed | Check backend logs for API errors |
+
+#### Wait Times Reference
+- Chapter content streaming: 10-20 seconds
+- Image generation: 5-10 seconds after content
+- Summary page load: 3-5 seconds
+- Summary generation (first time): up to 30 seconds
+
+### Unit Testing
+
+#### What to Test
 - State transitions and `AdventureState` updates
 - Structural correctness (does chapter have content? does summary have title?)
 - Correct function calls and service interactions
 - Chapter type validation and sequence rules
 
-### What NOT to Test
+#### What NOT to Test
 - Specific LLM-generated narrative text (will break tests)
 - Exact sentences or character names from generated content
 
-### Mocking
+#### Mocking
 Use mocking to provide structurally correct but non-specific narrative content when testing components that consume it.
 
 ## Key Validation Rules

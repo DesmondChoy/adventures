@@ -12,6 +12,7 @@ let renderTimeout = null;  // Timeout for debounced rendering
 let activeParagraphs = new Set(); // Store active paragraph indices
 let selectedCategory = '';
 let selectedLessonTopic = '';
+let currentChapterChoices = []; // Store current chapter's choices for state preservation
 
 // Utility: convert string to Title Case (handles spaces, underscores, hyphens)
 function toTitleCase(str) {
@@ -773,6 +774,16 @@ export async function displayChoices(choices) {
     const choicesContainer = document.getElementById('choicesContainer');
     choicesContainer.innerHTML = ''; // Clear existing choices
 
+    // Store the current choices for state preservation on reconnect
+    // This ensures the backend can reconstruct chapter state if connection drops
+    if (Array.isArray(choices) && choices.length > 0) {
+        currentChapterChoices = choices.map(c => ({
+            id: c.id,
+            text: c.text,
+            next_chapter: c.next_chapter || c.id
+        }));
+    }
+
     if (Array.isArray(choices) && choices.length === 0) {
         const button = document.createElement('button');
         button.className = 'w-full p-6 mb-3 text-center bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all duration-300 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shadow-lg hover:shadow-xl backdrop-blur-sm';
@@ -840,10 +851,46 @@ export async function displayChoices(choices) {
         button.onclick = async (e) => {
             const { makeChoice } = await import('./main.js');
             const storyWebSocket = window.appState?.storyWebSocket;
-            
+
+            // If connection is not open, attempt to reconnect before proceeding
             if (storyWebSocket?.readyState !== WebSocket.OPEN) {
-                showError('Connection lost. Please refresh the page.');
-                return;
+                showLoader();
+                showError('Reconnecting...');
+
+                try {
+                    // Attempt to reconnect
+                    await window.appState?.wsManager?.reconnect();
+
+                    // Wait for connection to be established (with timeout)
+                    const connectionReady = await new Promise((resolve) => {
+                        const maxWait = 5000; // 5 seconds
+                        const checkInterval = 100; // Check every 100ms
+                        let elapsed = 0;
+
+                        const checkConnection = setInterval(() => {
+                            elapsed += checkInterval;
+                            const ws = window.appState?.storyWebSocket;
+                            if (ws?.readyState === WebSocket.OPEN) {
+                                clearInterval(checkConnection);
+                                resolve(true);
+                            } else if (elapsed >= maxWait) {
+                                clearInterval(checkConnection);
+                                resolve(false);
+                            }
+                        }, checkInterval);
+                    });
+
+                    if (!connectionReady) {
+                        hideLoader();
+                        showError('Connection lost. Please refresh the page.');
+                        return;
+                    }
+                    // Connection restored, continue with choice
+                } catch (err) {
+                    hideLoader();
+                    showError('Connection lost. Please refresh the page.');
+                    return;
+                }
             }
 
             const allButtons = choicesContainer.querySelectorAll('button');
@@ -937,7 +984,17 @@ export function displaySummaryComplete(state) {
 export async function handleMessage(event) {
     try {
         const data = JSON.parse(event.data);
-        
+
+        // Handle ping/pong for keep-alive
+        // Server sends ping, client responds with pong to keep connection alive
+        if (data.type === 'ping') {
+            const storyWebSocket = window.appState?.storyWebSocket;
+            if (storyWebSocket?.readyState === WebSocket.OPEN) {
+                storyWebSocket.send(JSON.stringify({ type: 'pong' }));
+            }
+            return; // Don't process further, ping is internal
+        }
+
         if (data.type === 'hide_loader') {
             hideLoader();
         } else if (data.type === 'choices') {
@@ -958,7 +1015,17 @@ export async function handleMessage(event) {
             updateChoiceWithImage(data.choice_index, data.image_data);
         } else if (data.type === 'chapter_image_update') {
             // Handle image updates for chapters
-            updateChapterImage(data.chapter_number, data.image_data);
+            // Only show image if it matches the currently displayed chapter
+            // (prevents late-arriving images from previous chapters showing up)
+            const currentChapterEl = document.getElementById('current-chapter');
+            const currentChapter = currentChapterEl ? parseInt(currentChapterEl.textContent, 10) : 0;
+            console.log(`[IMAGE DEBUG] chapter_image_update received: image for chapter ${data.chapter_number}, current chapter is ${currentChapter}`);
+            if (data.chapter_number === currentChapter) {
+                console.log(`[IMAGE DEBUG] Showing image for chapter ${data.chapter_number}`);
+                updateChapterImage(data.chapter_number, data.image_data);
+            } else {
+                console.log(`[IMAGE DEBUG] Ignoring image for chapter ${data.chapter_number}, currently on chapter ${currentChapter}`);
+            }
         } else if (data.type === 'summary_start') {
             // Clear content for summary
             document.getElementById('storyContent').innerHTML = '';
@@ -990,6 +1057,20 @@ export async function handleMessage(event) {
                     window.scrollTo(0, 0);
                 } catch (e) {
                     // no-op
+                }
+            }
+
+            // Hide the previous chapter's image ONLY when a new chapter starts (chapter_update)
+            // Don't hide on adventure_loaded because that's resume - backend doesn't re-send images on resume
+            // The new chapter's image will be shown when it arrives via chapter_image_update
+            if (data.type === 'chapter_update') {
+                console.log('[IMAGE DEBUG] chapter_update received, hiding image container');
+                const imageContainer = document.getElementById('chapterImageContainer');
+                if (imageContainer) {
+                    imageContainer.classList.add('hidden');
+                    console.log('[IMAGE DEBUG] Image container hidden');
+                } else {
+                    console.log('[IMAGE DEBUG] Image container not found!');
                 }
             }
         } else {
@@ -1119,6 +1200,16 @@ export function clearStreamBuffer() {
 
 export function clearActiveParagraphs() {
     activeParagraphs.clear();
+}
+
+// Get current chapter choices for state preservation
+export function getCurrentChapterChoices() {
+    return currentChapterChoices;
+}
+
+// Clear current chapter choices (called when starting new chapter)
+export function clearCurrentChapterChoices() {
+    currentChapterChoices = [];
 }
 
 // Helper function to remove resume_adventure_id from URL without reload
