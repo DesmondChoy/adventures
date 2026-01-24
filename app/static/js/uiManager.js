@@ -1513,12 +1513,18 @@ function showFeedbackModal(isAuthenticated) {
     // Show the modal
     modal.style.display = 'flex';
 
+    // Get the subtext element in thanks state for dynamic updates
+    const thanksSubtext = thanksState.querySelector('.feedback-subtext');
+
     // Handler for thumbs up
     const handleThumbsUp = async () => {
         console.log('[FEEDBACK] Thumbs up clicked');
         await submitFeedback('positive');
 
-        // Transition to thanks state
+        // Set positive message and transition to thanks state
+        if (thanksSubtext) {
+            thanksSubtext.textContent = "We're glad you're enjoying the adventure.";
+        }
         initialState.style.display = 'none';
         thanksState.style.display = 'block';
 
@@ -1550,7 +1556,10 @@ function showFeedbackModal(isAuthenticated) {
         console.log('[FEEDBACK] Submitting negative feedback');
         await submitFeedback('negative', feedbackText, contactInfo);
 
-        // Show thanks briefly
+        // Set negative message and show thanks briefly
+        if (thanksSubtext) {
+            thanksSubtext.textContent = "Your feedback helps us improve!";
+        }
         negativeState.style.display = 'none';
         thanksState.style.display = 'block';
 
