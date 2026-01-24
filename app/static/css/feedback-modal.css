@@ -1,0 +1,214 @@
+/* Feedback Modal Styles
+   Extends the base modal styles from resume-modal.css */
+
+/* Feedback-specific modal content adjustments */
+.feedback-modal-content {
+    max-width: 420px;
+    padding: 35px 30px;
+}
+
+.feedback-header {
+    font-size: 1.6em;
+    margin-bottom: 8px;
+    color: var(--color-primary, #0d9488);
+}
+
+.feedback-subtext {
+    color: var(--text-color-medium, #666);
+    font-size: 1em;
+    margin-bottom: 25px;
+}
+
+/* Feedback state containers */
+.feedback-state {
+    text-align: center;
+}
+
+/* Thumbs up/down buttons */
+.feedback-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.feedback-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100px;
+    height: 100px;
+    border: 2px solid var(--border-color, #ddd);
+    border-radius: 16px;
+    background-color: var(--background-color, #fff);
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    padding: 10px;
+}
+
+.feedback-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.feedback-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--color-primary-light, rgba(13, 148, 136, 0.3));
+}
+
+.feedback-btn-positive:hover {
+    border-color: var(--success-color, #10b981);
+    background-color: rgba(16, 185, 129, 0.05);
+}
+
+.feedback-btn-negative:hover {
+    border-color: var(--warning-color, #f59e0b);
+    background-color: rgba(245, 158, 11, 0.05);
+}
+
+.feedback-emoji {
+    font-size: 2.5em;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+
+.feedback-label {
+    font-size: 0.85em;
+    color: var(--text-color, #333);
+    font-weight: 500;
+}
+
+/* Thanks state */
+.feedback-thanks-icon {
+    font-size: 3em;
+    margin-bottom: 15px;
+    animation: pulse-heart 0.6s ease-in-out;
+}
+
+@keyframes pulse-heart {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Negative feedback state */
+.feedback-textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 8px;
+    font-family: var(--font-family-sans-serif, sans-serif);
+    font-size: 1em;
+    resize: vertical;
+    min-height: 100px;
+    max-height: 200px;
+    margin-bottom: 15px;
+    transition: border-color 0.2s;
+}
+
+.feedback-textarea:focus {
+    outline: none;
+    border-color: var(--color-primary, #0d9488);
+    box-shadow: 0 0 0 3px var(--color-primary-light, rgba(13, 148, 136, 0.1));
+}
+
+.feedback-textarea::placeholder {
+    color: var(--text-color-light, #999);
+}
+
+/* Contact section (guests only) */
+.feedback-contact-section {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.feedback-contact-label {
+    font-size: 0.9em;
+    color: var(--text-color-medium, #666);
+    margin-bottom: 8px;
+}
+
+.feedback-contact-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 8px;
+    font-family: var(--font-family-sans-serif, sans-serif);
+    font-size: 0.95em;
+    transition: border-color 0.2s;
+}
+
+.feedback-contact-input:focus {
+    outline: none;
+    border-color: var(--color-primary, #0d9488);
+    box-shadow: 0 0 0 3px var(--color-primary-light, rgba(13, 148, 136, 0.1));
+}
+
+.feedback-contact-input::placeholder {
+    color: var(--text-color-light, #999);
+}
+
+/* Action buttons */
+.feedback-actions {
+    margin-top: 20px;
+    justify-content: center;
+    gap: 12px;
+}
+
+.feedback-actions .button {
+    min-width: 120px;
+}
+
+/* Fade transitions between states */
+.feedback-state {
+    transition: opacity 0.2s ease-in-out;
+}
+
+.feedback-state.fade-out {
+    opacity: 0;
+}
+
+.feedback-state.fade-in {
+    opacity: 1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .feedback-modal-content {
+        padding: 25px 20px;
+        max-width: 95%;
+    }
+
+    .feedback-header {
+        font-size: 1.4em;
+    }
+
+    .feedback-buttons {
+        gap: 20px;
+    }
+
+    .feedback-btn {
+        width: 90px;
+        height: 90px;
+    }
+
+    .feedback-emoji {
+        font-size: 2em;
+    }
+
+    .feedback-actions {
+        flex-direction: column;
+    }
+
+    .feedback-actions .button {
+        width: 100%;
+    }
+}
+
+/* Theme variable fallbacks */
+:root {
+    --success-color: #10b981;
+    --success-color-light: rgba(16, 185, 129, 0.1);
+    --text-color-light: #999;
+}

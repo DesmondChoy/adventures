@@ -15,6 +15,7 @@ let selectedLessonTopic = '';
 let currentChapterChoices = []; // Store current chapter's choices for state preservation
 let minExpectedImageChapter = 1; // Minimum chapter number we'll accept images for (prevents stale images)
 let displayedImageChapter = 0; // Track which chapter's image is currently displayed (prevents regression)
+let feedbackCheckedThisSession = false; // Track if we've checked/shown feedback this session
 
 // Utility: convert string to Title Case (handles spaces, underscores, hyphens)
 function toTitleCase(str) {
@@ -1137,12 +1138,19 @@ export async function handleMessage(event) {
             // The new chapter's image will be shown when it arrives via chapter_image_update
             if (data.type === 'chapter_update') {
                 console.log('[IMAGE DEBUG] chapter_update received, hiding image container');
+                console.log('[FEEDBACK DEBUG] chapter_update current_chapter:', data.current_chapter, 'type:', typeof data.current_chapter);
                 const imageContainer = document.getElementById('chapterImageContainer');
                 if (imageContainer) {
                     imageContainer.classList.add('hidden');
                     console.log('[IMAGE DEBUG] Image container hidden');
                 } else {
                     console.log('[IMAGE DEBUG] Image container not found!');
+                }
+
+                // Trigger feedback prompt when starting chapter 6 (after completing chapter 5)
+                // This is non-blocking - chapter 6 continues loading in background
+                if (data.current_chapter === 6) {
+                    triggerFeedbackIfEligible();
                 }
             }
         } else {
@@ -1403,4 +1411,232 @@ function showConflictConfirmationModal(currentAdventure, newSelection) {
         abandonBtn.addEventListener('click', handleAbandon, { once: true });
         cancelBtn.addEventListener('click', handleCancel, { once: true });
     });
+}
+
+// --- Feedback Modal Functions ---
+
+/**
+ * Check if user is eligible for feedback prompt and show modal if so.
+ * Called when chapter 6 starts (after completing chapter 5).
+ * Non-blocking - chapter 6 continues loading in background.
+ */
+async function triggerFeedbackIfEligible() {
+    // Only check once per session
+    if (feedbackCheckedThisSession) {
+        console.log('[FEEDBACK] Already checked this session, skipping');
+        return;
+    }
+    feedbackCheckedThisSession = true;
+
+    try {
+        // Get user info for the API check
+        const authManager = window.appState?.authManager;
+        const isAuthenticated = authManager?.user && !authManager?.user?.is_anonymous;
+        const clientUUID = localStorage.getItem('learning_odyssey_user_uuid');
+
+        // Build check URL with query params
+        let checkUrl = '/api/feedback/check';
+        if (!isAuthenticated && clientUUID) {
+            checkUrl += `?client_uuid=${encodeURIComponent(clientUUID)}`;
+        }
+
+        // Prepare headers
+        const headers = { 'Content-Type': 'application/json' };
+        if (isAuthenticated && authManager?.accessToken) {
+            headers['Authorization'] = `Bearer ${authManager.accessToken}`;
+        }
+
+        console.log('[FEEDBACK] Checking eligibility...');
+        const response = await fetch(checkUrl, { method: 'GET', headers });
+
+        if (!response.ok) {
+            console.warn('[FEEDBACK] Check failed:', response.status);
+            return;
+        }
+
+        const data = await response.json();
+
+        if (data.has_given_feedback) {
+            console.log('[FEEDBACK] User has already given feedback, skipping');
+            return;
+        }
+
+        console.log('[FEEDBACK] User eligible, showing modal');
+        showFeedbackModal(isAuthenticated);
+
+    } catch (error) {
+        console.error('[FEEDBACK] Error checking eligibility:', error);
+        // Don't block on errors - just skip the feedback prompt
+    }
+}
+
+/**
+ * Show the feedback modal.
+ * @param {boolean} isAuthenticated - Whether user is authenticated (hides contact field if true)
+ */
+function showFeedbackModal(isAuthenticated) {
+    const modal = document.getElementById('feedbackModal');
+    if (!modal) {
+        console.error('[FEEDBACK] Modal element not found!');
+        return;
+    }
+
+    // Get all state containers and buttons
+    const initialState = document.getElementById('feedbackInitial');
+    const thanksState = document.getElementById('feedbackThanks');
+    const negativeState = document.getElementById('feedbackNegative');
+    const thumbsUpBtn = document.getElementById('feedbackThumbsUp');
+    const thumbsDownBtn = document.getElementById('feedbackThumbsDown');
+    const submitBtn = document.getElementById('feedbackSubmitBtn');
+    const skipBtn = document.getElementById('feedbackSkipBtn');
+    const contactSection = document.getElementById('feedbackContactSection');
+    const feedbackTextarea = document.getElementById('feedbackText');
+    const contactInput = document.getElementById('feedbackContact');
+
+    if (!initialState || !thanksState || !negativeState || !thumbsUpBtn || !thumbsDownBtn) {
+        console.error('[FEEDBACK] Required modal elements not found!');
+        return;
+    }
+
+    // Reset to initial state
+    initialState.style.display = 'block';
+    thanksState.style.display = 'none';
+    negativeState.style.display = 'none';
+    if (feedbackTextarea) feedbackTextarea.value = '';
+    if (contactInput) contactInput.value = '';
+
+    // Show/hide contact section based on auth status
+    if (contactSection) {
+        contactSection.style.display = isAuthenticated ? 'none' : 'block';
+    }
+
+    // Show the modal
+    modal.style.display = 'flex';
+
+    // Handler for thumbs up
+    const handleThumbsUp = async () => {
+        console.log('[FEEDBACK] Thumbs up clicked');
+        await submitFeedback('positive');
+
+        // Transition to thanks state
+        initialState.style.display = 'none';
+        thanksState.style.display = 'block';
+
+        // Auto-close after 1.5 seconds
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 1500);
+    };
+
+    // Handler for thumbs down
+    const handleThumbsDown = () => {
+        console.log('[FEEDBACK] Thumbs down clicked');
+
+        // Transition to negative feedback state
+        initialState.style.display = 'none';
+        negativeState.style.display = 'block';
+
+        // Focus the textarea
+        if (feedbackTextarea) {
+            setTimeout(() => feedbackTextarea.focus(), 100);
+        }
+    };
+
+    // Handler for submit (negative feedback with text)
+    const handleSubmit = async () => {
+        const feedbackText = feedbackTextarea?.value?.trim() || '';
+        const contactInfo = contactInput?.value?.trim() || '';
+
+        console.log('[FEEDBACK] Submitting negative feedback');
+        await submitFeedback('negative', feedbackText, contactInfo);
+
+        // Show thanks briefly
+        negativeState.style.display = 'none';
+        thanksState.style.display = 'block';
+
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 1500);
+    };
+
+    // Handler for skip
+    const handleSkip = async () => {
+        console.log('[FEEDBACK] Skip clicked, submitting negative without text');
+        await submitFeedback('negative');
+        modal.style.display = 'none';
+    };
+
+    // Remove old listeners and add new ones
+    thumbsUpBtn.replaceWith(thumbsUpBtn.cloneNode(true));
+    thumbsDownBtn.replaceWith(thumbsDownBtn.cloneNode(true));
+
+    const newThumbsUpBtn = document.getElementById('feedbackThumbsUp');
+    const newThumbsDownBtn = document.getElementById('feedbackThumbsDown');
+
+    newThumbsUpBtn.addEventListener('click', handleThumbsUp, { once: true });
+    newThumbsDownBtn.addEventListener('click', handleThumbsDown, { once: true });
+
+    if (submitBtn) {
+        submitBtn.replaceWith(submitBtn.cloneNode(true));
+        const newSubmitBtn = document.getElementById('feedbackSubmitBtn');
+        newSubmitBtn.addEventListener('click', handleSubmit, { once: true });
+    }
+
+    if (skipBtn) {
+        skipBtn.replaceWith(skipBtn.cloneNode(true));
+        const newSkipBtn = document.getElementById('feedbackSkipBtn');
+        newSkipBtn.addEventListener('click', handleSkip, { once: true });
+    }
+}
+
+/**
+ * Submit feedback to the API.
+ * @param {string} rating - 'positive' or 'negative'
+ * @param {string} [feedbackText] - Optional text for negative feedback
+ * @param {string} [contactInfo] - Optional contact info for guests
+ */
+async function submitFeedback(rating, feedbackText = '', contactInfo = '') {
+    try {
+        const authManager = window.appState?.authManager;
+        const isAuthenticated = authManager?.user && !authManager?.user?.is_anonymous;
+        const clientUUID = localStorage.getItem('learning_odyssey_user_uuid');
+        const adventureId = window.appState?.wsManager?.adventureId;
+
+        if (!adventureId) {
+            console.warn('[FEEDBACK] No adventure ID available');
+            return;
+        }
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (isAuthenticated && authManager?.accessToken) {
+            headers['Authorization'] = `Bearer ${authManager.accessToken}`;
+        }
+
+        const body = {
+            adventure_id: adventureId,
+            rating: rating,
+            feedback_text: feedbackText || null,
+            contact_info: contactInfo || null,
+            client_uuid: !isAuthenticated ? clientUUID : null,
+            chapter_number: 5
+        };
+
+        console.log('[FEEDBACK] Submitting:', { rating, hasText: !!feedbackText });
+
+        const response = await fetch('/api/feedback', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+            console.warn('[FEEDBACK] Submit failed:', response.status);
+        } else {
+            console.log('[FEEDBACK] Submitted successfully');
+        }
+
+    } catch (error) {
+        console.error('[FEEDBACK] Error submitting:', error);
+        // Don't show error to user - feedback is non-critical
+    }
 }

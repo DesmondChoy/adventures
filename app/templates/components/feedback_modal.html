@@ -1,0 +1,57 @@
+<!-- Feedback Modal - Appears once per user after completing chapter 5 -->
+<div id="feedbackModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content feedback-modal-content">
+        <!-- Initial State: Thumbs up/down -->
+        <div id="feedbackInitial" class="feedback-state">
+            <h2 class="modal-header feedback-header">Are you enjoying learning?</h2>
+            <p class="feedback-subtext">Your feedback helps us improve!</p>
+            <div class="feedback-buttons">
+                <button id="feedbackThumbsUp" class="feedback-btn feedback-btn-positive" aria-label="Yes, I'm enjoying it">
+                    <span class="feedback-emoji">&#128077;</span>
+                    <span class="feedback-label">Yes!</span>
+                </button>
+                <button id="feedbackThumbsDown" class="feedback-btn feedback-btn-negative" aria-label="No, not really">
+                    <span class="feedback-emoji">&#128078;</span>
+                    <span class="feedback-label">Not really</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Thanks State: Shown after thumbs up -->
+        <div id="feedbackThanks" class="feedback-state" style="display: none;">
+            <div class="feedback-thanks-icon">&#128154;</div>
+            <h2 class="modal-header feedback-header">Thanks for the feedback!</h2>
+            <p class="feedback-subtext">We're glad you're enjoying the adventure.</p>
+        </div>
+
+        <!-- Negative State: Text input for more details -->
+        <div id="feedbackNegative" class="feedback-state" style="display: none;">
+            <h2 class="modal-header feedback-header">We'd love to learn more</h2>
+            <p class="feedback-subtext">What could we do better?</p>
+            <textarea
+                id="feedbackText"
+                class="feedback-textarea"
+                placeholder="Tell us what you'd like to see improved..."
+                maxlength="1000"
+                rows="4"
+            ></textarea>
+
+            <!-- Contact section: Only shown for guest users -->
+            <div id="feedbackContactSection" class="feedback-contact-section" style="display: none;">
+                <p class="feedback-contact-label">Leave your contact if you'd like us to follow up:</p>
+                <input
+                    type="text"
+                    id="feedbackContact"
+                    class="feedback-contact-input"
+                    placeholder="Email or phone (optional)"
+                    maxlength="100"
+                >
+            </div>
+
+            <div class="modal-actions feedback-actions">
+                <button id="feedbackSubmitBtn" class="button primary-button">Submit</button>
+                <button id="feedbackSkipBtn" class="button secondary-button">Skip</button>
+            </div>
+        </div>
+    </div>
+</div>
