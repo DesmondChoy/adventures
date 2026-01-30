@@ -2,7 +2,9 @@
 
 ## Current Focus: UI/UX Improvements Phase 2 Completion (As of 2026-01-30)
 
-✅ **LATEST ACHIEVEMENT (2026-01-30):** Journey Complete Summary Screen Legibility FIXED! The summary buttons now have proper white text on purple/green backgrounds with larger font sizes for children's readability. Root cause was CSS specificity - `#choicesContainer button { color: var(--color-text-primary) }` in typography.css overrode Tailwind's `text-white` class. Solution: Created dedicated CSS classes (`.summary-btn-memory`, `.summary-btn-new`) with `color: #ffffff !important` and ~50% larger fonts.
+✅ **LATEST ACHIEVEMENT (2026-01-30):** Chapter Image Flash on Loading Screen FIXED! Race condition where images would briefly flash on the loader when clicking choices before image arrival is now resolved. Added loader visibility check as a third filter in `updateChapterImage()` - since the loader is shown synchronously in `makeChoice()`, it serves as a reliable state flag to reject stale images during transitions.
+
+✅ **PREVIOUS ACHIEVEMENT (2026-01-30):** Journey Complete Summary Screen Legibility FIXED! The summary buttons now have proper white text on purple/green backgrounds with larger font sizes for children's readability. Root cause was CSS specificity - `#choicesContainer button { color: var(--color-text-primary) }` in typography.css overrode Tailwind's `text-white` class. Solution: Created dedicated CSS classes (`.summary-btn-memory`, `.summary-btn-new`) with `color: #ffffff !important` and ~50% larger fonts.
 
 ✅ **PREVIOUS ACHIEVEMENT (2026-01-30):** Loader Progress Indicator Between Chapters FIXED! The loader now correctly advances through all 3 steps (Connecting → Crafting Story → Ready) between chapters. Previously, the loader was stuck at "Connecting" (Step 1) because the WebSocket `onopen` event only fires on initial connection, not when the connection is already open between chapters. Fix: Advance loader based on message events (`chapter_update` → Step 2, raw text → Step 3) instead of relying on `onopen`.
 

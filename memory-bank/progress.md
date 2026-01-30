@@ -2,6 +2,38 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2026-01-30: Chapter Image Flash on Loading Screen - FIXED
+
+**✅ RACE CONDITION FIX** - Chapter images no longer flash briefly on the loading screen when users click a choice button before the image arrives.
+
+- **Problem:** When a user clicked a choice button *before* the current chapter's image arrived via WebSocket, the image would briefly flash on the loading screen before disappearing.
+
+- **Root Cause Analysis:**
+  - Race condition in the browser's event queue
+  - If WebSocket `message` event was queued before the `click` event, the image handler processed first
+  - `handleMessage()` ran with `minExpectedImageChapter` not yet updated by `makeChoice()`
+  - Existing filters (`minExpectedImageChapter` and `displayedImageChapter`) didn't catch this case
+
+- **Solution:**
+  - Added a third filter in `updateChapterImage()`: check if loader overlay is visible
+  - The loader is shown synchronously at the start of `makeChoice()`, making it a reliable state flag
+  - Any image arriving while loader is visible is either stale or will be re-sent for the new chapter
+
+- **Code Change:**
+  ```javascript
+  // Filter 1: Don't display images while loader is visible (transition in progress)
+  const loaderOverlay = document.getElementById('loaderOverlay');
+  if (loaderOverlay && !loaderOverlay.classList.contains('hidden')) {
+      console.log(`[IMAGE DEBUG] Rejecting image for chapter ${chapterNumber} - loader is visible`);
+      return;
+  }
+  ```
+
+- **Files Modified:**
+  - `app/static/js/uiManager.js` - Added loader visibility check in `updateChapterImage()`
+
+---
+
 ### 2026-01-30: Journey Complete Summary Screen Legibility - COMPLETED
 
 **✅ SUMMARY BUTTON LEGIBILITY FIXED** - The "Memory Lane" and "Start New Journey" buttons now have proper white text visibility and larger fonts for children's readability.
