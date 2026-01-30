@@ -656,3 +656,43 @@
 .carousel-card.selecting {
     animation: selectCard 0.3s ease-in-out;
 }
+
+/* =============================================
+   Ripple Effect on Card Tap
+   ============================================= */
+.carousel-card .card-front::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 70%);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease-out, height 0.3s ease-out, opacity 0.3s ease-out;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.carousel-card:active .card-front::before {
+    width: 200%;
+    height: 200%;
+    opacity: 1;
+    transition: width 0s, height 0s, opacity 0s;
+}
+
+/* =============================================
+   Accessibility Focus Rings
+   ============================================= */
+.carousel-card:focus {
+    outline: none;
+}
+
+.carousel-card:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 3px rgba(253, 252, 247, 0.9),
+        0 0 0 6px var(--color-primary);
+}

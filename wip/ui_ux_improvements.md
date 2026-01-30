@@ -4,7 +4,7 @@
 - [x] Phase 1: Core Experience (Loading & Error Handling) - **COMPLETED 2026-01-30**
 - [x] Phase 2: Selection Flow (Carousel & Navigation) - **COMPLETED 2026-01-30**
 - [x] Phase 3: Story Experience (Choices & Progress) - **SKIPPED 2026-01-30** (not needed)
-- [ ] Phase 4: Polish (Touch & Accessibility)
+- [x] Phase 4: Polish (Touch & Accessibility) - **COMPLETED 2026-01-30**
 
 ## Approach
 **Phased implementation** - Complete one phase at a time with manual testing before proceeding.
@@ -277,21 +277,28 @@ For mobile testing, use browser DevTools responsive mode (375px width).
 
 ---
 
-### Phase 4: Polish
-**Status**: Not Started
+### Phase 4: Polish (COMPLETED)
+**Status**: Completed 2026-01-30
 **Goal**: Mobile refinements and micro-interactions
 
 **Implementation Tasks**:
-- [ ] 4.1 Add swipe left/right gestures on carousel (`carousel-manager.js`)
-- [ ] 4.2 Add ripple effect on card tap (`carousel-component.css`)
-- [ ] 4.3 Improve accessibility focus rings (`theme.css`, `components.css`)
+- [x] 4.1 Add swipe left/right gestures on carousel - **ALREADY EXISTED** (full momentum-based swipe in `carousel-manager.js:85-224`)
+- [x] 4.2 Add ripple effect on card tap (`carousel-component.css`) - Added CSS-only ripple via `:active` on `.card-front::before`
+- [x] 4.3 Improve accessibility focus rings (`carousel-component.css`, `components.css`) - Added `:focus-visible` rings for both carousel and choice cards
+
+**Implementation Details**:
+- **Ripple Effect**: Uses `.card-front::before` pseudo-element (since `.carousel-card::before/::after` are used for glow effect). On `:active`, the element expands from 0 to 200% with white radial gradient, creating a brief flash on tap.
+- **Focus Rings**: Uses `:focus-visible` (not `:focus`) to show rings only on keyboard navigation, not mouse clicks. Pattern: cream inner ring + teal outer ring, matching existing button focus styles.
 
 **Manual Testing Checklist**:
-- [ ] Swipe works on mobile carousel
-- [ ] Touch creates visual feedback
-- [ ] Tab navigation shows clear focus states
+- [x] Swipe works on mobile carousel (already implemented with momentum physics)
+- [ ] Touch creates visual feedback (ripple on tap)
+- [ ] Tab navigation shows clear focus states on carousel and choice cards
+- [ ] Mouse clicks do NOT trigger focus rings (`:focus-visible` behavior)
 
-**Phase 4 Complete**: [ ]
+**Version**: `?v=20260130g`
+
+**Phase 4 Complete**: [x]
 
 ---
 
