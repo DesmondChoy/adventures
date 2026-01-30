@@ -10,8 +10,8 @@ import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js
 let streamBuffer = '';  // Buffer for accumulating streamed text
 let renderTimeout = null;  // Timeout for debounced rendering
 let activeParagraphs = new Set(); // Store active paragraph indices
-let selectedCategory = '';
-let selectedLessonTopic = '';
+export let selectedCategory = '';
+export let selectedLessonTopic = '';
 let currentChapterChoices = []; // Store current chapter's choices for state preservation
 let minExpectedImageChapter = 1; // Minimum chapter number we'll accept images for (prevents stale images)
 let displayedImageChapter = 0; // Track which chapter's image is currently displayed (prevents regression)
@@ -505,6 +505,41 @@ function handleChapterProgress(data) {
 }
 
 // --- Navigation Functions ---
+export function goBackToCategoryScreen() {
+    // Hide lesson screen, show category screen
+    document.getElementById('lessonTopicScreen').classList.add('hidden');
+    document.getElementById('storyCategoryScreen').classList.remove('hidden');
+
+    // Reset lesson selection (category preserved)
+    selectedLessonTopic = '';
+    const lessonInput = document.getElementById('lessonTopic');
+    if (lessonInput) lessonInput.value = '';
+
+    // Reset lesson button
+    const lessonBtn = document.getElementById('lesson-start-btn');
+    if (lessonBtn) {
+        lessonBtn.disabled = true;
+        lessonBtn.classList.add('cursor-not-allowed');
+        lessonBtn.textContent = 'Start adventure';
+    }
+
+    // Clear visual selection on lesson carousel
+    if (window.lessonCarousel) {
+        const cards = document.getElementById('lessonCarousel')?.getElementsByClassName('carousel-card');
+        if (cards) {
+            Array.from(cards).forEach(card => {
+                card.classList.remove('selected', 'selecting');
+                card.setAttribute('aria-selected', 'false');
+            });
+        }
+        window.lessonCarousel.selectedValue = '';
+    }
+
+    // Announce for screen readers
+    const stepRegion = document.getElementById('step-aria');
+    if (stepRegion) stepRegion.textContent = 'Step 1 of 2: Choose World';
+}
+
 export function goToLessonTopicScreen() {
     if (!selectedCategory) {
         showCategoryWarning('Click on a card below to choose your adventure');

@@ -2,7 +2,7 @@
 
 ## Progress Overview
 - [x] Phase 1: Core Experience (Loading & Error Handling) - **COMPLETED 2026-01-30**
-- [ ] Phase 2: Selection Flow (Carousel & Navigation)
+- [x] Phase 2: Selection Flow (Carousel & Navigation) - **COMPLETED 2026-01-30**
 - [ ] Phase 3: Story Experience (Choices & Progress)
 - [ ] Phase 4: Polish (Touch & Accessibility)
 
@@ -226,23 +226,35 @@ For mobile testing, use browser DevTools responsive mode (375px width).
 
 ---
 
-### Phase 2: Selection Flow
-**Status**: Not Started
-**Goal**: Make carousel interaction intuitive
+### Phase 2: Selection Flow (COMPLETED)
+**Status**: Completed 2026-01-30
+**Goal**: Make carousel interaction intuitive with "storybook" design aesthetic
 
 **Implementation Tasks**:
-- [ ] 2.1 Add pulsing glow on center card (`carousel-component.css`)
-- [ ] 2.2 Add checkmark overlay on selected card (`carousel-component.css`, `carousel-manager.js`)
-- [ ] 2.3 Add back button on lesson selection (`lesson_carousel.html`, `main.js`)
-- [ ] 2.4 Make completed steps clickable (`category_carousel.html`, `lesson_carousel.html`)
+- [x] 2.1 Pulsing glow on center card - Already implemented (golden glow animation)
+- [x] 2.2 "Wax Seal" selection indicator (`carousel-component.css`, `category_carousel.html`, `lesson_carousel.html`)
+- [x] 2.3 "Breadcrumb Trail" back button (`lesson_carousel.html`, `components.css`, `uiManager.js`, `main.js`)
+- [x] 2.4 "Chapter Marker" clickable step indicator (`lesson_carousel.html`, `components.css`)
 
-**Manual Testing Checklist**:
-- [ ] Center card shows clear "select me" affordance
-- [ ] Selected card shows confirmation state
-- [ ] Back button returns to category selection
-- [ ] Clicking step 1 goes back to category
+**Implementation Details**:
+- **Wax Seal**: Teal circular badge with 3D embossed effect using radial gradients, inset shadows for depth, shine highlight via `::before`, checkmark via `::after` border trick, stamp animation on selection
+- **Breadcrumb Back Button**: CSS-only arrow using pseudo-elements, hover animation shifts arrow left, transparent background with hover state
+- **Chapter Marker**: Completed step 1 transformed into clickable button with checkmark badge, hover lifts badge with glow effect
+- **goBackToCategoryScreen()**: New function preserves category selection, clears lesson selection, resets button state, announces to screen readers
 
-**Phase 2 Complete**: [ ]
+**Manual Testing Checklist** (verified via Playwright MCP):
+- [x] Center card shows clear "select me" affordance (golden pulsing glow)
+- [x] Selected card shows wax seal stamp with checkmark in top-right
+- [x] Seal appears on both category and lesson carousels
+- [x] "Back to worlds" button visible on lesson screen
+- [x] Back button returns to category selection with selection preserved
+- [x] Chapter marker (step 1) clickable with same behavior as back button
+- [x] Hover on chapter marker lifts badge with glow effect
+- [x] Mobile responsive (375px) - smaller seal, proper layout
+
+**Version**: `?v=20260130d`
+
+**Phase 2 Complete**: [x]
 
 ---
 

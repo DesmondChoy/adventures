@@ -3,11 +3,11 @@
  * Entry point for the client-side application, handles initialization and coordination
  */
 
-import { authManager } from './authManager.js?v=20260130c';
-import { AdventureStateManager } from './adventureStateManager.js?v=20260130c';
-import { WebSocketManager } from './webSocketManager.js?v=20260130c';
-import { stateManager, manageState } from './stateManager.js?v=20260130c';
-import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260130c';
+import { authManager } from './authManager.js?v=20260130d';
+import { AdventureStateManager } from './adventureStateManager.js?v=20260130d';
+import { WebSocketManager } from './webSocketManager.js?v=20260130d';
+import { stateManager, manageState } from './stateManager.js?v=20260130d';
+import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260130d';
 import {
     showError,
     hideLoader,
@@ -24,9 +24,10 @@ import {
     resetDisplayedImageChapter,
     hideChapterImage,
     goToLessonTopicScreen,
+    goBackToCategoryScreen,
     startAdventure,
     initializeLoaderRetryButton
-} from './uiManager.js?v=20260130c';
+} from './uiManager.js?v=20260130d';
 
 // Global application state
 // Guard against re-initialization if module is re-imported
@@ -426,5 +427,6 @@ window.addEventListener('beforeunload', function () {
 window.resetApplicationState = resetApplicationState;
 window.viewAdventureSummary = viewAdventureSummary;
 window.goToLessonTopicScreen = goToLessonTopicScreen;
+window.goBackToCategoryScreen = goBackToCategoryScreen;
 window.startAdventure = startAdventure;
 window.makeChoice = makeChoice;

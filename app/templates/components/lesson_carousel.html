@@ -1,11 +1,23 @@
 <div id="lessonTopicScreen" class="max-w-md mx-auto rounded-xl overflow-hidden md:max-w-2xl p-6 hidden screen-transition" style="background-color: transparent;">
-    <!-- Step indicator -->
+    <!-- Breadcrumb back button -->
+    <button type="button"
+            onclick="window.goBackToCategoryScreen()"
+            class="trail-back mb-3"
+            aria-label="Go back to world selection">
+        <span class="trail-arrow" aria-hidden="true"></span>
+        <span>Back to worlds</span>
+    </button>
+
+    <!-- Step indicator with clickable chapter marker -->
     <div class="mb-4 flex items-center gap-2 text-sm text-gray-600" aria-label="Adventure setup steps">
-        <div class="flex items-center gap-2 opacity-90">
-            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-white font-semibold" style="background-color: var(--color-primary-dark);">✓</span>
-            <span style="color: var(--color-text-dark);">Choose world</span>
-        </div>
-        <span class="mx-1">→</span>
+        <button type="button"
+                onclick="window.goBackToCategoryScreen()"
+                class="chapter-marker"
+                aria-label="Go back to step 1: Choose world">
+            <span class="marker-badge"></span>
+            <span class="marker-label">Choose world</span>
+        </button>
+        <span class="mx-1 opacity-60">→</span>
         <div class="flex items-center gap-2">
             <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-white font-semibold" style="background-color: var(--color-primary);">2</span>
             <span class="font-medium" style="color: var(--color-text-dark);">Choose topic</span>
@@ -21,6 +33,7 @@
         <div class="carousel" id="lessonCarousel" role="listbox" aria-label="Lesson topics">
             {% for topic in lesson_topics %}
             <div class="carousel-card" role="option" aria-selected="false" tabindex="0" data-topic="{{ topic }}">
+                <div class="selection-seal" aria-hidden="true"></div>
                 <div class="card-face card-front">
                     <img src="/static/images/lessons/{{ topic }}.jpg" alt="{{ topic }}" class="card-image">
                 </div>

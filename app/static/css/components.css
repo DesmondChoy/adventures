@@ -758,3 +758,146 @@
         font-size: 0.875rem;
     }
 }
+
+/* =============================================
+   Breadcrumb Trail Back Button
+   ============================================= */
+.trail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px 6px 8px;
+    background: transparent;
+    border: none;
+    color: var(--color-primary);
+    font-family: var(--font-reading);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+    border-radius: 20px;
+}
+
+.trail-back:hover {
+    background: rgba(13, 148, 136, 0.08);
+    color: var(--color-primary-dark);
+}
+
+.trail-back:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(253, 252, 247, 0.9), 0 0 0 4px var(--color-primary);
+}
+
+.trail-back:hover .trail-arrow::before {
+    transform: translateY(-50%) translateX(-3px);
+}
+
+/* Arrow */
+.trail-arrow {
+    position: relative;
+    width: 20px;
+    height: 16px;
+    transition: transform 0.3s ease;
+}
+
+.trail-arrow::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    width: 12px;
+    height: 2px;
+    background: currentColor;
+    transform: translateY(-50%);
+    border-radius: 1px;
+    transition: transform 0.2s ease;
+}
+
+.trail-arrow::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border: 2px solid currentColor;
+    border-right: none;
+    border-bottom: none;
+    transform: translateY(-50%) rotate(-45deg);
+}
+
+/* =============================================
+   Chapter Marker Step Indicator
+   ============================================= */
+.chapter-marker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px 4px 4px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.chapter-marker:hover {
+    background: rgba(13, 148, 136, 0.06);
+}
+
+.chapter-marker:focus {
+    outline: none;
+}
+
+.chapter-marker:focus .marker-badge {
+    box-shadow:
+        0 0 0 2px var(--color-bg-primary),
+        0 0 0 4px var(--color-primary);
+}
+
+/* The circular badge with checkmark */
+.marker-badge {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--color-primary-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(13, 148, 136, 0.2);
+}
+
+.chapter-marker:hover .marker-badge {
+    transform: scale(1.1) translateY(-2px);
+    box-shadow:
+        0 4px 8px rgba(13, 148, 136, 0.3),
+        0 0 0 3px rgba(13, 148, 136, 0.1);
+    background: var(--color-primary);
+}
+
+/* Checkmark inside badge */
+.marker-badge::after {
+    content: '';
+    width: 7px;
+    height: 12px;
+    border: solid white;
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg) translate(-1px, -1px);
+}
+
+/* Label text */
+.marker-label {
+    font-family: var(--font-reading);
+    color: var(--color-text-dark);
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    opacity: 0.85;
+}
+
+.chapter-marker:hover .marker-label {
+    color: var(--color-primary);
+    opacity: 1;
+}

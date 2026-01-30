@@ -169,6 +169,102 @@
     z-index: 2;
 }
 
+/* =============================================
+   Wax Seal Selection Indicator
+   ============================================= */
+.selection-seal {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle at 35% 35%,
+        #14b8a6 0%,
+        #0d9488 50%,
+        #0a7470 100%
+    );
+    box-shadow:
+        inset 2px 2px 4px rgba(255, 255, 255, 0.3),
+        inset -2px -2px 4px rgba(0, 0, 0, 0.2),
+        0 4px 12px rgba(13, 148, 136, 0.4),
+        0 2px 4px rgba(0, 0, 0, 0.15);
+    transform: translateZ(60px) rotate(-15deg);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.carousel-card.selected .selection-seal {
+    opacity: 1;
+    animation: sealStamp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Elegant flourish checkmark */
+.selection-seal::after {
+    content: '';
+    width: 12px;
+    height: 20px;
+    border: solid #fdfcf7;
+    border-width: 0 3.5px 3.5px 0;
+    transform: rotate(45deg) translate(-2px, -2px);
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+/* Wax shine highlight */
+.selection-seal::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    width: 12px;
+    height: 8px;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.5) 0%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    border-radius: 50%;
+    opacity: 0.7;
+}
+
+@keyframes sealStamp {
+    0% {
+        transform: translateZ(60px) rotate(-15deg) scale(0.3);
+        opacity: 0;
+    }
+    50% {
+        transform: translateZ(60px) rotate(-15deg) scale(1.15);
+    }
+    70% {
+        transform: translateZ(60px) rotate(-15deg) scale(0.95);
+    }
+    100% {
+        transform: translateZ(60px) rotate(-15deg) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Mobile adjustments for wax seal */
+@media (max-width: 768px) {
+    .selection-seal {
+        width: 36px;
+        height: 36px;
+        top: -6px;
+        right: -6px;
+    }
+    .selection-seal::after {
+        width: 10px;
+        height: 16px;
+        border-width: 0 3px 3px 0;
+    }
+}
+
 .card-image {
     width: 100%;
     height: 100%;
