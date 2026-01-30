@@ -854,3 +854,174 @@
     color: var(--color-primary);
     opacity: 1;
 }
+
+/* =============================================
+   Journey Complete Summary Buttons
+   ============================================= */
+
+/* Container for journey complete section */
+.journey-complete-container {
+    text-align: center;
+    padding: 1rem;
+}
+
+/* Heading style - larger for children's readability */
+.journey-complete-heading {
+    font-size: 1.75rem !important;
+    font-weight: 700 !important;
+    color: #166534 !important; /* green-800 */
+    margin-bottom: 0.5rem;
+    font-family: var(--font-heading), 'Crimson Text', serif;
+}
+
+/* Stats text - larger for readability */
+.journey-stats {
+    font-size: 1.15rem !important;
+    color: #15803d !important; /* green-700 */
+    line-height: 1.6;
+}
+
+.journey-stats p {
+    margin: 0.25rem 0;
+}
+
+/* Button container */
+.journey-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+/* Memory Lane Button - Purple with shimmer effect */
+.summary-btn-memory {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 50%, #7c3aed 100%);
+    background-size: 200% 200%;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.summary-btn-memory::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+    );
+    transition: left 0.5s ease;
+}
+
+.summary-btn-memory:hover {
+    background-position: 100% 100%;
+    transform: scale(1.02);
+    box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+}
+
+.summary-btn-memory:hover::before {
+    left: 100%;
+}
+
+.summary-btn-memory:focus {
+    outline: none;
+    box-shadow:
+        0 0 0 2px rgba(253, 252, 247, 0.9),
+        0 0 0 4px #7c3aed;
+}
+
+.summary-btn-memory:active {
+    transform: scale(0.98);
+}
+
+/* Memory Lane button text styles */
+.summary-btn-memory .btn-title {
+    display: block;
+    font-size: 1.5rem !important;
+    font-weight: 600;
+    color: #ffffff !important;
+    line-height: 1.3;
+    font-family: var(--font-heading), 'Crimson Text', serif;
+}
+
+.summary-btn-memory .btn-subtitle {
+    display: block;
+    font-size: 1.1rem !important;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.95) !important;
+    margin-top: 0.5rem;
+    font-family: var(--font-reading), 'Andika', sans-serif;
+}
+
+/* New Journey Button - Green */
+.summary-btn-new {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.875rem 1.5rem;
+    background: linear-gradient(135deg, #16a34a 0%, #22c55e 50%, #16a34a 100%);
+    background-size: 200% 200%;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+    font-size: 1.35rem !important;
+    font-weight: 600;
+    color: #ffffff !important;
+    font-family: var(--font-heading), 'Crimson Text', serif;
+}
+
+.summary-btn-new:hover {
+    background-position: 100% 100%;
+    transform: scale(1.02);
+    box-shadow: 0 6px 16px rgba(22, 163, 74, 0.4);
+}
+
+.summary-btn-new:focus {
+    outline: none;
+    box-shadow:
+        0 0 0 2px rgba(253, 252, 247, 0.9),
+        0 0 0 4px #16a34a;
+}
+
+.summary-btn-new:active {
+    transform: scale(0.98);
+}
+
+/* Mobile adjustments for summary buttons */
+@media (max-width: 640px) {
+    .journey-complete-heading {
+        font-size: 1.5rem !important;
+    }
+
+    .journey-stats {
+        font-size: 1.05rem !important;
+    }
+
+    .summary-btn-memory .btn-title {
+        font-size: 1.35rem !important;
+    }
+
+    .summary-btn-memory .btn-subtitle {
+        font-size: 1rem !important;
+    }
+
+    .summary-btn-new {
+        font-size: 1.2rem !important;
+    }
+}

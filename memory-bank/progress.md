@@ -2,6 +2,42 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2026-01-30: Journey Complete Summary Screen Legibility - COMPLETED
+
+**✅ SUMMARY BUTTON LEGIBILITY FIXED** - The "Memory Lane" and "Start New Journey" buttons now have proper white text visibility and larger fonts for children's readability.
+
+- **Problem:** Poor legibility on the Journey Complete summary screen - black text on purple/green backgrounds and font sizes too small for a children's app.
+
+- **Root Cause:**
+  - CSS specificity issue: `#choicesContainer button { color: var(--color-text-primary) }` in typography.css:224 overrode Tailwind's `text-white` class
+  - Font sizes (`text-lg`/`text-sm`) were insufficient (~1.125rem/0.875rem)
+  - `opacity-80` on subtitle reduced contrast
+
+- **Solution:**
+  - Created dedicated CSS classes in `components.css` with `!important` override:
+    - `.summary-btn-memory` - Purple gradient with shimmer hover effect
+    - `.summary-btn-new` - Green gradient button
+    - `.journey-complete-heading` - 1.75rem bold heading
+    - `.journey-stats` - 1.15rem stats text
+  - Replaced inline Tailwind classes with semantic CSS classes
+
+- **Font Size Improvements (~50% larger):**
+  - Heading: 1.125rem → 1.75rem
+  - Stats: 0.875rem → 1.15rem
+  - Memory Lane title: 1.125rem → 1.5rem
+  - Memory Lane subtitle: 0.875rem opacity-80 → 1.1rem rgba(255,255,255,0.95)
+  - New Journey button: implicit → 1.35rem
+
+- **Files Modified:**
+  - `app/static/css/components.css` - Added ~140 lines of CSS classes
+  - `app/templates/components/stats_display.html` - Updated both macros
+  - `app/static/js/uiManager.js` - Updated three display functions
+  - `app/templates/base.html` - Cache busting version bump
+
+- **Version:** `?v=20260130h`
+
+---
+
 ### 2026-01-30: Loader Progress Fix - Between Chapters - COMPLETED
 
 **✅ LOADER PROGRESS INDICATOR BETWEEN CHAPTERS FIXED** - The loader now correctly advances through all 3 steps between chapters, not just on initial load.
