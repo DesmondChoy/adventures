@@ -1,0 +1,79 @@
+/* ==========================================================================
+   Decorative Margin Vines
+
+   Static whimsical vine decorations positioned in the left and right margins,
+   framing the main content like a storybook border.
+
+   Design: Hand-drawn botanical style with organic curves and varying leaves.
+   Colors: Natural botanical palette (sage green, forest green, warm brown).
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Vine Decoration Base
+   -------------------------------------------------------------------------- */
+
+.vine-decoration {
+    position: fixed;
+    top: 0;
+    height: 100vh;
+    width: 120px;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.4;
+}
+
+.vine-decoration svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   Left and Right Positioning
+   -------------------------------------------------------------------------- */
+
+.vine-decoration--left {
+    left: 0;
+}
+
+.vine-decoration--right {
+    right: 0;
+    transform: scaleX(-1); /* Mirror for symmetry */
+}
+
+/* --------------------------------------------------------------------------
+   Accessibility - Reduced Motion Support
+
+   Vines are static, but ensure any future enhancements respect preferences.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+    .vine-decoration {
+        opacity: 0.35;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Responsive - Adjust for Smaller Screens
+
+   On mobile, make vines narrower and more subtle so they don't
+   overwhelm the limited screen space.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1024px) {
+    .vine-decoration {
+        width: 60px;
+        opacity: 0.3;
+    }
+}
+
+@media (max-width: 640px) {
+    .vine-decoration {
+        width: 40px;
+        opacity: 0.25;
+    }
+
+    /* Hide right vine on mobile to avoid conflict with scrollbar */
+    .vine-decoration--right {
+        display: none;
+    }
+}
