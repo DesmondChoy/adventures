@@ -60,12 +60,12 @@ class Carousel {
     
     // Calculate dynamic radius based on card count to prevent overlap
     const cardWidth = cards.length > 0 ? cards[0].offsetWidth : 300;
-    const radius = (cardWidth / 2) / Math.tan(Math.PI / this.effectiveCount);
+    this.radius = (cardWidth / 2) / Math.tan(Math.PI / this.effectiveCount);
     
     try {
       for (let i = 0; i < cards.length; i++) {
         const angle = (i * this.rotationAngle);
-        cards[i].style.transform = `rotateY(${angle}deg) translateZ(${radius}px)`;
+        cards[i].style.transform = `rotateY(${angle}deg) translateZ(${this.radius}px)`;
         cards[i].style.visibility = 'visible';
       }
       
@@ -277,47 +277,206 @@ class Carousel {
       }
     });
   }
-  
+
+  /**
+   * Normalize carousel position so the front card has rotateY(0deg).
+   * This ensures flip animations happen along the viewport's Y-axis,
+   * preventing the "weird angle" effect when cards are flipped after rotation.
+   */
+  normalizeCarouselPosition() {
+    const frontIndex = this.currentIndex;
+    const cards = this.element.getElementsByClassName('carousel-card');
+
+    // Disable transitions for instant reassignment
+    const originalCarouselTransition = this.element.style.transition;
+    this.element.style.transition = 'none';
+
+    const originalCardTransitions = [];
+    for (let i = 0; i < cards.length; i++) {
+      originalCardTransitions[i] = cards[i].style.transition;
+      cards[i].style.transition = 'none';
+    }
+
+    // Reset carousel to 0° rotation
+    this.currentRotation = 0;
+    this.element.style.transform = 'translate(-50%, -50%) rotateY(0deg)';
+
+    // Reassign card positions so front card is at rotateY(0deg)
+    for (let i = 0; i < cards.length; i++) {
+      const stepsFromFront = (i - frontIndex + this.itemCount) % this.itemCount;
+      const angle = stepsFromFront * this.rotationAngle;
+      cards[i].style.transform = `rotateY(${angle}deg) translateZ(${this.radius}px)`;
+    }
+
+    // Force reflow to apply changes immediately
+    this.element.offsetHeight;
+
+    // Restore transitions
+    this.element.style.transition = originalCarouselTransition;
+    for (let i = 0; i < cards.length; i++) {
+      cards[i].style.transition = originalCardTransitions[i];
+    }
+  }
+
+  /**
+   * Get the index of a card by its data attribute value
+   * @param {string} value - The value to find
+   * @returns {number} The card index, or -1 if not found
+   */
+  getCardIndexByValue(value) {
+    const cards = this.element.getElementsByClassName('carousel-card');
+    return Array.from(cards).findIndex(card => card.dataset[this.dataAttribute] === value);
+  }
+
+  /**
+   * Check if a card is currently at the front-facing position
+   * @param {number} cardIndex - The index of the card to check
+   * @returns {boolean} True if the card is at the front position
+   */
+  isCardAtFront(cardIndex) {
+    return cardIndex === this.currentIndex;
+  }
+
+  /**
+   * Rotate the carousel to bring a specific card to the front
+   * @param {number} targetIndex - The index of the card to bring to front
+   * @param {Function} callback - Function to call after rotation completes
+   * @param {boolean} instant - If true, rotation happens without animation
+   */
+  rotateToCard(targetIndex, callback, instant = false) {
+    if (targetIndex === this.currentIndex) {
+      // Already at front, execute callback immediately
+      if (callback) callback();
+      return;
+    }
+
+    // Calculate the shortest rotation path
+    const stepsForward = (targetIndex - this.currentIndex + this.itemCount) % this.itemCount;
+    const stepsBackward = (this.currentIndex - targetIndex + this.itemCount) % this.itemCount;
+
+    // Choose the direction with fewer steps
+    let rotationSteps;
+    let direction;
+    if (stepsForward <= stepsBackward) {
+      rotationSteps = stepsForward;
+      direction = 'next';
+    } else {
+      rotationSteps = stepsBackward;
+      direction = 'prev';
+    }
+
+    // Calculate the total rotation change
+    const rotationChange = rotationSteps * this.rotationAngle;
+    if (direction === 'next') {
+      this.currentRotation -= rotationChange;
+    } else {
+      this.currentRotation += rotationChange;
+    }
+
+    // Update state
+    this.currentIndex = targetIndex;
+
+    if (instant) {
+      // Disable transition temporarily for instant snap
+      const originalTransition = this.element.style.transition;
+      this.element.style.transition = 'none';
+
+      // Apply the rotation
+      this.element.style.transform = `translate(-50%, -50%) rotateY(${this.currentRotation}deg)`;
+
+      // Force reflow to apply the change immediately
+      this.element.offsetHeight;
+
+      // Restore transition
+      this.element.style.transition = originalTransition;
+
+      // Update active card
+      this.updateActiveCard();
+
+      // Execute callback immediately
+      if (callback) callback();
+    } else {
+      // Apply the rotation with animation
+      this.element.style.transform = `translate(-50%, -50%) rotateY(${this.currentRotation}deg)`;
+
+      // Update active card immediately for visual feedback
+      this.updateActiveCard();
+
+      // Listen for transition end to execute callback
+      if (callback) {
+        const handleTransitionEnd = (event) => {
+          // Only respond to the carousel's own transform transition
+          if (event.target === this.element && event.propertyName === 'transform') {
+            this.element.removeEventListener('transitionend', handleTransitionEnd);
+            callback();
+          }
+        };
+        this.element.addEventListener('transitionend', handleTransitionEnd);
+      }
+    }
+  }
+
   /**
    * Select a card by its data attribute value
+   * Rotates to the card first if not at front, then flips
    * @param {string} value - The value to select
    */
   select(value) {
     const cards = this.element.getElementsByClassName('carousel-card');
     const targetCard = Array.from(cards).find(card => card.dataset[this.dataAttribute] === value);
-    
-    if (targetCard) {
-      // Check if the card is already selected - if so, toggle it off
-      if (targetCard.classList.contains('selected')) {
-        targetCard.classList.remove('selected', 'selecting');
-        targetCard.setAttribute('aria-selected', 'false');
-        this.selectedValue = '';
-        if (this.inputElement) {
-          this.inputElement.value = '';
-        }
-        // Clear selection state from all cards' aria attributes
-        Array.from(cards).forEach(card => card.setAttribute('aria-selected', 'false'));
-        // Notify deselection so UI can disable buttons
-        this.onSelect('');
-      } else {
-        // Remove selected class from all cards and add to the chosen one
-        Array.from(cards).forEach(card => {
-          card.classList.remove('selected', 'selecting');
-          card.setAttribute('aria-selected', 'false');
-        });
-        
-        targetCard.classList.add('selected', 'selecting');
-        targetCard.setAttribute('aria-selected', 'true');
-        setTimeout(() => targetCard.classList.remove('selecting'), 300);
-        
-        this.selectedValue = value;
-        if (this.inputElement) {
-          this.inputElement.value = value;
-        }
-        
-        // Call the onSelect callback
-        this.onSelect(value);
+
+    if (!targetCard) return;
+
+    const cardIndex = this.getCardIndexByValue(value);
+    const isAtFront = this.isCardAtFront(cardIndex);
+
+    // Check if the card is already selected - if so, toggle it off (always immediate)
+    if (targetCard.classList.contains('selected')) {
+      targetCard.classList.remove('selected', 'selecting');
+      targetCard.setAttribute('aria-selected', 'false');
+      this.selectedValue = '';
+      if (this.inputElement) {
+        this.inputElement.value = '';
       }
+      // Clear selection state from all cards' aria attributes
+      Array.from(cards).forEach(card => card.setAttribute('aria-selected', 'false'));
+      // Notify deselection so UI can disable buttons
+      this.onSelect('');
+      return;
+    }
+
+    // Define the flip action
+    const performFlip = () => {
+      // Normalize carousel position so front card has rotateY(0deg)
+      // This ensures the flip animation happens along the viewport's Y-axis
+      this.normalizeCarouselPosition();
+
+      // Remove selected class from all cards and add to the chosen one
+      Array.from(cards).forEach(card => {
+        card.classList.remove('selected', 'selecting');
+        card.setAttribute('aria-selected', 'false');
+      });
+
+      targetCard.classList.add('selected', 'selecting');
+      targetCard.setAttribute('aria-selected', 'true');
+      setTimeout(() => targetCard.classList.remove('selecting'), 300);
+
+      this.selectedValue = value;
+      if (this.inputElement) {
+        this.inputElement.value = value;
+      }
+
+      // Call the onSelect callback
+      this.onSelect(value);
+    };
+
+    // If card is at front, flip immediately; otherwise snap to front first then flip
+    if (isAtFront) {
+      performFlip();
+    } else {
+      // Instantly snap carousel to bring card to front, then flip
+      // Using instant=true avoids the 0.8s rotation delay for responsive feedback
+      this.rotateToCard(cardIndex, performFlip, true);
     }
   }
   
@@ -400,16 +559,15 @@ class Carousel {
       
       console.log(`Card width: ${cardWidth}px, Item count: ${this.itemCount}`);
       
-      // Recalculate radius using the same logic as init()
-      const calculatedRadius = (cardWidth / 2) / Math.tan(Math.PI / this.effectiveCount);
-      const radius = calculatedRadius;
-      
-      console.log(`Calculated radius: ${calculatedRadius.toFixed(2)}px, Final radius: ${radius}px`);
-      
+      // Recalculate radius using the same logic as init() and update instance variable
+      this.radius = (cardWidth / 2) / Math.tan(Math.PI / this.effectiveCount);
+
+      console.log(`Calculated radius: ${this.radius.toFixed(2)}px`);
+
       // Apply new transforms to all cards
       for (let i = 0; i < cards.length; i++) {
         const angle = (i * this.rotationAngle);
-        const newTransform = `rotateY(${angle}deg) translateZ(${radius}px)`;
+        const newTransform = `rotateY(${angle}deg) translateZ(${this.radius}px)`;
         cards[i].style.transform = newTransform;
         cards[i].style.visibility = 'visible';
         console.log(`Card ${i}: angle=${angle}deg, transform=${newTransform}`);
