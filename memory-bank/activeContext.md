@@ -2,9 +2,13 @@
 
 ## Current Focus: UI/UX Improvements Phase 2 Completion (As of 2026-01-30)
 
-✅ **LATEST ACHIEVEMENT (2026-01-30):** Carousel Card Flip Animation FIXED! Cards now flip smoothly after using arrow keys to rotate. Root cause was CSS transform interpolation happening in the card's local coordinate system (tilted by carousel rotation) instead of the viewport's Y-axis. Solution: `normalizeCarouselPosition()` method resets carousel transforms before flip, ensuring consistent flip axis.
+✅ **LATEST ACHIEVEMENT (2026-01-30):** Journey Complete Summary Screen Legibility FIXED! The summary buttons now have proper white text on purple/green backgrounds with larger font sizes for children's readability. Root cause was CSS specificity - `#choicesContainer button { color: var(--color-text-primary) }` in typography.css overrode Tailwind's `text-white` class. Solution: Created dedicated CSS classes (`.summary-btn-memory`, `.summary-btn-new`) with `color: #ffffff !important` and ~50% larger fonts.
 
-✅ **LATEST ACHIEVEMENT (2026-01-30):** UI Cleanup - Removed unused connection status indicator and loading subtext elements. These visual elements weren't providing meaningful feedback and cluttered the loader interface.
+✅ **PREVIOUS ACHIEVEMENT (2026-01-30):** Loader Progress Indicator Between Chapters FIXED! The loader now correctly advances through all 3 steps (Connecting → Crafting Story → Ready) between chapters. Previously, the loader was stuck at "Connecting" (Step 1) because the WebSocket `onopen` event only fires on initial connection, not when the connection is already open between chapters. Fix: Advance loader based on message events (`chapter_update` → Step 2, raw text → Step 3) instead of relying on `onopen`.
+
+✅ **PREVIOUS ACHIEVEMENT (2026-01-30):** Carousel Card Flip Animation FIXED! Cards now flip smoothly after using arrow keys to rotate. Root cause was CSS transform interpolation happening in the card's local coordinate system (tilted by carousel rotation) instead of the viewport's Y-axis. Solution: `normalizeCarouselPosition()` method resets carousel transforms before flip, ensuring consistent flip axis.
+
+✅ **PREVIOUS ACHIEVEMENT (2026-01-30):** UI Cleanup - Removed unused connection status indicator and loading subtext elements. These visual elements weren't providing meaningful feedback and cluttered the loader interface.
 
 ✅ **PREVIOUS ACHIEVEMENT (2026-01-01):** Production Carousel Click Bug FIXED! Root cause identified - ES6 modules were being loaded twice with different URLs (direct `<script type="module">` with version string vs import from main.js without version string), creating two separate `Carousel` classes. The carousel instance used one class while `window.Carousel` was another, causing prototype mismatch and click handlers not firing.
 

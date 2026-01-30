@@ -2,6 +2,27 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2026-01-30: Loader Progress Fix - Between Chapters - COMPLETED
+
+**✅ LOADER PROGRESS INDICATOR BETWEEN CHAPTERS FIXED** - The loader now correctly advances through all 3 steps between chapters, not just on initial load.
+
+- **Problem:** Between chapters, the loader showed "Connecting" (Step 1) and never advanced to "Crafting Story" (Step 2) or "Ready" (Step 3). This created a poor user experience.
+
+- **Root Cause:** The `onopen` handler that advances to Step 2 (`webSocketManager.js:130`) only fires when the WebSocket connection is first established. Between chapters, the connection is already open, so `onopen` doesn't fire again - the loader was stuck at Step 1.
+
+- **Solution:** Advance loader steps based on **message events** rather than relying on `onopen`:
+  1. When `chapter_update` message arrives → Advance to Step 2 (Crafting Story)
+  2. When raw text starts streaming (catch block) → Advance to Step 3 (Ready) with 300ms delay before hiding
+
+- **Files Modified:**
+  - `app/static/js/uiManager.js` - Added Step 2 advancement on `chapter_update`, Step 3 on raw text
+  - `app/templates/base.html` - Version string update for cache busting
+  - `app/templates/components/scripts.html` - Version string update
+
+- **Version:** `?v=20260130h`
+
+---
+
 ### 2026-01-30: UI/UX Phase 1 - Enhanced Loading Experience - COMPLETED
 
 **✅ LOADER PROGRESS INDICATOR AND TIMEOUT HANDLING IMPLEMENTED** - Users now see clear progress feedback during long LLM generation waits.

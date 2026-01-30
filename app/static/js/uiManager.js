@@ -1192,38 +1192,37 @@ export async function displayChoices(choices) {
 // --- Stats Display Functions ---
 export function displayStats(state) {
     const statsHtml = `
-        <div class="text-center p-4">
-            <h3 class="text-lg font-semibold text-green-800 mb-2">Journey Complete!</h3>
-            <div class="text-sm text-green-700">
+        <div class="journey-complete-container">
+            <h3 class="journey-complete-heading">Journey Complete!</h3>
+            <div class="journey-stats">
                 <p>Total Lessons: ${state.stats.total_lessons}</p>
                 <p>Correct Answers: ${state.stats.correct_lesson_answers}</p>
                 <p>Success Rate: ${state.stats.completion_percentage}%</p>
             </div>
-            <button onclick="window.resetApplicationState()" 
-                    class="mt-4 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition btn-hover">
-                Start New Journey
-            </button>
+            <div class="journey-buttons">
+                <button onclick="window.resetApplicationState()" class="summary-btn-new">
+                    🚀 Start New Journey
+                </button>
+            </div>
         </div>`;
     document.getElementById('choicesContainer').innerHTML = statsHtml;
 }
 
 export function displayStatsWithSummaryButton(state) {
     const statsHtml = `
-        <div class="text-center p-4">
-            <h3 class="text-lg font-semibold text-green-800 mb-2">Journey Complete!</h3>
-            <div class="text-sm text-green-700">
+        <div class="journey-complete-container">
+            <h3 class="journey-complete-heading">Journey Complete!</h3>
+            <div class="journey-stats">
                 <p>Total Lessons: ${state.stats.total_lessons}</p>
                 <p>Correct Answers: ${state.stats.correct_lesson_answers}</p>
                 <p>Success Rate: ${state.stats.completion_percentage}%</p>
             </div>
-            <div class="flex flex-col gap-3 mt-4">
-                <button onclick="window.viewAdventureSummary()" 
-                       class="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition btn-hover inline-block text-center">
-                    <span class="text-lg text-center">🔮 Take a Trip Down 🔮<br>Memory Lane</span>
-                    <p class="text-sm opacity-80 mt-1">Relive your adventure and learning highlights</p>
+            <div class="journey-buttons">
+                <button onclick="window.viewAdventureSummary()" class="summary-btn-memory">
+                    <span class="btn-title">🔮 Take a Trip Down Memory Lane 🔮</span>
+                    <span class="btn-subtitle">Relive your adventure and learning highlights</span>
                 </button>
-                <button onclick="window.resetApplicationState()" 
-                        class="mt-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition btn-hover text-center">
+                <button onclick="window.resetApplicationState()" class="summary-btn-new">
                     🚀 Start New Journey
                 </button>
             </div>
@@ -1233,25 +1232,23 @@ export function displayStatsWithSummaryButton(state) {
 
 export function displaySummaryComplete(state) {
     hideLoader();
-    
+
     // Update progress to show completed adventure (exclude SUMMARY chapter from display)
     // If current chapter is SUMMARY type, show the story length instead of chapter number
-    const displayChapterNumber = state.current_chapter.chapter_type === 'summary' 
-        ? state.story_length || window.appConfig?.defaultStoryLength || 10 
+    const displayChapterNumber = state.current_chapter.chapter_type === 'summary'
+        ? state.story_length || window.appConfig?.defaultStoryLength || 10
         : state.current_chapter.chapter_number;
     updateProgress(displayChapterNumber, state.stats.total_lessons);
-    
+
     // Add buttons at the bottom
     const buttonsHtml = `
-        <div class="text-center p-4">
-            <div class="flex flex-col gap-3 mt-4">
-                <button onclick="window.viewAdventureSummary()" 
-                       class="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition btn-hover inline-block text-center">
-                    <span class="text-lg text-center">🔮 Take a Trip Down 🔮<br>Memory Lane</span>
-                    <p class="text-sm opacity-80 mt-1">Relive your adventure and learning highlights</p>
+        <div class="journey-complete-container">
+            <div class="journey-buttons">
+                <button onclick="window.viewAdventureSummary()" class="summary-btn-memory">
+                    <span class="btn-title">🔮 Take a Trip Down Memory Lane 🔮</span>
+                    <span class="btn-subtitle">Relive your adventure and learning highlights</span>
                 </button>
-                <button onclick="window.resetApplicationState()" 
-                        class="mt-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition btn-hover text-center">
+                <button onclick="window.resetApplicationState()" class="summary-btn-new">
                     🚀 Start New Journey
                 </button>
             </div>
@@ -1382,6 +1379,11 @@ export async function handleMessage(event) {
             // Don't hide on adventure_loaded because that's resume - backend doesn't re-send images on resume
             // The new chapter's image will be shown when it arrives via chapter_image_update
             if (data.type === 'chapter_update') {
+                // Advance loader to Step 2 (Crafting Story) when chapter_update arrives
+                // This handles the case where WebSocket is already open between chapters
+                if (currentLoaderStep < 2) {
+                    setLoaderStep(2);
+                }
                 console.log('[IMAGE DEBUG] chapter_update received, hiding image container');
                 console.log('[FEEDBACK DEBUG] chapter_update current_chapter:', data.current_chapter, 'type:', typeof data.current_chapter);
                 const imageContainer = document.getElementById('chapterImageContainer');
@@ -1403,8 +1405,14 @@ export async function handleMessage(event) {
             hideLoader();
         }
     } catch (e) {
-        // Assume it's plain text if JSON parsing fails
-        hideLoader();
+        // Assume it's plain text if JSON parsing fails (raw streaming content)
+        // Advance loader to Step 3 (Ready) before hiding to show full progress
+        if (currentLoaderStep < 3) {
+            setLoaderStep(3);
+            setTimeout(() => hideLoader(), 300);
+        } else {
+            hideLoader();
+        }
         appendStoryText(event.data);
     }
 }
