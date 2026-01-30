@@ -128,26 +128,12 @@ async def send_story_complete(
         "total_chapters": state.story_length
     })
 
-    # Start image generation for the CONCLUSION chapter
-    try:
-        image_tasks = await start_image_generation_tasks(
-            final_chapter.chapter_number,
-            final_chapter.chapter_type,
-            final_chapter.chapter_content,
-            state,
-        )
-        logger.info(
-            f"Started {len(image_tasks)} image generation tasks for CONCLUSION chapter"
-        )
-    except Exception as e:
-        logger.error(f"Error starting image generation tasks for CONCLUSION: {str(e)}")
-        image_tasks = []  # Empty list as fallback
-
     # Stream the content first (only if not already streamed)
     if not already_streamed:
         await stream_conclusion_content(final_chapter.content, websocket)
 
-    # Then send the completion message with stats and a button to view the summary
+    # Send story_complete IMMEDIATELY - don't wait for image generation
+    # This ensures the Memory Lane button appears right away
     await websocket.send_json(
         {
             "type": "story_complete",
@@ -168,10 +154,23 @@ async def send_story_complete(
             },
         }
     )
+    logger.info("Sent story_complete message - Memory Lane button now visible")
 
-    # Process image tasks after sending the completion message
-    if image_tasks:
-        await process_image_tasks(image_tasks, final_chapter.chapter_number, websocket)
-        logger.info(f"Processed image tasks for CONCLUSION chapter")
-    else:
-        logger.warning(f"No image tasks available for CONCLUSION chapter")
+    # Now start image generation (no longer blocks user experience)
+    try:
+        image_tasks = await start_image_generation_tasks(
+            final_chapter.chapter_number,
+            final_chapter.chapter_type,
+            final_chapter.chapter_content,
+            state,
+        )
+        logger.info(
+            f"Started {len(image_tasks)} image generation tasks for CONCLUSION chapter"
+        )
+
+        if image_tasks:
+            await process_image_tasks(image_tasks, final_chapter.chapter_number, websocket)
+            logger.info("Processed image tasks for CONCLUSION chapter")
+    except Exception as e:
+        logger.error(f"Error with image generation for CONCLUSION: {str(e)}")
+        # Non-fatal - user already has Memory Lane button

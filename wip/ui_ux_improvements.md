@@ -25,7 +25,7 @@ Based on Playwright testing and code review, this plan identifies actionable UI/
 
 ## Issues Found During E2E Testing (2026-01-30)
 
-### Issue A: Image Flicker Between Chapters (High Priority) - RESOLVED
+### Issue A: Image Flicker Between Chapters (High Priority) - RESOLVED & VERIFIED
 **Problem**: When a new chapter loads, the previous chapter's image briefly flickers in the background for 1-2 seconds before being hidden. For example, the image from Chapter 3 shows briefly as Chapter 4 is loading.
 
 **Root cause**: `hideChapterImage()` didn't clear the image `src` attribute, the container had a CSS transition creating a visibility window, and the `fade-in` class wasn't removed when hiding.
@@ -33,12 +33,18 @@ Based on Playwright testing and code review, this plan identifies actionable UI/
 **Fix applied** (2026-01-30):
 - `app/static/js/uiManager.js`: Updated `hideChapterImage()` to clear `src`, `alt`, and remove `fade-in` class
 - `app/static/css/components.css`: Removed `transition: all 0.3s ease-in-out` from `.chapter-image-container`
+- `app/static/js/uiManager.js`: Added `expectedImageChapter` tracking to ignore stale images from previous chapters
 
-**Status**: ✅ Resolved
+**E2E Verification** (2026-01-30):
+- Console logs confirmed: `[IMAGE DEBUG] Ignoring stale image for chapter X (min expected: Y)` throughout all chapter transitions
+- Image container hidden on each `chapter_update` message
+- No visual image spillover observed during 10-chapter playthrough
+
+**Status**: ✅ Resolved & Verified
 
 ---
 
-### Issue B: Memory Lane Button Delay After Chapter 10 (High Priority) - RESOLVED
+### Issue B: Memory Lane Button Delay After Chapter 10 (High Priority) - RESOLVED & VERIFIED
 **Problem**: After Chapter 10 (the final CONCLUSION chapter) finishes streaming, "Return to Landing Page" button appeared instead of "Memory Lane" button.
 
 **Root cause (original understanding - incomplete)**: In `send_story_complete()`, image generation tasks were started BEFORE sending the `story_complete` message.
@@ -60,7 +66,13 @@ Based on Playwright testing and code review, this plan identifies actionable UI/
 3. `send_story_complete()` sends `story_complete` with `show_summary_button: True` → Memory Lane appears
 4. Image generation starts in background (non-blocking)
 
-**Status**: ✅ Resolved
+**E2E Verification** (2026-01-30):
+- "Memory Lane" button appeared immediately after Chapter 10 content streamed
+- No 15-20 second delay waiting for image generation
+- "Journey Complete!" UI displayed with correct stats: 10 chapters, 3 questions, 100% success rate
+- Summary page loaded correctly with all chapter summaries and lesson explanations
+
+**Status**: ✅ Resolved & Verified
 
 ---
 

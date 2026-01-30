@@ -642,34 +642,42 @@ async def stream_chapter_with_live_generation(
     })
     
     # Send choices as separate message after streaming
-    await websocket.send_json({
-        "type": "choices",
-        "choices": [{"text": choice.text, "id": str(choice.next_chapter)} for choice in chapter_content.choices]
-    })
+    # Skip sending empty choices for CONCLUSION chapters - send_story_complete() will handle
+    # showing the Memory Lane button instead
+    if chapter_content.choices:
+        await websocket.send_json({
+            "type": "choices",
+            "choices": [{"text": choice.text, "id": str(choice.next_chapter)} for choice in chapter_content.choices]
+        })
     
     # Start image generation tasks for the new chapter
-    try:
-        from .image_generator import start_image_generation_tasks, process_image_tasks
-        
-        image_tasks = await start_image_generation_tasks(
-            current_chapter_number,
-            chapter_type,
-            chapter_content,
-            state,
-        )
-        logger.info(
-            f"Started {len(image_tasks)} image generation tasks for chapter {current_chapter_number}"
-        )
-        
-        # Process image tasks and send updates
-        if image_tasks:
-            await process_image_tasks(image_tasks, current_chapter_number, websocket)
-            logger.info(f"[PERFORMANCE] Image generation completed for chapter {current_chapter_number}")
-            
-    except Exception as e:
-        logger.error(
-            f"Error with image generation tasks: {str(e)}", exc_info=True
-        )
+    # Skip for CONCLUSION chapters - send_story_complete() handles image generation
+    # after sending the story_complete message (so Memory Lane appears immediately)
+    if chapter_type != ChapterType.CONCLUSION:
+        try:
+            from .image_generator import start_image_generation_tasks, process_image_tasks
+
+            image_tasks = await start_image_generation_tasks(
+                current_chapter_number,
+                chapter_type,
+                chapter_content,
+                state,
+            )
+            logger.info(
+                f"Started {len(image_tasks)} image generation tasks for chapter {current_chapter_number}"
+            )
+
+            # Process image tasks and send updates
+            if image_tasks:
+                await process_image_tasks(image_tasks, current_chapter_number, websocket)
+                logger.info(f"[PERFORMANCE] Image generation completed for chapter {current_chapter_number}")
+
+        except Exception as e:
+            logger.error(
+                f"Error with image generation tasks: {str(e)}", exc_info=True
+            )
+    else:
+        logger.info(f"[PERFORMANCE] Skipping image generation for CONCLUSION chapter - will be handled by send_story_complete()")
     
     logger.info(f"[PERFORMANCE] Post-streaming processing completed for chapter {current_chapter_number}")
     
