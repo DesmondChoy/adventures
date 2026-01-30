@@ -1,10 +1,14 @@
 # Active Context
 
-## Current Focus: Production Carousel & Cache Fixes (As of 2026-01-01)
+## Current Focus: UI/UX Improvements Phase 2 Completion (As of 2026-01-30)
 
-✅ **LATEST ACHIEVEMENT (2026-01-01):** Production Carousel Click Bug FIXED! Root cause identified - ES6 modules were being loaded twice with different URLs (direct `<script type="module">` with version string vs import from main.js without version string), creating two separate `Carousel` classes. The carousel instance used one class while `window.Carousel` was another, causing prototype mismatch and click handlers not firing.
+✅ **LATEST ACHIEVEMENT (2026-01-30):** Carousel Card Flip Animation FIXED! Cards now flip smoothly after using arrow keys to rotate. Root cause was CSS transform interpolation happening in the card's local coordinate system (tilted by carousel rotation) instead of the viewport's Y-axis. Solution: `normalizeCarouselPosition()` method resets carousel transforms before flip, ensuring consistent flip axis.
 
-✅ **LATEST ACHIEVEMENT (2026-01-01):** Cache Invalidation System IMPLEMENTED! Added version strings to all CSS/JS files in base.html, reduced cache-control from 1 year (immutable) to 1 day (revalidatable), and documented deployment process in CLAUDE.md.
+✅ **LATEST ACHIEVEMENT (2026-01-30):** UI Cleanup - Removed unused connection status indicator and loading subtext elements. These visual elements weren't providing meaningful feedback and cluttered the loader interface.
+
+✅ **PREVIOUS ACHIEVEMENT (2026-01-01):** Production Carousel Click Bug FIXED! Root cause identified - ES6 modules were being loaded twice with different URLs (direct `<script type="module">` with version string vs import from main.js without version string), creating two separate `Carousel` classes. The carousel instance used one class while `window.Carousel` was another, causing prototype mismatch and click handlers not firing.
+
+✅ **PREVIOUS ACHIEVEMENT (2026-01-01):** Cache Invalidation System IMPLEMENTED! Added version strings to all CSS/JS files in base.html, reduced cache-control from 1 year (immutable) to 1 day (revalidatable), and documented deployment process in CLAUDE.md.
 
 ✅ **PREVIOUS ACHIEVEMENT (2026-01-01):** WebSocket Reconnection Fix for Resumed Adventures VERIFIED! End-to-end Playwright testing confirmed the fix works - resumed adventures now properly process choice button clicks without "Reconnecting..." errors. The fix exposed `makeChoice` globally and removed problematic dynamic imports that were resetting `window.appState`.
 
