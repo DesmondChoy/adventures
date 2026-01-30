@@ -1021,7 +1021,16 @@ export function updateChoiceWithImage(choiceIndex, imageData) {
 }
 
 export function updateChapterImage(chapterNumber, imageData) {
-    // Solution 4: Only update if this is a newer or equal chapter (prevents regression)
+    // Filter 1: Don't display images while loader is visible (transition in progress)
+    // This catches race conditions where the image WebSocket message arrives
+    // just as the user clicks a choice button
+    const loaderOverlay = document.getElementById('loaderOverlay');
+    if (loaderOverlay && !loaderOverlay.classList.contains('hidden')) {
+        console.log(`[IMAGE DEBUG] Rejecting image for chapter ${chapterNumber} - loader is visible`);
+        return;
+    }
+
+    // Filter 2: Only update if this is a newer or equal chapter (prevents regression)
     if (displayedImageChapter > 0 && chapterNumber < displayedImageChapter) {
         console.log(`[IMAGE DEBUG] Rejecting image for chapter ${chapterNumber} - already showed chapter ${displayedImageChapter}`);
         return;
