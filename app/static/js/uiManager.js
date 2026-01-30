@@ -229,50 +229,22 @@ export function setLoaderStep(step) {
             line.classList.add('active');
         }
     });
-
-    // Update subtext based on step
-    const subtext = document.getElementById('loadingSubtext');
-    if (subtext) {
-        const subtexts = {
-            1: 'Creating your personalized adventure...',
-            2: 'Creating your personalized adventure...',
-            3: 'Almost ready!'
-        };
-        subtext.textContent = subtexts[step] || subtexts[2];
-    }
 }
 
 /**
- * Show connection status indicator
+ * Show connection status indicator (no-op - indicator removed)
  * @param {string} status - 'connecting', 'connected', 'error'
  * @param {string} [message] - Optional message to display
  */
 export function setConnectionStatus(status, message) {
-    const statusEl = document.getElementById('connectionStatus');
-    if (!statusEl) return;
-
-    statusEl.classList.remove('hidden', 'connecting', 'connected', 'error');
-    statusEl.classList.add(status);
-
-    const textEl = statusEl.querySelector('.connection-status-text');
-    if (textEl) {
-        const messages = {
-            connecting: message || 'Connecting...',
-            connected: message || 'Connected',
-            error: message || 'Connection lost'
-        };
-        textEl.textContent = messages[status] || message;
-    }
+    // No-op: connection status indicator has been removed
 }
 
 /**
- * Hide connection status indicator
+ * Hide connection status indicator (no-op - indicator removed)
  */
 export function hideConnectionStatus() {
-    const statusEl = document.getElementById('connectionStatus');
-    if (statusEl) {
-        statusEl.classList.add('hidden');
-    }
+    // No-op: connection status indicator has been removed
 }
 
 /**
@@ -320,7 +292,6 @@ function startLoaderTimeout() {
     loaderTimeoutId = setTimeout(() => {
         console.warn('[LOADER] Timeout reached after', LOADER_TIMEOUT_MS, 'ms');
         showLoaderError('This is taking longer than expected. The story generation might have encountered an issue.');
-        setConnectionStatus('error', 'Timeout');
     }, LOADER_TIMEOUT_MS);
 }
 
@@ -348,12 +319,6 @@ function resetLoaderState() {
     const lines = document.querySelectorAll('.loader-step-line');
     steps.forEach(step => step.classList.remove('active', 'completed'));
     lines.forEach(line => line.classList.remove('active', 'completed'));
-
-    // Reset subtext
-    const subtext = document.getElementById('loadingSubtext');
-    if (subtext) {
-        subtext.textContent = 'Creating your personalized adventure...';
-    }
 }
 
 /**
@@ -369,7 +334,6 @@ export function initializeLoaderRetryButton() {
 
             // Reset to connecting state
             setLoaderStep(1);
-            setConnectionStatus('connecting', 'Reconnecting...');
 
             // Start new timeout
             startLoaderTimeout();
@@ -381,7 +345,6 @@ export function initializeLoaderRetryButton() {
                 } catch (error) {
                     console.error('[LOADER] Retry failed:', error);
                     showLoaderError('Unable to reconnect. Please refresh the page.');
-                    setConnectionStatus('error', 'Reconnection failed');
                 }
             } else {
                 // No wsManager, suggest page refresh

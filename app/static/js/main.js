@@ -3,11 +3,11 @@
  * Entry point for the client-side application, handles initialization and coordination
  */
 
-import { authManager } from './authManager.js?v=20260130d';
-import { AdventureStateManager } from './adventureStateManager.js?v=20260130d';
-import { WebSocketManager } from './webSocketManager.js?v=20260130d';
-import { stateManager, manageState } from './stateManager.js?v=20260130d';
-import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260130d';
+import { authManager } from './authManager.js?v=20260130f';
+import { AdventureStateManager } from './adventureStateManager.js?v=20260130f';
+import { WebSocketManager } from './webSocketManager.js?v=20260130f';
+import { stateManager, manageState } from './stateManager.js?v=20260130f';
+import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260130f';
 import {
     showError,
     hideLoader,
@@ -27,7 +27,7 @@ import {
     goBackToCategoryScreen,
     startAdventure,
     initializeLoaderRetryButton
-} from './uiManager.js?v=20260130d';
+} from './uiManager.js?v=20260130f';
 
 // Global application state
 // Guard against re-initialization if module is re-imported

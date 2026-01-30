@@ -3,7 +3,7 @@
 ## Progress Overview
 - [x] Phase 1: Core Experience (Loading & Error Handling) - **COMPLETED 2026-01-30**
 - [x] Phase 2: Selection Flow (Carousel & Navigation) - **COMPLETED 2026-01-30**
-- [ ] Phase 3: Story Experience (Choices & Progress)
+- [x] Phase 3: Story Experience (Choices & Progress) - **SKIPPED 2026-01-30** (not needed)
 - [ ] Phase 4: Polish (Touch & Accessibility)
 
 ## Approach
@@ -258,23 +258,22 @@ For mobile testing, use browser DevTools responsive mode (375px width).
 
 ---
 
-### Phase 3: Story Experience
-**Status**: Not Started
-**Goal**: Enhance engagement during story reading
+### Phase 3: Story Experience (SKIPPED)
+**Status**: Skipped 2026-01-30
+**Goal**: Originally intended to enhance engagement during story reading
 
-**Implementation Tasks**:
-- [ ] 3.1 Add 1/2/3 indicators to choice cards (`uiManager.js`, `theme.css`)
-- [ ] 3.2 Add keyboard shortcuts (1/2/3 keys) for choices (`main.js`)
-- [ ] 3.3 Add visual chapter progress bar (`story_container.html`, `components.css`)
-- [ ] 3.4 Add chapter type badge (STORY/LESSON/REFLECT) (`story_container.html`, `uiManager.js`)
+**Decision**: After review, none of these tasks add meaningful value:
 
-**Manual Testing Checklist**:
-- [ ] Choice cards show numbers 1, 2, 3
-- [ ] Pressing 1/2/3 keys selects corresponding choice
-- [ ] Progress bar fills as chapters complete
-- [ ] Chapter type badge appears correctly
+| Task | Original Plan | Decision |
+|------|---------------|----------|
+| 3.1 Number badges | Add 1/2/3 to choice cards | **Skip** - Purely decorative, no clear purpose |
+| 3.2 Keyboard shortcuts | Press 1/2/3 to select | **Skip** - User declined |
+| 3.3 Progress bar | Visual journey progress | **Skip** - Redundant with "Chapter X of 10" text |
+| 3.4 Chapter type badge | Show STORY/LESSON/REFLECT | **Skip** - Backend concept, shouldn't be exposed to users |
 
-**Phase 3 Complete**: [ ]
+**Rationale**: The existing story experience is already effective. The "Chapter X of 10" counter provides sufficient progress indication, and exposing chapter types (STORY/LESSON/REFLECT) would break the immersive storybook experience by revealing backend implementation details.
+
+**Phase 3 Complete**: [x] (Skipped - not needed)
 
 ---
 

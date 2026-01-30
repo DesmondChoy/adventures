@@ -634,61 +634,6 @@
     }
 }
 
-/* Loading Subtext */
-.loading-subtext {
-    font-family: 'Andika', sans-serif;
-    font-size: 1rem;
-    color: #6b7280;
-    margin-top: 0.5rem;
-    opacity: 0.8;
-}
-
-/* Connection Status Indicator */
-.connection-status {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 1.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 9999px;
-    font-family: 'Andika', sans-serif;
-    font-size: 0.875rem;
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(4px);
-}
-
-.connection-status.hidden {
-    display: none;
-}
-
-.connection-status.connecting {
-    color: #f59e0b;
-}
-
-.connection-status.connected {
-    color: #10b981;
-}
-
-.connection-status.error {
-    color: #ef4444;
-}
-
-.connection-status-icon {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: currentColor;
-}
-
-.connection-status.connecting .connection-status-icon {
-    animation: blink 1s ease-in-out infinite;
-}
-
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-}
-
 /* Error/Retry Container */
 .loader-error {
     display: flex;
@@ -752,10 +697,6 @@
 
     .loading-phrase {
         font-size: 2rem;
-    }
-
-    .loading-subtext {
-        font-size: 0.875rem;
     }
 }
 
