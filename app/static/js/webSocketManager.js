@@ -81,14 +81,14 @@ export class WebSocketManager {
 
     async reconnect() {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            const { appendStoryText } = await import('./uiManager.js');
+            const { appendStoryText } = await import('./uiManager.js?v=20260130c');
             appendStoryText('\n\nUnable to reconnect after multiple attempts. Please refresh the page.');
             return;
         }
 
         const savedState = this.stateManager.loadState();
         if (!savedState && !this.adventureIdToResume) { // Also check adventureIdToResume
-            const { appendStoryText } = await import('./uiManager.js');
+            const { appendStoryText } = await import('./uiManager.js?v=20260130c');
             appendStoryText('\n\nUnable to recover story state. Please refresh the page.');
             return;
         }
@@ -108,23 +108,35 @@ export class WebSocketManager {
             this.reconnectAttempts++;
         } catch (e) {
             console.error("Error creating WebSocket during reconnect:", e); 
-            const { hideLoader } = await import('./uiManager.js');
+            const { hideLoader } = await import('./uiManager.js?v=20260130c');
             hideLoader();
         }
     }
 
     async setupConnectionHandlers() {
         const savedState = this.stateManager.loadState();
-        const { hideLoader, updateProgress, handleMessage } = await import('./uiManager.js');
-        const { manageState } = await import('./stateManager.js');
+        const uiModule = await import('./uiManager.js?v=20260130c');
+        const { hideLoader, updateProgress, handleMessage } = uiModule;
+        // Use window.loaderFunctions as fallback for cross-module access
+        const loaderFns = window.loaderFunctions || {};
+        const setLoaderStep = uiModule.setLoaderStep || loaderFns.setLoaderStep || (() => {});
+        const setConnectionStatus = uiModule.setConnectionStatus || loaderFns.setConnectionStatus || (() => {});
+        const hideConnectionStatus = uiModule.hideConnectionStatus || loaderFns.hideConnectionStatus || (() => {});
+        const showLoaderError = uiModule.showLoaderError || loaderFns.showLoaderError || (() => {});
+        const { manageState } = await import('./stateManager.js?v=20260130c');
 
         this.connection.onopen = () => {
             this.reconnectAttempts = 0;
 
+            // Update loader to advance to step 2 (crafting story)
+            // Hide any error/reconnect status that might be showing
+            hideConnectionStatus();
+            setLoaderStep(2); // Now crafting the story
+
             if (this.adventureIdToResume) {
                 this.connection.send(JSON.stringify({
-                    choice: 'resume_specific_adventure', 
-                    adventure_id_to_resume: this.adventureIdToResume 
+                    choice: 'resume_specific_adventure',
+                    adventure_id_to_resume: this.adventureIdToResume
                 }));
             } else if (savedState) {
                 // Don't call updateProgress here - let the backend's adventure_loaded message handle it
@@ -147,16 +159,19 @@ export class WebSocketManager {
         };
 
         this.connection.onclose = (event) => {
-            hideLoader();
             if (!event.wasClean) {
                 console.error('WebSocket connection died unexpectedly. Code:', event.code, 'Reason:', event.reason);
+                setConnectionStatus('error', 'Connection lost');
                 this.handleDisconnect();
+            } else {
+                hideLoader();
             }
         };
 
         this.connection.onerror = (error) => {
             console.error('WebSocket Error: ', error);
-            hideLoader();
+            setConnectionStatus('error', 'Connection error');
+            showLoaderError('Unable to connect. Please check your internet connection.');
         };
 
         this.connection.onmessage = handleMessage;

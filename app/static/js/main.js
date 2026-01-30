@@ -3,11 +3,11 @@
  * Entry point for the client-side application, handles initialization and coordination
  */
 
-import { authManager } from './authManager.js?v=20260124b';
-import { AdventureStateManager } from './adventureStateManager.js?v=20260124b';
-import { WebSocketManager } from './webSocketManager.js?v=20260124b';
-import { stateManager, manageState } from './stateManager.js?v=20260124b';
-import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260124b';
+import { authManager } from './authManager.js?v=20260130c';
+import { AdventureStateManager } from './adventureStateManager.js?v=20260130c';
+import { WebSocketManager } from './webSocketManager.js?v=20260130c';
+import { stateManager, manageState } from './stateManager.js?v=20260130c';
+import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260130c';
 import {
     showError,
     hideLoader,
@@ -24,8 +24,9 @@ import {
     resetDisplayedImageChapter,
     hideChapterImage,
     goToLessonTopicScreen,
-    startAdventure
-} from './uiManager.js?v=20260124b';
+    startAdventure,
+    initializeLoaderRetryButton
+} from './uiManager.js?v=20260130c';
 
 // Global application state
 // Guard against re-initialization if module is re-imported
@@ -327,6 +328,9 @@ async function initialize() {
 
     // Initialize WebSocket manager
     window.appState.wsManager = new WebSocketManager(authManager);
+
+    // Initialize loader retry button
+    initializeLoaderRetryButton();
 
     const authInitialized = await authManager.initialize();
     if (!authInitialized) {

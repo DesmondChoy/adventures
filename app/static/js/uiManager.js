@@ -102,6 +102,11 @@ let previousPhrase = '';
 let phraseInterval = null;
 let typewriterTimeout = null;
 
+// Progress tracking for loader
+let currentLoaderStep = 0;
+let loaderTimeoutId = null;
+const LOADER_TIMEOUT_MS = 90000; // 90 seconds timeout
+
 // Fetch loading phrases from API
 async function fetchLoadingPhrases() {
     try {
@@ -184,11 +189,205 @@ function stopPhraseRotation() {
     clearTimeout(typewriterTimeout);
     phraseInterval = null;
     typewriterTimeout = null;
-    
+
     const phraseElement = document.getElementById('loadingPhrase');
     if (phraseElement) {
         phraseElement.textContent = '';
         phraseElement.classList.remove('green-gradient');
+    }
+}
+
+// --- Progress Step Management ---
+/**
+ * Update the loader progress indicator to show current step
+ * @param {number} step - Step number (1=Connecting, 2=Crafting, 3=Ready)
+ */
+export function setLoaderStep(step) {
+    currentLoaderStep = step;
+
+    const steps = document.querySelectorAll('.loader-step');
+    const lines = document.querySelectorAll('.loader-step-line');
+
+    steps.forEach((stepEl, index) => {
+        const stepNum = index + 1;
+        stepEl.classList.remove('active', 'completed');
+
+        if (stepNum < step) {
+            stepEl.classList.add('completed');
+        } else if (stepNum === step) {
+            stepEl.classList.add('active');
+        }
+    });
+
+    lines.forEach((line, index) => {
+        const lineAfterStep = index + 1;
+        line.classList.remove('active', 'completed');
+
+        if (lineAfterStep < step) {
+            line.classList.add('completed');
+        } else if (lineAfterStep === step) {
+            line.classList.add('active');
+        }
+    });
+
+    // Update subtext based on step
+    const subtext = document.getElementById('loadingSubtext');
+    if (subtext) {
+        const subtexts = {
+            1: 'Creating your personalized adventure...',
+            2: 'Creating your personalized adventure...',
+            3: 'Almost ready!'
+        };
+        subtext.textContent = subtexts[step] || subtexts[2];
+    }
+}
+
+/**
+ * Show connection status indicator
+ * @param {string} status - 'connecting', 'connected', 'error'
+ * @param {string} [message] - Optional message to display
+ */
+export function setConnectionStatus(status, message) {
+    const statusEl = document.getElementById('connectionStatus');
+    if (!statusEl) return;
+
+    statusEl.classList.remove('hidden', 'connecting', 'connected', 'error');
+    statusEl.classList.add(status);
+
+    const textEl = statusEl.querySelector('.connection-status-text');
+    if (textEl) {
+        const messages = {
+            connecting: message || 'Connecting...',
+            connected: message || 'Connected',
+            error: message || 'Connection lost'
+        };
+        textEl.textContent = messages[status] || message;
+    }
+}
+
+/**
+ * Hide connection status indicator
+ */
+export function hideConnectionStatus() {
+    const statusEl = document.getElementById('connectionStatus');
+    if (statusEl) {
+        statusEl.classList.add('hidden');
+    }
+}
+
+/**
+ * Show loader error state with retry button
+ * @param {string} message - Error message to display
+ */
+export function showLoaderError(message) {
+    const errorEl = document.getElementById('loaderError');
+    const messageEl = errorEl?.querySelector('.loader-error-message');
+
+    if (errorEl && messageEl) {
+        messageEl.textContent = message;
+        errorEl.classList.remove('hidden');
+
+        // Hide the progress and phrase elements
+        const progress = document.querySelector('.loader-progress');
+        const text = document.querySelector('.loader-text');
+        if (progress) progress.style.opacity = '0.3';
+        if (text) text.style.opacity = '0.3';
+    }
+}
+
+/**
+ * Hide loader error state
+ */
+export function hideLoaderError() {
+    const errorEl = document.getElementById('loaderError');
+    if (errorEl) {
+        errorEl.classList.add('hidden');
+
+        // Restore the progress and phrase elements
+        const progress = document.querySelector('.loader-progress');
+        const text = document.querySelector('.loader-text');
+        if (progress) progress.style.opacity = '1';
+        if (text) text.style.opacity = '1';
+    }
+}
+
+/**
+ * Start the loader timeout - will show error after LOADER_TIMEOUT_MS
+ */
+function startLoaderTimeout() {
+    clearLoaderTimeout(); // Clear any existing timeout
+
+    loaderTimeoutId = setTimeout(() => {
+        console.warn('[LOADER] Timeout reached after', LOADER_TIMEOUT_MS, 'ms');
+        showLoaderError('This is taking longer than expected. The story generation might have encountered an issue.');
+        setConnectionStatus('error', 'Timeout');
+    }, LOADER_TIMEOUT_MS);
+}
+
+/**
+ * Clear the loader timeout
+ */
+function clearLoaderTimeout() {
+    if (loaderTimeoutId) {
+        clearTimeout(loaderTimeoutId);
+        loaderTimeoutId = null;
+    }
+}
+
+/**
+ * Reset loader to initial state
+ */
+function resetLoaderState() {
+    currentLoaderStep = 0;
+    clearLoaderTimeout();
+    hideLoaderError();
+    hideConnectionStatus();
+
+    // Reset progress steps
+    const steps = document.querySelectorAll('.loader-step');
+    const lines = document.querySelectorAll('.loader-step-line');
+    steps.forEach(step => step.classList.remove('active', 'completed'));
+    lines.forEach(line => line.classList.remove('active', 'completed'));
+
+    // Reset subtext
+    const subtext = document.getElementById('loadingSubtext');
+    if (subtext) {
+        subtext.textContent = 'Creating your personalized adventure...';
+    }
+}
+
+/**
+ * Initialize the retry button event listener
+ * Should be called once on page load
+ */
+export function initializeLoaderRetryButton() {
+    const retryBtn = document.getElementById('loaderRetryBtn');
+    if (retryBtn) {
+        retryBtn.addEventListener('click', async () => {
+            // Hide error state
+            hideLoaderError();
+
+            // Reset to connecting state
+            setLoaderStep(1);
+            setConnectionStatus('connecting', 'Reconnecting...');
+
+            // Start new timeout
+            startLoaderTimeout();
+
+            // Attempt to reconnect via WebSocketManager
+            if (window.appState?.wsManager) {
+                try {
+                    await window.appState.wsManager.reconnect();
+                } catch (error) {
+                    console.error('[LOADER] Retry failed:', error);
+                    showLoaderError('Unable to reconnect. Please refresh the page.');
+                    setConnectionStatus('error', 'Reconnection failed');
+                }
+            } else {
+                // No wsManager, suggest page refresh
+                showLoaderError('Please refresh the page to try again.');
+            }
+        });
     }
 }
 
@@ -198,11 +397,21 @@ export function showLoader() {
         console.error('Loader overlay element not found!');
         return;
     }
-    
+
+    // Reset loader state before showing
+    resetLoaderState();
+
     // Force display to ensure it's visible
     overlay.style.display = 'flex';
     overlay.classList.remove('hidden');
-    
+
+    // Start at step 1 (Connecting)
+    setLoaderStep(1);
+    // Don't show connection status during normal flow - only for errors/reconnects
+
+    // Start the timeout timer
+    startLoaderTimeout();
+
     // Fetch phrases if not already loaded
     if (loadingPhrases.length === 0) {
         fetchLoadingPhrases().then(() => {
@@ -211,7 +420,7 @@ export function showLoader() {
     } else {
         startPhraseRotation();
     }
-    
+
     // Use setTimeout to ensure the transition works
     setTimeout(() => {
         overlay.classList.add('active');
@@ -224,32 +433,62 @@ export function hideLoader() {
         console.error('Loader overlay element not found!');
         return;
     }
-    
+
     // Stop phrase rotation
     stopPhraseRotation();
-    
+
+    // Clear timeout and reset state
+    clearLoaderTimeout();
+    hideConnectionStatus();
+    hideLoaderError();
+
     overlay.classList.remove('active');
-    
+
     // Wait for transition to complete before hiding
     setTimeout(() => {
         overlay.classList.add('hidden');
+        resetLoaderState();
     }, 300);
 }
 
 // --- Progress Functions ---
 export function updateProgress(currentChapter, totalChapters) {
+    const currentEl = document.getElementById('current-chapter');
+    const totalEl = document.getElementById('total-chapters');
+
+    // Handle special initial state
+    if (totalChapters === '-' || totalChapters === null || totalChapters === undefined) {
+        if (currentEl) currentEl.textContent = currentChapter;
+        if (totalEl) totalEl.textContent = '-';
+        return;
+    }
+
     // Validate inputs
-    if (!Number.isInteger(currentChapter) || !Number.isInteger(totalChapters) || 
+    if (!Number.isInteger(currentChapter) || !Number.isInteger(totalChapters) ||
         currentChapter < 1 || totalChapters < 1 || currentChapter > totalChapters) {
         console.warn('Invalid chapter progress:', { currentChapter, totalChapters });
         return;
     }
-    
-    document.getElementById('current-chapter').textContent = currentChapter;
-    document.getElementById('total-chapters').textContent = totalChapters;
-    
+
+    if (currentEl) currentEl.textContent = currentChapter;
+    if (totalEl) totalEl.textContent = totalChapters;
+
     // Dispatch event for new chapter loaded (for font size manager)
     document.dispatchEvent(new CustomEvent('newChapterLoaded'));
+}
+
+/**
+ * Set the chapter display to show "Starting adventure..." state
+ * Called when loader is shown but chapter hasn't started yet
+ */
+export function setChapterStartingState() {
+    const currentEl = document.getElementById('current-chapter');
+    const totalEl = document.getElementById('total-chapters');
+
+    // We'll keep showing "Chapter 1 of 10" but this function can be used
+    // to set a loading state in the header if needed
+    if (currentEl) currentEl.textContent = '1';
+    if (totalEl) totalEl.textContent = window.appConfig?.defaultStoryLength || '10';
 }
 
 // Single function to handle all chapter updates
@@ -1039,10 +1278,18 @@ export async function handleMessage(event) {
 
         if (data.type === 'hide_loader') {
             hideLoader();
+        } else if (data.type === 'story') {
+            // When story content starts streaming, advance to step 3 and hide loader
+            if (currentLoaderStep < 3) {
+                setLoaderStep(3);
+                // Brief delay to show "Ready" state before hiding
+                setTimeout(() => {
+                    hideLoader();
+                }, 300);
+            }
+            appendStoryText(data.content);
         } else if (data.type === 'choices') {
             displayChoices(data.choices);
-        } else if (data.type === 'story') {
-            appendStoryText(data.content);
         } else if (data.type === 'replace_content') {
             replaceStoryContent(data.content);
         } else if (data.type === 'story_complete') {
@@ -1334,14 +1581,14 @@ export function hideChapterImage() {
             console.log('[UI FIX] Hiding visible image container');
             imageContainer.classList.add('hidden');
         }
-        
-        // Also ensure the image inside is reset to prevent flash
+
+        // Fully reset the image to prevent flicker when new chapter loads
         const img = imageContainer.querySelector('img');
         if (img) {
             img.classList.remove('show');
-            // We don't clear src here to avoid broken image icon if it's shown again quickly,
-            // but we might want to if we are sure we are changing chapters.
-            // For now, just removing 'show' and hiding container is enough.
+            img.classList.remove('fade-in');  // Remove fade-in to reset opacity
+            img.src = '';  // Clear src to prevent old image flashing during transitions
+            img.alt = '';  // Clear alt text
         }
     }
 }
@@ -1649,3 +1896,13 @@ async function submitFeedback(rating, feedbackText = '', contactInfo = '') {
         // Don't show error to user - feedback is non-critical
     }
 }
+
+// Expose loader functions on window for cross-module access
+// This ensures dynamic imports can access these functions reliably
+window.loaderFunctions = {
+    setLoaderStep,
+    setConnectionStatus,
+    hideConnectionStatus,
+    showLoaderError,
+    hideLoaderError
+};

@@ -133,7 +133,7 @@
     margin-bottom: 2.5rem;
     border-radius: 0.75rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    transition: all 0.3s ease-in-out;
+    /* Removed transition to prevent image flicker between chapters */
 }
 
 .chapter-image-container img {
@@ -533,4 +533,228 @@
 #lesson-start-btn {
     font-size: 1.5rem !important; /* same as intro primary (24px) */
     line-height: 1.4 !important;
+}
+
+/* ============================================
+   Phase 1: Enhanced Loading Experience
+   ============================================ */
+
+/* Progress Steps Container */
+.loader-progress {
+    margin-bottom: 2rem;
+    padding: 0 1rem;
+}
+
+.loader-progress-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* Individual Step */
+.loader-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.4;
+    transition: opacity 0.3s ease;
+}
+
+.loader-step.active {
+    opacity: 1;
+}
+
+.loader-step.completed {
+    opacity: 1;
+}
+
+.loader-step-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #d1d5db;
+    border: 2px solid #d1d5db;
+    transition: all 0.3s ease;
+}
+
+.loader-step.active .loader-step-dot {
+    background: #0d9488;
+    border-color: #0d9488;
+    animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+.loader-step.completed .loader-step-dot {
+    background: #0d9488;
+    border-color: #0d9488;
+}
+
+.loader-step-label {
+    font-family: 'Andika', sans-serif;
+    font-size: 0.75rem;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.loader-step.active .loader-step-label,
+.loader-step.completed .loader-step-label {
+    color: #0d9488;
+    font-weight: 500;
+}
+
+/* Connector Line */
+.loader-step-line {
+    width: 60px;
+    height: 2px;
+    background: #d1d5db;
+    margin: 0 0.5rem;
+    margin-bottom: 1.5rem; /* Align with dots, not labels */
+    transition: background 0.3s ease;
+}
+
+.loader-step-line.active {
+    background: linear-gradient(90deg, #0d9488 0%, #d1d5db 100%);
+}
+
+.loader-step-line.completed {
+    background: #0d9488;
+}
+
+@keyframes pulse-dot {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.4);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 8px rgba(13, 148, 136, 0);
+    }
+}
+
+/* Loading Subtext */
+.loading-subtext {
+    font-family: 'Andika', sans-serif;
+    font-size: 1rem;
+    color: #6b7280;
+    margin-top: 0.5rem;
+    opacity: 0.8;
+}
+
+/* Connection Status Indicator */
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-family: 'Andika', sans-serif;
+    font-size: 0.875rem;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(4px);
+}
+
+.connection-status.hidden {
+    display: none;
+}
+
+.connection-status.connecting {
+    color: #f59e0b;
+}
+
+.connection-status.connected {
+    color: #10b981;
+}
+
+.connection-status.error {
+    color: #ef4444;
+}
+
+.connection-status-icon {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.connection-status.connecting .connection-status-icon {
+    animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* Error/Retry Container */
+.loader-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: rgba(254, 242, 242, 0.9);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.loader-error.hidden {
+    display: none;
+}
+
+.loader-error-message {
+    font-family: 'Andika', sans-serif;
+    font-size: 1rem;
+    color: #dc2626;
+    margin: 0;
+    text-align: center;
+}
+
+.loader-retry-btn {
+    padding: 0.75rem 1.5rem;
+    background: #0d9488;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-family: 'Andika', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.loader-retry-btn:hover {
+    background: #0f766e;
+    transform: scale(1.02);
+}
+
+.loader-retry-btn:active {
+    transform: scale(0.98);
+}
+
+/* Mobile adjustments for loader */
+@media (max-width: 640px) {
+    .loader-progress-steps {
+        max-width: 300px;
+    }
+
+    .loader-step-line {
+        width: 40px;
+    }
+
+    .loader-step-label {
+        font-size: 0.65rem;
+    }
+
+    .loading-phrase {
+        font-size: 2rem;
+    }
+
+    .loading-subtext {
+        font-size: 0.875rem;
+    }
 }

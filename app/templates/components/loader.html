@@ -1,5 +1,38 @@
 <div id="loaderOverlay" class="loader-overlay hidden">
+    <!-- Progress indicator -->
+    <div class="loader-progress">
+        <div class="loader-progress-steps">
+            <div class="loader-step" data-step="1">
+                <div class="loader-step-dot"></div>
+                <span class="loader-step-label">Connecting</span>
+            </div>
+            <div class="loader-step-line"></div>
+            <div class="loader-step" data-step="2">
+                <div class="loader-step-dot"></div>
+                <span class="loader-step-label">Crafting Story</span>
+            </div>
+            <div class="loader-step-line"></div>
+            <div class="loader-step" data-step="3">
+                <div class="loader-step-dot"></div>
+                <span class="loader-step-label">Ready</span>
+            </div>
+        </div>
+    </div>
+
     <div class="loader-text">
         <div id="loadingPhrase" class="loading-phrase"></div>
+        <div id="loadingSubtext" class="loading-subtext">Creating your personalized adventure...</div>
+    </div>
+
+    <!-- Connection status indicator -->
+    <div id="connectionStatus" class="connection-status hidden">
+        <span class="connection-status-icon"></span>
+        <span class="connection-status-text"></span>
+    </div>
+
+    <!-- Error/retry container (hidden by default) -->
+    <div id="loaderError" class="loader-error hidden">
+        <p class="loader-error-message">Connection timed out</p>
+        <button id="loaderRetryBtn" class="loader-retry-btn">Try Again</button>
     </div>
 </div>
