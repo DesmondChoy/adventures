@@ -54,3 +54,5 @@ node_modules/
 
 # Gemini temp files
 .gemini-clipboard/
+
+.playwright-mcp/

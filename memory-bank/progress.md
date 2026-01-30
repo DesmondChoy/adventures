@@ -2,6 +2,40 @@
 
 ## Recently Completed (Last 14 Days)
 
+### 2026-01-30: UI/UX Phase 1 - Enhanced Loading Experience - COMPLETED
+
+**✅ LOADER PROGRESS INDICATOR AND TIMEOUT HANDLING IMPLEMENTED** - Users now see clear progress feedback during long LLM generation waits.
+
+- **Goal:** Fix the biggest UX pain point - users seeing only rotating phrases with no progress indication during potentially 2+ minute story generation.
+
+- **Implementation:**
+  1. **3-Step Progress Indicator** - Visual stepper showing: Connecting → Crafting Story → Ready
+  2. **Connection Status Indicator** - Shows "Connecting..." (amber), "Connected" (green), or error state (red)
+  3. **90-Second Timeout Detection** - Shows friendly error message with "Try Again" button
+  4. **Automatic Progress Advancement** - Steps advance as WebSocket connects and story streams
+
+- **Files Modified:**
+  - `app/templates/components/loader.html` - New HTML structure with progress steps, status indicator, error container
+  - `app/static/css/components.css` - 230+ lines of new CSS for progress UI, animations, mobile responsive
+  - `app/static/js/uiManager.js` - New functions: `setLoaderStep()`, `setConnectionStatus()`, `showLoaderError()`, `initializeLoaderRetryButton()`
+  - `app/static/js/webSocketManager.js` - Integration to call progress functions on connection events
+  - `app/static/js/main.js` - Added `initializeLoaderRetryButton()` import and call
+
+- **Technical Pattern - Cross-Module Function Access:**
+  ```javascript
+  // Fallback pattern for dynamic imports creating separate module instances
+  window.loaderFunctions = { setLoaderStep, setConnectionStatus, ... };
+  const setLoaderStep = uiModule.setLoaderStep || loaderFns.setLoaderStep || (() => {});
+  ```
+
+- **Testing:** Verified via Playwright MCP - progress indicator advances correctly, connection status shows, loader hides when story streams
+
+- **Version:** `?v=20260130b`
+
+- **Plan Location:** `wip/ui_ux_improvements.md` - Full 4-phase plan with Phases 2-4 pending
+
+---
+
 ### 2026-01-01: WebSocket Reconnection Fix Verification - CONFIRMED
 
 **✅ WEBSOCKET RECONNECTION FIX VERIFIED WORKING** - Resumed adventures now properly process choice button clicks without "Reconnecting..." errors.

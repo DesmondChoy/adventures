@@ -158,7 +158,7 @@ Story chapters MUST have exactly 3 choices. The system uses `generate_chapter_co
 
 ### Manual Testing with Playwright MCP
 
-See [tests/playwright_testing.md](tests/playwright_testing.md) for detailed end-to-end testing instructions using Playwright MCP.
+Use the `/playwright-test` skill for end-to-end testing with Playwright MCP.
 
 ### Unit Testing
 
