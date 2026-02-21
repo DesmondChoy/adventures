@@ -10,13 +10,13 @@ from app.models.story import (
     StoryChoice,
     AdventureState,
 )
-from app.services.llm import LLMService
+from app.services.llm.factory import LLMServiceFactory
 from app.services.chapter_manager import ChapterManager
 from app.data.story_loader import StoryLoader
 from app.data.lesson_loader import sample_question
 
 logger = logging.getLogger("story_app")
-llm_service = LLMService()
+llm_service = LLMServiceFactory.create_for_use_case("story_generation")
 chapter_manager = ChapterManager()
 MAX_CHAPTER_GENERATION_ATTEMPTS = 3
 
