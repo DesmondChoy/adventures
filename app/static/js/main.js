@@ -217,6 +217,11 @@ export async function viewAdventureSummary() {
                     // Use the state_id from the WebSocket response
                     const stateId = data.state_id;
 
+                    // Store auth token for summary page (separate React app needs it for API calls)
+                    if (authManager.accessToken) {
+                        localStorage.setItem('summary_access_token', authManager.accessToken);
+                    }
+
                     // Navigate to the summary page with this state_id
                     window.location.href = `/adventure/summary?state_id=${stateId}`;
                 }

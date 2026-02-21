@@ -356,6 +356,16 @@ async def send_fallback_image(
             "mountain": "jade_mountain",
             "festival": "festival_of_lights_and_colors",
             "lights": "festival_of_lights_and_colors",
+            "underwater": "underwater_kingdom_of_sunken_ships",
+            "sunken": "underwater_kingdom_of_sunken_ships",
+            "clockwork": "clockwork_sky_city",
+            "sky city": "clockwork_sky_city",
+            "desert": "whispering_desert_oasis",
+            "oasis": "whispering_desert_oasis",
+            "tiny": "tiny_world_under_the_floorboards",
+            "floorboards": "tiny_world_under_the_floorboards",
+            "dream": "dream_library_of_lost_stories",
+            "library": "dream_library_of_lost_stories",
         }
 
         # Try to map the story category to a standard filename
@@ -387,6 +397,11 @@ async def send_fallback_image(
             "app/static/images/stories/circus_and_carnival_capers.jpg",
             "app/static/images/stories/jade_mountain.jpg",
             "app/static/images/stories/festival_of_lights_and_colors.jpg",
+            "app/static/images/stories/underwater_kingdom_of_sunken_ships.jpg",
+            "app/static/images/stories/clockwork_sky_city.jpg",
+            "app/static/images/stories/whispering_desert_oasis.jpg",
+            "app/static/images/stories/tiny_world_under_the_floorboards.jpg",
+            "app/static/images/stories/dream_library_of_lost_stories.jpg",
         ]
     )
 
@@ -396,6 +411,11 @@ async def send_fallback_image(
             "app/static/images/lessons/Farm Animals.jpg",
             "app/static/images/lessons/Human Body.jpg",
             "app/static/images/lessons/Singapore History.jpg",
+            "app/static/images/lessons/Oceans and Marine Life.jpg",
+            "app/static/images/lessons/Inventions and Inventors.jpg",
+            "app/static/images/lessons/Music and Sound.jpg",
+            "app/static/images/lessons/Volcanoes Earthquakes and Weather.jpg",
+            "app/static/images/lessons/Dinosaurs and Prehistoric Life.jpg",
         ]
     )
 
