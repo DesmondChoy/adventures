@@ -55,7 +55,7 @@ async def handle_reveal_summary(
     state_manager: AdventureStateManager,
     websocket: WebSocket,
     connection_data: Optional[Dict[str, Any]] = None,
-) -> Tuple[None, None, bool]:
+) -> Tuple[None, None, bool, bool]:
     """Handle the reveal_summary special choice."""
     logger.info("[REVEAL SUMMARY] Processing reveal_summary choice")
     logger.info(f"[REVEAL SUMMARY] State has {len(state.chapters)} chapters before processing")
