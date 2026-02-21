@@ -657,15 +657,16 @@ export async function startAdventure() {
         if (isAnonymous) {
             const clientUUID = localStorage.getItem('learning_odyssey_user_uuid');
             console.log('[CONFLICT DEBUG] Guest user - clientUUID:', clientUUID?.substring(0, 8) + '...');
-            if (clientUUID) {
+            if (clientUUID && authManager.accessToken) {
                 endpoint = `/api/adventure/active_by_client_uuid/${clientUUID}`;
+                headers['Authorization'] = `Bearer ${authManager.accessToken}`;
+            } else if (!authManager.accessToken) {
+                console.warn('[CONFLICT DEBUG] Guest session has no access token; skipping active adventure lookup.');
             }
         } else { // Google authenticated user
             endpoint = '/api/user/current-adventure';
             headers['Authorization'] = `Bearer ${authManager.accessToken}`;
             console.log('[CONFLICT DEBUG] Google user - endpoint:', endpoint);
-            console.log('[CONFLICT DEBUG] Google user - token length:', authManager.accessToken?.length);
-            console.log('[CONFLICT DEBUG] Google user - token preview:', authManager.accessToken?.substring(0, 20) + '...');
         }
 
         console.log('[CONFLICT DEBUG] Final endpoint:', endpoint);

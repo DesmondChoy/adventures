@@ -4,6 +4,7 @@ Main service class for managing adventure summaries.
 
 import logging
 from typing import Dict, Any, Optional, List
+from uuid import UUID
 
 from app.models.story import AdventureState, ChapterType
 from app.services.state_storage_service import StateStorageService
@@ -163,7 +164,10 @@ class SummaryService:
             }
 
     async def store_adventure_state(
-        self, state_data: Dict[str, Any], adventure_id: Optional[str] = None
+        self,
+        state_data: Dict[str, Any],
+        adventure_id: Optional[str] = None,
+        user_id: Optional[UUID] = None,
     ) -> str:
         """Store adventure state with enhanced processing.
 
@@ -211,9 +215,16 @@ class SummaryService:
             # This ensures summary display remains read-only
             logger.info("Skipping lesson question processing during storage - questions should already exist from adventure flow")
 
+            if user_id:
+                metadata = state_data.get("metadata")
+                if not isinstance(metadata, dict):
+                    metadata = {}
+                    state_data["metadata"] = metadata
+                metadata["user_id"] = str(user_id)
+
             # Store the enhanced state
             state_id = await self.state_storage_service.store_state(
-                state_data, adventure_id=adventure_id
+                state_data, adventure_id=adventure_id, user_id=user_id
             )
             if adventure_id:
                 logger.info(f"Successfully updated enhanced state with ID: {state_id}")

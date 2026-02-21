@@ -37,6 +37,17 @@ When deploying code changes (especially JS/CSS), update version strings to force
 - Modifying any CSS file
 - Fixing bugs that users might have cached
 
+### Deployment Security Model (Railway)
+- Production deploy path is **GitHub -> Railway auto-deploy only**.
+- Local `.env` is developer-only and is **not** part of production deploy artifacts unless deployment source changes.
+- `.env` must remain gitignored and excluded from Docker context via `.dockerignore`.
+- Before rating a secret finding as high/critical, verify:
+  - whether secrets are in git history,
+  - whether deploy source included local filesystem context,
+  - whether secrets are present in shared logs/artifacts.
+
+For policy details and severity criteria, use: `docs/security/deployment-model.md`.
+
 ## Architecture Overview
 
 ### Core Flow

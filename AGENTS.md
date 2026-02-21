@@ -123,3 +123,23 @@ Quick shortcuts for common tasks:
 - **Data Flow Tracing**: When debugging UI display issues, trace the complete data flow from storage → calculation → display rather than assuming the problem is at the UI layer
 
 **Remember: Assumptions lead to bugs. Verification prevents them.**
+
+## Security Audit Context
+
+### Production Deployment Model (Railway)
+- Production deploy path is **GitHub -> Railway auto-deploy only**.
+- Local CLI deploys (for example `railway up`) are **not** part of the production release process.
+- Local `.env` is developer-only, must remain gitignored, and must be excluded from Docker build context.
+
+### Severity Rules for Local Secret Findings
+- Presence of a local `.env` file alone is **not** automatically a production exposure.
+- Escalate to `high`/`critical` only when at least one is true:
+  - Secret is committed to git history.
+  - Deployment source included local filesystem context.
+  - Secret appears in shared logs/artifacts/images/backups.
+
+### Required Verification for Secret-Exposure Claims
+- Check deployment source in Railway deploy history (`via GitHub` vs local CLI source).
+- Confirm `.env` is not tracked (`git ls-files .env` should be empty).
+- Confirm `.dockerignore` excludes `.env` and `.env.*`.
+- Refer to `docs/security/deployment-model.md` as the source of truth before assigning severity.

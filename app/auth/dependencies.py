@@ -15,6 +15,20 @@ def get_supabase_jwt_secret_from_env() -> Optional[str]:
     return os.getenv("SUPABASE_JWT_SECRET")
 
 
+def _extract_bearer_token(request: Request) -> Optional[str]:
+    """Extract a bearer token from the Authorization header."""
+    authorization = request.headers.get("authorization")
+    if not authorization:
+        return None
+
+    scheme, separator, token = authorization.partition(" ")
+    if separator != " " or scheme.lower() != "bearer":
+        return None
+
+    token = token.strip()
+    return token if token else None
+
+
 async def get_current_user_id_optional(
     request: Request,
     supabase_jwt_secret: str = Depends(get_supabase_jwt_secret_from_env),
@@ -28,46 +42,23 @@ async def get_current_user_id_optional(
     - If invalid (e.g., expired, signature error), a warning is logged, and None is returned.
     - If no token is provided, None is returned.
     """
-    logger.info("[JWT DEBUG] get_current_user_id_optional function called!")
-    logger.info(f"[JWT DEBUG] Request method: {request.method}")
-    logger.info(f"[JWT DEBUG] Request URL: {request.url}")
-    logger.info(f"[JWT DEBUG] Request headers: {dict(request.headers)}")
+    logger.debug(
+        "Processing optional JWT authentication",
+        extra={"path": request.url.path, "method": request.method},
+    )
 
-    # Extract token from Authorization header
-    authorization = request.headers.get("authorization")
-    logger.info(f"[JWT DEBUG] Authorization header: {authorization}")
-
-    if not authorization:
-        logger.info("[JWT DEBUG] No Authorization header provided - returning None")
+    token = _extract_bearer_token(request)
+    if not token:
         return None
-
-    # Parse "Bearer <token>" format
-    if not authorization.startswith("Bearer "):
-        logger.warning(
-            "[JWT DEBUG] Authorization header doesn't start with 'Bearer ' - returning None"
-        )
-        return None
-
-    token = authorization[7:]  # Remove "Bearer " prefix
-    logger.info(f"[JWT DEBUG] Extracted token (first 20 chars): {token[:20]}...")
-    logger.info(f"[JWT DEBUG] Token length: {len(token)}")
 
     if not supabase_jwt_secret:
-        logger.error("[JWT DEBUG] SUPABASE_JWT_SECRET is not set. Cannot verify JWT.")
+        logger.error("SUPABASE_JWT_SECRET is not set. Cannot verify JWT.")
         return None
-
-    logger.info(f"[JWT DEBUG] JWT secret available: {bool(supabase_jwt_secret)}")
-    logger.info(
-        f"[JWT DEBUG] JWT secret length: {len(supabase_jwt_secret) if supabase_jwt_secret else 0}"
-    )
 
     try:
         # Supabase typically uses HS256 for its JWTs signed with the JWT secret
         # Supabase tokens have audience "authenticated" for logged-in users
         # Add 60-second leeway to handle clock skew between client/server (industry standard)
-        logger.info(
-            "[JWT DEBUG] Attempting to decode JWT with secret and 60s clock skew tolerance..."
-        )
         decoded_token = jwt.decode(
             token,
             supabase_jwt_secret,
@@ -75,48 +66,29 @@ async def get_current_user_id_optional(
             audience="authenticated",  # Supabase uses "authenticated" as audience
             leeway=60,  # 60-second tolerance for clock skew (industry standard)
         )
-        logger.info(
-            f"[JWT DEBUG] Successfully decoded JWT payload keys: {list(decoded_token.keys())}"
-        )
-        logger.info(f"[JWT DEBUG] JWT 'sub' claim: {decoded_token.get('sub')}")
-        logger.info(f"[JWT DEBUG] JWT 'aud' claim: {decoded_token.get('aud')}")
-        logger.info(f"[JWT DEBUG] JWT 'exp' claim: {decoded_token.get('exp')}")
-        logger.info(f"[JWT DEBUG] JWT 'iat' claim: {decoded_token.get('iat')}")
-        logger.info(f"[JWT DEBUG] JWT 'iss' claim: {decoded_token.get('iss')}")
 
         user_id_str = decoded_token.get("sub")
         if user_id_str:
             try:
                 user_uuid = UUID(user_id_str)
-                logger.info(
-                    f"[JWT DEBUG] Successfully extracted and converted user_id: {user_uuid}"
-                )
                 return user_uuid
-            except ValueError as uuid_error:
-                logger.error(
-                    f"[JWT DEBUG] Failed to convert user_id to UUID: {uuid_error}"
-                )
+            except ValueError:
+                logger.warning("JWT contained a non-UUID 'sub' claim")
                 return None
         else:
-            logger.warning(
-                "[JWT DEBUG] JWT token is valid but missing 'sub' (user_id) claim."
-            )
+            logger.warning("JWT token is valid but missing a 'sub' claim")
             return None
     except jwt.ExpiredSignatureError:
-        logger.warning("[JWT DEBUG] JWT token has expired.")
+        logger.info("JWT token has expired")
         return None
-    except jwt.InvalidAudienceError as e:
-        logger.warning(f"[JWT DEBUG] JWT token has invalid audience: {e}")
+    except jwt.InvalidAudienceError:
+        logger.warning("JWT token has invalid audience")
         return None
-    except jwt.InvalidTokenError as e:
-        logger.warning(f"[JWT DEBUG] Invalid JWT token: {e}")
+    except jwt.InvalidTokenError:
+        logger.warning("Invalid JWT token")
         return None
     except Exception as e:
-        logger.error(
-            f"[JWT DEBUG] An unexpected error occurred during JWT decoding: {e}"
-        )
-        logger.error(f"[JWT DEBUG] Exception type: {type(e).__name__}")
-        logger.error(f"[JWT DEBUG] Exception args: {e.args}")
+        logger.error("Unexpected error during JWT decoding: %s", type(e).__name__)
         return None
 
 

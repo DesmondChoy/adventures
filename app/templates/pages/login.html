@@ -627,7 +627,7 @@
                     const clientUUID = localStorage.getItem('learning_odyssey_user_uuid'); // Correct key from adventureStateManager.js
                     if (clientUUID) {
                         apiUrl = `/api/adventure/active_by_client_uuid/${clientUUID}`;
-                        // No Authorization header needed for this specific guest endpoint
+                        apiHeaders['Authorization'] = `Bearer ${token}`;
                     } else {
                         console.error("Anonymous user but no client_uuid found in localStorage. Cannot fetch adventure for modal.");
                         redirectToSelectPage();
