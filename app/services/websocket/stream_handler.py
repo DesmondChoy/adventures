@@ -77,7 +77,7 @@ async def stream_chapter_content(
     if already_streamed:
         logger.info("[PERFORMANCE] Content already live-streamed, skipping word-by-word streaming")
         # Execute deferred tasks immediately since streaming is done
-        await execute_deferred_summary_tasks(state)
+        await execute_deferred_task_factories(state)
         return
 
     if is_resumption:
@@ -230,7 +230,7 @@ async def stream_chapter_content(
     await stream_text_content(content_to_stream, websocket)
     
     # Execute deferred summary tasks after streaming completes (Phase 1 streaming fix)
-    await execute_deferred_summary_tasks(state)
+    await execute_deferred_task_factories(state)
 
     # Also send choices separately for backward compatibility
     await websocket.send_json(
@@ -555,23 +555,23 @@ async def stream_text_content(content: str, websocket: WebSocket) -> None:
         await asyncio.sleep(PARAGRAPH_DELAY)
 
 
-async def execute_deferred_summary_tasks(state: AdventureState) -> None:
-    """Execute all deferred summary tasks after streaming completes (Phase 1 streaming fix)."""
-    if not state.deferred_summary_tasks:
+async def execute_deferred_task_factories(state: AdventureState) -> None:
+    """Execute all deferred task factories after streaming completes."""
+    if not state.deferred_task_factories:
         return
-    
-    logger.info(f"[PERFORMANCE] Executing {len(state.deferred_summary_tasks)} deferred summary tasks after streaming completed")
-    
+
+    logger.info(f"[PERFORMANCE] Executing {len(state.deferred_task_factories)} deferred task factories after streaming completed")
+
     # Execute all deferred task factories
-    for task_factory in state.deferred_summary_tasks:
+    for task_factory in state.deferred_task_factories:
         try:
             task_factory()  # Create and start the background task
         except Exception as e:
-            logger.error(f"Failed to execute deferred summary task: {e}")
-    
-    # Clear the deferred tasks list
-    state.deferred_summary_tasks.clear()
-    logger.info(f"[PERFORMANCE] All deferred summary tasks started, cleared deferred task list")
+            logger.error(f"Failed to execute deferred task factory: {e}")
+
+    # Clear the deferred factories list
+    state.deferred_task_factories.clear()
+    logger.info(f"[PERFORMANCE] All deferred task factories executed, list cleared")
 
 
 async def stream_chapter_with_live_generation(
@@ -633,7 +633,7 @@ async def stream_chapter_with_live_generation(
     await stream_text_content(content_to_stream, websocket)
     
     # Execute deferred summary tasks after streaming completes
-    await execute_deferred_summary_tasks(state)
+    await execute_deferred_task_factories(state)
     
     # Replace the displayed content with the validated text (ensures exact match)
     await websocket.send_json({
@@ -692,22 +692,21 @@ async def create_and_append_chapter_direct(
     state_manager: AdventureStateManager,
 ) -> ChapterData:
     """Create and append chapter without WebSocket streaming (already done)."""
-    
-    # Create chapter data
-    new_chapter = ChapterData(
-        chapter_number=len(state.chapters) + 1,
-        chapter_type=chapter_type,
-        content=chapter_content.content,
-        chapter_content=chapter_content,
-        question=sampled_question,
-    )
-    
-    # Add to state
-    state.chapters.append(new_chapter)
-    
+
+    # Read + create + append under a single lock to prevent duplicate chapter numbers
+    async with state.chapters_lock:
+        new_chapter = ChapterData(
+            chapter_number=len(state.chapters) + 1,
+            chapter_type=chapter_type,
+            content=chapter_content.content,
+            chapter_content=chapter_content,
+            question=sampled_question,
+        )
+        state.chapters.append(new_chapter)
+
     # Note: State storage is handled by the WebSocket router flow
     logger.info(f"Chapter {new_chapter.chapter_number} created and added to state")
-    
+
     return new_chapter
 
 

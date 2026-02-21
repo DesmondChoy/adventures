@@ -27,7 +27,8 @@ export class AdventureStateManager {
 
     clearState() {
         localStorage.removeItem(this.STORAGE_KEY);
-        // Note: We don't clear the client UUID as it's used for persistence
+        localStorage.removeItem(this.CLIENT_UUID_KEY);
+        this.ensureClientUuid();
     }
     
     ensureClientUuid() {

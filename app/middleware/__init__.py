@@ -19,7 +19,7 @@ def get_middleware_stack():
         Middleware(CacheControlMiddleware),
         Middleware(
             SessionMiddleware,
-            secret_key=os.getenv("SECRET_KEY", "your-secret-key-here"),
+            secret_key=os.getenv("SECRET_KEY"),
             session_cookie="story_app_session",
             max_age=86400,  # 24 hours
             same_site="lax",  # Improved security

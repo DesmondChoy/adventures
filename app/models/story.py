@@ -175,29 +175,36 @@ class AdventureState(BaseModel):
         description="Additional metadata for tracking element consistency and plot development",
     )
     
-    # Async summary generation support
-    pending_summary_tasks: List[asyncio.Task] = Field(
+    # Running background tasks (summaries, visual extraction, etc.)
+    pending_background_tasks: List[asyncio.Task] = Field(
         default_factory=list,
-        description="Background tasks for chapter summary generation",
+        description="Running asyncio.Tasks created by factories, awaited before summary reveal",
         exclude=True,  # Don't serialize these tasks
         repr=False
     )
-    
-    # Deferred task support for streaming delay fix
-    deferred_summary_tasks: List[Callable[[], Any]] = Field(
+
+    # Deferred task factories queued during chapter processing
+    deferred_task_factories: List[Callable[[], Any]] = Field(
         default_factory=list,
-        description="Deferred background tasks to start after streaming completes",
+        description="Factory functions queued during chapter processing, executed after streaming completes",
         exclude=True,  # Don't serialize these callables
         repr=False
     )
     
-    # We'll add the lock as a computed property to avoid serialization issues
+    # We'll add locks as computed properties to avoid serialization issues
     @property
     def summary_lock(self) -> asyncio.Lock:
         """Get or create the summary lock for thread-safe summary generation."""
         if not hasattr(self, '_summary_lock'):
             self._summary_lock = asyncio.Lock()
         return self._summary_lock
+
+    @property
+    def chapters_lock(self) -> asyncio.Lock:
+        """Get or create the chapters lock for thread-safe chapter mutations."""
+        if not hasattr(self, '_chapters_lock'):
+            self._chapters_lock = asyncio.Lock()
+        return self._chapters_lock
 
     @field_validator("selected_narrative_elements")
     @classmethod

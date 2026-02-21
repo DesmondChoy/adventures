@@ -145,7 +145,7 @@ class AdventureStateManager:
             logger.error(f"Plot twist progression validation failed: {e}")
             raise StateValidationError(f"Plot twist progression validation failed: {e}")
 
-    def update_state_from_client(self, validated_state: dict) -> None:
+    async def update_state_from_client(self, validated_state: dict) -> None:
         """Updates the current AdventureState based on validated client data.
 
         Args:
@@ -366,32 +366,32 @@ class AdventureStateManager:
                         )
                         new_chapters.append(new_chapter)
 
-                # Update self.state.chapters
-                # Keep all existing chapters and add only truly new chapters
-                client_chapter_numbers = [c["chapter_number"] for c in client_chapters]
-                max_existing_chapter = max([ch.chapter_number for ch in self.state.chapters]) if self.state.chapters else 0
-                
-                # Only add chapters that are truly new (higher chapter number than existing)
-                truly_new_chapters = [
-                    ch for ch in new_chapters 
-                    if ch.chapter_number > max_existing_chapter
-                ]
-                
-                # Update existing chapters if they're included in client_chapters
-                for existing_ch in self.state.chapters:
-                    for new_ch in new_chapters:
-                        if existing_ch.chapter_number == new_ch.chapter_number:
-                            # Update the existing chapter with new data
-                            existing_ch.content = new_ch.content
-                            existing_ch.chapter_type = new_ch.chapter_type
-                            existing_ch.response = new_ch.response
-                            existing_ch.chapter_content = new_ch.chapter_content
-                            existing_ch.question = new_ch.question
-                
-                updated_chapters = self.state.chapters + truly_new_chapters
-                self.state.chapters = sorted(
-                    updated_chapters, key=lambda x: x.chapter_number
-                )
+                # Update self.state.chapters under lock (read + modify + write must be atomic)
+                async with self.state.chapters_lock:
+                    client_chapter_numbers = [c["chapter_number"] for c in client_chapters]
+                    max_existing_chapter = max([ch.chapter_number for ch in self.state.chapters]) if self.state.chapters else 0
+
+                    # Only add chapters that are truly new (higher chapter number than existing)
+                    truly_new_chapters = [
+                        ch for ch in new_chapters
+                        if ch.chapter_number > max_existing_chapter
+                    ]
+
+                    # Update existing chapters if they're included in client_chapters
+                    for existing_ch in self.state.chapters:
+                        for new_ch in new_chapters:
+                            if existing_ch.chapter_number == new_ch.chapter_number:
+                                # Update the existing chapter with new data
+                                existing_ch.content = new_ch.content
+                                existing_ch.chapter_type = new_ch.chapter_type
+                                existing_ch.response = new_ch.response
+                                existing_ch.chapter_content = new_ch.chapter_content
+                                existing_ch.question = new_ch.question
+
+                    updated_chapters = self.state.chapters + truly_new_chapters
+                    self.state.chapters = sorted(
+                        updated_chapters, key=lambda x: x.chapter_number
+                    )
 
             if "current_chapter_id" in validated_state:
                 logger.debug(
@@ -544,11 +544,11 @@ class AdventureStateManager:
             f"[CHAPTER {chapter_number}] Summary: {new_count} new, {updates_count} updated, {unchanged_count} unchanged"
         )
 
-    def append_new_chapter(self, chapter_data: ChapterData) -> None:
+    async def append_new_chapter(self, chapter_data: ChapterData) -> None:
         """Appends a new chapter to the AdventureState."""
         if self.state is None:
             raise ValueError("State not initialized.")
-        
+
         logger.info(f"[CHAPTER CREATION] Appending new chapter: {chapter_data.chapter_number}")
         logger.info(f"[CHAPTER CREATION] Chapter type: {chapter_data.chapter_type}")
         logger.info(f"[CHAPTER CREATION] Current chapters before append: {len(self.state.chapters)}")
@@ -558,10 +558,11 @@ class AdventureStateManager:
         self.update_agency_references(chapter_data)
 
         # Append the chapter to the state
-        self.state.chapters.append(chapter_data)
-        
+        async with self.state.chapters_lock:
+            self.state.chapters.append(chapter_data)
+
         logger.info(f"[CHAPTER CREATION] Chapter appended! Total chapters now: {len(self.state.chapters)}")
-        
+
         # CHECK IF ADVENTURE SHOULD BE COMPLETE
         if len(self.state.chapters) >= self.state.story_length:
             logger.info(f"[CHAPTER CREATION] Adventure reached target length ({len(self.state.chapters)}/{self.state.story_length})")

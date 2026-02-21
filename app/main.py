@@ -8,6 +8,7 @@ from app.services.state_storage_service import StateStorageService
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 import asyncio
+import os
 
 # Load environment variables
 load_dotenv()
@@ -41,6 +42,12 @@ async def periodic_cleanup():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    if not os.getenv("SECRET_KEY"):
+        raise RuntimeError(
+            "SECRET_KEY environment variable is not set. "
+            "The application cannot start without it. "
+            "Please set SECRET_KEY in your .env file."
+        )
     logger.info("Application starting up")
 
     # Start background task for cleaning up expired states

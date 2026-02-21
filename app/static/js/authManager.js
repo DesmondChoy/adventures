@@ -98,10 +98,18 @@ export const authManager = {
         // onAuthStateChange (event === 'SIGNED_OUT') handles redirect.
     },
     
-    clearSessionAndRedirect() {
+    async clearSessionAndRedirect() {
         this.session = null;
         this.accessToken = null;
         this.user = null;
+        try {
+            const { stateManager } = await import('./stateManager.js');
+            stateManager.clearState();
+        } catch (e) {
+            console.error("Failed to clear adventure state on logout:", e);
+            localStorage.removeItem('adventure_state');
+            localStorage.removeItem('learning_odyssey_user_uuid');
+        }
         window.location.href = window.location.origin + '/';
     }
 };

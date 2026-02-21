@@ -24,6 +24,33 @@ logger = logging.getLogger("story_app")
 PING_INTERVAL_SECONDS = 30  # Send ping every 30 seconds
 
 
+def _validate_adventure_ownership(
+    stored_state: dict, current_user_id, adventure_id: str
+) -> bool:
+    """Validate that the current user owns the adventure.
+
+    Returns True if the user can access the adventure, False otherwise.
+    """
+    adventure_owner_id_str = stored_state.get("metadata", {}).get("user_id")
+    if not adventure_owner_id_str and "user_id" in stored_state:
+        adventure_owner_id_str = stored_state.get("user_id")
+
+    if adventure_owner_id_str is None:
+        logger.info(f"Resuming guest adventure {adventure_id}.")
+        return True
+    elif current_user_id and adventure_owner_id_str == str(current_user_id):
+        logger.info(
+            f"User {current_user_id} confirmed owner of adventure {adventure_id}."
+        )
+        return True
+    else:
+        logger.warning(
+            f"User {current_user_id} is not the owner of adventure {adventure_id} "
+            f"(owner: {adventure_owner_id_str}). Denying access."
+        )
+        return False
+
+
 async def websocket_ping_task(websocket: WebSocket, stop_event: asyncio.Event):
     """Send periodic ping messages to keep the WebSocket connection alive.
 
@@ -159,36 +186,13 @@ async def story_websocket(
                     resume_adventure_id
                 )
                 if stored_state:
-                    # TODO: Add user_id validation here. Ensure token's user_id matches stored_state's user_id if both exist.
-                    # For now, RLS policies are the primary guard.
                     current_user_id = connection_data.get("user_id")
-                    adventure_owner_id_str = stored_state.get("metadata", {}).get(
-                        "user_id"
-                    )  # Assuming user_id is in metadata or top level of state_data
-                    if (
-                        not adventure_owner_id_str and "user_id" in stored_state
-                    ):  # Check top level if not in metadata
-                        adventure_owner_id_str = stored_state.get("user_id")
+                    can_load = _validate_adventure_ownership(
+                        stored_state, current_user_id, resume_adventure_id
+                    )
 
-                    can_load = False
-                    if adventure_owner_id_str is None:  # Guest adventure
-                        can_load = True
-                        logger.info(f"Resuming guest adventure {resume_adventure_id}.")
-                    elif current_user_id and adventure_owner_id_str == str(
-                        current_user_id
-                    ):
-                        can_load = True
-                        logger.info(
-                            f"User {current_user_id} confirmed owner of adventure {resume_adventure_id}."
-                        )
-                    else:
-                        logger.warning(
-                            f"User {current_user_id} is not the owner of adventure {resume_adventure_id} (owner: {adventure_owner_id_str}). Denying direct load via ID."
-                        )
-                        # This case should ideally be prevented by RLS or frontend not allowing this.
-                        # If it happens, treat as if no adventure found.
-                        connection_data["adventure_id"] = None  # Clear it
-                        # Fall through to normal "find active or new" logic
+                    if not can_load:
+                        connection_data["adventure_id"] = None
 
                     if can_load:
                         logger.info(
@@ -302,6 +306,18 @@ async def story_websocket(
                     stored_state = await state_storage_service.get_state(
                         active_adventure_id
                     )
+                    if stored_state:
+                        # Defense-in-depth: verify ownership even though SQL filtered by user_id
+                        current_user_id = connection_data.get("user_id")
+                        if not _validate_adventure_ownership(
+                            stored_state, current_user_id, active_adventure_id
+                        ):
+                            logger.warning(
+                                f"Ownership mismatch for active adventure {active_adventure_id}. Treating as no adventure found."
+                            )
+                            connection_data["adventure_id"] = None
+                            stored_state = None
+
                     if stored_state:
                         logger.info(
                             f"Reconstructing state from storage for active ID: {active_adventure_id}"
@@ -577,7 +593,7 @@ async def story_websocket(
                         await websocket.close(code=1001)
                         return
                 else:
-                    state_manager.update_state_from_client(validated_state)
+                    await state_manager.update_state_from_client(validated_state)
                     state = state_manager.get_current_state()
 
                 if state is None:

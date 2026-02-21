@@ -66,10 +66,10 @@ async def handle_reveal_summary(
     logger.info(f"Current chapter summaries: {len(state.chapter_summaries)}")
     
     # Wait for any pending summary tasks to complete before revealing summary
-    if state.pending_summary_tasks:
-        logger.info(f"[REVEAL SUMMARY] Waiting for {len(state.pending_summary_tasks)} pending summary tasks to complete")
-        await asyncio.gather(*state.pending_summary_tasks, return_exceptions=True)
-        state.pending_summary_tasks.clear()
+    if state.pending_background_tasks:
+        logger.info(f"[REVEAL SUMMARY] Waiting for {len(state.pending_background_tasks)} pending summary tasks to complete")
+        await asyncio.gather(*state.pending_background_tasks, return_exceptions=True)
+        state.pending_background_tasks.clear()
         logger.info("[REVEAL SUMMARY] All pending summary tasks completed")
     
     # Ensure all chapter summaries exist (on-demand generation for missing ones)
@@ -123,7 +123,7 @@ async def handle_reveal_summary(
         summary_chapter.chapter_content.content = summary_content
 
         # Add the SUMMARY chapter to the state
-        state_manager.append_new_chapter(summary_chapter)
+        await state_manager.append_new_chapter(summary_chapter)
 
         # Save final complete state with all chapters
         state_storage_service = StateStorageService()
@@ -926,7 +926,7 @@ async def process_non_start_choice(
     # Create a deferred task factory that will be executed after streaming
     def create_summary_task():
         task = asyncio.create_task(generate_chapter_summary_background(previous_chapter, state))
-        state.pending_summary_tasks.append(task)
+        state.pending_background_tasks.append(task)
         
         # Add error visibility callback
         def _log_task_error(task: asyncio.Task) -> None:
@@ -938,7 +938,7 @@ async def process_non_start_choice(
         return task
     
     # Store the deferred task to be executed after streaming
-    state.deferred_summary_tasks.append(create_summary_task)
+    state.deferred_task_factories.append(create_summary_task)
     logger.info(f"[PERFORMANCE] Chapter summary task deferred, continuing with next chapter generation")
 
     # Defer character visual extraction until after streaming completes (Phase 2 streaming fix)
@@ -947,7 +947,7 @@ async def process_non_start_choice(
     # Create a deferred task factory for character visual extraction
     def create_visual_extraction_task():
         task = asyncio.create_task(_update_character_visuals_background(previous_chapter, state, state_manager))
-        state.pending_summary_tasks.append(task)  # Reuse existing task tracking
+        state.pending_background_tasks.append(task)  # Reuse existing task tracking
         
         # Add error visibility callback
         def _log_visual_task_error(task: asyncio.Task) -> None:
@@ -959,7 +959,7 @@ async def process_non_start_choice(
         return task
     
     # Store the deferred visual extraction task
-    state.deferred_summary_tasks.append(create_visual_extraction_task)
+    state.deferred_task_factories.append(create_visual_extraction_task)
     logger.info(f"[PERFORMANCE] Character visual extraction deferred, continuing with next chapter generation")
     
     # Skip synchronous visual extraction for now - it will happen after streaming
@@ -1069,7 +1069,7 @@ async def process_start_choice(
                 # Create a deferred task factory for character visual extraction (same pattern as other chapters)
                 def create_visual_extraction_task():
                     task = asyncio.create_task(_update_character_visuals_background(new_chapter, state, state_manager))
-                    state.pending_summary_tasks.append(task)  # Reuse existing task tracking
+                    state.pending_background_tasks.append(task)  # Reuse existing task tracking
                     
                     # Add error visibility callback
                     def _log_visual_task_error(task: asyncio.Task) -> None:
@@ -1081,7 +1081,7 @@ async def process_start_choice(
                     return task
                 
                 # Store the deferred visual extraction task
-                state.deferred_summary_tasks.append(create_visual_extraction_task)
+                state.deferred_task_factories.append(create_visual_extraction_task)
                 logger.info("[PERFORMANCE] Chapter 1 visual extraction task deferred for Chapter 1")
             except Exception as e:
                 logger.error(f"Error setting up deferred character visual extraction for Chapter 1: {e}")
@@ -1530,7 +1530,7 @@ async def create_and_append_chapter(
             chapter_content=chapter_content,
             question=sampled_question,
         )
-        state_manager.append_new_chapter(new_chapter)
+        await state_manager.append_new_chapter(new_chapter)
         logger.debug(f"Added new chapter {new_chapter.chapter_number}")
         logger.debug(f"Chapter type: {chapter_type}")
         logger.debug(f"Has question: {sampled_question is not None}")
