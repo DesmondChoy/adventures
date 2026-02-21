@@ -1,10 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from app.routers import web, websocket_router, summary_router, feedback_router
 from app.utils.logging_config import setup_logging
 from app.middleware import get_middleware_stack
 from app.services.state_storage_service import StateStorageService
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 import asyncio
@@ -16,15 +18,19 @@ load_dotenv()
 # Setup structured logging
 logger = setup_logging()
 
-# Initialize state storage service
+# Rate limiter
+from app.rate_limit import limiter
+
+
+async def _rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Rate limit exceeded. Please try again later."},
+    )
+
+# Initialize state storage service (singleton – subsequent StateStorageService()
+# calls in routers/dependencies will return this same instance)
 state_storage_service = StateStorageService()
-
-# Export the state storage service instance for use in other modules
-from app.services.state_storage_service import (
-    StateStorageService as _StateStorageService,
-)
-
-_StateStorageService._instance = state_storage_service
 
 
 async def periodic_cleanup():
@@ -74,6 +80,11 @@ app = FastAPI(
     middleware=get_middleware_stack(),
 )
 
+# Set up rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # Mount React app assets
@@ -87,27 +98,6 @@ app.mount(
 @app.get("/favicon.ico")
 async def favicon():
     return FileResponse("app/static/favicon.ico")
-
-
-# Direct test route with the same path as the summary router
-@app.get("/adventure/direct-summary")
-async def direct_summary():
-    """Direct test route with the same path as the summary router."""
-    return FileResponse("app/static/test_summary.html")
-
-
-# Simple test route that returns plain text
-@app.get("/test-text")
-async def test_text():
-    """Simple test route that returns plain text."""
-    return "This is a test route that returns plain text"
-
-
-# Simple test route in the adventure path that returns plain text
-@app.get("/adventure/test-text")
-async def adventure_test_text():
-    """Simple test route in the adventure path that returns plain text."""
-    return "This is a test route in the adventure path that returns plain text"
 
 
 app.include_router(web.router)

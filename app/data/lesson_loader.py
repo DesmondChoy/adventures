@@ -7,6 +7,7 @@ methods for accessing lessons by topic and difficulty.
 """
 
 import os
+import random
 import pandas as pd
 import logging
 import glob
@@ -256,3 +257,65 @@ class LessonLoader:
         """Clear the cached lesson data."""
         self._cache = None
         logger.debug("Lesson data cache cleared")
+
+
+def sample_question(
+    topic: str,
+    exclude_questions: list = None,
+    difficulty: str = "Reasonably Challenging",
+) -> dict:
+    """Sample a random question from the specified topic and difficulty, with fallback.
+
+    Args:
+        topic: The topic to sample from
+        exclude_questions: List of questions to exclude from sampling
+        difficulty: Difficulty level ("Reasonably Challenging" or "Very Challenging"),
+                    defaults to "Reasonably Challenging"
+
+    Returns:
+        dict: Question data including question, answers, and explanation
+    """
+    loader = LessonLoader()
+
+    # Filter by topic and difficulty if specified
+    if difficulty:
+        topic_questions = loader.get_lessons_by_topic_and_difficulty(topic, difficulty)
+
+        # Fallback if fewer than 3 questions available
+        if len(topic_questions) < 3:
+            logger.warning(
+                f"Insufficient questions for topic '{topic}' with difficulty '{difficulty}'. "
+                f"Falling back to all difficulties."
+            )
+            topic_questions = loader.get_lessons_by_topic(topic)
+    else:
+        topic_questions = loader.get_lessons_by_topic(topic)
+
+    # Exclude previously used questions
+    if exclude_questions:
+        topic_questions = topic_questions[
+            ~topic_questions["question"].isin(exclude_questions)
+        ]
+
+    if len(topic_questions) == 0:
+        raise ValueError(f"No more available questions for topic: {topic}")
+
+    # Sample a random question
+    sampled = topic_questions.sample(n=1).iloc[0]
+
+    # Create list of all answers and randomize their order
+    all_answers = [
+        {"text": sampled["correct_answer"], "is_correct": True},
+        {"text": sampled["wrong_answer1"], "is_correct": False},
+        {"text": sampled["wrong_answer2"], "is_correct": False},
+    ]
+    randomized_answers = random.sample(all_answers, k=len(all_answers))
+
+    return {
+        "question": sampled["question"],
+        "answers": randomized_answers,
+        "explanation": sampled["explanation"],
+        "topic": sampled["topic"],
+        "subtopic": sampled["subtopic"],
+        "difficulty": sampled["difficulty"],
+    }

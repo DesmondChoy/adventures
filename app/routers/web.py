@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import datetime
 import pandas as pd
 import logging
@@ -356,11 +355,12 @@ async def get_user_current_adventure_api(
 async def get_active_adventure_by_client_uuid_api(
     request: Request,
     client_uuid: str,
+    user_id: UUID_type = Depends(get_current_user_id),
     state_storage_service: StateStorageService = Depends(StateStorageService),
 ):
     """
     API endpoint to get the active adventure by client_uuid.
-    This endpoint does not require JWT authentication.
+    Requires authentication and scopes lookup to the authenticated user.
     Returns adventure details if found, otherwise null.
     """
     context = get_session_context(request)
@@ -378,7 +378,9 @@ async def get_active_adventure_by_client_uuid_api(
 
     try:
         adventure_data = (
-            await state_storage_service.get_active_adventure_by_client_uuid(client_uuid)
+            await state_storage_service.get_active_adventure_by_client_uuid_for_user(
+                client_uuid, user_id
+            )
         )
 
         if adventure_data:
@@ -460,10 +462,3 @@ async def get_loading_phrases():
     return {"phrases": LOADING_PHRASES}
 
 
-@router.get("/debug/localStorage-inspector", response_class=HTMLResponse)
-async def debug_localStorage_inspector(request: Request):
-    """Debug dashboard for localStorage inspection and corruption tracking."""
-    return templates.TemplateResponse(
-        "debug/localStorage-inspector.html",
-        {"request": request}
-    )

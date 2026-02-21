@@ -15,7 +15,7 @@ from app.services.llm import LLMService
 from app.services.chapter_manager import ChapterManager
 from app.services.llm.prompt_engineering import build_summary_chapter_prompt
 from app.data.story_loader import StoryLoader
-from app.init_data import sample_question
+from app.data.lesson_loader import sample_question
 
 logger = logging.getLogger("story_app")
 llm_service = LLMService()

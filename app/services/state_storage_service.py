@@ -1,10 +1,8 @@
-import uuid  # Keep for adventure_id generation if needed, and for UUID type hint
 from datetime import datetime, timedelta
 import logging
 from typing import Dict, Any, Optional, List
-from uuid import UUID  # Import UUID for type hinting user_id
+from uuid import UUID
 import os
-import json
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
@@ -14,10 +12,25 @@ logger = logging.getLogger("story_app")
 class StateStorageService:
     """
     Service for storing and retrieving adventure state data using Supabase.
+
+    Uses a singleton pattern so that ``Depends(StateStorageService)`` in
+    FastAPI routers reuses the same Supabase client instead of creating a
+    new connection on every request.
     """
 
+    _instance: Optional["StateStorageService"] = None
+
+    def __new__(cls):
+        if cls._instance is not None:
+            return cls._instance
+        cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self):
-        """Initialize the Supabase client."""
+        """Initialize the Supabase client (skipped if already initialized)."""
+        if hasattr(self, "supabase"):
+            return  # Already initialized via singleton
+
         load_dotenv()  # Load environment variables from .env file
         supabase_url = os.getenv("SUPABASE_URL")
         supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
@@ -154,20 +167,27 @@ class StateStorageService:
             if adventure_id:
                 # Prepare record for UPDATE - include client_uuid as well
                 update_record = {
-                    "user_id": user_id_for_db,  # Add stringified user_id
                     "state_data": state_data,
                     "is_complete": is_complete,
                     "completed_chapter_count": completed_chapter_count,
                     "client_uuid": client_uuid,  # Add client_uuid to update_record
                     # updated_at is handled by the trigger
                 }
+                if user_id_for_db is not None:
+                    update_record["user_id"] = user_id_for_db
+
                 logger.info(f"Updating existing adventure with ID: {adventure_id}")
-                response = (
+                query = (
                     self.supabase.table("adventures")
                     .update(update_record)  # Use the specific update record
                     .eq("id", adventure_id)
-                    .execute()
                 )
+
+                # If user_id is present, enforce ownership at the query layer.
+                if user_id_for_db is not None:
+                    query = query.eq("user_id", user_id_for_db)
+
+                response = query.execute()
 
                 if not response.data or len(response.data) == 0:
                     logger.error(
@@ -257,6 +277,59 @@ class StateStorageService:
         except Exception as e:
             logger.error(f"Error retrieving state from Supabase: {str(e)}")
             return None
+
+    async def get_adventure_record(self, adventure_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve an adventure record with ownership metadata.
+
+        Args:
+            adventure_id: Adventure UUID.
+
+        Returns:
+            Optional[Dict[str, Any]]: Record containing id, user_id, client_uuid,
+            and state_data if found.
+        """
+        try:
+            response = (
+                self.supabase.table("adventures")
+                .select("id, user_id, client_uuid, state_data")
+                .eq("id", adventure_id)
+                .maybe_single()
+                .execute()
+            )
+            return response.data if response.data else None
+        except Exception as e:
+            logger.error(
+                f"get_adventure_record: Error retrieving adventure {adventure_id}: {str(e)}"
+            )
+            return None
+
+    async def is_adventure_owned_by_user(self, adventure_id: str, user_id: UUID) -> bool:
+        """
+        Check whether a specific adventure belongs to a specific authenticated user.
+
+        Args:
+            adventure_id: Adventure UUID.
+            user_id: Authenticated user UUID.
+
+        Returns:
+            bool: True if owned by the user, otherwise False.
+        """
+        try:
+            response = (
+                self.supabase.table("adventures")
+                .select("id")
+                .eq("id", adventure_id)
+                .eq("user_id", str(user_id))
+                .limit(1)
+                .execute()
+            )
+            return bool(response.data)
+        except Exception as e:
+            logger.error(
+                f"is_adventure_owned_by_user: Error checking ownership for adventure {adventure_id}, user {user_id}: {str(e)}"
+            )
+            return False
 
     async def get_active_adventure_id(
         self,
@@ -591,5 +664,42 @@ class StateStorageService:
         except Exception as e:
             logger.error(
                 f"get_active_adventure_by_client_uuid: Error fetching current adventure for client_uuid {client_uuid}: {str(e)}"
+            )
+            return None
+
+    async def get_active_adventure_by_client_uuid_for_user(
+        self, client_uuid: str, user_id: UUID
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get the active adventure for a client_uuid scoped to an authenticated user.
+
+        Args:
+            client_uuid: Client UUID from frontend storage.
+            user_id: Authenticated user UUID.
+
+        Returns:
+            Optional[Dict[str, Any]]: Adventure data if found, otherwise None.
+        """
+        try:
+            response = (
+                self.supabase.table("adventures")
+                .select(
+                    "id, story_category, lesson_topic, completed_chapter_count, updated_at, state_data"
+                )
+                .eq("client_uuid", client_uuid)
+                .eq("user_id", str(user_id))
+                .eq("is_complete", False)
+                .order("updated_at", desc=True)
+                .limit(1)
+                .maybe_single()
+                .execute()
+            )
+
+            if not response.data:
+                return None
+            return response.data
+        except Exception as e:
+            logger.error(
+                f"get_active_adventure_by_client_uuid_for_user: Error fetching adventure for client_uuid {client_uuid}, user {user_id}: {str(e)}"
             )
             return None

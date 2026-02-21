@@ -160,6 +160,58 @@ async def reformat_text_with_paragraphs(
     return text
 
 
+async def regenerate_with_paragraphs(
+    full_response: str,
+    regenerate_fn,
+    llm_service=None,
+    max_attempts: int = 3,
+) -> str:
+    """Try regenerating text to get proper paragraph formatting, with reformat fallback.
+
+    This extracts the common regeneration-then-reformat pattern used across LLM providers.
+
+    Args:
+        full_response: The original response text that lacks paragraphs
+        regenerate_fn: An async callable that returns a new string response
+        llm_service: LLM service instance for reformat fallback (passed to reformat_text_with_paragraphs)
+        max_attempts: Maximum regeneration attempts before falling back to reformatting
+
+    Returns:
+        str: Text with proper paragraph formatting
+    """
+    logger.info(
+        "Detected text without proper paragraph formatting, regenerating response..."
+    )
+
+    regenerated_text = None
+
+    for attempt in range(1, max_attempts + 1):
+        logger.info(f"Regeneration attempt {attempt}/{max_attempts}")
+        try:
+            regenerated_text = await regenerate_fn()
+            if "\n\n" in regenerated_text:
+                logger.info(
+                    f"Successfully generated text with proper paragraphs (attempt {attempt})"
+                )
+                return regenerated_text
+            else:
+                logger.warning(
+                    f"Regeneration attempt {attempt} still lacks paragraph breaks"
+                )
+        except Exception as e:
+            logger.error(f"Error in regeneration attempt {attempt}: {str(e)}")
+
+    # All regeneration attempts failed — fall back to reformatting
+    logger.warning(
+        f"All {max_attempts} regeneration attempts failed, falling back to reformatting"
+    )
+    reformatted_text = await reformat_text_with_paragraphs(
+        full_response, 3, llm_service
+    )
+    logger.info("Sent reformatted text with paragraph formatting")
+    return reformatted_text
+
+
 async def collect_and_check_formatting(
     stream_generator, buffer_size: int = 1000
 ) -> Tuple[str, bool]:

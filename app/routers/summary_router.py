@@ -1,17 +1,16 @@
 from fastapi import APIRouter, Request, HTTPException, Depends
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from typing import Optional
 import os
 import logging
-import json
+from pathlib import Path
 from uuid import UUID
 
-from app.models.story import AdventureState
 from app.services.state_storage_service import StateStorageService
 from app.services.summary import SummaryService, StateNotFoundError, SummaryError
 from app.services.telemetry_service import TelemetryService
 from app.utils.case_conversion import snake_to_camel_dict
-from app.auth.dependencies import get_current_user_id_optional
+from app.auth.dependencies import get_current_user_id_optional, get_current_user_id
 
 # Configure logger
 logger = logging.getLogger("summary_router")
@@ -47,20 +46,18 @@ async def validate_user_adventure_access(
     Validate that the user has access to the adventure.
     Returns the state_data if access is allowed, raises HTTPException otherwise.
     """
-    # Get the raw state data to check ownership
-    state_data = await summary_service.state_storage_service.get_state(state_id)
-    if not state_data:
+    adventure_record = await summary_service.state_storage_service.get_adventure_record(
+        state_id
+    )
+    if not adventure_record:
         raise HTTPException(status_code=404, detail="Adventure not found")
 
-    # Check ownership
-    adventure_user_id_str = None
+    state_data = adventure_record.get("state_data")
+    if not isinstance(state_data, dict):
+        logger.error(f"Adventure {state_id} has invalid state_data format")
+        raise HTTPException(status_code=500, detail="Invalid adventure state data")
 
-    # Check for user_id in metadata first
-    if "metadata" in state_data and "user_id" in state_data["metadata"]:
-        adventure_user_id_str = state_data["metadata"]["user_id"]
-    # Fallback to top-level user_id
-    elif "user_id" in state_data:
-        adventure_user_id_str = state_data["user_id"]
+    adventure_user_id_str = adventure_record.get("user_id")
 
     # If adventure has no user_id (guest adventure), allow access
     if adventure_user_id_str is None:
@@ -115,13 +112,6 @@ async def summary_page(request: Request):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/test-plain")
-async def test_plain():
-    """Test route that returns plain text."""
-    logger.info("Serving test plain text")
-    return "This is a test plain text response from the summary router"
-
-
 @router.get("/api/adventure-summary")
 async def get_adventure_summary(
     state_id: Optional[str] = None,
@@ -144,39 +134,10 @@ async def get_adventure_summary(
     # Check if state_id is provided
     if not state_id:
         logger.warning("No state_id provided to get_adventure_summary")
-        # Create minimal mock data for testing if needed
-        mock_data = {
-            "chapterSummaries": [
-                {
-                    "number": 1,
-                    "title": "Chapter 1: The Beginning",
-                    "summary": "This is a sample summary for testing. You can start a real adventure to see actual chapter summaries.",
-                    "chapterType": "story",
-                },
-                {
-                    "number": 2,
-                    "title": "Chapter 2: The Journey",
-                    "summary": "This is another sample summary. Real adventures will have actual content here based on your choices.",
-                    "chapterType": "story",
-                },
-            ],
-            "educationalQuestions": [
-                {
-                    "question": "Would you like to go on an educational adventure?",
-                    "userAnswer": "Yes",
-                    "isCorrect": True,
-                    "explanation": "Great! Click the Start button to begin a new adventure.",
-                }
-            ],
-            "statistics": {
-                "chaptersCompleted": 2,
-                "questionsAnswered": 1,
-                "timeSpent": "5 mins",
-                "correctAnswers": 1,
-            },
-        }
-        logger.info("Returning mock data for testing")
-        return mock_data
+        raise HTTPException(
+            status_code=400,
+            detail="state_id query parameter is required",
+        )
 
     # If state_id contains multiple values (e.g., from duplicate parameters), use the first one
     if "," in state_id:
@@ -264,28 +225,45 @@ async def get_adventure_summary(
         raise HTTPException(status_code=404, detail=str(e))
     except SummaryError as e:
         logger.error(f"Error generating summary: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error generating summary")
     except Exception as e:
         logger.error(f"Unexpected error serving summary data: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Error serving summary data: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/api/store-adventure-state")
 async def store_adventure_state(
     state_data: dict,
     adventure_id: Optional[str] = None,
+    user_id: UUID = Depends(get_current_user_id),
     summary_service: SummaryService = Depends(get_summary_service),
 ):
     """Store adventure state and return a unique ID."""
     try:
+        if adventure_id:
+            owns_adventure = (
+                await summary_service.state_storage_service.is_adventure_owned_by_user(
+                    adventure_id, user_id
+                )
+            )
+            if not owns_adventure:
+                logger.warning(
+                    f"User {user_id} attempted to update non-owned adventure {adventure_id}"
+                )
+                raise HTTPException(status_code=403, detail="Access denied")
+
         # Store the state with the service
-        state_id = await summary_service.store_adventure_state(state_data, adventure_id)
+        state_id = await summary_service.store_adventure_state(
+            state_data,
+            adventure_id,
+            user_id=user_id,
+        )
         return {"state_id": state_id}
+    except HTTPException:
+        raise
     except SummaryError as e:
         logger.error(f"Error storing adventure state: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error storing adventure state")
     except Exception as e:
         logger.error(f"Unexpected error storing adventure state: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -314,38 +292,32 @@ async def get_adventure_state(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/generate-summary/{state_file_id}")
-async def generate_summary(state_file_id: str):
-    """Generate a summary from a simulation state file."""
-    try:
-        # This would normally call the generate_chapter_summaries_react.py script
-        # For now, we'll just return a message
-        return {
-            "message": f"Summary generation from state file {state_file_id} would be triggered here.",
-            "note": "This endpoint is a placeholder. Implement the actual generation logic in production.",
-        }
-    except Exception as e:
-        logger.error(f"Error generating summary: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
 # Route to serve JavaScript files - this must be at the end to avoid catching other routes
 @router.get("/{js_file:path}")
 async def serve_js_file(js_file: str):
     """Serve JavaScript files from the summary chapter directory."""
-    if not js_file.endswith(".js"):
-        raise HTTPException(status_code=404, detail="Not found")
-
     try:
-        js_path = os.path.join(SUMMARY_CHAPTER_DIR, js_file)
-        if os.path.exists(js_path):
-            logger.info(f"Serving JavaScript file from: {js_path}")
-            return FileResponse(js_path, media_type="application/javascript")
-        else:
-            logger.error(f"JavaScript file not found at: {js_path}")
+        base_path = Path(SUMMARY_CHAPTER_DIR).resolve()
+        resolved_path = (base_path / js_file).resolve()
+
+        # Block traversal attempts by ensuring the final path remains inside base_path.
+        if not resolved_path.is_relative_to(base_path):
+            logger.warning(f"Blocked JS path traversal attempt: {js_file}")
+            raise HTTPException(status_code=404, detail="Not found")
+
+        if resolved_path.suffix != ".js":
+            raise HTTPException(status_code=404, detail="Not found")
+
+        if not resolved_path.is_file():
+            logger.error(f"JavaScript file not found at: {resolved_path}")
             raise HTTPException(
                 status_code=404, detail=f"JavaScript file {js_file} not found"
             )
+
+        logger.info(f"Serving JavaScript file from: {resolved_path}")
+        return FileResponse(str(resolved_path), media_type="application/javascript")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error serving JavaScript file: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")

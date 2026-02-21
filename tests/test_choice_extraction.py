@@ -28,35 +28,7 @@ def _ensure_pandas_stub():
     sys.modules["pandas"] = pandas_stub
 
 
-def _install_init_data_stub():
-    if "app.init_data" in sys.modules:
-        return
-
-    import app  # Ensure base package is loaded
-
-    init_data_stub = types.ModuleType("app.init_data")
-
-    def sample_question(topic, exclude_questions=None, difficulty="Reasonably Challenging"):
-        return {
-            "question": "Stub question?",
-            "answers": [
-                {"text": "Answer 1", "is_correct": True},
-                {"text": "Answer 2", "is_correct": False},
-                {"text": "Answer 3", "is_correct": False},
-            ],
-            "explanation": "Stub explanation",
-            "topic": topic,
-            "subtopic": "Stub",
-            "difficulty": difficulty,
-        }
-
-    init_data_stub.sample_question = sample_question  # type: ignore[attr-defined]
-    sys.modules["app.init_data"] = init_data_stub
-    setattr(app, "init_data", init_data_stub)
-
-
 _ensure_pandas_stub()
-_install_init_data_stub()
 
 
 def _load_content_generator_module():
