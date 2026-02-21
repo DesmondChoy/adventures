@@ -144,30 +144,48 @@ async def handle_reveal_summary(
         # Skip streaming to avoid WebSocket disconnection errors  
         logger.info("Summary ready signal sent, skipping streaming to prevent disconnection errors")
 
-    # Send the complete summary data
-    await websocket.send_json(
-        {
-            "type": "summary_complete",
-            "state": {
-                "current_chapter_id": state.current_chapter_id,
-                "current_chapter": {
-                    "chapter_number": summary_chapter.chapter_number,
-                    "content": summary_content,
-                    "chapter_type": ChapterType.SUMMARY.value,
+        # Send the complete summary data
+        await websocket.send_json(
+            {
+                "type": "summary_complete",
+                "state": {
+                    "current_chapter_id": state.current_chapter_id,
+                    "current_chapter": {
+                        "chapter_number": summary_chapter.chapter_number,
+                        "content": summary_content,
+                        "chapter_type": ChapterType.SUMMARY.value,
+                    },
+                    "stats": {
+                        "total_lessons": state.total_lessons,
+                        "correct_lesson_answers": state.correct_lesson_answers,
+                        "completion_percentage": round(
+                            (state.correct_lesson_answers / state.total_lessons * 100)
+                            if state.total_lessons > 0
+                            else 0
+                        ),
+                    },
+                    "chapter_summaries": state.chapter_summaries,
                 },
-                "stats": {
-                    "total_lessons": state.total_lessons,
-                    "correct_lesson_answers": state.correct_lesson_answers,
-                    "completion_percentage": round(
-                        (state.correct_lesson_answers / state.total_lessons * 100)
-                        if state.total_lessons > 0
-                        else 0
-                    ),
-                },
-                "chapter_summaries": state.chapter_summaries,
+            }
+        )
+    else:
+        logger.error(
+            "handle_reveal_summary called but last chapter is not CONCLUSION",
+            extra={
+                "chapter_count": len(state.chapters),
+                "last_chapter_type": (
+                    state.chapters[-1].chapter_type.value if state.chapters else None
+                ),
             },
-        }
-    )
+        )
+        await websocket.send_json(
+            {
+                "type": "error",
+                "message": (
+                    "Could not generate summary: no CONCLUSION chapter found."
+                ),
+            }
+        )
 
     return None, None, False, False
 

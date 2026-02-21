@@ -179,6 +179,7 @@ export async function viewAdventureSummary() {
     // Set up timeout for WebSocket response
     timeoutId = setTimeout(() => {
         console.error('WebSocket timeout: No summary_ready response received within 8 seconds');
+        timeoutId = null;
 
         // Restore original handler
         if (originalOnMessage) {
@@ -219,6 +220,24 @@ export async function viewAdventureSummary() {
                     // Navigate to the summary page with this state_id
                     window.location.href = `/adventure/summary?state_id=${stateId}`;
                 }
+            } else if (data.type === 'error') {
+                // Stop summary timeout flow when backend sends an explicit error.
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                    timeoutId = null;
+                }
+
+                // Restore original handler before forwarding this error event.
+                if (originalOnMessage) {
+                    window.appState.storyWebSocket.onmessage = originalOnMessage;
+                    originalOnMessage(event);
+                } else {
+                    const message = typeof data.message === 'string' && data.message.trim()
+                        ? data.message
+                        : 'Unable to generate summary. Please try again.';
+                    showError(message);
+                    hideLoader();
+                }
             } else {
                 // Pass other messages to the original handler
                 if (originalOnMessage) {
@@ -247,6 +266,7 @@ export async function viewAdventureSummary() {
         // Clean up on send failure
         if (timeoutId) {
             clearTimeout(timeoutId);
+            timeoutId = null;
         }
         if (originalOnMessage) {
             window.appState.storyWebSocket.onmessage = originalOnMessage;
