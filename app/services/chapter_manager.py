@@ -909,5 +909,5 @@ class ChapterManager:
             if paragraphs:
                 first_para = paragraphs[0]
                 words = first_para.split()[:30]
-                return " ".join(words) + "..."
-            return "A scene from the story"
+                return {"title": "Adventure Chapter", "summary": " ".join(words) + "..."}
+            return {"title": "Adventure Chapter", "summary": "A scene from the story"}
