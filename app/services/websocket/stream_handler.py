@@ -616,7 +616,7 @@ async def stream_chapter_with_live_generation(
     
     logger.info(f"[PERFORMANCE] Generating chapter content with validation for chapter {current_chapter_number}")
     
-    previous_lessons = collect_previous_lessons(state) if chapter_type == ChapterType.REFLECT else None
+    previous_lessons = collect_previous_lessons(state)
     
     chapter_content = await generate_chapter_content_with_retries(
         story_config=story_config,
