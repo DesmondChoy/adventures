@@ -1,12 +1,31 @@
 from typing import List
 import logging
 
-from app.models.story import ChapterType, ChapterData, AdventureState
+from app.models.story import (
+    ChapterType,
+    ChapterData,
+    AdventureState,
+    StoryResponse,
+    LessonResponse,
+)
 from app.services.llm.factory import LLMServiceFactory
 from app.services.llm.prompt_engineering import build_summary_chapter_prompt
 
 logger = logging.getLogger("story_app")
 llm_service = LLMServiceFactory.create_for_use_case("summary_generation")
+
+
+def _get_summary_choice_data(chapter: ChapterData) -> tuple[str, str]:
+    """Extract summary choice fields for different chapter response types."""
+    response = chapter.response
+    if isinstance(response, StoryResponse):
+        return response.chosen_path, response.choice_text
+    if isinstance(response, LessonResponse):
+        choice_context = (
+            " (Correct answer)" if response.is_correct else " (Incorrect answer)"
+        )
+        return response.chosen_answer, choice_context
+    return "story_progression", ""
 
 
 async def generate_summary_content(state: AdventureState) -> str:
@@ -190,9 +209,7 @@ async def ensure_all_summaries_exist(state: AdventureState) -> None:
     for chapter in missing_chapters:
         try:
             # Use the existing chapter summary generation function
-            # For chapters without responses, provide defaults
-            chosen_choice = chapter.response.chosen_path if chapter.response else "story_progression"
-            choice_context = chapter.response.choice_text if chapter.response else ""
+            chosen_choice, choice_context = _get_summary_choice_data(chapter)
             
             summary_result = await ChapterManager.generate_chapter_summary(
                 chapter_content=chapter.content,
