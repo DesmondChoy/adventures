@@ -1,10 +1,6 @@
 from app.services.llm.base import BaseLLMService
 from app.services.llm.providers import OpenAIService, GeminiService
-from app.services.llm.factory import (
-    LLMServiceFactory,
-    LLMServiceFlash,
-    LLMServiceFlashLite
-)
+from app.services.llm.factory import LLMServiceFactory
 
 # Default service for backward compatibility
 LLMService = GeminiService

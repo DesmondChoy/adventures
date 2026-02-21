@@ -66,7 +66,3 @@ class LLMServiceFactory:
         """Check if a use case should use Flash Lite model."""
         return cls.get_model_for_use_case(use_case) == ModelConfig.GEMINI_FLASH_LITE_MODEL
 
-
-# Convenience instances for direct import
-LLMServiceFlash = lambda: LLMServiceFactory.create_flash()
-LLMServiceFlashLite = lambda: LLMServiceFactory.create_flash_lite()

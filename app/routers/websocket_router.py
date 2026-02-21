@@ -12,7 +12,7 @@ from app.services.telemetry_service import TelemetryService
 from app.services.websocket.stream_handler import (
     stream_chapter_content,
 )
-from app.services.websocket_service import (
+from app.services.websocket import (
     process_choice,
     send_story_complete,
 )

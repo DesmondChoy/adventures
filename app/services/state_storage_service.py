@@ -357,23 +357,6 @@ class StateStorageService:
             )
             return None
 
-    async def get_user_current_adventure(
-        self, user_id: UUID
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Get the user's single incomplete adventure with essential info for the resume modal.
-        This method is kept for compatibility but new calls for resume modal should use
-        get_user_current_adventure_for_resume.
-
-        Args:
-            user_id: The UUID of the user.
-
-        Returns:
-            Optional[Dict[str, Any]]: A dictionary containing adventure details if an
-                                     incomplete adventure is found, otherwise None.
-        """
-        return await self.get_user_current_adventure_for_resume(user_id)
-
     async def get_user_current_adventure_for_resume(
         self, user_id: UUID
     ) -> Optional[Dict[str, Any]]:
@@ -568,13 +551,6 @@ class StateStorageService:
 
         # Return True if we abandoned at least some adventures, or if there were none to abandon
         return failed_count == 0
-
-    async def _abandon_existing_incomplete_adventure(self, user_id: UUID) -> bool:
-        """
-        DEPRECATED: Internal helper to find and abandon a user's existing incomplete adventure.
-        This method is kept for compatibility but now calls the comprehensive abandonment logic.
-        """
-        return await self._abandon_all_incomplete_adventures(user_id)
 
     async def get_active_adventure_by_client_uuid(
         self, client_uuid: str
