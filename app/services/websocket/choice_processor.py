@@ -1269,7 +1269,7 @@ async def process_story_response(
                     visual_part = f" [{match.group(1)}]"
 
                 # Reconstruct the choice text with visual details
-            enhanced_choice_text = f"{agency_name}{visual_part} - {agency_description}"
+                enhanced_choice_text = f"{agency_name}{visual_part} - {agency_description}"
 
         # --- Start: Extract Agency Name ---
         extracted_name = "Unknown Agency"  # Default value
