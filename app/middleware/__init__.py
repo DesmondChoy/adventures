@@ -45,7 +45,7 @@ def get_middleware_stack():
 
     trusted_proxy_hosts = _parse_csv_env(
         "PROXY_TRUSTED_HOSTS",
-        ["127.0.0.1", "localhost"],
+        ["*"],
     )
     allowed_hosts = _parse_csv_env(
         "ALLOWED_HOSTS",
