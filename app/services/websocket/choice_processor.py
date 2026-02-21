@@ -1494,36 +1494,7 @@ async def store_chapter_summary(
     chapter: ChapterData, state: AdventureState, title: str, summary_text: str
 ) -> None:
     """Store chapter summary and title in the state."""
-    if len(state.chapter_summaries) < chapter.chapter_number:
-        # If this is the first summary, we might need to add placeholders for previous chapters
-        while len(state.chapter_summaries) < chapter.chapter_number - 1:
-            state.chapter_summaries.append("Chapter summary not available")
-            # Also add placeholder titles
-            if hasattr(state, "summary_chapter_titles"):
-                state.summary_chapter_titles.append(
-                    f"Chapter {len(state.summary_chapter_titles) + 1}"
-                )
-
-        # Add the new summary and title
-        state.chapter_summaries.append(summary_text)
-        # Add the title if the field exists
-        if hasattr(state, "summary_chapter_titles"):
-            state.summary_chapter_titles.append(title)
-    else:
-        # Replace the summary at the correct index
-        state.chapter_summaries[chapter.chapter_number - 1] = summary_text
-        # Replace the title if the field exists
-        if hasattr(state, "summary_chapter_titles"):
-            # Ensure the list is long enough
-            while len(state.summary_chapter_titles) < chapter.chapter_number:
-                state.summary_chapter_titles.append(
-                    f"Chapter {len(state.summary_chapter_titles) + 1}"
-                )
-            state.summary_chapter_titles[chapter.chapter_number - 1] = title
-
-    logger.info(f"Stored summary for chapter {chapter.chapter_number}: {summary_text}")
-    if hasattr(state, "summary_chapter_titles"):
-        logger.info(f"Stored title for chapter {chapter.chapter_number}: {title}")
+    await _store_summary_safe(chapter, state, title, summary_text)
 
 
 async def create_and_append_chapter(
