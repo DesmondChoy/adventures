@@ -1,6 +1,6 @@
-# CLAUDE.md
+# GEMINI.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Gemini (Google AI) when working with code in this repository.
 
 ## Project Overview
 
@@ -26,8 +26,8 @@ pip install -r requirements.txt
 When deploying code changes (especially JS/CSS), update version strings to force cache invalidation:
 
 **Files with version strings:**
-- `app/templates/base.html` - CSS files and `font-size-manager.js`
-- `app/templates/components/scripts.html` - ES6 module (`main.js`)
+- `app/templates/base.html` — CSS files and `font-size-manager.js`
+- `app/templates/components/scripts.html` — ES6 module (`main.js`)
 
 **Version format:** `?v=YYYYMMDDC` (date + letter increment)
 - Example: `?v=20260101a` → `?v=20260101b` → `?v=20260102a`
@@ -37,29 +37,18 @@ When deploying code changes (especially JS/CSS), update version strings to force
 - Modifying any CSS file
 - Fixing bugs that users might have cached
 
-### Deployment Security Model (Railway)
-- Production deploy path is **GitHub -> Railway auto-deploy only**.
-- Local `.env` is developer-only and is **not** part of production deploy artifacts unless deployment source changes.
-- `.env` must remain gitignored and excluded from Docker context via `.dockerignore`.
-- Before rating a secret finding as high/critical, verify:
-  - whether secrets are in git history,
-  - whether deploy source included local filesystem context,
-  - whether secrets are present in shared logs/artifacts.
-
-For policy details and severity criteria, use: `docs/security/deployment-model.md`.
-
 ## Architecture Overview
 
 ### Core Flow
-1. **WebSocket Router** (`app/routers/websocket_router.py`) - Entry point for adventure sessions, handles JWT auth
-2. **AdventureStateManager** (`app/services/adventure_state_manager.py`) - Central state management
-3. **ChapterManager** (`app/services/chapter_manager.py`) - Chapter type sequencing and story element selection
-4. **LLMServiceFactory** (`app/services/llm/factory.py`) - Dual-model architecture for cost optimization
+1. **WebSocket Router** (`app/routers/websocket_router.py`) — Entry point for adventure sessions, handles JWT auth
+2. **AdventureStateManager** (`app/services/adventure_state_manager.py`) — Central state management
+3. **ChapterManager** (`app/services/chapter_manager.py`) — Chapter type sequencing and story element selection
+4. **LLMServiceFactory** (`app/services/llm/factory.py`) — Dual-model architecture for cost optimization
 
 ### Dual-Model LLM Architecture
 The factory pattern routes tasks to appropriate models (~50% cost reduction):
-- **Gemini Flash** (29% of ops): Complex reasoning - `story_generation`, `image_scene_generation`
-- **Gemini Flash Lite** (71% of ops): Simple processing - `summary_generation`, `paragraph_formatting`, `character_visual_processing`, `image_prompt_synthesis`
+- **Gemini Flash** (29% of ops): Complex reasoning — `story_generation`, `image_scene_generation`
+- **Gemini Flash Lite** (71% of ops): Simple processing — `summary_generation`, `paragraph_formatting`, `character_visual_processing`, `image_prompt_synthesis`
 
 ```python
 from app.services.llm.factory import LLMServiceFactory
@@ -86,7 +75,7 @@ Configurable chapter length (currently 10) with rules:
 - Two additional non-consecutive LESSON chapters
 - Remaining positions: STORY
 
-### WebSocket Services (app/services/websocket/)
+### WebSocket Services (`app/services/websocket/`)
 - `core.py`: Connection management and coordination
 - `choice_processor.py`: User choice handling, triggers character visual updates
 - `content_generator.py`: Chapter content generation
@@ -114,7 +103,7 @@ Narrative content is generated dynamically by LLMs and is inherently variable. *
 ### 2. Validated Streaming Pattern
 Use `stream_chapter_with_live_generation()` to generate, validate, then stream:
 ```python
-# CORRECT - Collect and validate first, then stream approved content
+# CORRECT — Collect and validate first, then stream approved content
 chapter_content = await generate_chapter_content_with_retries(...)
 await stream_text_content(chapter_content.content, websocket)
 await websocket.send_json({"type": "choices", "choices": ...})
@@ -142,7 +131,7 @@ Images use a sophisticated synthesis process for visual consistency:
 - `state.character_visuals` tracks all character appearances
 - `CHARACTER_VISUAL_UPDATE_PROMPT` extracts descriptions from each chapter
 - `update_character_visuals()` merges new descriptions intelligently
-- **System-wide character description rules in `SYSTEM_PROMPT_TEMPLATE` are NOT duplication** - they ensure extractable descriptions in every chapter
+- **System-wide character description rules in `SYSTEM_PROMPT_TEMPLATE` are NOT duplication** — they ensure extractable descriptions in every chapter
 
 ### 6. Security: User Isolation
 - WebSocket: Authenticated users access adventures via `user_id` only (no `client_uuid` fallback)
@@ -166,26 +155,81 @@ Story chapters MUST have exactly 3 choices. The system uses `generate_chapter_co
 ### 9. Chapter Update Timing
 **Critical**: Send `chapter_update` message BEFORE streaming content, not after. This ensures the UI shows the correct chapter number immediately when content starts streaming.
 
+## Code Style & Patterns
+
+- **Virtual Environment**: ALWAYS activate `.venv` before running Python commands
+- **Imports**: Use absolute imports (`from app.services.summary import SummaryService`)
+- **Type hints**: Required for all functions, use Pydantic models extensively
+- **Error handling**: Use custom exceptions (`StateNotFoundError`, `SummaryError`)
+- **Async**: Use `async`/`await` for all I/O operations, services are async
+- **Naming**: `snake_case` for functions/variables, `PascalCase` for classes
+- **State management**: `AdventureState` is single source of truth, never hardcode chapter data
+- **Logging**: Use structured logging with context (`logger.info("message", extra={"state_id": id})`)
+- **Code reuse**: Review existing codebase before creating new functions, prioritize modular design
+
+## Critical Implementation Rules
+
+### State Management
+- `AdventureState` MUST be single source of truth
+- NEVER hardcode chapter numbers (use `state.story_length` and `planned_chapter_types`)
+- Agency choice MUST be stored in `state.metadata["agency"]`
+- Always convert chapter types to lowercase when storing/retrieving
+- Complete state serialization required with proper type hints
+- State changes must be logged with context
+
+### Chapter Requirements
+- First chapter MUST be STORY type with agency choice
+- Last chapter MUST be CONCLUSION type
+- 3 LESSON chapters required (1 in a LESSON-REFLECT-STORY sequence, 2 additional non-consecutive)
+- REFLECT chapters MUST only follow LESSON chapters
+- No consecutive LESSON chapters allowed
+- No question repetition in session
+
+### Agency Implementation
+- Agency MUST be referenced in all subsequent chapters
+- Agency MUST evolve in REFLECT chapters
+- Agency MUST have meaningful resolution in conclusion
+- Use `update_agency_references()` for tracking
+
+### Code Implementation Guidelines (CRITICAL)
+
+**NEVER make assumptions — always verify first.** Before writing ANY code that calls functions, imports, or references existing code:
+
+1. **ALWAYS search and verify function names and signatures BEFORE using them**
+2. **NEVER assume function names, even if they seem logical**
+3. **ALWAYS check existing import patterns before adding new imports**
+4. **ALWAYS verify parameter types and return values**
+
+**Implementation order:**
+1. **Search** → Find existing implementations
+2. **Read** → Understand the actual code structure
+3. **Verify** → Check function signatures and usage patterns
+4. **Implement** → Write code based on verified information
+5. **Test** → Run diagnostics to catch errors early
+
 ## Testing Guidelines
 
-### Manual Testing with Playwright MCP
-
-Use the `/playwright-test` skill for end-to-end testing with Playwright MCP.
-
-### Unit Testing
-
-#### What to Test
+### What to Test
 - State transitions and `AdventureState` updates
 - Structural correctness (does chapter have content? does summary have title?)
 - Correct function calls and service interactions
 - Chapter type validation and sequence rules
 
-#### What NOT to Test
+### What NOT to Test
 - Specific LLM-generated narrative text (will break tests)
 - Exact sentences or character names from generated content
 
-#### Mocking
+### Mocking
 Use mocking to provide structurally correct but non-specific narrative content when testing components that consume it.
+
+### Running Tests
+```bash
+# Run all tests
+pytest tests/
+
+# Run specific test file
+pytest tests/test_summary_service.py
+```
 
 ## Key Validation Rules
 
@@ -217,7 +261,7 @@ Agency is tracked in `state.metadata["agency"]` with visual details extracted fr
 
 ## Frontend Architecture
 
-### ES6 Modules (app/static/js/)
+### ES6 Modules (`app/static/js/`)
 - `authManager.js`: Supabase auth, session management
 - `adventureStateManager.js`: localStorage operations
 - `webSocketManager.js`: Connection lifecycle, reconnection with exponential backoff
@@ -234,12 +278,38 @@ Required in `.env`:
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`: Database/auth
 - `APP_ENVIRONMENT`: development/production
 
+## Security Audit Context
+
+### Production Deployment Model (Railway)
+- Production deploy path is **GitHub -> Railway auto-deploy only**.
+- Local CLI deploys (for example `railway up`) are **not** part of the production release process.
+- Local `.env` is developer-only, must remain gitignored, and must be excluded from Docker build context.
+
+### Severity Rules for Local Secret Findings
+- Presence of a local `.env` file alone is **not** automatically a production exposure.
+- Escalate to `high`/`critical` only when at least one is true:
+  - Secret is committed to git history.
+  - Deployment source included local filesystem context.
+  - Secret appears in shared logs/artifacts/images/backups.
+
+### Required Verification for Secret-Exposure Claims
+- Check deployment source in Railway deploy history (`via GitHub` vs local CLI source).
+- Confirm `.env` is not tracked (`git ls-files .env` should be empty).
+- Confirm `.dockerignore` excludes `.env` and `.env.*`.
+- Refer to `docs/security/deployment-model.md` as the source of truth before assigning severity.
+
 ## Database Migrations
 Supabase migrations are in `supabase/migrations/`. Apply with:
 ```bash
 npx supabase db push
 ```
 
+## Common Debugging Patterns
+- **Method Missing at Runtime**: Check indentation — methods inside functions won't be accessible on class instances
+- **AttributeError on Service Methods**: Verify method is properly indented within the class definition
+- **Telemetry/Duration Issues**: Connection restarts cause chapter start times to be lost, resulting in null duration values. Check metadata keys and consider timestamp-based backfilling
+- **Data Flow Tracing**: When debugging UI display issues, trace the complete data flow from storage → calculation → display rather than assuming the problem is at the UI layer
+
 ## Additional Documentation
-- `memory-bank/` - Architectural decisions, implementation plans, progress logs, LLM best practices
-- `wip/implemented/` - Detailed implementation history for major features (streaming optimization, Supabase integration, visual consistency, etc.)
+- `memory-bank/` — Architectural decisions, implementation plans, progress logs, LLM best practices
+- `wip/implemented/` — Detailed implementation history for major features (streaming optimization, Supabase integration, visual consistency, etc.)

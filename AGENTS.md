@@ -60,7 +60,7 @@ Quick shortcuts for common tasks:
 ### Chapter Requirements
 - First chapter MUST be STORY type with agency choice
 - Last chapter MUST be CONCLUSION type
-- 50% of remaining chapters MUST be LESSON type
+- 3 LESSON chapters required (1 in a LESSON-REFLECT-STORY sequence, 2 additional non-consecutive)
 - REFLECT chapters MUST only follow LESSON chapters
 - No consecutive LESSON chapters allowed
 - No question repetition in session
