@@ -99,17 +99,17 @@ Narrative content is generated dynamically by LLMs and is inherently variable. *
 - Use metadata for reliable decision-making
 - Tests should verify state transitions and structure, not narrative sentences
 
-### 2. Live Streaming Performance
-Use `stream_chapter_with_live_generation()` for 50-70% faster chapter generation:
+### 2. Validated Streaming Pattern
+Use `stream_chapter_with_live_generation()` to generate, validate, then stream:
 ```python
-# CORRECT - Stream directly from LLM
-async for chunk in get_llm_service().generate_chapter_stream():
-    await websocket.send_text(chunk)
-
-# AVOID - Collecting then streaming (causes 2-5s delays)
-content = await llm.generate_content()  # Blocks
-await stream_word_by_word(content)
+# CORRECT - Collect and validate first, then stream approved content
+chapter_content = await generate_chapter_content_with_retries(...)
+await stream_text_content(chapter_content.content, websocket)
+await websocket.send_json({"type": "choices", "choices": ...})
 ```
+This intentionally prioritizes correctness:
+- Story chapters must have exactly 3 validated choices before content is shown
+- Unvalidated live token streaming should be avoided for chapter output
 
 ### 3. Background Task Pattern
 Non-critical tasks (summaries, visual extraction) run in background after streaming:

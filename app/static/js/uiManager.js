@@ -5,6 +5,47 @@
 
 import { stateManager, manageState } from './stateManager.js';
 import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js';
+import { withCurrentModuleVersion } from './moduleVersion.js';
+
+function withModuleVersion(modulePath) {
+    return withCurrentModuleVersion(import.meta.url, modulePath);
+}
+
+function sanitizeRenderedHtml(html) {
+    if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+        return window.DOMPurify.sanitize(html);
+    }
+
+    // Fallback sanitizer: preserve safe markup while stripping active content.
+    console.warn('[SECURITY] DOMPurify unavailable, using strict fallback sanitizer');
+    const parsedHtml = new DOMParser().parseFromString(html, 'text/html');
+    const blockedTags = ['script', 'style', 'iframe', 'object', 'embed', 'link', 'meta'];
+
+    blockedTags.forEach((tagName) => {
+        parsedHtml.querySelectorAll(tagName).forEach((node) => node.remove());
+    });
+
+    parsedHtml.querySelectorAll('*').forEach((node) => {
+        Array.from(node.attributes).forEach((attribute) => {
+            const attrName = attribute.name.toLowerCase();
+            const attrValue = attribute.value || '';
+
+            if (attrName.startsWith('on') || attrName === 'srcdoc') {
+                node.removeAttribute(attribute.name);
+                return;
+            }
+
+            if (
+                (attrName === 'href' || attrName === 'src' || attrName === 'xlink:href') &&
+                /^\s*javascript:/i.test(attrValue)
+            ) {
+                node.removeAttribute(attribute.name);
+            }
+        });
+    });
+
+    return parsedHtml.body.innerHTML;
+}
 
 // Global variables for UI state
 let streamBuffer = '';  // Buffer for accumulating streamed text
@@ -31,7 +72,6 @@ function toTitleCase(str) {
 marked.setOptions({
     breaks: true,  // Enable line breaks
     gfm: true,    // Enable GitHub Flavored Markdown
-    sanitize: false // Allow HTML in the markdown
 });
 
 // --- Error and Notification Functions ---
@@ -799,7 +839,7 @@ export async function startAdventure() {
 
     // Start the adventure
     showLoader();
-    const { initWebSocket } = await import('./main.js');
+    const { initWebSocket } = await import(withModuleVersion('./main.js'));
     initWebSocket();
 }
 
@@ -891,9 +931,10 @@ export function appendStoryText(text) {
             breaks: true,
             gfm: true
         });
+        const sanitizedHtmlContent = sanitizeRenderedHtml(htmlContent);
 
         // Apply the HTML content to the story container
-        storyContent.innerHTML = htmlContent;
+        storyContent.innerHTML = sanitizedHtmlContent;
 
         // Add drop cap to the first paragraph
         const firstParagraph = storyContent.querySelector('p:first-child');
@@ -948,9 +989,10 @@ export function replaceStoryContent(content) {
             breaks: true,
             gfm: true
         });
+        const sanitizedHtmlContent = sanitizeRenderedHtml(htmlContent);
 
         // Apply the HTML content to the story container
-        storyContent.innerHTML = htmlContent;
+        storyContent.innerHTML = sanitizedHtmlContent;
 
         // Add drop cap to the first paragraph
         const firstParagraph = storyContent.querySelector('p:first-child');
@@ -1282,6 +1324,12 @@ export async function handleMessage(event) {
 
         if (data.type === 'hide_loader') {
             hideLoader();
+        } else if (data.type === 'error') {
+            hideLoader();
+            const message = typeof data.message === 'string' && data.message.trim()
+                ? data.message
+                : 'An unexpected error occurred. Please try again.';
+            showError(message);
         } else if (data.type === 'story') {
             // When story content starts streaming, advance to step 3 and hide loader
             if (currentLoaderStep < 3) {

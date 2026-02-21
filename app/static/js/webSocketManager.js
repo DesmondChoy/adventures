@@ -4,6 +4,11 @@
  */
 
 import { AdventureStateManager } from './adventureStateManager.js';
+import { withCurrentModuleVersion } from './moduleVersion.js';
+
+function withModuleVersion(modulePath) {
+    return withCurrentModuleVersion(import.meta.url, modulePath);
+}
 
 export class WebSocketManager {
     constructor(authManager) {
@@ -81,14 +86,14 @@ export class WebSocketManager {
 
     async reconnect() {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            const { appendStoryText } = await import('./uiManager.js?v=20260130f');
+            const { appendStoryText } = await import(withModuleVersion('./uiManager.js'));
             appendStoryText('\n\nUnable to reconnect after multiple attempts. Please refresh the page.');
             return;
         }
 
         const savedState = this.stateManager.loadState();
         if (!savedState && !this.adventureIdToResume) { // Also check adventureIdToResume
-            const { appendStoryText } = await import('./uiManager.js?v=20260130f');
+            const { appendStoryText } = await import(withModuleVersion('./uiManager.js'));
             appendStoryText('\n\nUnable to recover story state. Please refresh the page.');
             return;
         }
@@ -108,20 +113,20 @@ export class WebSocketManager {
             this.reconnectAttempts++;
         } catch (e) {
             console.error("Error creating WebSocket during reconnect:", e); 
-            const { hideLoader } = await import('./uiManager.js?v=20260130f');
+            const { hideLoader } = await import(withModuleVersion('./uiManager.js'));
             hideLoader();
         }
     }
 
     async setupConnectionHandlers() {
         const savedState = this.stateManager.loadState();
-        const uiModule = await import('./uiManager.js?v=20260130f');
+        const uiModule = await import(withModuleVersion('./uiManager.js'));
         const { hideLoader, updateProgress, handleMessage } = uiModule;
         // Use window.loaderFunctions as fallback for cross-module access
         const loaderFns = window.loaderFunctions || {};
         const setLoaderStep = uiModule.setLoaderStep || loaderFns.setLoaderStep || (() => {});
         const showLoaderError = uiModule.showLoaderError || loaderFns.showLoaderError || (() => {});
-        const { manageState } = await import('./stateManager.js?v=20260130f');
+        const { manageState } = await import(withModuleVersion('./stateManager.js'));
 
         this.connection.onopen = () => {
             this.reconnectAttempts = 0;

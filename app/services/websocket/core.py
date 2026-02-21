@@ -22,7 +22,7 @@ async def process_choice(
     lesson_topic: str,
     websocket: WebSocket,
     connection_data: Optional[Dict[str, Any]] = None,
-) -> Tuple[Optional[ChapterContent], Optional[dict], bool]:
+) -> Tuple[Optional[ChapterContent], Optional[Dict[str, Any]], bool, bool]:
     """Process a user's choice and generate the next chapter.
 
     Args:
@@ -117,6 +117,16 @@ async def send_story_complete(
     """
     from .stream_handler import stream_conclusion_content
     from .image_generator import start_image_generation_tasks, process_image_tasks
+
+    if not state.chapters:
+        logger.error("send_story_complete called with empty chapters list")
+        await websocket.send_json(
+            {
+                "type": "error",
+                "message": "Story completion data unavailable. Please refresh and try again.",
+            }
+        )
+        return
 
     # Get the final chapter (which should be CONCLUSION type)
     final_chapter = state.chapters[-1]
