@@ -10,7 +10,6 @@ from .choice_processor import (
     process_non_start_choice,
     handle_reveal_summary,
 )
-from .stream_handler import stream_chapter_content
 
 logger = logging.getLogger("story_app")
 
@@ -83,22 +82,6 @@ async def process_choice(
         state, state_manager, story_category, lesson_topic, websocket, connection_data
     )
 
-
-async def stream_and_send_chapter(
-    websocket: WebSocket,
-    chapter_content: ChapterContent,
-    sampled_question: Optional[Dict[str, Any]],
-    state: AdventureState,
-) -> None:
-    """Stream chapter content and send chapter data to the client.
-
-    Args:
-        websocket: The WebSocket connection
-        chapter_content: The chapter content to stream
-        sampled_question: The question data (if any)
-        state: The current state
-    """
-    await stream_chapter_content(websocket, chapter_content, sampled_question, state)
 
 
 async def send_story_complete(
