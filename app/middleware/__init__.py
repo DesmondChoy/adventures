@@ -49,7 +49,7 @@ def get_middleware_stack():
     )
     allowed_hosts = _parse_csv_env(
         "ALLOWED_HOSTS",
-        ["localhost", "127.0.0.1", "*.herokuapp.com"],
+        ["localhost", "127.0.0.1", "*.railway.app"],
     )
 
     return [
