@@ -335,14 +335,8 @@ async def send_fallback_image(
     # Different image sources in order of preference
     image_paths = []
 
-    # Get the story category (which might be in different formats)
-    story_category = None
-    if hasattr(state, "storyCategory"):
-        story_category = getattr(state, "storyCategory", "")
-    elif hasattr(state, "story_category"):
-        story_category = getattr(state, "story_category", "")
-    elif hasattr(state, "metadata") and "story_category" in state.metadata:
-        story_category = state.metadata["story_category"]
+    # Story category and lesson topic are stored in state.metadata
+    story_category = state.metadata.get("story_category")
 
     # 1. Try story category specific image
     if story_category:
@@ -370,7 +364,7 @@ async def send_fallback_image(
                 image_paths.append(f"app/static/images/stories/{value}.jpg")
 
     # 2. Try lesson topic specific image
-    lesson_topic = getattr(state, "lessonTopic", "")
+    lesson_topic = state.metadata.get("lesson_topic")
     if lesson_topic:
         logger.info(f"Found lesson topic: {lesson_topic}")
         image_paths.append(f"app/static/images/lessons/{lesson_topic}.jpg")
