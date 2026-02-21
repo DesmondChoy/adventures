@@ -3,7 +3,7 @@ Feedback Router
 API endpoints for submitting and checking user feedback.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 from uuid import UUID
@@ -11,6 +11,7 @@ import logging
 
 from app.services.feedback_service import get_feedback_service, FeedbackService
 from app.auth.dependencies import get_current_user_id_optional
+from app.rate_limit import limiter
 
 # Configure logger
 logger = logging.getLogger("feedback_router")
@@ -52,7 +53,9 @@ def get_feedback_service_dep() -> FeedbackService:
 
 
 @router.post("", response_model=FeedbackResponse)
+@limiter.limit("10/minute")
 async def submit_feedback(
+    request: Request,
     feedback: FeedbackSubmission,
     user_id: Optional[UUID] = Depends(get_current_user_id_optional),
     feedback_service: FeedbackService = Depends(get_feedback_service_dep),

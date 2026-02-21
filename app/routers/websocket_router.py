@@ -3,6 +3,7 @@ import asyncio
 import logging
 import os
 import jwt  # PyJWT
+from collections import defaultdict
 from typing import Optional
 from uuid import UUID
 from app.models.story import ChapterType
@@ -22,6 +23,11 @@ logger = logging.getLogger("story_app")
 
 # WebSocket keep-alive configuration
 PING_INTERVAL_SECONDS = 30  # Send ping every 30 seconds
+
+# WebSocket rate limiting: max concurrent connections per IP
+MAX_WS_CONNECTIONS_PER_IP = 3
+_ws_connections_per_ip: dict[str, int] = defaultdict(int)
+_ws_lock = asyncio.Lock()
 
 
 def _validate_adventure_ownership(
@@ -120,60 +126,74 @@ async def story_websocket(
         None
     ),  # New parameter for specific resumption
 ):
-    await websocket.accept()
-    logger.info(
-        f"WebSocket attempting connection with client_uuid: {client_uuid}, resume_adventure_id: {resume_adventure_id}"
-    )
-    logger.info(
-        f"WebSocket connection established for story category: {story_category}, lesson topic: {lesson_topic}, client_uuid: {client_uuid}, difficulty: {difficulty}, resume_adventure_id: {resume_adventure_id}"
-    )
-
-    state_manager = AdventureStateManager()
-    state_storage_service = StateStorageService()
-
-    # Lazy instantiation to avoid environment variable loading issues during import
-    def get_telemetry_service():
-        return TelemetryService()
-
-    telemetry_service = get_telemetry_service()
-
-    connection_data = {
-        "adventure_id": None,
-        "client_uuid": client_uuid,
-        "user_id": None,
-    }
-
-    # JWT Processing Block
-    if token:
-        supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
-        if supabase_jwt_secret:
-            try:
-                payload = jwt.decode(
-                    token,
-                    supabase_jwt_secret,
-                    algorithms=["HS256"],
-                    audience="authenticated",
-                )
-                user_id_from_token_str = payload.get("sub")
-                if user_id_from_token_str:
-                    connection_data["user_id"] = UUID(user_id_from_token_str)
-                    logger.info(
-                        f"Authenticated user via JWT: {connection_data['user_id']}"
-                    )
-                else:
-                    logger.warning("JWT decoded but 'sub' (user_id) claim is missing.")
-            except jwt.ExpiredSignatureError:
-                logger.warning("JWT ExpiredSignatureError")
-            except jwt.InvalidTokenError as e:
-                logger.warning(f"JWT InvalidTokenError: {e}")
-            except Exception as e:
-                logger.error(f"An unexpected error occurred during JWT decoding: {e}")
-        else:
-            logger.error("SUPABASE_JWT_SECRET is missing or empty. Cannot decode JWT.")
-    else:
-        logger.info("No token provided, skipping JWT processing.")
+    # Rate limit: check concurrent WebSocket connections per IP
+    client_ip = websocket.client.host if websocket.client else "unknown"
+    async with _ws_lock:
+        if _ws_connections_per_ip[client_ip] >= MAX_WS_CONNECTIONS_PER_IP:
+            await websocket.accept()
+            logger.warning(
+                f"WebSocket rate limit exceeded for IP {client_ip}: "
+                f"{_ws_connections_per_ip[client_ip]} concurrent connections"
+            )
+            await websocket.close(code=1008, reason="Too many concurrent connections")
+            return
+        _ws_connections_per_ip[client_ip] += 1
 
     try:
+        await websocket.accept()
+        logger.info(
+            f"WebSocket attempting connection with client_uuid: {client_uuid}, resume_adventure_id: {resume_adventure_id}"
+        )
+        logger.info(
+            f"WebSocket connection established for story category: {story_category}, lesson topic: {lesson_topic}, client_uuid: {client_uuid}, difficulty: {difficulty}, resume_adventure_id: {resume_adventure_id}"
+        )
+
+        state_manager = AdventureStateManager()
+        state_storage_service = StateStorageService()
+
+        # Lazy instantiation to avoid environment variable loading issues during import
+        def get_telemetry_service():
+            return TelemetryService()
+
+        telemetry_service = get_telemetry_service()
+
+        connection_data = {
+            "adventure_id": None,
+            "client_uuid": client_uuid,
+            "user_id": None,
+        }
+
+        # JWT Processing Block
+        if token:
+            supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+            if supabase_jwt_secret:
+                try:
+                    payload = jwt.decode(
+                        token,
+                        supabase_jwt_secret,
+                        algorithms=["HS256"],
+                        audience="authenticated",
+                        leeway=60,
+                    )
+                    user_id_from_token_str = payload.get("sub")
+                    if user_id_from_token_str:
+                        connection_data["user_id"] = UUID(user_id_from_token_str)
+                        logger.info(
+                            f"Authenticated user via JWT: {connection_data['user_id']}"
+                        )
+                    else:
+                        logger.warning("JWT decoded but 'sub' (user_id) claim is missing.")
+                except jwt.ExpiredSignatureError:
+                    logger.warning("JWT ExpiredSignatureError")
+                except jwt.InvalidTokenError as e:
+                    logger.warning(f"JWT InvalidTokenError: {e}")
+                except Exception as e:
+                    logger.error(f"An unexpected error occurred during JWT decoding: {e}")
+            else:
+                logger.error("SUPABASE_JWT_SECRET is missing or empty. Cannot decode JWT.")
+        else:
+            logger.info("No token provided, skipping JWT processing.")
+
         loaded_state_from_storage = None
 
         if resume_adventure_id:
@@ -723,6 +743,12 @@ async def story_websocket(
         except Exception:
             pass  # Ignore errors during close if connection already broken
     finally:
+        # Decrement WebSocket connection counter for this IP
+        async with _ws_lock:
+            _ws_connections_per_ip[client_ip] -= 1
+            if _ws_connections_per_ip[client_ip] <= 0:
+                del _ws_connections_per_ip[client_ip]
+
         # Clean up ping task when connection closes
         if 'ping_stop_event' in locals():
             ping_stop_event.set()

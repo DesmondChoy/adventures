@@ -22,29 +22,11 @@ class ImageGenerationService:
         """Initialize Gemini service with the specified model."""
         self.model_name = "imagen-4.0-generate-001"
 
-        # First try to load from environment variables
         api_key = os.getenv("GOOGLE_API_KEY")
-
-        # If not found in environment, try loading from .env file
-        if not api_key:
-            try:
-                # Try to manually read from .env file
-                with open(".env", "r") as env_file:
-                    for line in env_file:
-                        if line.startswith("GOOGLE_API_KEY="):
-                            api_key = line.strip().split("=", 1)[1]
-                            # Remove quotes if present
-                            api_key = api_key.strip("'\"")
-                            logger.info(
-                                "Successfully loaded GOOGLE_API_KEY from .env file"
-                            )
-                            break
-            except Exception as e:
-                logger.error(f"Error loading API key from .env file: {str(e)}")
 
         if not api_key:
             logger.warning(
-                "GOOGLE_API_KEY is not set in environment variables or .env file!"
+                "GOOGLE_API_KEY is not set in environment variables!"
             )
 
         # Create a client with the API key
