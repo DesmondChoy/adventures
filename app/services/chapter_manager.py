@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from app.models.story import ChapterType, AdventureState, ChapterData, ChapterContent
 from app.data.story_loader import StoryLoader
-from app.services.llm import LLMService
+from app.services.llm.factory import LLMServiceFactory
 from app.services.llm.prompt_templates import (
     SUMMARY_CHAPTER_PROMPT,
     IMAGE_SCENE_PROMPT,
@@ -670,7 +670,7 @@ class ChapterManager:
         """
         try:
             # Use the LLM service to generate an image scene
-            llm = LLMService()
+            llm = LLMServiceFactory.create_for_use_case("image_scene_generation")
 
             # Format character visuals as a JSON string for the prompt
             character_visual_context = json.dumps(character_visuals, indent=2)
@@ -693,9 +693,7 @@ class ChapterManager:
                     self.metadata = {"prompt_override": True}
 
             # Check if we're using Gemini or OpenAI
-            is_gemini = (
-                isinstance(llm, LLMService) or "Gemini" in llm.__class__.__name__
-            )
+            is_gemini = "Gemini" in llm.__class__.__name__
             logger.debug(f"Using LLM service for image scene: {llm.__class__.__name__}")
 
             # For Gemini, use the LLM service instead of direct calls
@@ -782,7 +780,7 @@ class ChapterManager:
         """
         try:
             # Use the LLM service to generate a summary
-            llm = LLMService()
+            llm = LLMServiceFactory.create_for_use_case("chapter_summaries")
 
             # Create a custom prompt for the chapter summary using the template
             custom_prompt = SUMMARY_CHAPTER_PROMPT.format(
@@ -807,9 +805,7 @@ class ChapterManager:
                     self.metadata = {"prompt_override": True}
 
             # Check if we're using Gemini or OpenAI
-            is_gemini = (
-                isinstance(llm, LLMService) or "Gemini" in llm.__class__.__name__
-            )
+            is_gemini = "Gemini" in llm.__class__.__name__
             logger.debug(f"Using LLM service: {llm.__class__.__name__}")
 
             # For Gemini, use the LLM service instead of direct calls
