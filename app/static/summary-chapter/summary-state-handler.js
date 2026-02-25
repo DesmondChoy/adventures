@@ -15,6 +15,86 @@ function getQueryParam(name) {
     return values.length > 0 ? values[0].trim() : null;
 }
 
+function extract_access_token(value) {
+    if (!value) {
+        return null;
+    }
+
+    if (typeof value === 'string') {
+        const token = value.trim();
+        return token.length > 0 ? token : null;
+    }
+
+    if (Array.isArray(value)) {
+        for (const item of value) {
+            const token = extract_access_token(item);
+            if (token) {
+                return token;
+            }
+        }
+        return null;
+    }
+
+    if (typeof value === 'object') {
+        if (typeof value.access_token === 'string' && value.access_token.trim()) {
+            return value.access_token.trim();
+        }
+        if (typeof value.accessToken === 'string' && value.accessToken.trim()) {
+            return value.accessToken.trim();
+        }
+
+        const nestedCandidates = [
+            value.currentSession,
+            value.session,
+            value.userSession,
+            value.data && value.data.session,
+        ];
+
+        for (const nested of nestedCandidates) {
+            const token = extract_access_token(nested);
+            if (token) {
+                return token;
+            }
+        }
+    }
+
+    return null;
+}
+
+function get_summary_access_token() {
+    const explicitToken = localStorage.getItem('summary_access_token');
+    if (explicitToken && explicitToken.trim()) {
+        return explicitToken.trim();
+    }
+
+    // Fallback: recover token from Supabase persisted session storage.
+    // Key pattern is typically: sb-<project-ref>-auth-token
+    const supabaseKeys = Object.keys(localStorage).filter(
+        (key) => key.startsWith('sb-') && key.endsWith('-auth-token')
+    );
+
+    for (const key of supabaseKeys) {
+        const raw = localStorage.getItem(key);
+        if (!raw) {
+            continue;
+        }
+
+        try {
+            const parsed = JSON.parse(raw);
+            const token = extract_access_token(parsed);
+            if (token) {
+                localStorage.setItem('summary_access_token', token);
+                console.log('[SummaryStateHandler] Recovered token from Supabase storage:', key);
+                return token;
+            }
+        } catch (error) {
+            // Non-JSON values are ignored.
+        }
+    }
+
+    return null;
+}
+
 // =============================================================================
 // IMMEDIATE FETCH PATCH — runs before React module loads
 // =============================================================================
@@ -38,10 +118,11 @@ function getQueryParam(name) {
     // Store in localStorage for consistency
     localStorage.setItem('summary_state_id', stateId);
 
-    // Read auth token stored by main app before navigation
-    const accessToken = localStorage.getItem('summary_access_token');
+    // Read auth token stored by main app before navigation.
+    // If missing, recover from Supabase session storage.
+    const initialAccessToken = get_summary_access_token();
 
-    console.log('[SummaryStateHandler] Patching fetch BEFORE React loads. state_id:', stateId, 'hasToken:', !!accessToken);
+    console.log('[SummaryStateHandler] Patching fetch BEFORE React loads. state_id:', stateId, 'hasToken:', !!initialAccessToken);
 
     const originalFetch = window.fetch;
 
@@ -59,7 +140,9 @@ function getQueryParam(name) {
 
             console.log('[SummaryStateHandler] Intercepted fetch:', url, '->', newUrl);
 
-            // Inject Authorization header if token is available
+            // Inject Authorization header if token is available.
+            // Re-resolve per request to handle refreshed tokens.
+            const accessToken = get_summary_access_token();
             if (accessToken) {
                 options = options || {};
                 options.headers = options.headers || {};
