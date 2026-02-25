@@ -29,26 +29,28 @@
 
     <input type="hidden" id="lessonTopic" name="lessonTopic" required>
     <div id="lesson-warning-container" class="warning-container" style="display: none;"></div>
-    <div class="carousel-container">
-        <div class="carousel" id="lessonCarousel" role="listbox" aria-label="Lesson topics">
-            {% for topic in lesson_topics %}
-            <div class="carousel-card" role="option" aria-selected="false" tabindex="0" data-topic="{{ topic }}">
-                <div class="selection-seal" aria-hidden="true"></div>
-                <div class="card-face card-front">
-                    <img src="/static/images/lessons/{{ topic }}.jpg" alt="{{ topic }}" class="card-image">
-                </div>
-                <div class="card-face card-back">
-                    <div class="carousel-title">{{ topic }}</div>
-                    <div class="carousel-description">
-                        {% if topic in topic_subtopics and topic_subtopics[topic] %}
-                            Topics include {{ topic_subtopics[topic]|join(', ') }}!
-                        {% else %}
-                            Learn about {{ topic }}!
-                        {% endif %}
+    <div class="carousel-wrapper">
+        <div class="carousel-container">
+            <div class="carousel" id="lessonCarousel" role="listbox" aria-label="Lesson topics">
+                {% for topic in lesson_topics %}
+                <div class="carousel-card" role="option" aria-selected="false" tabindex="0" data-topic="{{ topic }}">
+                    <div class="selection-seal" aria-hidden="true"></div>
+                    <div class="card-face card-front">
+                        <img src="/static/images/lessons/{{ topic }}.jpg" alt="{{ topic }}" class="card-image">
+                    </div>
+                    <div class="card-face card-back">
+                        <div class="carousel-title">{{ topic }}</div>
+                        <div class="carousel-description">
+                            {% if topic in topic_subtopics and topic_subtopics[topic] %}
+                                Topics include {{ topic_subtopics[topic]|join(', ') }}!
+                            {% else %}
+                                Learn about {{ topic }}!
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
         <div class="carousel-nav">
             <button type="button" onclick="window.lessonCarousel.rotate('prev')" aria-label="Previous">
