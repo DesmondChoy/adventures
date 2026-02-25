@@ -7,7 +7,7 @@ import { authManager } from './authManager.js?v=20260225c';
 import { AdventureStateManager } from './adventureStateManager.js?v=20260225c';
 import { WebSocketManager } from './webSocketManager.js?v=20260225c';
 import { stateManager, manageState } from './stateManager.js?v=20260225c';
-import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260225c';
+import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260225e';
 import {
     showError,
     hideLoader,

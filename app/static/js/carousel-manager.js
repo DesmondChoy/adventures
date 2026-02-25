@@ -61,6 +61,10 @@ class Carousel {
     // Calculate dynamic radius based on card count to prevent overlap
     const cardWidth = cards.length > 0 ? cards[0].offsetWidth : 300;
     this.radius = (cardWidth / 2) / Math.tan(Math.PI / this.effectiveCount);
+    // Cap radius on mobile so side cards stay within viewport
+    if (window.innerWidth <= 768) {
+      this.radius = Math.min(this.radius, 160);
+    }
     
     try {
       for (let i = 0; i < cards.length; i++) {
@@ -561,6 +565,10 @@ class Carousel {
       
       // Recalculate radius using the same logic as init() and update instance variable
       this.radius = (cardWidth / 2) / Math.tan(Math.PI / this.effectiveCount);
+      // Cap radius on mobile so side cards stay within viewport
+      if (window.innerWidth <= 768) {
+        this.radius = Math.min(this.radius, 160);
+      }
 
       console.log(`Calculated radius: ${this.radius.toFixed(2)}px`);
 
