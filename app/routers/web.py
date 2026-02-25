@@ -9,6 +9,7 @@ import os
 from typing import Dict, Any, Optional
 from uuid import UUID as UUID_type  # To avoid conflict with uuid.uuid4()
 from app.data.story_loader import StoryLoader
+from app.data.lesson_loader import LessonLoader
 from app.services.state_storage_service import StateStorageService
 from app.auth.dependencies import get_current_user_id_optional, get_current_user_id
 from app.models.story import AdventureState
@@ -184,6 +185,9 @@ async def select_adventure(request: Request):
             else:
                 topic_subtopics[topic] = []
 
+        # Load narrative descriptions for lesson topic carousel cards
+        topic_descriptions = LessonLoader().get_topic_descriptions()
+
         # Get Supabase environment variables
         supabase_url = os.getenv("SUPABASE_URL")
         supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
@@ -197,7 +201,8 @@ async def select_adventure(request: Request):
                 "request": request,
                 "story_categories": story_categories,  # This now contains the complete category data
                 "lesson_topics": lesson_data["topic"].unique(),
-                "topic_subtopics": topic_subtopics,  # Add the topic to subtopics mapping
+                "topic_subtopics": topic_subtopics,
+                "topic_descriptions": topic_descriptions,
                 "supabase_url": supabase_url,
                 "supabase_anon_key": supabase_anon_key,
                 **context,

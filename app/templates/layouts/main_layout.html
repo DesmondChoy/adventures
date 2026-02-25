@@ -147,10 +147,17 @@
     <h1 class="text-4xl font-bold text-center mb-4">
         <a href="/" class="gradient-title hover:text-amber-700 transition-colors duration-200">Learning Odyssey</a>
     </h1>
-    
+
+    <!-- Adventure Context Ribbon (world + topic, shown during chapters) -->
+    <div id="adventureContextRibbon" class="adventure-context-ribbon hidden">
+        Exploring <span id="contextWorldName" class="context-world"></span>
+        <span class="context-separator">&middot;</span>
+        Discovering <span id="contextLessonTopic" class="context-topic"></span>
+    </div>
+
     <div id="introText" class="text-center space-y-2 mb-8">
         <p class="text-xl gradient-text font-medium">Where no two stories are ever the same.</p>
-        <p class="text-gray-600 max-w-2xl mx-auto">Choose your path and learn through engaging, personalized adventures.</p>
+        <p class="text-gray-600 max-w-2xl mx-auto">Fantasy worlds. Real knowledge. You choose both.</p>
         <!-- Debug info - hidden but accessible via console for developers -->
         <div id="debugInfo" class="debug-info" style="display: none;">
             <p><strong>Debug Info:</strong></p>

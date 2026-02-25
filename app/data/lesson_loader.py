@@ -12,7 +12,8 @@ import pandas as pd
 import logging
 import glob
 import csv
-from typing import Optional, List
+import yaml
+from typing import Optional, List, Dict
 
 logger = logging.getLogger("story_app")
 
@@ -252,6 +253,21 @@ class LessonLoader:
         difficulties = df["difficulty"].unique().tolist()
         logger.debug(f"Available difficulties: {difficulties}")
         return difficulties
+
+    def get_topic_descriptions(self) -> Dict[str, str]:
+        """Load narrative descriptions for lesson topics from YAML file.
+
+        Returns:
+            Dictionary mapping topic names to their carousel descriptions
+        """
+        descriptions_path = os.path.join(self._lessons_dir, "topic_descriptions.yaml")
+        try:
+            with open(descriptions_path, "r", encoding="utf-8") as f:
+                descriptions = yaml.safe_load(f)
+            return descriptions or {}
+        except FileNotFoundError:
+            logger.warning(f"Topic descriptions file not found: {descriptions_path}")
+            return {}
 
     def clear_cache(self) -> None:
         """Clear the cached lesson data."""

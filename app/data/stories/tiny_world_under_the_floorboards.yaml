@@ -1,0 +1,53 @@
+name: "Tiny World Under the Floorboards"
+description: "Have you ever wondered what bustles beneath your feet, where tiny creatures build grand civilizations from forgotten buttons and lost pins, thimbles become towers, and every crumb is a feast worth sharing?"
+
+narrative_elements:
+  settings:
+    - "Button-Cap Marketplace: A bustling bazaar built atop a mosaic of mismatched buttons, where tiny merchants trade thread-spools of fabric and bead-jewels under canopies of fallen postage stamps. The market thrives when visitors share generously, but stalls shutter and traders hide when greed poisons the air."
+    - "Thimble Tower Fortress: A towering stronghold constructed from stacked thimbles and reinforced with straightened staples, standing guard at the crossroads of major dust trails. Its needle-point banners fly higher when the community rallies together in courage, but droop and tarnish when fear divides its tiny defenders."
+    - "Matchbox Village: A cozy hamlet of matchbox homes nestled between pipe joints, each dwelling decorated with wallpaper scraps and lit by captured firefly lanterns. The village glows warmest when neighbors help one another, but dims to near darkness when selfishness creeps through its narrow lanes."
+    - "Dust Bunny Forest: A vast, rolling wilderness of tangled lint and dust clusters that shift like living dunes beneath the floorboards. Paths through the forest reveal themselves to those who treat its delicate ecosystem with respect, but close off and swallow the trails of those who trample carelessly through."
+    - "Pipe Tunnel Highways: A sprawling network of copper and lead pipes that serves as the main transit system between settlements, echoing with the rush of distant water and the tap of tiny footsteps. The tunnels widen and brighten for travelers who cooperate and share the road, but grow narrow and treacherous for those who bully others off the path."
+
+  themes:
+    - "Resourcefulness with What You Have: In a world built from cast-off objects, ingenuity transforms the overlooked into the invaluable. Every paperclip bridge and bottle-cap shield reflects the creativity born from making do with what the giants above discard."
+    - "Community Building: No single creature can survive alone beneath the floorboards—survival depends on neighbors who share skills, divide labor, and rally around one another. Choosing to strengthen bonds opens pathways to safety and wonder."
+    - "Seeing Big Value in Small Things: A single breadcrumb can feed a family, a lost sequin can light a hall, and the tiniest act of kindness can ripple across an entire civilization. Learning to see greatness in the miniature reshapes how the world responds."
+    - "Cooperation Across Differences: Beetles, mice, dust sprites, and borrower-folk each bring unique strengths. Stories unfold most richly when characters bridge their differences, pooling talents to overcome obstacles no single group could face alone."
+    - "Stewardship of Fragile Spaces: The world beneath the floorboards is delicate—one careless step can collapse a tunnel, one spill can flood a village. Those who tread thoughtfully and protect shared spaces earn the trust and aid of the community."
+
+  moral_teachings:
+    - "Sharing Limited Resources: When a rare sugar crystal is discovered, choosing to divide it among hungry neighbors may seem costly, but it forges alliances that prove far more valuable than any single treasure hoarded in secret."
+    - "Protecting the Tiny Community: Standing between a frightened matchbox family and a marauding centipede earns the gratitude and loyalty of the settlement, while looking away in cowardice leaves the village vulnerable and its people mistrustful."
+    - "Helping Those Smaller Than You: Even in a miniature world, some creatures are smaller still. Offering aid to a struggling ant colony or a lost dust mite earns unexpected allies, while ignoring their plight may cost you guidance when you need it most."
+    - "Honesty in Trade and Friendship: At the Button-Cap Marketplace, honest dealing builds a reputation that opens doors to rare goods and secret knowledge, but cheating a fellow trader can see you barred from the market when supplies run thin."
+    - "Patience Over Haste: Rushing through the Pipe Tunnel Highways without checking for water surges risks disaster, while those who pause to listen and plan find safe passage and hidden shortcuts revealed by grateful tunnel-keepers."
+
+  plot_twists:
+    - "The Earthquake from Above: Thunderous footsteps of the humans upstairs send shockwaves through the tiny world, collapsing tunnels and scattering settlements. How you have treated your neighbors determines who rushes to help you rebuild—and who turns away."
+    - "The Lost Coin Economy: A fallen coin crashes through a floorboard crack and lands in the marketplace, its gleaming surface becoming the most valuable object in the realm. Whether it unites the community in shared prosperity or tears it apart in greed depends on how leaders choose to manage this sudden wealth."
+    - "The Dragon of the House: The family cat discovers a crack in the floorboards and begins hunting the tiny inhabitants, its enormous eye peering through gaps like a dragon surveying its prey. Past acts of bravery and alliance determine whether the community can mount a coordinated defense or scatters in panic."
+    - "The Forgotten Toys Awaken: Abandoned toys pushed beneath furniture begin to stir with mysterious life, their button eyes blinking and painted smiles shifting. Whether these strange newcomers become allies or rivals depends on how welcoming the existing community has been to outsiders."
+    - "The Great Flood: A burst pipe sends water cascading through the tunnel highways, threatening to wash away everything the tiny civilization has built. Only those who have invested in cooperation and community infrastructure find their homes and friendships strong enough to weather the deluge."
+
+sensory_details:
+  visuals:
+    - "Dust Mote Snowfall: Particles of dust drift through shafts of light like a gentle blizzard, swirling into flurries around moments of excitement and settling peacefully when harmony reigns among the tiny folk."
+    - "Floorboard Crack Sunbeams: Brilliant golden bars of light slice through gaps in the boards above, shifting throughout the day like slow-moving spotlights that the inhabitants use as sundials and gathering places for warmth."
+    - "Dewdrop Mirrors: Tiny beads of condensation cling to pipe joints and nail heads, each one reflecting the miniature world in curved perfection. They glow brighter near acts of compassion, as if capturing and amplifying the light of good intentions."
+    - "Cobweb Bridges: Intricate spans of spider silk stretch between rafters and joists, shimmering with caught moisture and serving as elegant if precarious walkways. They strengthen and multiply where communities cooperate with the web-spinners, but fray and snap where trust has been broken."
+    - "Ember Glow Hearths: Tiny fires kindled inside bottle caps and walnut shells cast warm, flickering light across matchbox doorways, their glow reaching further into the darkness when families gather together in shared celebration."
+
+  sounds:
+    - "Thunder Footsteps: The humans walking above produce deep, rolling booms that shake dust from the rafters and rattle thimble towers, a constant reminder of the vast, unknowing world that looms overhead."
+    - "Dripping Pipe Percussion: Water droplets falling at steady intervals from pipe joints create a rhythmic backdrop, their tempo quickening before a surge and slowing to a calming beat during peaceful stretches."
+    - "Scratching Mice Warnings: The scritch-scratch of mouse claws on wood serves as both alarm and communication, growing frantic when danger approaches and settling to a gentle patter when scouts signal that all is clear."
+    - "Creaking Board Whispers: The floorboards groan and shift with temperature changes, producing low moans that the tiny folk have learned to read like weather forecasts, predicting safe travel times and periods of dangerous movement above."
+    - "Pin-Drop Chimes: Lost sewing pins and paper clips, strung on thread between rafters, tinkle in the faint drafts that flow beneath the floor, creating delicate wind chimes whose melodies shift with the mood of the community."
+
+  smells:
+    - "Ancient Wood Musk: The deep, earthy scent of old timber surrounds everything beneath the floorboards, growing richer and more comforting in well-tended areas where the tiny folk polish and care for their wooden world."
+    - "Dusty Attic Air: A dry, powdery fragrance hangs in the still corners of the under-floor realm, tickling noses and carrying faint traces of forgotten things—old letters, dried flowers, and memories pressed between the boards."
+    - "Crumb Feast Aromas: The scent of fallen breadcrumbs, cake fragments, and spilled sugar drifts down through the cracks, filling the tiny world with tantalizing bakery smells that draw communities together for shared meals and celebrations."
+    - "Candle Wax Warmth: Melted wax from birthday candles and holiday tapers seeps between floorboards, lending a sweet, honeyed fragrance to the tunnels below and providing raw material for the tiny folk's own miniature candles."
+    - "Soap Sud Freshness: When the humans above mop the floors, a clean, floral-tinged mist filters through the cracks, filling the tiny world with a bracing freshness that signals both renewal and the brief danger of slippery surfaces."

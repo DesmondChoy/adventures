@@ -26,8 +26,9 @@ import {
     goToLessonTopicScreen,
     goBackToCategoryScreen,
     startAdventure,
-    initializeLoaderRetryButton
-} from './uiManager.js?v=20260221a';
+    initializeLoaderRetryButton,
+    updateAdventureContextRibbon
+} from './uiManager.js?v=20260225a';
 
 // Global application state
 // Guard against re-initialization if module is re-imported
@@ -217,6 +218,11 @@ export async function viewAdventureSummary() {
                     // Use the state_id from the WebSocket response
                     const stateId = data.state_id;
 
+                    // Store auth token for summary page (separate React app needs it for API calls)
+                    if (authManager.accessToken) {
+                        localStorage.setItem('summary_access_token', authManager.accessToken);
+                    }
+
                     // Navigate to the summary page with this state_id
                     window.location.href = `/adventure/summary?state_id=${stateId}`;
                 }
@@ -394,6 +400,7 @@ async function initialize() {
 
             setSelectedCategory(savedState.storyCategory);
             setSelectedLessonTopic(savedState.lessonTopic);
+            updateAdventureContextRibbon(savedState.storyCategory, savedState.lessonTopic);
 
             const storyCatEl = document.getElementById('storyCategory');
             const lessonTopicEl = document.getElementById('lessonTopic');

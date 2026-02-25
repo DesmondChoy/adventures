@@ -1,0 +1,53 @@
+name: "Dream Library of Lost Stories"
+description: "Have you ever wondered what happens to stories that are forgotten—could you brave an infinite magical library where lost tales whisper from the shelves, books become portals to other worlds, and every page you turn reshapes the boundaries of imagination itself?"
+
+narrative_elements:
+  settings:
+    - "Infinite Reading Hall: A cathedral-sized chamber lined with bookshelves that stretch endlessly upward into starlit darkness. The shelves rearrange themselves to reward curious readers who treat books with reverence, while slamming shut against those who would misuse the knowledge within."
+    - "Whispering Archives: A labyrinth of towering scroll racks and card catalogues where half-finished stories murmur their forgotten endings. The whispers grow clearer and more helpful for those who listen with empathy, but dissolve into confusing riddles for those who demand answers without patience."
+    - "Ink River Delta: A winding underground river of luminous ink that flows beneath the library's foundations, carrying fragments of dissolved stories to new destinations. The ink responds to the reader's intentions—forming stepping stones for the compassionate and whirlpools for the greedy."
+    - "Living Storybook Garden: An indoor courtyard where illustrations have grown into real plants and creatures, each one escaped from a beloved tale. The garden flourishes when visitors share stories of their own, but wilts and retreats behind thorny hedges when confronted with dishonesty or indifference."
+    - "Constellation Map Room: A domed observatory at the library's highest tower where star charts are drawn in floating ink and each constellation represents a genre of lost literature. The maps reveal hidden connections between stories for those who approach with wonder, but the stars scatter into chaos for those driven by selfish ambition."
+
+  themes:
+    - "The Power of Stories: Every narrative carries weight in this world—stories can heal wounds, bridge divides, and reshape reality itself. The choices readers make about which tales to preserve or abandon ripple outward, affecting the library and all who dwell within it."
+    - "Preserving Knowledge: Ancient texts hold wisdom that future generations need, but knowledge left unshared withers like unwatered roots. The library tests whether readers will hoard rare discoveries for personal gain or spread understanding to those who need it most."
+    - "Imagination as Magic: In the Dream Library, the boundary between thought and reality is parchment-thin. Creative thinking can conjure solutions where none existed, while a closed mind finds only locked doors and blank pages in every corridor."
+    - "Empathy Through Reading Others' Tales: Stepping into another character's story grants profound understanding of perspectives unlike your own. Those who read with open hearts gain allies and insight, while those who dismiss unfamiliar narratives find the library's paths growing narrow and unwelcoming."
+    - "Legacy and Remembrance: Every story forgotten diminishes the world, and every story remembered strengthens it. The library challenges readers to decide which legacies deserve preservation and whether a flawed tale still holds value worth fighting for."
+
+  moral_teachings:
+    - "Using Stories Wisely: Discovering a powerful tale that could influence others presents a choice—wield it to manipulate or to illuminate. Sharing a story's truth with care earns the library's deepest trust, while twisting narratives for personal advantage causes the ink to rebel and rewrite your path."
+    - "Sharing Knowledge Freely: A rare book found in the archives could be kept as a personal treasure or offered to a struggling story-character in need. Generosity unlocks hidden chapters and secret rooms, while hoarding causes the shelves to seal themselves away one by one."
+    - "Rewriting Endings Responsibly: The library grants the power to alter how forgotten stories conclude, but every change carries consequences. Rewriting with compassion can redeem a tragic character, while careless edits unravel neighboring tales and destabilize the archive's fragile balance."
+    - "Truth Versus Fiction: When a charming but dishonest story-character offers a too-good-to-be-true bargain, discerning truth from fabrication becomes essential. Choosing honesty over comfortable illusions strengthens the library's foundations, while embracing convenient lies causes cracks to spread through the shelves."
+    - "Respecting Authorship: Finding another's unfinished manuscript tempts the reader to claim credit or complete it without permission. Honoring the original author's voice earns the guidance of the library's oldest guardians, while taking credit awakens protective enchantments that complicate the journey ahead."
+
+  plot_twists:
+    - "The Escaped Protagonist: A beloved character from a crumbling storybook breaks free from their pages and wanders the library corridors, desperate for a new ending. Whether they become your greatest ally or a formidable obstacle depends on how you've treated the stories you've encountered so far."
+    - "The Living Library: The library itself reveals that it is a sentient being—a vast consciousness woven from every story ever written within its walls. Its mood and helpfulness shift based on the reader's accumulated choices, offering sanctuary to the respectful and bewildering mazes to the careless."
+    - "The Lost Chapter Resurfaces: A missing chapter from the library's founding tale suddenly reappears, containing revelations that recontextualize everything you thought you knew about the archive. The chapter's contents change depending on the moral path you've walked, presenting redemption or reckoning."
+    - "The Reader Becomes the Story: Without warning, the boundary between reader and narrative dissolves—you discover that you have become a character in a tale being read by someone else in a distant wing of the library. Your earlier choices now form the plot that this unknown reader is judging."
+    - "The Rival Librarian: A mysterious figure who has been shelving books in your path reveals themselves as a former reader who became trapped in the library centuries ago. Their offer of alliance or opposition hinges on whether your journey has been one of preservation or exploitation."
+
+sensory_details:
+  visuals:
+    - "Floating Book Processions: Open volumes drift through the air in slow, stately columns, their pages fluttering like wings. They gravitate toward readers who show genuine curiosity, forming orbiting constellations of knowledge around those who treat the library with reverence."
+    - "Ink-to-Illustration Blooms: Spilled ink on any surface rapidly transforms into vivid, animated illustrations that depict scenes from nearby stories. The images grow more detailed and beautiful in response to compassionate choices, but smear into dark blots when driven by selfish intent."
+    - "Glowing Page Edges: The gilded edges of certain ancient books emit a warm, pulsing light that intensifies when important truths are spoken nearby. They serve as beacons guiding honest seekers through the library's deeper chambers, dimming to darkness for those who spread falsehoods."
+    - "Shifting Bookshelves: Entire walls of shelving slowly rotate, slide, and rearrange themselves like a vast living puzzle. The shelves open welcoming pathways for those who have shared knowledge freely, but close into impenetrable barriers against those who have hoarded what they've found."
+    - "Margin Annotations Coming Alive: Handwritten notes in the margins of old texts peel themselves from the page and dance in the air as tiny luminous figures. They act out warnings or encouragements based on the reader's recent moral choices, performing silent pantomimes of possible futures."
+
+  sounds:
+    - "Turning Pages Echo: A soft, rhythmic rustling like hundreds of pages turning in unison echoes through the halls whenever a reader makes a meaningful choice, as though the entire library is updating its records in response to your journey."
+    - "Whispering Story Voices: Half-heard narrations drift from between the shelves—fragments of forgotten tales seeking someone to listen. The whispers coalesce into coherent guidance for patient, empathetic listeners, but scatter into unintelligible babble for those who refuse to pay attention."
+    - "Ink Dripping Cadence: A steady, musical dripping from the ceiling where ink seeps through from stories being written above. The rhythm quickens with anticipation when adventure is near and slows to a contemplative pace during moments of reflection."
+    - "Distant Narrator Voices: Deep, resonant voices recite passages from far-off wings of the library, their tone shifting from warm encouragement to stern warning depending on the moral weight of your recent decisions."
+    - "Binding Spine Crackle: The satisfying creak of old book spines opening for the first time in centuries, a sound that carries gratitude when a forgotten story is finally read again and a mournful groan when a book is handled roughly or dismissed."
+
+  smells:
+    - "Old Parchment Musk: A rich, comforting scent of aged paper and dried vellum that permeates every corridor. It deepens into a warm, inviting fragrance when stories are treated with respect, encouraging the reader to linger and explore further."
+    - "Fresh Ink Sweetness: A bright, slightly tangy aroma that rises whenever new words are being written somewhere in the library. It intensifies around moments of creative inspiration and honest expression, filling the air with possibility."
+    - "Leather Binding Warmth: The deep, earthy scent of well-oiled leather covers that grows stronger near the library's oldest and most treasured volumes. It wraps around readers who show reverence for the past, offering a sense of comfort and belonging."
+    - "Candle Wax and Lamplight: A gentle, honeyed fragrance from the countless tapers illuminating reading nooks and study alcoves. The scent brightens when knowledge is shared openly and dims to a faint, smoky trace when secrets are kept selfishly."
+    - "Dusty Page Nostalgia: A faintly sweet, powdery scent that rises from long-unopened books, carrying with it fleeting impressions of the stories within. It evokes a bittersweet longing that deepens when forgotten tales are rediscovered, reminding readers that every story deserves to be remembered."

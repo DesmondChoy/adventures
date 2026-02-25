@@ -13,25 +13,27 @@
     </div>
 
     <h2 class="text-xl font-semibold text-gray-900">Choose your world</h2>
-    <p class="text-sm text-gray-600 mt-1">Pick a world to shape the tone and setting of your adventure.</p>
+    <p class="text-sm text-gray-600 mt-1">Each realm has its own magic, secrets, and surprises.</p>
 
     <input type="hidden" id="storyCategory" name="storyCategory" required>
     <div class="swipe-tip">Swipe to explore <span class="hand">➜</span></div>
     <div id="category-warning-container" class="warning-container" style="display: none;"></div>
-    <div class="carousel-container">
-        <div class="carousel" id="categoryCarousel" role="listbox" aria-label="Story worlds">
-            {% for category_id, category_data in story_categories.items() %}
-            <div class="carousel-card" role="option" aria-selected="false" tabindex="0" data-category="{{ category_id }}">
-                <div class="selection-seal" aria-hidden="true"></div>
-                <div class="card-face card-front">
-                    <img src="/static/images/stories/{{ category_id }}.jpg" alt="{{ category_data.name }}" class="card-image">
+    <div class="carousel-wrapper">
+        <div class="carousel-container">
+            <div class="carousel" id="categoryCarousel" role="listbox" aria-label="Story worlds">
+                {% for category_id, category_data in story_categories.items() %}
+                <div class="carousel-card" role="option" aria-selected="false" tabindex="0" data-category="{{ category_id }}">
+                    <div class="selection-seal" aria-hidden="true"></div>
+                    <div class="card-face card-front">
+                        <img src="/static/images/stories/{{ category_id }}.jpg" alt="{{ category_data.name }}" class="card-image">
+                    </div>
+                    <div class="card-face card-back">
+                        <div class="carousel-title">{{ category_data.name }}</div>
+                        <div class="carousel-description">{{ category_data.description }}</div>
+                    </div>
                 </div>
-                <div class="card-face card-back">
-                    <div class="carousel-title">{{ category_data.name }}</div>
-                    <div class="carousel-description">{{ category_data.description }}</div>
-                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
         <div class="carousel-nav">
             <button type="button" onclick="window.categoryCarousel.rotate('prev')" aria-label="Previous">
