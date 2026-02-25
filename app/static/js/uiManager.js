@@ -481,6 +481,27 @@ export function updateProgress(currentChapter, totalChapters) {
 }
 
 /**
+ * Update the adventure context ribbon with world and topic names.
+ * Called on new adventure start and on resume (adventure_loaded).
+ */
+export function updateAdventureContextRibbon(worldName, lessonTopic) {
+    const ribbon = document.getElementById('adventureContextRibbon');
+    const worldEl = document.getElementById('contextWorldName');
+    const topicEl = document.getElementById('contextLessonTopic');
+    if (!ribbon || !worldEl || !topicEl) return;
+
+    if (worldName && lessonTopic) {
+        worldEl.textContent = toTitleCase(worldName);
+        topicEl.textContent = toTitleCase(lessonTopic);
+        ribbon.classList.remove('hidden');
+        // Trigger fade-in on next frame
+        requestAnimationFrame(() => {
+            ribbon.classList.add('visible');
+        });
+    }
+}
+
+/**
  * Set the chapter display to show "Starting adventure..." state
  * Called when loader is shown but chapter hasn't started yet
  */
@@ -634,6 +655,7 @@ export async function startAdventure() {
     }
 
     showLoader(); // Show loader early as API calls are made
+    updateAdventureContextRibbon(selectedCategory, selectedLessonTopic);
 
     const authManager = window.appState?.authManager;
     const isAnonymous = authManager?.user?.is_anonymous === true;
@@ -1392,6 +1414,9 @@ export async function handleMessage(event) {
             // Without this, localStorage is empty after modal resume, causing initWebSocket() to not be called
             // Only do this if localStorage doesn't already have valid state (avoid overwriting real chapter data)
             if (data.type === 'adventure_loaded' && data.story_category && data.lesson_topic) {
+                // Update adventure context ribbon for resumed adventures
+                updateAdventureContextRibbon(data.story_category, data.lesson_topic);
+
                 const existingState = stateManager.loadState();
                 const hasValidState = existingState?.chapters?.length > 0 &&
                                       existingState?.storyCategory &&

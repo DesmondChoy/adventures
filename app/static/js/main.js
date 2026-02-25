@@ -26,8 +26,9 @@ import {
     goToLessonTopicScreen,
     goBackToCategoryScreen,
     startAdventure,
-    initializeLoaderRetryButton
-} from './uiManager.js?v=20260221a';
+    initializeLoaderRetryButton,
+    updateAdventureContextRibbon
+} from './uiManager.js?v=20260225a';
 
 // Global application state
 // Guard against re-initialization if module is re-imported
@@ -399,6 +400,7 @@ async function initialize() {
 
             setSelectedCategory(savedState.storyCategory);
             setSelectedLessonTopic(savedState.lessonTopic);
+            updateAdventureContextRibbon(savedState.storyCategory, savedState.lessonTopic);
 
             const storyCatEl = document.getElementById('storyCategory');
             const lessonTopicEl = document.getElementById('lessonTopic');
