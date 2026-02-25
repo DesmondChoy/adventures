@@ -613,8 +613,41 @@ async def story_websocket(
                         await websocket.close(code=1001)
                         return
                 else:
-                    await state_manager.update_state_from_client(validated_state)
-                    state = state_manager.get_current_state()
+                    is_reveal_summary_choice = False
+                    if isinstance(choice_data, str):
+                        is_reveal_summary_choice = (
+                            choice_data.lower() == "reveal_summary"
+                        )
+                    elif isinstance(choice_data, dict):
+                        choice_id = (
+                            choice_data.get("id")
+                            or choice_data.get("chosen_path")
+                            or choice_data.get("choice")
+                        )
+                        if isinstance(choice_id, str):
+                            is_reveal_summary_choice = (
+                                choice_id.lower() == "reveal_summary"
+                            )
+
+                    # Use server-authoritative state for summary reveal to avoid stale
+                    # client localStorage state overwriting the latest CONCLUSION state.
+                    if is_reveal_summary_choice:
+                        logger.info(
+                            "Skipping client state overwrite for reveal_summary",
+                            extra={
+                                "adventure_id": connection_data.get("adventure_id"),
+                                "server_chapters": len(current_state.chapters)
+                                if current_state
+                                else 0,
+                                "client_chapters": len(validated_state.get("chapters", []))
+                                if isinstance(validated_state, dict)
+                                else 0,
+                            },
+                        )
+                        state = current_state
+                    else:
+                        await state_manager.update_state_from_client(validated_state)
+                        state = state_manager.get_current_state()
 
                 if state is None:
                     logger.error("State is None after initialization/update.")
