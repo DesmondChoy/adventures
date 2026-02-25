@@ -12,7 +12,7 @@
 function getQueryParam(name) {
     const urlParams = new URLSearchParams(window.location.search);
     const values = urlParams.getAll(name);
-    return values.length > 0 ? values[0] : null;
+    return values.length > 0 ? values[0].trim() : null;
 }
 
 // =============================================================================

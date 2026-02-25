@@ -1397,6 +1397,16 @@ export async function handleMessage(event) {
         } else if (data.type === 'summary_ready') {
             // Use the state_id from the WebSocket response
             const stateId = data.state_id;
+            if (stateId) {
+                localStorage.setItem('summary_state_id', stateId);
+            }
+
+            // Fallback token handoff: if summary_ready is handled here (instead of main.js
+            // temporary handler), ensure the summary page still has auth for protected fetches.
+            const accessToken = window.appState?.authManager?.accessToken;
+            if (accessToken) {
+                localStorage.setItem('summary_access_token', accessToken);
+            }
             
             // Navigate to the summary page with this state_id
             window.location.href = `/adventure/summary?state_id=${stateId}`;

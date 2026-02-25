@@ -3,11 +3,11 @@
  * Entry point for the client-side application, handles initialization and coordination
  */
 
-import { authManager } from './authManager.js?v=20260225b';
-import { AdventureStateManager } from './adventureStateManager.js?v=20260225b';
-import { WebSocketManager } from './webSocketManager.js?v=20260225b';
-import { stateManager, manageState } from './stateManager.js?v=20260225b';
-import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260225b';
+import { authManager } from './authManager.js?v=20260225c';
+import { AdventureStateManager } from './adventureStateManager.js?v=20260225c';
+import { WebSocketManager } from './webSocketManager.js?v=20260225c';
+import { stateManager, manageState } from './stateManager.js?v=20260225c';
+import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260225c';
 import {
     showError,
     hideLoader,
@@ -28,7 +28,7 @@ import {
     startAdventure,
     initializeLoaderRetryButton,
     updateAdventureContextRibbon
-} from './uiManager.js?v=20260225b';
+} from './uiManager.js?v=20260225c';
 
 // Global application state
 // Guard against re-initialization if module is re-imported
@@ -179,19 +179,19 @@ export async function viewAdventureSummary() {
 
     // Set up timeout for WebSocket response
     timeoutId = setTimeout(() => {
-        console.error('WebSocket timeout: No summary_ready response received within 8 seconds');
+        console.error('WebSocket timeout: No summary_ready response received within 20 seconds');
         timeoutId = null;
 
-        // Restore original handler
+        // Restore original handler to avoid stacking nested temporary handlers.
+        // Late summary_ready events are still handled safely by uiManager.js.
         if (originalOnMessage) {
             window.appState.storyWebSocket.onmessage = originalOnMessage;
         }
 
         if (!hasRedirected) {
-            showError('Summary generation timed out. Please try again.');
-            hideLoader();
+            showError('Summary generation is taking longer than usual. Still trying...');
         }
-    }, 8000); // Increased to 8 seconds for reliability
+    }, 20000); // Allow slower summary generation without breaking auth/token handoff
 
     // Override ONLY the onmessage handler temporarily
     window.appState.storyWebSocket.onmessage = function (event) {
@@ -217,6 +217,9 @@ export async function viewAdventureSummary() {
 
                     // Use the state_id from the WebSocket response
                     const stateId = data.state_id;
+                    if (stateId) {
+                        localStorage.setItem('summary_state_id', stateId);
+                    }
 
                     // Store auth token for summary page (separate React app needs it for API calls)
                     if (authManager.accessToken) {
