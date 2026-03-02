@@ -59,18 +59,19 @@
 @media (max-width: 768px) {
     .carousel-container {
         width: 260px;
-        height: 250px; /* reduce overall block height to pull button closer */
+        height: 300px; /* add headroom so selected seal and card are not clipped */
         perspective: 1500px;
-        margin: 32px auto 0; /* minimal bottom whitespace */
-        padding: 8px 12px 2px; /* minimal internal spacing */
+        margin: 32px auto 4px;
+        padding: 12px 12px 8px;
         overflow: hidden; /* clip side cards that extend beyond container */
     }
     
     .carousel-container.warning-active {
         margin-top: 60px !important;
     }
-    /* tighten space between carousel and the green button on mobile */
-    #storyCategoryScreen .mt-4 { margin-top: -12px !important; }
+    /* keep action button visually close after increasing carousel headroom */
+    #storyCategoryScreen .mt-4,
+    #lessonTopicScreen .mt-4 { margin-top: -8px !important; }
 }
 
 .carousel {
@@ -88,7 +89,7 @@
 
 @media (max-width: 768px) {
     .carousel {
-        height: 240px; /* match reduced container height */
+        height: 240px; /* retain stable card centering with added container headroom */
         /* inherit default centering (top: 50%) */
     }
 }
@@ -257,13 +258,37 @@
     .selection-seal {
         width: 36px;
         height: 36px;
-        top: -6px;
-        right: -6px;
+        top: 4px;
+        right: 0;
+        transform: translateZ(30px) rotate(-15deg);
     }
     .selection-seal::after {
         width: 10px;
         height: 16px;
         border-width: 0 3px 3px 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .carousel-card.selected .selection-seal {
+        animation: sealStampMobile 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+}
+
+@keyframes sealStampMobile {
+    0% {
+        transform: translateZ(30px) rotate(-15deg) scale(0.3);
+        opacity: 0;
+    }
+    50% {
+        transform: translateZ(30px) rotate(-15deg) scale(1.08);
+    }
+    70% {
+        transform: translateZ(30px) rotate(-15deg) scale(0.96);
+    }
+    100% {
+        transform: translateZ(30px) rotate(-15deg) scale(1);
+        opacity: 1;
     }
 }
 
