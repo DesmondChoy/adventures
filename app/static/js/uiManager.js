@@ -4,7 +4,7 @@
  */
 
 import { stateManager, manageState } from './stateManager.js';
-import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js';
+import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260302a';
 import { withCurrentModuleVersion } from './moduleVersion.js';
 
 function withModuleVersion(modulePath) {

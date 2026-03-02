@@ -1,5 +1,13 @@
 {
+  "name": "coya_app_2025",
+  "scripts": {
+    "test:visual:carousel": "playwright test tests/playwright/carousel-visual.spec.ts",
+    "test:visual:carousel:update": "playwright test tests/playwright/carousel-visual.spec.ts --update-snapshots"
+  },
   "dependencies": {
     "supabase": "^2.20.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1"
   }
 }

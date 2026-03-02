@@ -56,3 +56,5 @@ node_modules/
 .gemini-clipboard/
 
 .playwright-mcp/
+playwright-report/
+test-results/
