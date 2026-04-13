@@ -1,100 +1,121 @@
 # Chapter Summary Generator
 
-A utility script for generating consistent chapter summaries for all chapters in a Learning Odyssey adventure.
+`generate_chapter_summaries.py` reads a saved
+`logs/simulations/simulation_state_*.json` file and produces chapter summaries
+using the same summary-generation path across all chapter types. It can also
+emit a React-compatible payload for the summary front-end.
 
-## Overview
+This script works from simulation state JSON files, not from raw log files.
 
-The Chapter Summary Generator extracts chapter content from simulation log files and generates summaries for all chapters using the same prompt template and approach. This ensures consistency across all chapter summaries, including the CONCLUSION chapter.
+## Inputs
 
-## Features
+The script accepts either:
 
-- Extracts chapter content from simulation log files
-- Generates summaries using the same prompt template for all chapters
-- Uses the same function to generate summaries for all chapters (no special cases)
-- Handles missing chapters gracefully by continuing to process available chapters
-- Provides both standard and compact output formats
-- Supports skipping JSON file creation with `--no-json` flag
-- Includes detailed error handling and logging
+- an explicit `simulation_state_*.json` path
+- no positional argument, in which case it automatically picks the latest
+  `simulation_state_*.json` file from `logs/simulations/`
+
+The state files are normally created by
+`tests/simulations/generate_all_chapters.py`.
 
 ## Usage
 
 ```bash
-# Using the latest simulation log file
-python tests/simulations/generate_chapter_summaries.py
-
-# Specifying a particular log file
-python tests/simulations/generate_chapter_summaries.py logs/simulations/simulation_2025-03-17_12345678.log
-
-# Using compact output format
+# Use the latest simulation state file and print concise output
 python tests/simulations/generate_chapter_summaries.py --compact
 
-# Save to JSON file (by default, no JSON is saved)
-python tests/simulations/generate_chapter_summaries.py --save-json
+# Use a specific simulation state file
+python tests/simulations/generate_chapter_summaries.py \
+  logs/simulations/simulation_state_2026-04-14_12:34_abcd1234.json
 
-# Combining options
-python tests/simulations/generate_chapter_summaries.py --compact --save-json
+# Save the chapter-summary JSON payload
+python tests/simulations/generate_chapter_summaries.py \
+  --save-json \
+  --output chapter_summaries.json
+
+# Generate React-compatible summary data without writing a file
+python tests/simulations/generate_chapter_summaries.py --react-json
+
+# Generate React-compatible summary data and save it to disk
+python tests/simulations/generate_chapter_summaries.py \
+  --react-json \
+  --react-output tests/summary_data.json
+
+# Slow down LLM calls between chapters
+python tests/simulations/generate_chapter_summaries.py \
+  --delay 1.0 \
+  --compact
 ```
 
-## Output Formats
+## Options
 
-### Standard Format
+- `state_file`: optional path to a simulation state JSON file
+- `--output OUTPUT`: output path for saved chapter-summary JSON
+  (default: `chapter_summaries.json`)
+- `--save-json`: writes the chapter-summary JSON file
+- `--compact`: prints one concise block per chapter
+- `--delay DELAY`: pause between chapter requests in seconds
+  (default: `2.0`)
+- `--react-json`: generates React-compatible summary data instead of the raw
+  chapter-summary list
+- `--react-output REACT_OUTPUT`: optional output path for the React-compatible
+  JSON payload
 
-The standard output format includes detailed formatting with headers and separators:
+## Output Behavior
 
-```
-================================================================================
-CHAPTER SUMMARIES
-================================================================================
+### Default mode
 
-Chapter 1 (STORY):
-[Summary text for chapter 1]
-----------------------------------------
+Without `--save-json` or `--react-json`, the script prints generated summaries
+to the console and does not write a file.
 
-Chapter 2 (LESSON):
-[Summary text for chapter 2]
-----------------------------------------
+### Saved chapter-summary JSON
 
-... and so on
-```
+When `--save-json` is provided, the script writes a list of chapter summary
+objects to `--output`. Each object contains:
 
-### Compact Format
+- `chapter_number`
+- `chapter_type`
+- `title`
+- `summary`
 
-The compact output format provides a more concise display with one line per chapter:
+### React-compatible summary JSON
 
-```
-CHAPTER SUMMARIES
+When `--react-json` is provided, the script returns the shape expected by the
+summary front-end, including:
 
-CHAPTER 1 (STORY): [Summary text for chapter 1]
-CHAPTER 2 (LESSON): [Summary text for chapter 2]
-...
-```
+- `chapterSummaries`
+- `educationalQuestions`
+- `statistics`
 
-## Error Handling
+If `--react-output` is also provided, that payload is written to disk.
 
-The script includes robust error handling that allows it to continue processing even if some chapters are missing from the log file. If a chapter is not found, the script will:
+## Typical Workflow
 
-1. Log a warning message
-2. Skip the missing chapter
-3. Continue processing the remaining chapters
-4. Display summaries for all successfully processed chapters
-5. Save summaries to JSON file only if explicitly requested with `--save-json`
+1. Generate a full simulation state:
 
-This makes the script more resilient when working with incomplete simulation logs.
+   ```bash
+   python tests/simulations/generate_all_chapters.py
+   ```
 
-## Implementation Details
+2. Turn that state into summary data:
 
-- Uses direct API call to Gemini with fallback to streaming approach
-- Implements retry logic with exponential backoff for reliability
-- Standardizes summary generation across all chapter types
-- Maintains consistent parameters for all chapters
-- Provides detailed logging for debugging and monitoring
+   ```bash
+   python tests/simulations/generate_chapter_summaries.py \
+     --react-json \
+     --react-output tests/summary_data.json
+   ```
 
-## Integration with Other Tools
+3. Preview the summary UI against that data:
 
-This script complements the existing simulation tools:
+   ```bash
+   python tests/test_summary_chapter.py \
+     --state-file logs/simulations/simulation_state_<timestamp>_<run_id>.json
+   ```
 
-- `run_simulation_tests.py`: Runs simulations and generates log files
-- `show_summary_from_log.py`: Displays the summary chapter from a log file
-- `story_simulation.py`: Core simulation logic
+## Notes
 
-The Chapter Summary Generator provides a way to generate consistent summaries for all chapters, which can be useful for testing and debugging the summary chapter functionality.
+- The script uses the same summary-generation path for story, lesson, reflect,
+  and conclusion chapters.
+- Missing chapter content is skipped rather than aborting the entire run.
+- React payload generation is useful when debugging the front-end summary page
+  without replaying a whole adventure in the browser.
