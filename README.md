@@ -1,219 +1,295 @@
-# Learning Odyssey: Where Adventure Ignites Lifelong Learning
+# Learning Odyssey
 
-**Learning Odyssey is revolutionizing education by merging the immersive power of AI-driven storytelling with deeply personalized learning.** We create uniquely engaging experiences for children that traditional methods can't match, tackling the critical challenge of student disengagement and fostering a genuine love for knowledge through compelling narrative arcs and reflective learning.
+Learning Odyssey is an educational adventure platform built with FastAPI,
+WebSockets, Supabase, and Gemini models. It delivers 10-chapter,
+story-driven learning sessions where players choose a story world and a
+lesson topic, make an agency choice in the opening chapter, answer lesson
+questions, revisit ideas in reflect chapters, and finish with a dedicated
+summary experience.
 
-🚀 **[Try it live!](https://learning-odyssey.up.railway.app/)**
+## Current Experience
 
-## Your Epic Journey Starts Here: How It Works
+- Storybook-style landing page with Google sign-in and guest access.
+- Responsive 3D carousels for story-world and lesson-topic selection, with
+  Playwright screenshot coverage for desktop and mobile layouts.
+- A fixed 10-chapter adventure structure managed by `AdventureState`,
+  covering story, lesson, reflect, and conclusion chapters, followed by a
+  separate summary page.
+- An agency system introduced in chapter 1 and carried through the story,
+  reflect chapters, and conclusion.
+- AI-generated text, image prompts, and chapter illustrations with tracked
+  character and agency visuals.
+- Resume and abandon flows for authenticated and guest adventures backed by
+  Supabase persistence.
+- A gameplay context ribbon that keeps the active story world and lesson
+  topic visible.
+- A loading overlay with 45 rotating phrases served by
+  `/api/loading-phrases`.
+- A once-per-user feedback prompt after chapter 5, with optional follow-up
+  contact collection for guest users who leave negative feedback.
+- A standalone summary application served under `/adventure/summary`,
+  including a chapter timeline, question review, and telemetry-based
+  time-spent stats.
 
-Imagine an education that feels like your favorite adventure game, complete with rising action, pivotal choices, and a satisfying resolution. That's Learning Odyssey.
+## Architecture
 
-1.  **Launch Your Quest:** Choose a captivating story world – from mystical forests to ancient mountains – and select an educational topic you're curious about, like the wonders of the human body or the secrets of farm animals.
-2.  **Define Your Destiny:** Early in your adventure, you'll make a pivotal **Agency** choice. Will you wield a unique magical artifact, gain a loyal fantastical companion, master an extraordinary skill, or step into a heroic role? This choice becomes your signature, evolving with you and unlocking new possibilities as your story unfolds.
-3.  **Shape Your Story:** Your decisions are the compass guiding your narrative. Every choice you make, every challenge you overcome, directly influences the path ahead as the **plot deepens, leading to unique turning points, a thrilling climax, and a satisfying conclusion** to your unique tale.
-4.  **Learn Without Limits:** Educational concepts are seamlessly woven into the fabric of your adventure. Characters you meet will spark your curiosity, and challenges will test your knowledge in fun, interactive ways. The journey includes **dedicated REFLECT chapters, prompting deeper thought** on what you've learned.
-5.  **See Your World Come Alive:** AI-generated images bring characters, breathtaking scenes, and your evolving Agency to life with stunning, consistent visuals that adapt to your story.
-6.  **Adventure on Your Terms:** Life is an adventure too! Pause your quest at any time and resume your learning journey whenever you're ready, with all your progress saved.
-7.  **Save Your Saga & Track Your Triumphs:** With optional user accounts (Google or Guest), you can securely save your unique adventures and pick up right where you left off. Never lose your progress on an epic quest!
-8.  **Celebrate Your Achievements:** Conclude your epic journey with a personalized adventure summary, recapping your unique story, choices, and the knowledge you've gained.
+- Backend: FastAPI routes in `app/routers/` handle the landing flow,
+  WebSocket gameplay, summary APIs, and feedback APIs.
+- Adventure orchestration: `AdventureStateManager`, `ChapterManager`, and
+  `StateStorageService` manage flow, persistence, reconstruction, and
+  server-authoritative state handling. `AdventureState` is the single source
+  of truth.
+- AI services: `app/services/llm/` routes complex generation work to Gemini
+  Flash and lighter work such as summaries, prompt synthesis, and formatting
+  to Flash Lite through `LLMServiceFactory`.
+- Frontend: Jinja templates and modular ES modules drive login, selection,
+  live chapter streaming, resume modals, context ribbon, and feedback UX.
+  The summary page is served as a separate built bundle from
+  `app/static/summary-chapter/`.
+- Persistence and analytics: Supabase stores adventures, telemetry events,
+  and user feedback. Telemetry powers summary statistics, and the optional
+  `feedback-notify` Edge Function can send feedback emails through Resend.
+- Testing: pytest covers backend services and data loaders, simulation
+  scripts exercise the WebSocket flow end-to-end, and Playwright guards the
+  carousel UI on desktop and mobile.
 
-## Why Learning Odyssey? The Difference We Make.
+## Content Library
 
-Learning Odyssey isn't just another educational app; it's a thoughtfully engineered platform designed for impact:
+### Story worlds
 
-*   **Deep Engagement Through Agency & Narrative:** We combat passive learning by empowering users. Children actively shape their narrative – experiencing a story that builds suspense and resolves meaningfully – fostering ownership and sustained interest.
-*   **Scalable, Dynamic, Personalized Content:** Our advanced AI narrative engine ensures that **virtually no two adventures are ever the same.** By dynamically generating story paths, character interactions, and visual elements based on user choices and their evolving Agency, we deliver unparalleled personalization and replayability at scale – a true breakthrough in interactive learning.
-*   **True Integration of Learning & Play:** We solve the core challenge of making learning 'invisible' and fun. Education is an intrinsic, exciting part of the adventure, not a separate chore. Our **carefully crafted narrative arcs, complete with rising action, climactic moments, and thoughtful resolutions, are designed to mirror compelling real-world storytelling,** ensuring learning is both engaging and memorable. This is further enhanced by opportunities for guided reflection on new knowledge.
-*   **Addressing a Critical Market Need:** Designed to tackle the engagement gap in traditional education, Learning Odyssey offers a solution for parents and educators seeking effective, captivating learning tools for the digital age.
+- Circus & Carnival Capers (`circus_and_carnival_capers`)
+- Clockwork Sky City (`clockwork_sky_city`)
+- Dream Library of Lost Stories (`dream_library_of_lost_stories`)
+- Enchanted Forest Tales (`enchanted_forest_tales`)
+- Festival of Lights & Colors (`festival_of_lights_and_colors`)
+- Jade Mountain (`jade_mountain`)
+- Living Inside Your Own Drawing (`living_inside_your_own_drawing`)
+- Tiny World Under the Floorboards (`tiny_world_under_the_floorboards`)
+- Underwater Kingdom of Sunken Ships
+  (`underwater_kingdom_of_sunken_ships`)
+- Whispering Desert Oasis (`whispering_desert_oasis`)
 
-## Key Features: Powering the Adventure
+### Lesson topics
 
-*   **Hyper-Personalized Adventures:** At its heart, Learning Odyssey crafts a unique journey for every child. The combination of AI-driven narratives, dynamic branching choices, and the evolving Agency system means each playthrough is a distinct and personal experience, complete with its own plot developments.
-*   **Immersive AI Storytelling:** Dynamic narratives, powered by advanced AI, adapt in real-time to user choices. Experience a story that **builds suspense, presents meaningful turning points, and resolves in a fulfilling way,** creating a deeply engaging and replayable experience.
-*   **Interactive Challenges & Meaningful Choices:** The "Agency" system and narrative branches ensure that decisions have tangible consequences, influencing the story's direction and fostering critical thinking through a well-paced plot.
-*   **Dynamic & Evolving Visuals:** State-of-the-art AI image generation provides a rich visual tapestry for the adventure, with characters and scenes maintaining consistency and evolving with the narrative.
-*   **Reflective Learning Chapters:** Dedicated "REFLECT" chapters go beyond simple quizzes, encouraging users to think critically about the educational content they've encountered, deepening comprehension and retention.
-*   **Save & Resume Your Quests:** Our robust platform (powered by Supabase) offers the convenience of saving your progress. Optional user accounts (Google or Guest) make it easy to return to your adventures anytime, anywhere, demonstrating a production-ready experience.
-*   **Comprehensive Adventure Recap:** A detailed summary chapter reinforces learning by allowing users to reflect on their entire narrative arc, from initial choices to the final resolution, and review their educational achievements.
+- Ancient Civilizations
+- Astronomy
+- Dinosaurs and Prehistoric Life
+- Farm Animals
+- Human Body
+- Inventions and Inventors
+- Music and Sound
+- Oceans and Marine Life
+- Singapore History
+- Volcanoes Earthquakes and Weather
 
-## Technical Snapshot: Engineered for Innovation
+## Getting Started
 
-The robust and scalable architecture of Learning Odyssey is designed for growth and continuous improvement. A Python/FastAPI backend ensures efficient AI integration and real-time responsiveness via WebSockets, supporting sophisticated narrative structures and learning flows. The platform features a smart dual-model LLM architecture with factory pattern for cost optimization, automatically selecting between Gemini Flash and Flash Lite based on task complexity. Supabase provides a flexible and secure cloud-based foundation for user data, persistent adventures, and telemetry. This modern stack allows for rapid iteration and the seamless incorporation of emerging AI capabilities.
+### Prerequisites
 
-### Architecture Overview
-```mermaid
-graph TD
-    Client[Web Client]
-    LP[localStorage/Supabase Auth]
-    Client <--> LP
+- Python 3.10 or newer
+- Node.js and npm
+- A Supabase project
+- A Google API key for Gemini-based text and image generation
 
-    WR["Web Router (/select and resume)"]
-    WSR["WebSocket Router"]
-    SR["Summary Router (/adventure/*)"]
+### Local setup
 
-    Client <--> WR
-    Client <--> WSR
-    Client <--> SR
+1. Create and activate the virtual environment:
 
-    subgraph WebSocket Services
-        WSR --> WSC[WebSocket Core]
-        WSC --> CP[Choice Processor]
-        WSC --> CG[Content Generator]
-        WSC --> SH[Stream Handler]
-        WSC --> IG[Image Generator]
-        WSC --> SG[Summary Generator]
-    end
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate
+   ```
 
-    CP --> ASM[Adventure State Manager]
-    CG --> ASM
-    ASM --> AS[AdventureState]
-    ASM --> CM[Chapter Manager]
-    CM --> LLMF[LLM Service Factory]
-    LLMF --> LLM[Gemini Flash]
-    LLMF --> LLML[Gemini Flash Lite]
-    CM --> SL[Story Loader]
-    IG --> IMG[Image Generation Service]
+2. Install Python dependencies:
 
-    subgraph Summary Experience
-        SR --> RSUM[React Summary App]
-        SR --> SAPI[Summary API]
-        RSUM <--> SAPI
-        SAPI --> SUMS[Summary Service]
-    end
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-    SUMS --> ASM
-    SUMS --> AS
+3. Install Node-based tooling used for Playwright and summary bundle
+   maintenance:
 
-    subgraph Persistence & Analytics
-        SSS[StateStorageService]
-        TS[TelemetryService]
-        DB[(Supabase: adventures + telemetry)]
-    end
+   ```bash
+   npm install
+   ```
 
-    WR <--> SSS
-    WSR <--> SSS
-    SUMS <--> SSS
-    WSR --> TS
-    SUMS --> TS
-    TS --> DB
-    SSS <--> DB
+4. Create a local `.env` file in the repository root.
 
-    subgraph Content Sources
-        CSV[(lessons/*.csv)]
-        SF[(stories/*.yaml)]
-    end
+5. Apply the Supabase schema if you are provisioning a project from scratch:
 
-    CSV --> CM
-    SF --> SL
-    WR --> SL
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref <project-ref>
+   npx supabase db push
+   ```
 
-    subgraph Templates
-        BL[Base Layout]
-        PC[Page Components]
-        UI[UI Components]
-    end
+6. Start the app:
 
-    WR --> BL
-    BL --> PC
-    PC --> UI
+   ```bash
+   python -m uvicorn app.main:app --reload
+   ```
+
+7. Open `http://127.0.0.1:8000/`.
+
+### Environment variables
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `SECRET_KEY` | Yes | Session middleware secret. The app refuses to start without it. |
+| `GOOGLE_API_KEY` | Yes | Gemini text generation and image-generation workflows. |
+| `SUPABASE_URL` | Yes | Supabase project URL injected into the backend and templates. |
+| `SUPABASE_ANON_KEY` | Yes | Browser-side Supabase client for login and client flows. |
+| `SUPABASE_SERVICE_KEY` | Yes | Server-side Supabase access for adventures, telemetry, and feedback storage. |
+| `SUPABASE_JWT_SECRET` | Yes | JWT verification for authenticated summary, resume, and WebSocket flows. |
+| `APP_ENVIRONMENT` | Recommended | Environment label stored with telemetry and feedback records. |
+| `OPENAI_API_KEY` | Optional | Alternate LLM client support present in the codebase. |
+| `ALLOWED_HOSTS` | Optional | Comma-separated host allowlist for `TrustedHostMiddleware`. |
+| `PROXY_TRUSTED_HOSTS` | Optional | Comma-separated trusted proxy hosts for proxy-header handling. |
+| `CORS_ALLOW_ORIGINS` | Optional | Comma-separated CORS allowlist. Defaults to local dev origins. |
+| `CORS_ALLOW_CREDENTIALS` | Optional | Enables or disables credentialed CORS requests. |
+| `HTTPS_ONLY` | Optional | Forces secure session cookies when enabled. |
+| `RESEND_API_KEY` | Optional | Supabase Edge Function secret for feedback notification email delivery. |
+| `FEEDBACK_NOTIFICATION_EMAIL` | Optional | Supabase Edge Function secret for the feedback notification recipient. |
+
+The app runtime loads local `.env` values in development. Keep `.env` and
+`.env.*` untracked and out of Docker build contexts; see
+`docs/security/deployment-model.md` for the deployment policy.
+
+## Common Commands
+
+Run commands from the repository root with `.venv` activated. For pytest,
+prefer `python -m pytest` over bare `pytest` if your shell does not place the
+repo root on `PYTHONPATH`.
+
+### Daily development
+
+| Task | Command |
+| --- | --- |
+| Start the FastAPI app | `python -m uvicorn app.main:app --reload` |
+| Run the full Python test suite | `python -m pytest` |
+| Run a focused test module | `python -m pytest tests/test_summary_service.py -q` |
+| Run deployment guardrails locally | `bash tools/check_deployment_security.sh` |
+
+### Browser regression
+
+| Task | Command |
+| --- | --- |
+| Run carousel visual regression tests | `npm run test:visual:carousel` |
+| Refresh carousel screenshots | `npm run test:visual:carousel:update` |
+
+### Simulations and summary tooling
+
+| Task | Command |
+| --- | --- |
+| Fully automated simulation run with server management | `python tests/simulations/run_test_analysis.py --runs 3` |
+| Analyze the most recent simulation log only | `python tests/simulations/run_test_analysis.py --analyze-only` |
+| Run raw WebSocket simulations against an existing server | `python tests/simulations/adventure_test_runner.py --runs 5 --host localhost --port 8000` |
+| Generate one reusable full-adventure state file | `python tests/simulations/generate_all_chapters.py --category enchanted_forest_tales --topic "Singapore History"` |
+| Generate chapter summaries from the latest saved simulation state | `python tests/simulations/generate_chapter_summaries.py --compact` |
+| Generate React-compatible summary JSON | `python tests/simulations/generate_chapter_summaries.py --react-json --react-output tests/summary_data.json` |
+| Preview the summary page with saved simulation data | `python tests/test_summary_chapter.py --state-file logs/simulations/simulation_state_<timestamp>_<run_id>.json --port 8001` |
+| Validate the summary button flow | `python tests/test_summary_button_flow.py --compare` |
+
+### Utilities
+
+| Task | Command |
+| --- | --- |
+| Analyze large files by line count | `python tools/code_complexity_analyzer.py -s code -n 20` |
+| Generate optimized image variants | `python tools/optimize_images.py app/static/images/stories` |
+| Rebuild a colocated summary app checkout | `python tools/build_summary_app.py --mode production --skip-install` |
+
+The repository already includes the served summary bundle in
+`app/static/summary-chapter/`, so most local development does not need to
+rebuild it.
+
+## HTTP and WebSocket Surface
+
+### UI routes
+
+| Route | Purpose |
+| --- | --- |
+| `GET /` | Landing page with Google login and guest entry. |
+| `GET /select` | Story-world and lesson-topic selection flow. |
+| `GET /adventure/summary` | Standalone summary front-end. |
+| `GET /api/loading-phrases` | Returns the rotating loader phrase list. |
+
+### Adventure state and summary APIs
+
+| Route | Purpose |
+| --- | --- |
+| `GET /api/user/current-adventure` | Returns the current authenticated user's incomplete adventure, if any. |
+| `GET /api/adventure/active_by_client_uuid/{client_uuid}` | Looks up an active guest-linked adventure for the authenticated user. |
+| `POST /api/adventure/{adventure_id}/abandon` | Abandons an incomplete adventure owned by the authenticated user. |
+| `GET /adventure/api/adventure-summary?state_id=<uuid>` | Returns summary data for a completed adventure. |
+| `POST /adventure/api/store-adventure-state` | Stores or updates an adventure state record for an authenticated user. |
+| `GET /adventure/api/get-adventure-state/{state_id}` | Fetches a stored adventure state by ID. |
+
+### Feedback APIs
+
+| Route | Purpose |
+| --- | --- |
+| `POST /api/feedback` | Stores positive or negative feedback for an adventure. |
+| `GET /api/feedback/check` | Returns whether the current user or guest client has already submitted feedback. |
+
+### WebSocket gameplay endpoint
+
+The live adventure flow runs through:
+
+```text
+/ws/story/{story_category}/{lesson_topic}
 ```
 
-## Recent Enhancements: Continual Evolution
+Supported query parameters:
 
-Learning Odyssey is a living project, constantly evolving to deliver a richer experience:
+- `client_uuid`: guest identity and guest-resume tracking
+- `difficulty`: optional lesson difficulty hint
+- `token`: authenticated JWT for secure ownership checks
+- `resume_adventure_id`: explicit adventure ID to resume
 
-*   **🎨 Latest: Literary Book-Like Visual Experience (July 2025):** Complete transformation from digital interface to elegant storybook aesthetic featuring serif typography (Crimson Text), decorative title fonts (Cinzel Decorative, Playfair Display), sophisticated drop caps, paper textures with warm cream backgrounds, and unified teal accents. The visual experience now perfectly matches our educational storytelling mission.
-*   **⚡ Enhanced Loading Experience (July 2025):** Replaced static spinners with 45 entertaining Sims-inspired loading phrases like "Thickening the plot..." and "Teaching dragons proper etiquette..." with smooth fade transitions, accessibility-optimized rainbow gradients, and instant display for engaging wait times.
-*   **🚀 Summary Page UX Fixes & Data Integrity:** Resolved critical user experience issues including non-functional summary page buttons, auto-resumption bypass problems, and backend chapter counting inconsistencies. Users can now seamlessly navigate from adventure completion to new adventure selection.
-*   **💰 Smart AI Cost Optimization:** Implemented dual-model LLM architecture achieving ~50% cost reduction through strategic use of Gemini Flash Lite for simple tasks (75% of operations) while preserving Gemini Flash for complex reasoning. Factory pattern ensures optimal model selection automatically for most operations.
-*   **🧠 Enhanced AI Reasoning with Gemini 2.5 Flash:** Successfully upgraded to Gemini 2.5 Flash with centralized thinking budget configuration, delivering enhanced reasoning capabilities for story generation, image synthesis, and character development while maintaining code modularity.
-*   **🎯 Future-Proof AI Integration:** Migrated to Google's unified `google-genai` SDK, ensuring access to the latest AI capabilities and improved stability while maintaining 100% backward compatibility.
-*   **🎉 Complete Supabase Integration - PRODUCTION READY:** Full implementation of user authentication (Google OAuth & Guest), persistent adventure state, comprehensive telemetry tracking, and robust adventure resumption with custom modal flows. All four phases completed with thorough testing and bug fixes.
-*   **Enhanced User Experience:** Custom modal system for adventure management, consistent chapter display across all components, and seamless resumption flows for both authenticated and guest users.
-*   **Improved Visual Consistency:** Characters and agency elements now maintain more consistent and evolving visual appearances throughout your adventure with advanced prompt synthesis and character tracking.
-*   **Modular Frontend Architecture:** Complete ES6 module refactoring for improved maintainability, testability, and code organization across all JavaScript components.
-*   **Enterprise-Ready Data Management:** Row-level security (RLS) policies, comprehensive telemetry analytics, and robust state persistence ensuring data integrity and user privacy.
+The server enforces ownership checks for resumed authenticated adventures,
+keeps the authoritative state for summary reveal, and applies an in-memory
+concurrent-connection limit per client IP.
 
-## Setup (For Developers)
+## Repository Layout
 
-1.  Clone the repository.
-2.  Create and activate the `.venv` virtual environment (required for all Python commands):
-    ```bash
-    python -m venv .venv
-    source .venv/bin/activate  # Linux/Mac
-    # or
-    .\.venv\Scripts\activate  # Windows
-    ```
-3.  Install dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
-4.  Create a `.env` file with required environment variables:
-    ```env
-    # API key for LLM and image generation (both use the same key with Google)
-    GOOGLE_API_KEY=your_google_key
-    # Or alternatively use OpenAI for LLM (image generation still requires Google)
-    OPENAI_API_KEY=your_openai_key
+- `app/`
+  - FastAPI app, routers, data loaders, services, templates, and frontend
+    assets.
+- `app/data/`
+  - Story YAML files and lesson CSV files.
+- `app/services/llm/`
+  - Prompt construction, provider integrations, and model routing.
+- `app/services/websocket/`
+  - Choice processing, content generation, streaming, image orchestration, and
+    summary reveal.
+- `app/services/summary/`
+  - Summary DTOs, chapter/question/stat processors, and the summary service.
+- `app/static/summary-chapter/`
+  - Served summary front-end bundle plus runtime patches.
+- `tests/`
+  - pytest coverage, simulation tooling, Playwright coverage, and state
+    fixtures.
+- `supabase/migrations/`
+  - Schema changes for adventures, telemetry, auth ownership, and feedback.
+- `supabase/functions/feedback-notify/`
+  - Optional email notification function for feedback submissions.
+- `tools/`
+  - Guardrail checks, complexity analysis, image optimization, and summary
+    bundle tooling.
 
-    # Supabase credentials (obtain from your Supabase project)
-    SUPABASE_URL=your_supabase_url
-    SUPABASE_ANON_KEY=your_supabase_anon_key
-    SUPABASE_SERVICE_KEY=your_supabase_service_key
-    SUPABASE_JWT_SECRET=your_supabase_jwt_secret 
-    # Ensure this JWT secret matches the one in your Supabase project settings (Auth > JWT Settings)
-    
-    # Application environment (development/production)
-    APP_ENVIRONMENT=development
-    ```
-5.  Apply Supabase database migrations (if you're setting up the DB for the first time):
-    ```bash
-    npx supabase login
-    npx supabase link --project-ref your-project-ref
-    npx supabase db push
-    ```
-6.  Run the application:
-    ```bash
-    uvicorn app.main:app --reload
-    ```
+## Deployment and Security
 
-## Project Structure
+Production deploys flow from GitHub to Railway. The `Procfile` runs:
 
-The project is organized into several key components:
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
+```
 
-*   **Backend (`app/`)**: Contains the FastAPI application, including:
-    *   `auth/`: Authentication and JWT validation dependencies.
-    *   `middleware/`: Request/response middleware components.
-    *   `models/`: Data structures like `AdventureState`.
-    *   `routers/`: API and WebSocket endpoint definitions.
-    *   `services/`: Core logic for LLMs, state management, content generation, Supabase interaction, etc.
-    *   `static/`: Frontend assets (CSS, JS, images), including the React summary app.
-    *   `templates/`: Jinja2 HTML templates.
-    *   `utils/`: Utility functions and shared components.
-*   **Content Sources (`app/data/`)**:
-    *   `lessons/`: CSV files for educational content.
-    *   `stories/`: YAML files defining story categories and narrative elements.
-*   **Supabase (`supabase/`)**: Database migration files.
-*   **Tests (`tests/`)**: Automated tests and simulation scripts.
-*   **WIP & Memory Bank (`wip/`, `memory-bank/`)**: Documents for ongoing work and project knowledge.
+Deployment security policy lives in `docs/security/deployment-model.md`.
+Repository guardrails are enforced by
+`.github/workflows/deployment-security-guardrails.yml`, which runs
+`bash tools/check_deployment_security.sh` on pull requests and on pushes to
+`main` and `master`.
 
-## Testing
-
-The project includes a testing framework to ensure reliability:
-
-*   **Simulation Framework**: End-to-end testing of adventure generation.
-*   **Test Coverage**: Includes chapter sequences, state transitions, and summary generation.
-*   **Running Tests**:
-    ```bash
-    # Run all tests with pytest
-    pytest tests/
-    
-    # Run specific test file
-    pytest tests/test_summary_service.py
-    
-    # Example: Run the complete adventure simulation
-    python tests/simulations/generate_all_chapters.py
-    ```
-
-## Technical Considerations
-
-Learning Odyssey's dynamic nature requires sequential chapter generation, as each chapter builds upon previous events and choices. The narrative is generated in real-time, following a structured arc designed for engagement. To manage this, the platform uses robust WebSocket communication, client-side and server-side (Supabase) state persistence, and graceful degradation to ensure a smooth learning journey. This thoughtful engineering ensures a reliable and engaging platform ready for future growth.
+If you are working on simulation tooling, the detailed command reference lives
+in `tests/simulations/README.md`.

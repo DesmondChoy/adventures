@@ -1,214 +1,213 @@
-# Adventure Testing Suite
+# Adventure Simulation Suite
 
-Automated testing framework for the Learning Odyssey adventure system. This suite simulates complete adventure playthroughs and analyzes logs to detect errors and anomalies.
+The scripts in this directory exercise the production adventure flow through
+the live WebSocket endpoint and the summary pipeline. They are useful for
+smoke tests, log-based anomaly detection, reusable state generation, and
+summary debugging without reimplementing application logic.
 
-**🚧 Work in Progress** - The testing framework is implemented but still under development. Some functionality may not be fully stable yet.
+## Prerequisites
 
-**✨ Automated** - Includes automatic server startup/shutdown for zero-configuration testing!
+- Run commands from the repository root.
+- Activate `.venv` before running Python commands:
 
-## Overview
+  ```bash
+  source .venv/bin/activate
+  ```
 
-The testing suite consists of three main components:
+- For scripts other than `run_test_analysis.py`, start the application first:
 
-1. **`adventure_test_runner.py`** - Simulates complete adventure experiences via WebSocket
-2. **`log_analyzer.py`** - Analyzes test logs to extract errors and anomalies  
-3. **`run_test_analysis.py`** - Combined runner with automatic server management
+  ```bash
+  python -m uvicorn app.main:app --reload
+  ```
+
+## Script Overview
+
+| Script | Purpose | Key options |
+| --- | --- | --- |
+| `run_test_analysis.py` | Runs adventure simulations, manages the server lifecycle if needed, and analyzes the newest test log. | `--runs`, `--category`, `--topic`, `--host`, `--port`, `--analyze-only`, `--no-server` |
+| `adventure_test_runner.py` | Runs one or more end-to-end WebSocket adventures against an existing server. | `--runs`, `--category`, `--topic`, `--host`, `--port` |
+| `log_analyzer.py` | Analyzes one test log file for errors and app-specific anomalies. | `<log_file>`, `--output` |
+| `generate_all_chapters.py` | Generates a single full adventure, reveals the summary, and saves a reusable state JSON file. | `--category`, `--topic` |
+| `generate_chapter_summaries.py` | Produces chapter summaries or React-compatible summary data from a saved simulation state JSON file. | `[state_file]`, `--output`, `--save-json`, `--compact`, `--delay`, `--react-json`, `--react-output` |
 
 ## Quick Start
 
-### Zero-Configuration Testing
+### End-to-end automated run
 
-⚠️ **Note**: This testing framework is still a work in progress. While the core functionality is implemented, some features may not be fully stable.
-
-Just run the test suite - it handles everything automatically:
+This is the fastest way to validate the app from the outside:
 
 ```bash
-python tests/simulations/run_test_analysis.py
-```
-
-This will:
-- Automatically start the uvicorn server in the background
-- Run 1 complete adventure simulation (default)
-- Analyze the generated logs
-- Provide a summary report with any issues found
-- Automatically shut down the server when done
-
-**No manual server setup required!**
-
-For multiple test runs:
-```bash
-python tests/simulations/run_test_analysis.py --runs 5
-```
-
-## Components
-
-### Adventure Test Runner
-
-Simulates real user interactions:
-- Connects to WebSocket endpoint
-- Makes random story choices
-- Processes all chapters (1-10)
-- Generates adventure summary
-- Captures comprehensive logs
-
-```bash
-# Run 10 tests with random categories/topics
-python tests/simulations/adventure_test_runner.py --runs 10
-
-# Test specific category and topic
-python tests/simulations/adventure_test_runner.py --category "enchanted_forest_tales" --topic "Singapore History"
-
-# Test against different server
-python tests/simulations/adventure_test_runner.py --host production.server.com --port 443
-```
-
-### Enhanced Log Analyzer
-
-Uses **app-specific patterns** from the actual Learning Odyssey codebase to detect:
-
-**Critical Issues (High Severity):**
-- **State Corruption**: `[STATE CORRUPTION]` messages, invalid chapter data
-- **LLM Failures**: Generation timeouts, prompt failures, serialization errors
-- **WebSocket Errors**: Connection failures, message processing errors
-- **Performance Issues**: `[PERFORMANCE]` failures, operations >5 seconds
-
-**Adventure Flow Issues:**
-- **Incomplete Stories**: Adventures stopping before 10 chapters
-- **Chapter Processing**: Missing/invalid chapter types or numbers
-- **Summary Generation**: Failed adventure summary creation
-- **Lesson Validation**: Invalid questions or answers
-
-**Structured Logging Integration:**
-- **JSON Log Parsing**: Handles StructuredLogger format from the app
-- **Category Prefixes**: Recognizes `[PERFORMANCE]`, `[STATE STORAGE]`, `[REVEAL SUMMARY]`
-- **Context Extraction**: Provides relevant log context around issues
-
-```bash
-# Analyze specific log file
-python tests/simulations/log_analyzer.py logs/simulations/adventure_test_2025-01-20_14-30-15_a1b2c3d4.log
-
-# Save analysis to file
-python tests/simulations/log_analyzer.py logs/test.log --output analysis_report.txt
-```
-
-### Combined Test & Analysis
-
-The easiest way to run comprehensive testing with full automation:
-
-```bash
-# Run 3 tests with automatic server management
 python tests/simulations/run_test_analysis.py --runs 3
+```
 
-# Only analyze existing logs (no new tests)
+That command:
+
+- starts `uvicorn` automatically if port `8000` is free
+- runs the requested number of WebSocket playthroughs
+- finds the newest `adventure_test_*.log`
+- runs `log_analyzer.py` against that log
+- writes an `analysis_report_*.txt` file under `logs/simulations/`
+
+Useful variants:
+
+```bash
+# Reuse an already running local server
+python tests/simulations/run_test_analysis.py --runs 3 --no-server
+
+# Only analyze the newest log file
 python tests/simulations/run_test_analysis.py --analyze-only
 
-# Test specific content with automatic server
-python tests/simulations/run_test_analysis.py --runs 5 --category "circus_and_carnival_capers" --topic "Human Body"
+# Lock the run to a specific world and topic
+python tests/simulations/run_test_analysis.py \
+  --runs 2 \
+  --category enchanted_forest_tales \
+  --topic "Singapore History"
+```
 
-# Use existing server (no automatic startup/shutdown)
-python tests/simulations/run_test_analysis.py --runs 3 --no-server
+### Raw WebSocket simulations
+
+Use the raw runner when you want repeated playthroughs without the analysis
+wrapper:
+
+```bash
+python tests/simulations/adventure_test_runner.py --runs 5
+python tests/simulations/adventure_test_runner.py \
+  --category festival_of_lights_and_colors \
+  --topic "Human Body" \
+  --host localhost \
+  --port 8000
+```
+
+### Generate a reusable full-adventure state file
+
+`generate_all_chapters.py` is the handiest way to create a state JSON file that
+can be reused by summary tools:
+
+```bash
+python tests/simulations/generate_all_chapters.py
+python tests/simulations/generate_all_chapters.py \
+  --category clockwork_sky_city \
+  --topic "Astronomy"
+```
+
+This script connects to `localhost:8000`, runs the full 10-chapter flow, sends
+`"reveal_summary"` after the conclusion chapter, and writes a
+`simulation_state_*.json` file under `logs/simulations/`.
+
+### Turn a saved state into summary data
+
+`generate_chapter_summaries.py` works from simulation state JSON files, not
+from raw logs:
+
+```bash
+# Use the latest simulation_state_*.json file and print summaries only
+python tests/simulations/generate_chapter_summaries.py --compact
+
+# Use a specific state file and save JSON output
+python tests/simulations/generate_chapter_summaries.py \
+  logs/simulations/simulation_state_2026-04-14_12:34_abcd1234.json \
+  --save-json \
+  --output chapter_summaries.json
+
+# Generate React-compatible summary data
+python tests/simulations/generate_chapter_summaries.py \
+  --react-json \
+  --react-output tests/summary_data.json
 ```
 
 ## Output Files
 
-### Log Files
+### Adventure test logs
+
 - Location: `logs/simulations/`
-- Format: `adventure_test_{timestamp}_{run_id}.log`
-- Contains: All server and client logs during testing
+- Pattern: `adventure_test_{timestamp}_{run_id}.log`
+- Created by: `adventure_test_runner.py` and `run_test_analysis.py`
 
-### Analysis Reports  
+### Analysis reports
+
 - Location: `logs/simulations/`
-- Format: `analysis_report_{timestamp}.txt`
-- Contains: Summary of anomalies, errors, and performance issues
+- Pattern: `analysis_report_{timestamp}_{run_id}.txt`
+- Created by: `run_test_analysis.py`
 
-## Test Flow
+### Full simulation state files
 
-Each adventure test follows this path:
+- Location: `logs/simulations/`
+- Pattern: `simulation_state_{timestamp}_{run_id}.json`
+- Created by: `generate_all_chapters.py`
 
-1. **Connection**: WebSocket to `/ws/story/{category}/{topic}`
-2. **Initialization**: Send `"start"` choice
-3. **Chapter Loop**: 
-   - Receive chapter content
-   - Make random choice from available options
-   - Repeat for 10 chapters
-4. **Completion**: Process CONCLUSION chapter
-5. **Summary**: Generate adventure summary
-6. **Cleanup**: Close connection and log results
+### Full-adventure generation logs
 
-## Common Issues
+- Location: `logs/simulations/`
+- Pattern: `generate_all_chapters_{timestamp}_{run_id}.log`
+- Created by: `generate_all_chapters.py`
 
-### Server Not Running
-```
-Error: Failed to establish WebSocket connection
-```
-**Solution**: Ensure the server is running on the specified host/port
+## Log Analyzer Coverage
 
-### Timeout Errors
-```
-Timeout waiting for response in chapter X
-```
-**Solution**: Check server performance, LLM service availability
+`log_analyzer.py` looks for application-specific issues rather than generic
+grep-style errors. It detects:
 
-### Authentication Issues
-```
-WebSocket connection closed during chapter X
-```
-**Solution**: Verify server configuration and JWT setup
+- critical error and exception lines
+- performance problems such as slow operations and streaming issues
+- state management issues such as `[STATE CORRUPTION]` and storage failures
+- WebSocket connection and message-processing failures
+- LLM generation and prompt-related errors
+- incomplete adventure or summary-generation failures
 
-## Advanced Usage
+Run it directly when you want to inspect a specific log:
 
-### Custom Categories/Topics
-
-Available story categories:
-- `circus_and_carnival_capers`
-- `enchanted_forest_tales`
-- `festival_of_lights_and_colors`
-- `jade_mountain`
-- `living_inside_your_own_drawing`
-
-Available lesson topics:
-- `Farm Animals`
-- `Human Body`
-- `Singapore History`
-
-### Performance Testing
-
-For load testing, run multiple instances:
 ```bash
-# Terminal 1
-python tests/simulations/adventure_test_runner.py --runs 10 &
-
-# Terminal 2  
-python tests/simulations/adventure_test_runner.py --runs 10 &
-
-# Terminal 3
-python tests/simulations/adventure_test_runner.py --runs 10 &
+python tests/simulations/log_analyzer.py \
+  logs/simulations/adventure_test_2026-04-14_12:34_abcd1234.log \
+  --output logs/simulations/manual_analysis.txt
 ```
 
-### Continuous Integration
+## Command Reference
 
-For CI/CD pipelines:
-```bash
-# Run minimal test suite
-python tests/simulations/run_test_analysis.py --runs 2
+### `adventure_test_runner.py`
 
-# Check exit code
-if [ $? -eq 0 ]; then
-    echo "Tests passed!"
-else
-    echo "Tests failed - check logs"
-    exit 1
-fi
+```text
+--runs RUNS
+--category CATEGORY
+--topic TOPIC
+--port PORT
+--host HOST
 ```
 
-## Architecture Integration
+### `run_test_analysis.py`
 
-This testing suite leverages the existing Learning Odyssey architecture:
+```text
+--runs RUNS
+--category CATEGORY
+--topic TOPIC
+--port PORT
+--host HOST
+--analyze-only
+--no-server
+```
 
-- **Data Loading**: Uses `StoryLoader` and `LessonLoader` for valid test data
-- **WebSocket Protocol**: Follows exact message formats used by frontend
-- **State Management**: Respects `AdventureState` structure and transitions  
-- **Error Handling**: Captures all application errors and edge cases
-- **Logging**: Uses existing logging infrastructure for comprehensive coverage
+### `generate_all_chapters.py`
 
-The tests simulate real user interactions without reimplementing business logic, ensuring accurate representation of production behavior.
+```text
+--category CATEGORY
+--topic TOPIC
+```
+
+### `generate_chapter_summaries.py`
+
+```text
+[state_file]
+--output OUTPUT
+--save-json
+--compact
+--delay DELAY
+--react-json
+--react-output REACT_OUTPUT
+```
+
+## Recommended Workflow
+
+1. Use `run_test_analysis.py` for routine smoke coverage.
+2. Use `generate_all_chapters.py` when you need a reusable adventure state.
+3. Use `generate_chapter_summaries.py` and `tests/test_summary_chapter.py`
+   when working on the summary experience.
+4. Use `log_analyzer.py` directly when investigating a specific failure.
