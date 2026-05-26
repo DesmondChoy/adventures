@@ -118,62 +118,80 @@ export class WebSocketManager {
         }
     }
 
-    async setupConnectionHandlers() {
+    setupConnectionHandlers() {
         const savedState = this.stateManager.loadState();
-        const uiModule = await import(withModuleVersion('./uiManager.js'));
-        const { hideLoader, updateProgress, handleMessage } = uiModule;
-        // Use window.loaderFunctions as fallback for cross-module access
-        const loaderFns = window.loaderFunctions || {};
-        const setLoaderStep = uiModule.setLoaderStep || loaderFns.setLoaderStep || (() => {});
-        const showLoaderError = uiModule.showLoaderError || loaderFns.showLoaderError || (() => {});
-        const { manageState } = await import(withModuleVersion('./stateManager.js'));
+        const connection = this.connection;
+        const uiModulePromise = import(withModuleVersion('./uiManager.js'));
+        const stateModulePromise = import(withModuleVersion('./stateManager.js'));
 
-        this.connection.onopen = () => {
+        connection.onopen = async () => {
             this.reconnectAttempts = 0;
 
-            // Update loader to advance to step 2 (crafting story)
-            setLoaderStep(2); // Now crafting the story
+            try {
+                const uiModule = await uiModulePromise;
+                const { manageState } = await stateModulePromise;
+                // Use window.loaderFunctions as fallback for cross-module access
+                const loaderFns = window.loaderFunctions || {};
+                const setLoaderStep = uiModule.setLoaderStep || loaderFns.setLoaderStep || (() => {});
 
-            if (this.adventureIdToResume) {
-                this.connection.send(JSON.stringify({
-                    choice: 'resume_specific_adventure',
-                    adventure_id_to_resume: this.adventureIdToResume
-                }));
-            } else if (savedState) {
-                // Don't call updateProgress here - let the backend's adventure_loaded message handle it
-                this.connection.send(JSON.stringify({
-                    state: savedState,
-                    choice: 'start'
-                }));
-            } else {
-                const storyCategoryEl = document.getElementById('storyCategory');
-                const lessonTopicEl = document.getElementById('lessonTopic');
-                const initialState = manageState('initialize', {
-                    storyCategory: storyCategoryEl ? storyCategoryEl.value : (sessionStorage.getItem('resume_story_category') || ''),
-                    lessonTopic: lessonTopicEl ? lessonTopicEl.value : (sessionStorage.getItem('resume_lesson_topic') || '')
-                });
-                this.connection.send(JSON.stringify({
-                    state: initialState,
-                    choice: 'start'
-                }));
+                // Update loader to advance to step 2 (crafting story)
+                setLoaderStep(2); // Now crafting the story
+
+                if (this.adventureIdToResume) {
+                    connection.send(JSON.stringify({
+                        choice: 'resume_specific_adventure',
+                        adventure_id_to_resume: this.adventureIdToResume
+                    }));
+                } else if (savedState) {
+                    // Don't call updateProgress here - let the backend's adventure_loaded message handle it
+                    connection.send(JSON.stringify({
+                        state: savedState,
+                        choice: 'start'
+                    }));
+                } else {
+                    const storyCategoryEl = document.getElementById('storyCategory');
+                    const lessonTopicEl = document.getElementById('lessonTopic');
+                    const initialState = manageState('initialize', {
+                        storyCategory: storyCategoryEl ? storyCategoryEl.value : (sessionStorage.getItem('resume_story_category') || ''),
+                        lessonTopic: lessonTopicEl ? lessonTopicEl.value : (sessionStorage.getItem('resume_lesson_topic') || '')
+                    });
+                    connection.send(JSON.stringify({
+                        state: initialState,
+                        choice: 'start'
+                    }));
+                }
+            } catch (error) {
+                console.error('WebSocket open handler failed:', error);
+                const uiModule = await uiModulePromise.catch(() => ({}));
+                const loaderFns = window.loaderFunctions || {};
+                const showLoaderError = uiModule.showLoaderError || loaderFns.showLoaderError || (() => {});
+                showLoaderError('Unable to start the adventure. Please try again.');
             }
         };
 
-        this.connection.onclose = (event) => {
+        connection.onclose = async (event) => {
             if (!event.wasClean) {
                 console.error('WebSocket connection died unexpectedly. Code:', event.code, 'Reason:', event.reason);
                 this.handleDisconnect();
             } else {
+                const uiModule = await uiModulePromise.catch(() => ({}));
+                const hideLoader = uiModule.hideLoader || (() => {});
                 hideLoader();
             }
         };
 
-        this.connection.onerror = (error) => {
+        connection.onerror = async (error) => {
             console.error('WebSocket Error: ', error);
+            const uiModule = await uiModulePromise.catch(() => ({}));
+            const loaderFns = window.loaderFunctions || {};
+            const showLoaderError = uiModule.showLoaderError || loaderFns.showLoaderError || (() => {});
             showLoaderError('Unable to connect. Please check your internet connection.');
         };
 
-        this.connection.onmessage = handleMessage;
+        connection.onmessage = async (event) => {
+            const uiModule = await uiModulePromise;
+            uiModule.handleMessage(event);
+        };
     }
 
     sendMessage(message) {
