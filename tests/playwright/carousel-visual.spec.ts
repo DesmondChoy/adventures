@@ -1,5 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 
+import { ensureSelectionPage, installFakeSupabase, waitForCarousel } from './helpers';
+
 const DESKTOP_VIEWPORT = { width: 1366, height: 900 };
 const MOBILE_VIEWPORT = { width: 390, height: 844 };
 
@@ -13,32 +15,6 @@ async function disableMotion(page: Page): Promise<void> {
       }
     `,
   });
-}
-
-async function ensureSelectionPage(page: Page): Promise<void> {
-  await page.goto('/select');
-
-  const guestButton = page.getByRole('button', { name: 'Continue as Guest' });
-  if (await guestButton.count()) {
-    await guestButton.first().click();
-  }
-
-  await expect(page).toHaveURL(/\/select$/);
-}
-
-async function waitForCarousel(page: Page, carouselId: string): Promise<void> {
-  await page.waitForFunction((id) => {
-    const fallback =
-      id === 'categoryCarousel'
-        ? (window as any).categoryCarousel
-        : (window as any).lessonCarousel;
-    const instance = (window as any).carouselInstances?.[id] ?? fallback;
-    const element = document.getElementById(id);
-    const cardCount = element?.querySelectorAll('.carousel-card').length ?? 0;
-    const firstCard = element?.querySelector('.carousel-card') as HTMLElement | null;
-    const has3dTransform = !!firstCard && firstCard.style.transform.includes('translateZ(');
-    return !!instance && !!element && cardCount > 0 && has3dTransform;
-  }, carouselId);
 }
 
 async function expectCarouselScreenshot(
@@ -55,6 +31,7 @@ async function expectCarouselScreenshot(
 }
 
 test('category and lesson carousels render correctly on desktop and mobile', async ({ page }) => {
+  await installFakeSupabase(page);
   await ensureSelectionPage(page);
   await waitForCarousel(page, 'categoryCarousel');
   await disableMotion(page);

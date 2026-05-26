@@ -4,7 +4,7 @@
  */
 
 import { stateManager, manageState } from './stateManager.js';
-import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260302a';
+import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260526a';
 import { withCurrentModuleVersion } from './moduleVersion.js';
 
 function withModuleVersion(modulePath) {
@@ -525,6 +525,37 @@ function handleChapterProgress(data) {
     
     if (currentChapter && totalChapters) {
         updateProgress(currentChapter, totalChapters);
+    }
+}
+
+function getDisplayedChapterNumber() {
+    const currentEl = document.getElementById('current-chapter');
+    const displayedChapter = parseInt(currentEl?.textContent || '', 10);
+    return Number.isInteger(displayedChapter) ? displayedChapter : null;
+}
+
+function clearChapterTransitionContent(data) {
+    const incomingChapter = Number(data.current_chapter);
+    const displayedChapter = getDisplayedChapterNumber();
+
+    // The server sends chapter_update before streaming a new chapter. Clear the
+    // buffer in this module instance so old text cannot prefix the next stream.
+    if (Number.isInteger(incomingChapter) && displayedChapter === incomingChapter) {
+        return;
+    }
+
+    clearStreamBuffer();
+    activeParagraphs.clear();
+    clearCurrentChapterChoices();
+
+    const storyContent = document.getElementById('storyContent');
+    if (storyContent) {
+        storyContent.innerHTML = '';
+    }
+
+    const choicesContainer = document.getElementById('choicesContainer');
+    if (choicesContainer) {
+        choicesContainer.innerHTML = '';
     }
 }
 
@@ -1452,6 +1483,10 @@ export async function handleMessage(event) {
                     });
                     console.log('[WS] Saved adventure state to localStorage for resume persistence');
                 }
+            }
+
+            if (data.type === 'chapter_update') {
+                clearChapterTransitionContent(data);
             }
 
             // Use consolidated function for all chapter progress messages
