@@ -2,6 +2,7 @@ from typing import Dict, Optional, List, Tuple, Any
 import logging
 import asyncio
 import re
+from starlette.websockets import WebSocketDisconnect
 
 from app.models.story import ChapterType, ChapterContent, AdventureState, StoryChoice
 from app.services.image_generation_service import ImageGenerationService
@@ -10,6 +11,15 @@ from app.services.chapter_manager import ChapterManager
 logger = logging.getLogger("story_app")
 image_service = ImageGenerationService()
 chapter_manager = ChapterManager()
+
+
+def cancel_pending_image_tasks(
+    image_tasks: List[Tuple[Any, asyncio.Task]],
+) -> None:
+    """Cancel image tasks that no longer have a connected client to receive them."""
+    for _, task in image_tasks:
+        if not task.done():
+            task.cancel()
 
 
 async def start_image_generation_tasks(
@@ -474,6 +484,26 @@ async def process_image_tasks(
                 )
                 logger.info(f"Sent image update for chapter {current_chapter_number}")
 
+        except WebSocketDisconnect:
+            logger.info(
+                "WebSocket disconnected before image update could be sent; "
+                f"skipping remaining image updates for chapter {current_chapter_number}"
+            )
+            cancel_pending_image_tasks(image_tasks)
+            break
+        except RuntimeError as e:
+            if 'Cannot call "send" once a close message has been sent' in str(e):
+                logger.info(
+                    "WebSocket was already closed before image update could be sent; "
+                    f"skipping remaining image updates for chapter {current_chapter_number}"
+                )
+                cancel_pending_image_tasks(image_tasks)
+                break
+            logger.error(f"Error processing image task for {identifier}: {str(e)}")
+            # Log the stack trace for debugging
+            import traceback
+
+            logger.error(f"Traceback: {traceback.format_exc()}")
         except Exception as e:
             logger.error(f"Error processing image task for {identifier}: {str(e)}")
             # Log the stack trace for debugging

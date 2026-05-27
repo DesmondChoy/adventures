@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learning Odyssey — AI-Powered Story Adventures for Kids</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: #1a1a2e;
+    background: #fafafa;
+    line-height: 1.6;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+    color: white;
+    padding: 80px 40px 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 30% 70%, rgba(233, 196, 106, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 70% 30%, rgba(42, 157, 143, 0.08) 0%, transparent 50%);
+    animation: float 20s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-20px, -20px); }
+  }
+
+  .hero * { position: relative; z-index: 1; }
+
+  .badge {
+    display: inline-block;
+    background: rgba(233, 196, 106, 0.15);
+    border: 1px solid rgba(233, 196, 106, 0.3);
+    color: #e9c46a;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  h1 {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    letter-spacing: -1px;
+  }
+
+  h1 span { color: #e9c46a; }
+
+  .subtitle {
+    font-size: clamp(16px, 2vw, 20px);
+    color: rgba(255,255,255,0.8);
+    max-width: 600px;
+    margin: 0 auto 36px;
+    font-weight: 400;
+  }
+
+  .cta-btn {
+    display: inline-block;
+    background: #e9c46a;
+    color: #1a1a2e;
+    padding: 16px 40px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .cta-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(233, 196, 106, 0.3);
+  }
+
+  .cta-sub {
+    margin-top: 12px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.5);
+  }
+
+  .section {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 60px 40px;
+  }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #2a9d8f;
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: 800;
+    margin-bottom: 24px;
+    letter-spacing: -0.5px;
+  }
+
+  .how-it-works {
+    background: white;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 32px;
+    margin-top: 40px;
+  }
+
+  .step {
+    text-align: center;
+    padding: 24px;
+  }
+
+  .step-num {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #2a9d8f, #264653);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 auto 16px;
+  }
+
+  .step h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .step p {
+    font-size: 14px;
+    color: #555;
+    line-height: 1.5;
+  }
+
+  .worlds-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 32px;
+  }
+
+  .world-tag {
+    background: white;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .world-tag:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  .world-tag .emoji {
+    display: block;
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  .topics-section {
+    background: white;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+  }
+
+  .topic-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  .topic-pill {
+    background: #f0faf8;
+    border: 1px solid #d0e8e4;
+    color: #264653;
+    padding: 10px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .diff-section { background: #fafafa; }
+
+  .diff-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 32px;
+  }
+
+  @media (max-width: 640px) {
+    .diff-grid { grid-template-columns: 1fr; }
+  }
+
+  .diff-card {
+    padding: 28px;
+    border-radius: 16px;
+  }
+
+  .diff-card.old {
+    background: #fff5f5;
+    border: 1px solid #fecaca;
+  }
+
+  .diff-card.new {
+    background: #f0faf8;
+    border: 1px solid #a7d8cf;
+  }
+
+  .diff-card h3 {
+    font-size: 16px;
+    margin-bottom: 16px;
+    font-weight: 700;
+  }
+
+  .diff-card.old h3 { color: #c53030; }
+  .diff-card.new h3 { color: #2a9d8f; }
+
+  .diff-card ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .diff-card li {
+    padding: 6px 0;
+    font-size: 14px;
+    color: #555;
+    padding-left: 24px;
+    position: relative;
+  }
+
+  .diff-card.old li::before { content: '✕'; position: absolute; left: 0; color: #e53e3e; font-weight: 700; }
+  .diff-card.new li::before { content: '✓'; position: absolute; left: 0; color: #2a9d8f; font-weight: 700; }
+
+  .bottom-cta {
+    background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+    color: white;
+    text-align: center;
+    padding: 80px 40px;
+  }
+
+  .bottom-cta h2 { color: white; }
+
+  .bottom-cta p {
+    color: rgba(255,255,255,0.7);
+    max-width: 500px;
+    margin: 0 auto 36px;
+    font-size: 18px;
+  }
+
+  .stats {
+    display: flex;
+    justify-content: center;
+    gap: 48px;
+    margin-top: 40px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-num {
+    font-size: 42px;
+    font-weight: 800;
+    color: #e9c46a;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 13px;
+    color: #999;
+    background: #1a1a2e;
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="badge">Free for all families</div>
+  <h1>Stories that <span>secretly teach</span> your kids</h1>
+  <p class="subtitle">AI-powered interactive adventures where real lessons in science, history, and more are woven into stories your kids won't want to put down.</p>
+  <a href="https://learning-odyssey.up.railway.app/" class="cta-btn">Start a Free Adventure</a>
+  <p class="cta-sub">Ages 6–10 &middot; No account required &middot; No ads, ever</p>
+</div>
+
+<div class="how-it-works section">
+  <p class="section-title">How It Works</p>
+  <h2>Three choices. One unforgettable adventure.</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Pick a World</h3>
+      <p>Enchanted forests, clockwork cities, underwater kingdoms — 10 immersive worlds to explore.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Pick a Topic</h3>
+      <p>Dinosaurs, astronomy, the human body — 10 real educational subjects woven into the story.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Shape the Story</h3>
+      <p>Make choices each chapter. Craft artifacts, pick companions, solve problems. Every playthrough is unique.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="section-title">Story Worlds</p>
+  <h2>Where will they go today?</h2>
+  <div class="worlds-grid">
+    <div class="world-tag"><span class="emoji">🌲</span>Enchanted Forest</div>
+    <div class="world-tag"><span class="emoji">⚙️</span>Clockwork Sky City</div>
+    <div class="world-tag"><span class="emoji">🌊</span>Underwater Kingdom</div>
+    <div class="world-tag"><span class="emoji">🏔️</span>Jade Mountain</div>
+    <div class="world-tag"><span class="emoji">🎪</span>Circus & Carnival</div>
+    <div class="world-tag"><span class="emoji">📚</span>Dream Library</div>
+    <div class="world-tag"><span class="emoji">🎨</span>Inside Your Drawing</div>
+    <div class="world-tag"><span class="emoji">🔍</span>Tiny World Under the Floor</div>
+    <div class="world-tag"><span class="emoji">🏜️</span>Whispering Desert Oasis</div>
+    <div class="world-tag"><span class="emoji">🎆</span>Festival of Lights</div>
+  </div>
+</div>
+
+<div class="topics-section section">
+  <p class="section-title">Educational Topics</p>
+  <h2>Real learning, zero flashcards</h2>
+  <div class="topic-pills">
+    <span class="topic-pill">🦕 Dinosaurs & Prehistoric Life</span>
+    <span class="topic-pill">🔭 Astronomy</span>
+    <span class="topic-pill">🏛️ Ancient Civilizations</span>
+    <span class="topic-pill">🫀 Human Body</span>
+    <span class="topic-pill">🌊 Oceans & Marine Life</span>
+    <span class="topic-pill">🌋 Volcanoes & Weather</span>
+    <span class="topic-pill">💡 Inventions & Inventors</span>
+    <span class="topic-pill">🎵 Music & Sound</span>
+    <span class="topic-pill">🐄 Farm Animals</span>
+    <span class="topic-pill">🇸🇬 Singapore History</span>
+  </div>
+</div>
+
+<div class="diff-section section">
+  <p class="section-title">Why It's Different</p>
+  <h2>Not another quiz app in disguise</h2>
+  <div class="diff-grid">
+    <div class="diff-card old">
+      <h3>Typical "Educational" Apps</h3>
+      <ul>
+        <li>Learning is the chore, games are the reward</li>
+        <li>Same experience every time</li>
+        <li>Multiple choice quizzes with cartoon stickers</li>
+        <li>Kids lose interest after a week</li>
+      </ul>
+    </div>
+    <div class="diff-card new">
+      <h3>Learning Odyssey</h3>
+      <ul>
+        <li>The story IS the lesson — inseparable</li>
+        <li>Every single playthrough is unique</li>
+        <li>Lessons arise naturally from narrative problems</li>
+        <li>Kids ask to play again with different combinations</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-cta">
+  <h2>100 unique adventures waiting</h2>
+  <p>10 worlds &times; 10 topics. Every combination generates a completely different story. Your kids won't run out.</p>
+  <a href="https://learning-odyssey.up.railway.app/" class="cta-btn">Start a Free Adventure</a>
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num">10</div>
+      <div class="stat-label">Story Worlds</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">10</div>
+      <div class="stat-label">Topics</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">100</div>
+      <div class="stat-label">Combinations</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">$0</div>
+      <div class="stat-label">Forever</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Learning Odyssey &middot; Built with love for curious kids
+</footer>
+
+</body>
+</html>

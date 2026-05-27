@@ -563,15 +563,40 @@ class AdventureStateManager:
 
         logger.info(f"[CHAPTER CREATION] Chapter appended! Total chapters now: {len(self.state.chapters)}")
 
+        user_visible_count = len(
+            [
+                chapter
+                for chapter in self.state.chapters
+                if chapter.chapter_type != ChapterType.SUMMARY
+            ]
+        )
+
         # CHECK IF ADVENTURE SHOULD BE COMPLETE
-        if len(self.state.chapters) >= self.state.story_length:
-            logger.info(f"[CHAPTER CREATION] Adventure reached target length ({len(self.state.chapters)}/{self.state.story_length})")
+        if chapter_data.chapter_type == ChapterType.SUMMARY:
+            logger.info(
+                "[CHAPTER CREATION] Internal SUMMARY chapter appended after completion "
+                f"({user_visible_count}/{self.state.story_length} visible chapters)"
+            )
+        elif user_visible_count >= self.state.story_length:
+            logger.info(
+                "[CHAPTER CREATION] Adventure reached target length "
+                f"({user_visible_count}/{self.state.story_length})"
+            )
             if chapter_data.chapter_type == ChapterType.CONCLUSION:
-                logger.info(f"[CHAPTER CREATION] Final chapter is CONCLUSION - adventure should be complete!")
+                logger.info(
+                    "[CHAPTER CREATION] Final user-visible chapter is CONCLUSION - "
+                    "adventure should be complete!"
+                )
             else:
-                logger.warning(f"[CHAPTER CREATION] Final chapter is {chapter_data.chapter_type} instead of CONCLUSION!")
+                logger.warning(
+                    "[CHAPTER CREATION] Final user-visible chapter is "
+                    f"{chapter_data.chapter_type} instead of CONCLUSION!"
+                )
         else:
-            logger.info(f"[CHAPTER CREATION] Adventure not complete yet ({len(self.state.chapters)}/{self.state.story_length})")
+            logger.info(
+                "[CHAPTER CREATION] Adventure not complete yet "
+                f"({user_visible_count}/{self.state.story_length})"
+            )
 
     async def reconstruct_state_from_storage(
         self, stored_state: Dict[str, Any]

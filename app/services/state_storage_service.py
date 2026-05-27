@@ -100,19 +100,48 @@ class StateStorageService:
                 "chapters_preview": [{"type": ch.get("chapter_type", "unknown"), "number": ch.get("chapter_number", "unknown")} for ch in chapters[:5]]
             })
             
-            # Check for duplicate chapter types (corruption detection)
-            chapter_types = [ch.get("chapter_type") for ch in chapters if ch.get("chapter_type")]
-            type_counts = {}
-            for ch_type in chapter_types:
-                type_counts[ch_type] = type_counts.get(ch_type, 0) + 1
-            
-            duplicate_types = {k: v for k, v in type_counts.items() if v > 1}
-            if duplicate_types:
-                logger.warning(f"[STATE CORRUPTION] Duplicate chapter types detected: {duplicate_types}", extra={
-                    "adventure_id": adventure_id,
-                    "duplicate_types": duplicate_types,
-                    "total_chapters": completed_chapter_count
-                })
+            # Repeated STORY and LESSON chapter types are valid by design. Flag
+            # duplicate chapter numbers instead; those actually corrupt ordering.
+            chapter_numbers = [
+                ch.get("chapter_number")
+                for ch in chapters
+                if ch.get("chapter_number") is not None
+            ]
+            number_counts = {}
+            for ch_num in chapter_numbers:
+                number_counts[ch_num] = number_counts.get(ch_num, 0) + 1
+
+            duplicate_numbers = {
+                k: v for k, v in number_counts.items() if v > 1
+            }
+            if duplicate_numbers:
+                logger.warning(
+                    f"[STATE CORRUPTION] Duplicate chapter numbers detected: {duplicate_numbers}",
+                    extra={
+                        "adventure_id": adventure_id,
+                        "duplicate_numbers": duplicate_numbers,
+                        "total_chapters": completed_chapter_count,
+                    },
+                )
+
+            chapter_types = []
+            for ch in chapters:
+                raw_chapter_type = ch.get("chapter_type")
+                if raw_chapter_type:
+                    chapter_type_value = getattr(
+                        raw_chapter_type, "value", raw_chapter_type
+                    )
+                    chapter_types.append(str(chapter_type_value).lower())
+            summary_count = chapter_types.count("summary")
+            if summary_count > 1:
+                logger.warning(
+                    f"[STATE CORRUPTION] Multiple SUMMARY chapters detected: {summary_count}",
+                    extra={
+                        "adventure_id": adventure_id,
+                        "summary_count": summary_count,
+                        "total_chapters": completed_chapter_count,
+                    },
+                )
             
             # Log chapter content status
             chapters_with_content = sum(1 for ch in chapters if ch.get("content"))

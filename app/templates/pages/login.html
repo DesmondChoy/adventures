@@ -629,7 +629,7 @@
                         apiUrl = `/api/adventure/active_by_client_uuid/${clientUUID}`;
                         apiHeaders['Authorization'] = `Bearer ${token}`;
                     } else {
-                        console.error("Anonymous user but no client_uuid found in localStorage. Cannot fetch adventure for modal.");
+                        console.info("Anonymous user has no client_uuid yet; skipping active adventure lookup before selection.");
                         redirectToSelectPage();
                         return;
                     }
