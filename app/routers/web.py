@@ -18,6 +18,7 @@ from app.services.llm.prompt_templates import LOADING_PHRASES
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 logger = logging.getLogger("story_app")
+DEFAULT_STORY_LENGTH = int(AdventureState.model_fields["story_length"].default)
 
 
 # Pydantic Models for API Response
@@ -26,7 +27,7 @@ class AdventureResumeDetails(BaseModel):
     story_category: str
     lesson_topic: str
     current_chapter: int
-    total_chapters: int = 10  # Will be set from AdventureState default in practice
+    total_chapters: int = DEFAULT_STORY_LENGTH
     last_updated: datetime
 
 
@@ -105,9 +106,7 @@ def _adventure_data_to_resume(adventure_data: dict) -> Optional[AdventureResumeD
         story_category=story_display_name,
         lesson_topic=adventure_data["lesson_topic"],
         current_chapter=current_chapter_num,
-        total_chapters=adventure_data.get(
-            "total_chapters", AdventureState.model_fields["story_length"].default
-        ),
+        total_chapters=adventure_data.get("total_chapters", DEFAULT_STORY_LENGTH),
         last_updated=adventure_data["updated_at"],
     )
 
@@ -191,10 +190,6 @@ async def select_adventure(request: Request):
         # Get Supabase environment variables
         supabase_url = os.getenv("SUPABASE_URL")
         supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
-        logger.info(
-            f"For /select route: SUPABASE_URL from env: '{supabase_url}', SUPABASE_ANON_KEY from env: '{supabase_anon_key}'"
-        )  # DEBUG LOG
-
         return templates.TemplateResponse(
             "pages/index.html",  # Corrected path to use the index.html within 'pages'
             {
@@ -226,9 +221,6 @@ async def root(request: Request):
         )
         supabase_url = os.getenv("SUPABASE_URL")
         supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
-        logger.info(
-            f"For / route: SUPABASE_URL from env: '{supabase_url}', SUPABASE_ANON_KEY from env: '{supabase_anon_key}'"
-        )  # DEBUG LOG
         return templates.TemplateResponse(
             "pages/login.html",  # Serve the new login page from templates
             {
@@ -249,38 +241,39 @@ async def root(request: Request):
 @router.get("/story/{chapter}")
 async def story_page(request: Request, chapter: int):
     """Render the story page for the given chapter."""
-    try:
-        # Validate chapter number
-        if chapter < 1 or chapter > 7:  # Updated to match maximum story length
-            logger.error(
-                f"Invalid story chapter requested: {chapter}",
-                extra={
-                    "request_id": request.state.request_id,
-                    "path": f"/story/{chapter}",
-                    "status_code": 400,
-                    "chapter": chapter,
-                },
-            )
-            return {"error": "Invalid story chapter"}
+    context = get_session_context(request)
 
+    if chapter < 1 or chapter > DEFAULT_STORY_LENGTH:
+        logger.warning(
+            "Invalid story chapter requested",
+            extra={
+                **context,
+                "path": f"/story/{chapter}",
+                "status_code": 400,
+                "chapter": chapter,
+            },
+        )
+        raise HTTPException(status_code=400, detail="Invalid story chapter")
+
+    try:
         logger.info(
             f"Loading story page for chapter {chapter}",
             extra={
-                "request_id": request.state.request_id,
+                **context,
                 "path": f"/story/{chapter}",
                 "status_code": 200,
                 "chapter": chapter,
             },
         )
-        return templates.TemplateResponse(
-            "story.html",
-            {"request": request},
-        )
+        # Gameplay lives on the selection page as a single-page flow. Reuse
+        # that renderer so direct legacy chapter URLs do not target the
+        # removed ``story.html`` template.
+        return await select_adventure(request)
     except Exception as e:
         logger.error(
             f"Error rendering story page for chapter {chapter}",
             extra={
-                "request_id": request.state.request_id,
+                **context,
                 "path": f"/story/{chapter}",
                 "status_code": 500,
                 "chapter": chapter,
@@ -463,7 +456,4 @@ async def abandon_adventure_api(
 @router.get("/api/loading-phrases")
 async def get_loading_phrases():
     """API endpoint to serve loading phrases for the loader component."""
-    import random
     return {"phrases": LOADING_PHRASES}
-
-

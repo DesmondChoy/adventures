@@ -42,7 +42,11 @@ async def process_choice(
     # Extract choice information and debug state
     logger.debug(f"Raw choice_data: {choice_data}")
     if isinstance(choice_data, dict):
-        chosen_path = choice_data.get("id") or choice_data.get("chosen_path", "")
+        chosen_path = (
+            choice_data.get("id")
+            or choice_data.get("chosen_path")
+            or choice_data.get("choice", "")
+        )
         choice_text = choice_data.get("text") or choice_data.get("choice_text", "")
         if "state" in choice_data:
             logger.debug("Choice data contains state")

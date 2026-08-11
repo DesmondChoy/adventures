@@ -91,7 +91,7 @@ class OpenAIService(BaseLLMService):
             )
 
             # Extract the text
-            response_text = completion.choices[0].message.content
+            response_text = completion.choices[0].message.content or ""
 
             # logger.info("\n=== CHARACTER VISUAL JSON RESPONSE ===")
             # logger.info(f"Response excerpt:\n{response_text[:300]}...")
@@ -135,11 +135,17 @@ class OpenAIService(BaseLLMService):
             full_response = ""
             buffer_complete = False
             needs_formatting = False
+            skip_paragraph_formatting = bool(
+                context and context.get("skip_paragraph_formatting")
+            )
 
             async for chunk in stream:
                 if chunk.choices[0].delta.content is not None:
                     content = chunk.choices[0].delta.content
                     full_response += content
+                    if skip_paragraph_formatting:
+                        yield content
+                        continue
                     collected_text += content
 
                     if not buffer_complete and len(collected_text) >= buffer_size:
@@ -150,6 +156,12 @@ class OpenAIService(BaseLLMService):
                             collected_text = ""
                     elif buffer_complete and not needs_formatting:
                         yield content
+
+            # The inspection buffer is normally emitted once it reaches
+            # ``buffer_size``. Short responses never cross that threshold, so
+            # flush them when the provider finishes streaming.
+            if not buffer_complete and collected_text:
+                yield collected_text
 
             if needs_formatting:
                 async def _regenerate():
@@ -239,6 +251,9 @@ class OpenAIService(BaseLLMService):
                     elif buffer_complete and not needs_formatting:
                         yield content
 
+            if not buffer_complete and collected_text:
+                yield collected_text
+
             if needs_formatting:
                 async def _regenerate():
                     resp = await self.client.chat.completions.create(
@@ -319,7 +334,7 @@ class GeminiService(BaseLLMService):
             )
 
             # Extract the text
-            response_text = response.text
+            response_text = response.text or ""
 
             # logger.info("\n=== CHARACTER VISUAL JSON RESPONSE ===")
             # logger.info(f"Response excerpt:\n{response_text[:300]}...")
@@ -360,11 +375,17 @@ class GeminiService(BaseLLMService):
             full_response = ""
             buffer_complete = False
             needs_formatting = False
+            skip_paragraph_formatting = bool(
+                context and context.get("skip_paragraph_formatting")
+            )
 
             for chunk in response:
                 if chunk.text:
                     content = chunk.text
                     full_response += content
+                    if skip_paragraph_formatting:
+                        yield content
+                        continue
                     collected_text += content
 
                     if not buffer_complete and len(collected_text) >= buffer_size:
@@ -376,6 +397,9 @@ class GeminiService(BaseLLMService):
                     elif buffer_complete and not needs_formatting:
                         yield content
 
+            if not buffer_complete and collected_text:
+                yield collected_text
+
             if needs_formatting:
                 async def _regenerate():
                     cp = f"{system_prompt}\n\n{user_prompt}"
@@ -384,7 +408,7 @@ class GeminiService(BaseLLMService):
                         contents=cp,
                         config=ModelConfig.get_gemini_config(),
                     )
-                    return retry_resp.text
+                    return retry_resp.text or ""
 
                 result = await regenerate_with_paragraphs(
                     full_response, _regenerate, llm_service=self
@@ -462,6 +486,9 @@ class GeminiService(BaseLLMService):
                     elif buffer_complete and not needs_formatting:
                         yield content
 
+            if not buffer_complete and collected_text:
+                yield collected_text
+
             if needs_formatting:
                 async def _regenerate():
                     cp = f"{system_prompt}\n\n{user_prompt}"
@@ -470,7 +497,7 @@ class GeminiService(BaseLLMService):
                         contents=cp,
                         config=ModelConfig.get_gemini_config(),
                     )
-                    return retry_resp.text
+                    return retry_resp.text or ""
 
                 result = await regenerate_with_paragraphs(
                     full_response, _regenerate, llm_service=self

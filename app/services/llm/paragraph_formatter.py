@@ -115,9 +115,10 @@ async def reformat_text_with_paragraphs(
             
             # Collect the complete response from the streaming interface
             reformatted_text = ""
-            response_generator = await llm_service.generate_with_prompt(
+            response_generator = llm_service.generate_with_prompt(
                 system_prompt=system_prompt,
-                user_prompt=prompt
+                user_prompt=prompt,
+                context={"skip_paragraph_formatting": True},
             )
             async for chunk in response_generator:
                 reformatted_text += chunk

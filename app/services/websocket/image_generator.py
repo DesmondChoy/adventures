@@ -43,7 +43,11 @@ async def start_image_generation_tasks(
         image_tasks = await generate_agency_images(chapter_content, state)
     # For chapters after the first, generate a single image based on current chapter content
     elif current_chapter_number > 1:
-        image_tasks = await generate_chapter_image(current_chapter_number, state)
+        image_tasks = await generate_chapter_image(
+            current_chapter_number,
+            state,
+            chapter_content,
+        )
     else:
         logger.warning(
             f"No image tasks started for chapter {current_chapter_number}, type: {chapter_type}"
@@ -197,7 +201,9 @@ def find_matching_agency_option(
 
 
 async def generate_chapter_image(
-    current_chapter_number: int, state: AdventureState
+    current_chapter_number: int,
+    state: AdventureState,
+    chapter_content: Optional[ChapterContent] = None,
 ) -> List[Tuple[str, asyncio.Task]]:
     """Generate an image for the current chapter using the two-step prompt generation process.
 
@@ -213,6 +219,8 @@ async def generate_chapter_image(
     Args:
         current_chapter_number: The chapter number
         state: The current adventure state
+        chapter_content: The exact chapter to illustrate when it has not yet
+            been appended to state.
 
     Returns:
         A list of tuples containing the image identifier and task
@@ -228,8 +236,21 @@ async def generate_chapter_image(
         return image_tasks
 
     try:
-        # We need a chapter content to generate an image
-        if len(state.chapters) == 0:
+        # Prefer the numbered AdventureState chapter. The explicit content is
+        # needed only by callers that intentionally start work before append.
+        state_chapter = next(
+            (
+                chapter
+                for chapter in reversed(state.chapters)
+                if chapter.chapter_number == current_chapter_number
+            ),
+            None,
+        )
+        if state_chapter is not None:
+            current_content = state_chapter.content
+        elif chapter_content is not None:
+            current_content = chapter_content.content
+        else:
             # Special case for first chapter - use story metadata
             if current_chapter_number == 1:
                 # Create a scene description from story metadata
@@ -277,10 +298,6 @@ async def generate_chapter_image(
             # For other chapters with no content, we need content to generate an image
             logger.error("No chapters available for image generation")
             return image_tasks
-
-        # Get the most relevant chapter content - always use the most recently added chapter
-        current_chapter = state.chapters[-1]
-        current_content = current_chapter.content
 
         if not current_content or len(current_content.strip()) == 0:
             logger.error("Chapter has no content, cannot generate image")

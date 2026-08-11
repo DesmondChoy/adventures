@@ -368,23 +368,16 @@ async def extract_regular_choices(
 
 def parse_choice_text(choices_text: str) -> List[str]:
     """Parse the choices text to extract individual choices."""
-    choices = []
-
-    # Try multi-line format first (within choices section)
-    choice_pattern = r"Choice\s*([ABC])\s*:\s*([^\n]+)"
-    matches = re.finditer(
-        choice_pattern, choices_text, re.IGNORECASE | re.MULTILINE
+    choice_pattern = (
+        r"Choice\s*[ABC]\s*:\s*(.*?)"
+        r"(?=\s*Choice\s*[ABC]\s*:|\s*$)"
     )
-    for match in matches:
-        choices.append(match.group(2).strip())
-
-    # If no matches found, try single-line format (still within choices section)
-    if not choices:
-        single_line_pattern = (
-            r"Choice\s*[ABC]\s*:\s*([^.]+(?:\.\s*(?=Choice\s*[ABC]\s*:|$))?)"
+    return [
+        match.group(1).strip()
+        for match in re.finditer(
+            choice_pattern,
+            choices_text,
+            re.IGNORECASE | re.DOTALL,
         )
-        matches = re.finditer(single_line_pattern, choices_text, re.IGNORECASE)
-        for match in matches:
-            choices.append(match.group(1).strip())
-    
-    return choices
+        if match.group(1).strip()
+    ]

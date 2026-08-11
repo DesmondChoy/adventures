@@ -196,7 +196,7 @@ class ImageGenerationService:
         protagonist_description: str,
         agency_details: Dict[str, str],
         story_visual_sensory_detail: str,
-        character_visuals: Dict[str, str] = None,
+        character_visuals: Optional[Dict[str, str]] = None,
     ) -> str:
         """Synthesize a coherent image prompt using LLM to combine multiple inputs.
 
@@ -293,7 +293,7 @@ class ImageGenerationService:
                     )
 
                     # Extract the text directly
-                    synthesized_prompt = response.text.strip()
+                    synthesized_prompt = (response.text or "").strip()
                 except Exception as e:
                     logger.error(f"Error with direct Gemini call: {str(e)}")
                     # Fallback to streaming approach
@@ -301,15 +301,7 @@ class ImageGenerationService:
 
                     chunks = []
 
-                    # Create a minimal AdventureState-like object with just what we need
-                    class MinimalState:
-                        def __init__(self):
-                            self.current_chapter_id = "image_prompt_synthesis"
-                            self.story_length = 1
-                            self.chapters = []
-                            self.metadata = {"prompt_override": True}
-
-                    response_generator = await llm.generate_with_prompt(
+                    response_generator = llm.generate_with_prompt(
                         system_prompt="You are a helpful assistant that follows instructions precisely.",
                         user_prompt=meta_prompt,
                     )
@@ -319,7 +311,7 @@ class ImageGenerationService:
             else:
                 # For OpenAI, use the streaming approach
                 chunks = []
-                response_generator = await llm.generate_with_prompt(
+                response_generator = llm.generate_with_prompt(
                     system_prompt="You are a helpful assistant that follows instructions precisely.",
                     user_prompt=meta_prompt,
                 )

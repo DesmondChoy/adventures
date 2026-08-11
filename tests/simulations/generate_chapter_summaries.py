@@ -182,7 +182,7 @@ async def generate_chapter_summary(
                 f"Attempting streaming approach (attempt {retry + 1}/{max_retries})"
             )
             chunks = []
-            response_generator = await llm_service.generate_with_prompt(
+            response_generator = llm_service.generate_with_prompt(
                 system_prompt="You are a helpful assistant that follows instructions precisely.",
                 user_prompt=custom_prompt,
             )

@@ -31,20 +31,18 @@ _ws_lock = asyncio.Lock()
 
 
 def _validate_adventure_ownership(
-    stored_state: dict, current_user_id, adventure_id: str
+    adventure_record: dict, current_user_id: Optional[UUID], adventure_id: str
 ) -> bool:
     """Validate that the current user owns the adventure.
 
     Returns True if the user can access the adventure, False otherwise.
     """
-    adventure_owner_id_str = stored_state.get("metadata", {}).get("user_id")
-    if not adventure_owner_id_str and "user_id" in stored_state:
-        adventure_owner_id_str = stored_state.get("user_id")
+    adventure_owner_id_str = adventure_record.get("user_id")
 
     if adventure_owner_id_str is None:
         logger.info(f"Resuming guest adventure {adventure_id}.")
         return True
-    elif current_user_id and adventure_owner_id_str == str(current_user_id):
+    elif current_user_id and str(adventure_owner_id_str) == str(current_user_id):
         logger.info(
             f"User {current_user_id} confirmed owner of adventure {adventure_id}."
         )
@@ -55,6 +53,20 @@ def _validate_adventure_ownership(
             f"(owner: {adventure_owner_id_str}). Denying access."
         )
         return False
+
+
+def _get_choice_id(choice_data: object) -> Optional[str]:
+    """Normalize the supported WebSocket choice payload shapes."""
+    if isinstance(choice_data, str):
+        return choice_data
+    if isinstance(choice_data, dict):
+        choice_id = (
+            choice_data.get("id")
+            or choice_data.get("chosen_path")
+            or choice_data.get("choice")
+        )
+        return choice_id if isinstance(choice_id, str) else None
+    return None
 
 
 async def websocket_ping_task(websocket: WebSocket, stop_event: asyncio.Event):
@@ -202,13 +214,21 @@ async def story_websocket(
             )
             connection_data["adventure_id"] = resume_adventure_id
             try:
-                stored_state = await state_storage_service.get_state(
+                adventure_record = await state_storage_service.get_adventure_record(
                     resume_adventure_id
                 )
-                if stored_state:
+                if adventure_record:
+                    stored_state = adventure_record.get("state_data")
+                    if not isinstance(stored_state, dict):
+                        logger.error(
+                            "Adventure record has invalid state_data",
+                            extra={"adventure_id": resume_adventure_id},
+                        )
+                        stored_state = None
+
                     current_user_id = connection_data.get("user_id")
                     can_load = _validate_adventure_ownership(
-                        stored_state, current_user_id, resume_adventure_id
+                        adventure_record, current_user_id, resume_adventure_id
                     )
 
                     if not can_load:
@@ -323,14 +343,21 @@ async def story_websocket(
                 connection_data["adventure_id"] = active_adventure_id
                 # Attempt to load this active adventure's state
                 try:
-                    stored_state = await state_storage_service.get_state(
-                        active_adventure_id
+                    adventure_record = (
+                        await state_storage_service.get_adventure_record(
+                            active_adventure_id
+                        )
+                    )
+                    stored_state = (
+                        adventure_record.get("state_data")
+                        if adventure_record
+                        else None
                     )
                     if stored_state:
                         # Defense-in-depth: verify ownership even though SQL filtered by user_id
                         current_user_id = connection_data.get("user_id")
                         if not _validate_adventure_ownership(
-                            stored_state, current_user_id, active_adventure_id
+                            adventure_record, current_user_id, active_adventure_id
                         ):
                             logger.warning(
                                 f"Ownership mismatch for active adventure {active_adventure_id}. Treating as no adventure found."
@@ -504,17 +531,41 @@ async def story_websocket(
 
             validated_state = data.get("state")
             choice_data = data.get("choice")
+            choice_id = _get_choice_id(choice_data)
+            requested_resume_id = data.get("adventure_id_to_resume")
+            connected_adventure_id = connection_data.get("adventure_id")
+
+            is_specific_resume_handshake = (
+                choice_id is not None
+                and choice_id.lower() == "resume_specific_adventure"
+                and requested_resume_id is not None
+                and connected_adventure_id is not None
+                and str(requested_resume_id) == str(connected_adventure_id)
+            )
+            if is_specific_resume_handshake:
+                current_state = state_manager.get_current_state()
+                if (
+                    current_state
+                    and current_state.chapters
+                    and len(current_state.chapters) == current_state.story_length
+                    and current_state.chapters[-1].chapter_type
+                    == ChapterType.CONCLUSION
+                ):
+                    logger.info(
+                        "Specific resume restored a completed CONCLUSION chapter",
+                        extra={"adventure_id": connected_adventure_id},
+                    )
+                    await send_story_complete(
+                        websocket=websocket,
+                        state=current_state,
+                        connection_data=connection_data,
+                        already_streamed=False,
+                    )
+                    connection_data.pop("resumed_session_just_sent_chapter", None)
+                    continue
 
             if connection_data.get("resumed_session_just_sent_chapter"):
-                is_initial_start_message = False
-                if isinstance(choice_data, str) and choice_data.lower() == "start":
-                    is_initial_start_message = True
-                elif (
-                    isinstance(choice_data, dict)
-                    and choice_data.get("chosen_path", "").lower() == "start"
-                ):
-                    is_initial_start_message = True
-                if is_initial_start_message:
+                if choice_id and choice_id.lower() == "start":
                     logger.info(
                         "Ignoring initial 'start' message from client after successful chapter resumption."
                     )
@@ -613,21 +664,9 @@ async def story_websocket(
                         await websocket.close(code=1001)
                         return
                 else:
-                    is_reveal_summary_choice = False
-                    if isinstance(choice_data, str):
-                        is_reveal_summary_choice = (
-                            choice_data.lower() == "reveal_summary"
-                        )
-                    elif isinstance(choice_data, dict):
-                        choice_id = (
-                            choice_data.get("id")
-                            or choice_data.get("chosen_path")
-                            or choice_data.get("choice")
-                        )
-                        if isinstance(choice_id, str):
-                            is_reveal_summary_choice = (
-                                choice_id.lower() == "reveal_summary"
-                            )
+                    is_reveal_summary_choice = bool(
+                        choice_id and choice_id.lower() == "reveal_summary"
+                    )
 
                     # Use server-authoritative state for summary reveal to avoid stale
                     # client localStorage state overwriting the latest CONCLUSION state.
@@ -661,8 +700,8 @@ async def story_websocket(
                     current_state
                     and current_state.chapters
                     and len(current_state.chapters) == current_state.story_length
-                    and isinstance(choice_data, str)
-                    and choice_data.lower() == "start"
+                    and choice_id is not None
+                    and choice_id.lower() == "start"
                     and current_state.chapters[-1].chapter_type
                     == ChapterType.CONCLUSION
                 ):

@@ -196,8 +196,9 @@ async def generate_conclusion_chapter_summary(
     websocket: WebSocket,
     connection_data: Optional[Dict[str, Any]] = None,
     send_ready_signal: bool = True,
-) -> str:
+) -> Optional[str]:
     """Generate and store summary for the conclusion chapter."""
+    summary_stored = False
     try:
         logger.info(f"Generating summary for CONCLUSION chapter")
         summary_result = await chapter_manager.generate_chapter_summary(
@@ -212,52 +213,13 @@ async def generate_conclusion_chapter_summary(
 
         logger.info(f"Generated CONCLUSION chapter summary: {summary_text[:100]}...")
 
-        # Store the summary
-        if len(state.chapter_summaries) < conclusion_chapter.chapter_number:
-            logger.info(
-                f"Adding placeholder summaries up to chapter {conclusion_chapter.chapter_number - 1}"
-            )
-            while len(state.chapter_summaries) < conclusion_chapter.chapter_number - 1:
-                state.chapter_summaries.append("Chapter summary not available")
-                # Also add placeholder titles
-                if hasattr(state, "summary_chapter_titles"):
-                    state.summary_chapter_titles.append(
-                        f"Chapter {len(state.summary_chapter_titles) + 1}"
-                    )
-
-            # Add the new summary and title
-            state.chapter_summaries.append(summary_text)
-            # Add the title if the field exists
-            if hasattr(state, "summary_chapter_titles"):
-                state.summary_chapter_titles.append(title)
-        else:
-            logger.info(
-                f"Updating existing summary at index {conclusion_chapter.chapter_number - 1}"
-            )
-            state.chapter_summaries[conclusion_chapter.chapter_number - 1] = (
-                summary_text
-            )
-            # Update the title if the field exists
-            if hasattr(state, "summary_chapter_titles"):
-                # Ensure the list is long enough
-                while (
-                    len(state.summary_chapter_titles)
-                    < conclusion_chapter.chapter_number
-                ):
-                    state.summary_chapter_titles.append(
-                        f"Chapter {len(state.summary_chapter_titles) + 1}"
-                    )
-                state.summary_chapter_titles[conclusion_chapter.chapter_number - 1] = (
-                    title
-                )
-
-        logger.info(
-            f"Stored summary for chapter {conclusion_chapter.chapter_number}: {summary_text}"
+        await _store_summary_safe(
+            conclusion_chapter,
+            state,
+            title,
+            summary_text,
         )
-        if hasattr(state, "summary_chapter_titles"):
-            logger.info(
-                f"Stored title for chapter {conclusion_chapter.chapter_number}: {title}"
-            )
+        summary_stored = True
 
         # Store the updated state in StateStorageService
         adventure_id = None
@@ -269,12 +231,10 @@ async def generate_conclusion_chapter_summary(
                 f"Using existing adventure_id: {adventure_id} for state storage"
             )
 
-            # Update the existing record with is_complete=True
-            # Update the existing record with is_complete=True
             state_id = await state_storage_service.store_state(
                 state.model_dump(mode='json'),
                 adventure_id=adventure_id,
-                user_id=None,  # No authenticated user yet
+                user_id=connection_data.get("user_id"),
                 explicit_is_complete=True,  # Mark as complete
             )
             logger.info(
@@ -297,12 +257,18 @@ async def generate_conclusion_chapter_summary(
         return state_id  # Return state_id for caller to use
     except Exception as e:
         logger.error(f"Error generating chapter summary: {str(e)}", exc_info=True)
-        if len(state.chapter_summaries) < conclusion_chapter.chapter_number:
+        if not summary_stored:
             logger.warning(
                 f"Using fallback summary for chapter {conclusion_chapter.chapter_number}"
             )
-            state.chapter_summaries.append("Chapter summary not available")
-        return None  # Return None if error occurs
+            await _store_summary_safe(
+                conclusion_chapter,
+                state,
+                f"Chapter {conclusion_chapter.chapter_number}",
+                "Chapter summary not available",
+                overwrite_existing=False,
+            )
+        return None
 
 
 async def diagnose_character_visuals(chapter_content, existing_visuals=None):
@@ -1362,29 +1328,54 @@ async def _store_summary_safe(
     prev_chapter: ChapterData,
     state: AdventureState,
     title: str,
-    summary_text: str
+    summary_text: str,
+    overwrite_existing: bool = True,
 ) -> None:
-    """
-    Safely write the summary/title to the shared state object.
-    Uses a lock to avoid races with other summary tasks.
-    """
+    """Write a chapter summary under lock, optionally preserving valid data."""
     async with state.summary_lock:
         chap_idx = prev_chapter.chapter_number - 1
         
         # Pad lists if needed
         while len(state.chapter_summaries) <= chap_idx:
             state.chapter_summaries.append("Chapter summary not available")
-            if hasattr(state, "summary_chapter_titles"):
-                state.summary_chapter_titles.append(f"Chapter {len(state.summary_chapter_titles)+1}")
-        
-        # Store the actual summary and title
-        state.chapter_summaries[chap_idx] = summary_text
         if hasattr(state, "summary_chapter_titles"):
+            while len(state.summary_chapter_titles) <= chap_idx:
+                state.summary_chapter_titles.append(
+                    f"Chapter {len(state.summary_chapter_titles) + 1}"
+                )
+        
+        existing_summary = state.chapter_summaries[chap_idx]
+        has_existing_summary = bool(
+            existing_summary
+            and existing_summary != "Chapter summary not available"
+        )
+        has_existing_title = bool(
+            hasattr(state, "summary_chapter_titles")
+            and state.summary_chapter_titles[chap_idx]
+        )
+
+        # A failed duplicate task must not replace an already-valid summary.
+        stored_value = False
+        if overwrite_existing or not has_existing_summary:
+            state.chapter_summaries[chap_idx] = summary_text
+            stored_value = True
+        if (
+            hasattr(state, "summary_chapter_titles")
+            and (overwrite_existing or not has_existing_title)
+        ):
             state.summary_chapter_titles[chap_idx] = title
-        
-        logger.info(f"Stored summary for chapter {prev_chapter.chapter_number}: {summary_text}")
-        if hasattr(state, "summary_chapter_titles"):
-            logger.info(f"Stored title for chapter {prev_chapter.chapter_number}: {title}")
+            stored_value = True
+
+        if stored_value:
+            logger.info(
+                "Stored chapter summary",
+                extra={"chapter_number": prev_chapter.chapter_number},
+            )
+        else:
+            logger.debug(
+                "Preserved existing chapter summary after fallback failure",
+                extra={"chapter_number": prev_chapter.chapter_number},
+            )
 
 
 async def _update_character_visuals_background(
@@ -1443,12 +1434,13 @@ async def generate_chapter_summary_background(
         logger.info(f"[PERFORMANCE] Completed background chapter summary generation for chapter {previous_chapter.chapter_number}")
     except Exception as e:
         logger.error(f"Background chapter summary generation failed for chapter {previous_chapter.chapter_number}: {e}")
-        # Ensure we have a fallback summary to prevent summary screen issues
-        async with state.summary_lock:
-            if len(state.chapter_summaries) < previous_chapter.chapter_number:
-                state.chapter_summaries.append("Chapter summary not available")
-                if hasattr(state, "summary_chapter_titles"):
-                    state.summary_chapter_titles.append(f"Chapter {previous_chapter.chapter_number}")
+        await _store_summary_safe(
+            previous_chapter,
+            state,
+            f"Chapter {previous_chapter.chapter_number}",
+            "Chapter summary not available",
+            overwrite_existing=False,
+        )
         # Continue execution - don't let summary failures affect story flow
 
 

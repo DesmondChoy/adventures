@@ -45,6 +45,80 @@ def get_telemetry_service():
     return _telemetry_service
 
 
+async def _record_chapter_viewed(
+    state: AdventureState,
+    chapter_number: int,
+    chapter_type: ChapterType,
+    adventure_id: Optional[str],
+    story_category: Optional[str],
+    lesson_topic: Optional[str],
+    connection_data: Optional[Dict[str, Any]],
+    is_resumption: bool,
+) -> None:
+    """Record chapter telemetry and start the response-duration timer."""
+    try:
+        event_metadata = {
+            "chapter_number": chapter_number,
+            "chapter_type": chapter_type.value,
+            "story_category": story_category,
+            "lesson_topic": lesson_topic,
+            "is_resumption": is_resumption,
+            "client_uuid": state.metadata.get("client_uuid"),
+        }
+        event_metadata = {
+            key: value
+            for key, value in event_metadata.items()
+            if value is not None
+        }
+
+        await get_telemetry_service().log_event(
+            event_name="chapter_viewed",
+            adventure_id=UUID(adventure_id) if adventure_id else None,
+            user_id=connection_data.get("user_id") if connection_data else None,
+            metadata=event_metadata,
+            chapter_type=chapter_type.value,
+            chapter_number=chapter_number,
+        )
+        logger.info(
+            "Logged chapter_viewed event",
+            extra={
+                "adventure_id": adventure_id,
+                "chapter_number": chapter_number,
+                "chapter_type": chapter_type.value,
+            },
+        )
+    except Exception as telemetry_error:
+        logger.error(
+            "Failed to log chapter_viewed event",
+            extra={
+                "adventure_id": adventure_id,
+                "chapter_number": chapter_number,
+                "error": str(telemetry_error),
+            },
+        )
+
+    current_time_ms = int(time.time() * 1000)
+    if connection_data and isinstance(connection_data, dict):
+        connection_data["current_chapter_start_time_ms"] = current_time_ms
+        logger.debug(
+            "Stored chapter start time",
+            extra={
+                "adventure_id": adventure_id,
+                "chapter_number": chapter_number,
+            },
+        )
+    else:
+        logger.warning(
+            "Cannot store chapter start time without connection data",
+            extra={
+                "adventure_id": adventure_id,
+                "chapter_number": chapter_number,
+            },
+        )
+
+    state.metadata[f"chapter_{chapter_number}_start_time_ms"] = current_time_ms
+
+
 async def stream_chapter_content(
     websocket: WebSocket,
     state: AdventureState,
@@ -75,9 +149,35 @@ async def stream_chapter_content(
     image_tasks: List[asyncio.Task] = []
 
     if already_streamed:
-        logger.info("[PERFORMANCE] Content already live-streamed, skipping word-by-word streaming")
-        # Execute deferred tasks immediately since streaming is done
+        logger.info(
+            "[PERFORMANCE] Content already live-streamed, skipping word-by-word streaming"
+        )
+        if not state.chapters:
+            logger.error(
+                "Live-streamed chapter is missing from AdventureState",
+                extra={"adventure_id": adventure_id},
+            )
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "message": "Internal server error: generated chapter was not saved.",
+                }
+            )
+            return
+
+        latest_chapter = state.chapters[-1]
         await execute_deferred_task_factories(state)
+        await websocket.send_json({"type": "hide_loader"})
+        await _record_chapter_viewed(
+            state=state,
+            chapter_number=latest_chapter.chapter_number,
+            chapter_type=latest_chapter.chapter_type,
+            adventure_id=adventure_id,
+            story_category=story_category,
+            lesson_topic=lesson_topic,
+            connection_data=connection_data,
+            is_resumption=False,
+        )
         return
 
     if is_resumption:
@@ -272,47 +372,16 @@ async def stream_chapter_content(
         )
         # Optionally, send a message or ensure client handles no new image for resumed chapter
 
-    # Log chapter_viewed event
-    try:
-        event_metadata = {
-            "chapter_number": current_chapter_number_to_send,
-            "chapter_type": current_chapter_type_to_send.value,
-            "story_category": story_category,  # Use passed argument
-            "lesson_topic": lesson_topic,  # Use passed argument
-            "is_resumption": is_resumption,
-            "client_uuid": state.metadata.get("client_uuid"),
-        }
-        # Remove None values from metadata to keep it clean
-        event_metadata = {k: v for k, v in event_metadata.items() if v is not None}
-
-        await get_telemetry_service().log_event(
-            event_name="chapter_viewed",
-            adventure_id=UUID(adventure_id) if adventure_id else None,
-            user_id=connection_data.get("user_id") if connection_data else None,
-            metadata=event_metadata,
-            chapter_type=current_chapter_type_to_send.value,  # Added
-            chapter_number=current_chapter_number_to_send,  # Added
-        )
-        logger.info(
-            f"Logged 'chapter_viewed' event for adventure ID: {adventure_id}, chapter: {current_chapter_number_to_send}, type: {current_chapter_type_to_send.value}"
-        )
-    except Exception as tel_e:
-        logger.error(f"Error logging 'chapter_viewed' event: {tel_e}")
-
-    # Store chapter start time for duration calculation
-    current_time_ms = int(time.time() * 1000)
-    if connection_data and isinstance(connection_data, dict):
-        connection_data["current_chapter_start_time_ms"] = current_time_ms
-        logger.debug(
-            f"Stored chapter start time for adventure_id {adventure_id}, chapter {current_chapter_number_to_send}"
-        )
-    else:
-        logger.warning(
-            f"'connection_data' not available or not a dict in stream_handler for adventure {adventure_id}, chapter {current_chapter_number_to_send}, cannot store chapter start time."
-        )
-    
-    # Also store in adventure state metadata for persistence across connection restarts
-    state.metadata[f"chapter_{current_chapter_number_to_send}_start_time_ms"] = current_time_ms
+    await _record_chapter_viewed(
+        state=state,
+        chapter_number=current_chapter_number_to_send,
+        chapter_type=current_chapter_type_to_send,
+        adventure_id=adventure_id,
+        story_category=story_category,
+        lesson_topic=lesson_topic,
+        connection_data=connection_data,
+        is_resumption=is_resumption,
+    )
 
 
 async def send_fallback_image(
@@ -663,7 +732,7 @@ async def stream_chapter_with_live_generation(
             "type": "choices",
             "choices": [{"text": choice.text, "id": str(choice.next_chapter)} for choice in chapter_content.choices]
         })
-    
+
     # Start image generation tasks for the new chapter
     # Skip for CONCLUSION chapters - send_story_complete() handles image generation
     # after sending the story_complete message (so Memory Lane appears immediately)
@@ -716,6 +785,7 @@ async def create_and_append_chapter_direct(
             chapter_content=chapter_content,
             question=sampled_question,
         )
+        state_manager.update_agency_references(new_chapter)
         state.chapters.append(new_chapter)
 
     # Note: State storage is handled by the WebSocket router flow

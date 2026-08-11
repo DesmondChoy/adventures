@@ -421,16 +421,24 @@ class AdventureStateManager:
             return
 
         agency = self.state.metadata["agency"]
+        if not isinstance(agency, dict):
+            logger.warning(
+                "Cannot track agency references: agency metadata is invalid",
+                extra={
+                    "chapter_number": chapter_data.chapter_number,
+                    "agency_metadata_type": type(agency).__name__,
+                },
+            )
+            return
+
         content = chapter_data.content
 
         # Check if agency is referenced
-        agency_name = agency.get("name", "")
-        agency_type = agency.get("type", "")
-
-        has_reference = (
-            agency_name.lower() in content.lower()
-            or agency_type.lower() in content.lower()
+        raw_agency_name = agency.get("name")
+        agency_name = (
+            raw_agency_name.strip() if isinstance(raw_agency_name, str) else ""
         )
+        has_reference = bool(agency_name) and agency_name.lower() in content.lower()
 
         # Track references
         if "references" not in agency:
@@ -967,6 +975,10 @@ class AdventureStateManager:
                 "selected_theme": stored_state["selected_theme"],
                 "selected_moral_teaching": stored_state["selected_moral_teaching"],
                 "selected_plot_twist": stored_state["selected_plot_twist"],
+                "protagonist_description": stored_state.get(
+                    "protagonist_description", ""
+                ),
+                "character_visuals": stored_state.get("character_visuals", {}),
                 "planned_chapter_types": stored_state["planned_chapter_types"],
                 "current_storytelling_phase": stored_state[
                     "current_storytelling_phase"
