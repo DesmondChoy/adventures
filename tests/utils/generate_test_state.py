@@ -27,29 +27,26 @@ Usage:
 
 import asyncio
 import json
+import logging
 import os
 import sys
-import logging
-from typing import Dict, Any, Optional
-from datetime import datetime
 import uuid
+from datetime import datetime, timezone
+from typing import Any
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-
-# Import the generate_all_chapters function
-from tests.simulations.generate_all_chapters import generate_all_chapters
 
 # Configure logging
 logger = logging.getLogger("generate_test_state")
 
 
 async def generate_test_state(
-    story_category: Optional[str] = None,
-    lesson_topic: Optional[str] = None,
-    output_file: Optional[str] = None,
+    story_category: str | None = None,
+    lesson_topic: str | None = None,
+    output_file: str | None = None,
     use_mock: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate a realistic test state using generate_all_chapters.py
 
     This function runs the actual simulation by default to generate a realistic state.
@@ -72,13 +69,19 @@ async def generate_test_state(
             "Using mock state instead of running simulation - this is not recommended for normal testing"
         )
         state_source = "mock:hardcoded"
-        return await _create_mock_state(story_category, lesson_topic)
+        mock_state = await _create_mock_state(story_category, lesson_topic)
+        if output_file:
+            _save_state(mock_state, output_file)
+        return mock_state
 
     try:
         logger.info(
             f"Generating realistic test state with category={story_category}, topic={lesson_topic}"
         )
         state_source = "realistic:generate_all_chapters"
+
+        # Import the networked simulation only when it is actually requested.
+        from tests.simulations.generate_all_chapters import generate_all_chapters
 
         # Generate the state using generate_all_chapters
         state = await generate_all_chapters(story_category, lesson_topic)
@@ -102,27 +105,22 @@ async def generate_test_state(
             state_dict["metadata"]["simulation"] = {}
 
         state_dict["metadata"]["simulation"]["state_source"] = state_source
-        state_dict["metadata"]["simulation"]["generation_timestamp"] = (
-            datetime.now().isoformat()
-        )
+        state_dict["metadata"]["simulation"]["generation_timestamp"] = datetime.now(
+            timezone.utc
+        ).isoformat()
 
         # Save to file if specified
         if output_file:
-            os.makedirs(os.path.dirname(output_file), exist_ok=True)
-            with open(output_file, "w") as f:
-                json.dump(state_dict, f, indent=2)
-            logger.info(f"Saved state to {output_file}")
+            _save_state(state_dict, output_file)
 
         logger.info(
             f"Successfully generated realistic test state (source: {state_source})"
         )
         return state_dict
 
-    except Exception as e:
-        logger.error(f"Error generating test state: {e}")
-        import traceback
-
-        traceback.print_exc()
+    # A failed live simulation must not make the offline test utility unusable.
+    except Exception as error:
+        logger.exception("Error generating test state")
 
         # Return a mock state as fallback
         logger.warning(
@@ -138,17 +136,17 @@ async def generate_test_state(
             mock_state["metadata"]["simulation"] = {}
 
         mock_state["metadata"]["simulation"]["state_source"] = state_source
-        mock_state["metadata"]["simulation"]["error"] = str(e)
-        mock_state["metadata"]["simulation"]["generation_timestamp"] = (
-            datetime.now().isoformat()
-        )
+        mock_state["metadata"]["simulation"]["error"] = str(error)
+        mock_state["metadata"]["simulation"]["generation_timestamp"] = datetime.now(
+            timezone.utc
+        ).isoformat()
 
         return mock_state
 
 
 async def _create_mock_state(
-    story_category: Optional[str] = None, lesson_topic: Optional[str] = None
-) -> Dict[str, Any]:
+    story_category: str | None = None, lesson_topic: str | None = None
+) -> dict[str, Any]:
     """Create a mock state for testing when simulation fails or for quick tests
 
     This creates a synthetic state with hardcoded values. It should only be used
@@ -167,7 +165,7 @@ async def _create_mock_state(
 
     # Generate a unique run ID and timestamp
     run_id = str(uuid.uuid4())[:8]
-    timestamp = datetime.now().isoformat()
+    timestamp = datetime.now(timezone.utc).isoformat()
 
     logger.info(f"Creating mock state with run_id={run_id}")
 
@@ -263,7 +261,17 @@ async def _create_mock_state(
     return mock_state
 
 
-def load_state_from_file(file_path: str) -> Dict[str, Any]:
+def _save_state(state: dict[str, Any], output_file: str) -> None:
+    """Persist a generated state to JSON."""
+    output_directory = os.path.dirname(output_file)
+    if output_directory:
+        os.makedirs(output_directory, exist_ok=True)
+    with open(output_file, "w") as state_file:
+        json.dump(state, state_file, indent=2)
+    logger.info("Saved state to %s", output_file)
+
+
+def load_state_from_file(file_path: str) -> dict[str, Any]:
     """Load a state from a JSON file
 
     Args:
@@ -275,13 +283,13 @@ def load_state_from_file(file_path: str) -> Dict[str, Any]:
     try:
         with open(file_path, "r") as f:
             return json.load(f)
-    except Exception as e:
-        logger.error(f"Error loading state from {file_path}: {e}")
+    except (json.JSONDecodeError, OSError, TypeError, UnicodeError) as error:
+        logger.error(f"Error loading state from {file_path}: {error}")
         return {}
 
 
 def compare_state_structures(
-    state1: Dict[str, Any], state2: Dict[str, Any], ignore_fields: Optional[list] = None
+    state1: dict[str, Any], state2: dict[str, Any], ignore_fields: list | None = None
 ) -> list:
     """Compare the structure of two states and report differences
 

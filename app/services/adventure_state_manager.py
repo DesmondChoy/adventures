@@ -1,31 +1,34 @@
-import re
 import logging
-from typing import Dict, Any, Optional
+import re
+from typing import Any
+from uuid import UUID
+
+from pydantic import ValidationError
+
 from app.models.story import (
     AdventureState,
+    ChapterContent,
     ChapterData,
     ChapterType,
     StoryChoice,
     StoryResponse,
-    LessonResponse,
-    ChapterContent,
 )
 from app.services.chapter_manager import ChapterManager
 from app.services.telemetry_service import get_telemetry_service
+from supabase import SupabaseException
 
 logger = logging.getLogger("story_app")
+_CHAPTER_TYPE_BY_VALUE = {
+    chapter_type.value: chapter_type for chapter_type in ChapterType
+}
 
 
 class StateValidationError(Exception):
     """Raised when state validation fails."""
 
-    pass
-
 
 class ElementConsistencyError(Exception):
     """Raised when element consistency validation fails."""
-
-    pass
 
 
 class AdventureStateManager:
@@ -38,7 +41,7 @@ class AdventureStateManager:
         story_length: int,
         lesson_topic: str,
         story_category: str,
-        difficulty: str = None,
+        difficulty: str | None = None,
     ) -> AdventureState:
         """Initializes and returns a new AdventureState.
 
@@ -70,7 +73,7 @@ class AdventureStateManager:
         """Returns the current AdventureState."""
         return self.state
 
-    def validate_element_consistency(self, chapter_data: Dict[str, Any]) -> None:
+    def validate_element_consistency(self, chapter_data: dict[str, Any]) -> None:
         """Validates that story elements remain consistent throughout the adventure.
 
         Args:
@@ -99,11 +102,13 @@ class AdventureStateManager:
                     f"Moral teaching found: {self.state.selected_moral_teaching}"
                 )
 
-        except Exception as e:
-            logger.error(f"Element consistency validation failed: {e}")
-            raise ElementConsistencyError(f"Element consistency validation failed: {e}")
+        except (AttributeError, TypeError) as error:
+            logger.exception("Element consistency validation failed")
+            raise ElementConsistencyError(
+                f"Element consistency validation failed: {error}"
+            ) from error
 
-    def validate_plot_twist_progression(self, chapter_data: Dict[str, Any]) -> None:
+    def validate_plot_twist_progression(self, chapter_data: dict[str, Any]) -> None:
         """Validates that the plot twist develops appropriately based on story phase.
 
         Args:
@@ -131,19 +136,22 @@ class AdventureStateManager:
                     logger.warning(
                         "Missing connection to previous hints in Rising phase"
                     )
-            elif current_phase == "Climax":
+            elif (
+                current_phase == "Climax" and plot_twist.lower() not in content.lower()
+            ):
                 # Should have clear plot twist revelation
-                if plot_twist.lower() not in content.lower():
-                    logger.warning("Missing plot twist revelation in Climax phase")
+                logger.warning("Missing plot twist revelation in Climax phase")
 
             # Update hint tracking in metadata
             hints = self.state.metadata.get("previous_hints", [])
             hints.append(content)
             self.state.metadata["previous_hints"] = hints
 
-        except Exception as e:
-            logger.error(f"Plot twist progression validation failed: {e}")
-            raise StateValidationError(f"Plot twist progression validation failed: {e}")
+        except (AttributeError, TypeError) as error:
+            logger.exception("Plot twist progression validation failed")
+            raise StateValidationError(
+                f"Plot twist progression validation failed: {error}"
+            ) from error
 
     async def update_state_from_client(self, validated_state: dict) -> None:
         """Updates the current AdventureState based on validated client data.
@@ -235,13 +243,21 @@ class AdventureStateManager:
                             if existing_chapter.chapter_type == ChapterType.STORY:
                                 # If no choices from client, check if existing chapter has valid choices
                                 # (Supabase is source of truth - preserve choices that were stored)
-                                if len(choices) == 0 and existing_chapter.chapter_content and existing_chapter.chapter_content.choices:
-                                    existing_choices_count = len(existing_chapter.chapter_content.choices)
+                                if (
+                                    len(choices) == 0
+                                    and existing_chapter.chapter_content
+                                    and existing_chapter.chapter_content.choices
+                                ):
+                                    existing_choices_count = len(
+                                        existing_chapter.chapter_content.choices
+                                    )
                                     if existing_choices_count > 0:
                                         logger.debug(
                                             f"Client sent empty choices for chapter {chapter_number}, preserving {existing_choices_count} existing choices from Supabase"
                                         )
-                                        choices = existing_chapter.chapter_content.choices
+                                        choices = (
+                                            existing_chapter.chapter_content.choices
+                                        )
 
                                 # If still no choices, try parsing from content
                                 if len(choices) == 0:
@@ -338,7 +354,7 @@ class AdventureStateManager:
 
                         # Handle response for new chapter
                         response = None
-                        if "response" in client_chapter and client_chapter["response"]:
+                        if client_chapter.get("response"):
                             if chapter_type == ChapterType.STORY:
                                 response = StoryResponse(
                                     chosen_path=client_chapter["response"][
@@ -368,12 +384,16 @@ class AdventureStateManager:
 
                 # Update self.state.chapters under lock (read + modify + write must be atomic)
                 async with self.state.chapters_lock:
-                    client_chapter_numbers = [c["chapter_number"] for c in client_chapters]
-                    max_existing_chapter = max([ch.chapter_number for ch in self.state.chapters]) if self.state.chapters else 0
+                    max_existing_chapter = (
+                        max([ch.chapter_number for ch in self.state.chapters])
+                        if self.state.chapters
+                        else 0
+                    )
 
                     # Only add chapters that are truly new (higher chapter number than existing)
                     truly_new_chapters = [
-                        ch for ch in new_chapters
+                        ch
+                        for ch in new_chapters
                         if ch.chapter_number > max_existing_chapter
                     ]
 
@@ -404,12 +424,20 @@ class AdventureStateManager:
                 setattr(self.state, key, value)
 
             logger.debug("Preserved critical state properties during update")
-        except Exception as e:
-            logger.error(f"Error updating state: {e}")
+        except (
+            AttributeError,
+            ElementConsistencyError,
+            IndexError,
+            KeyError,
+            StateValidationError,
+            TypeError,
+            ValueError,
+        ) as error:
+            logger.exception("Error updating state")
             # Restore preserved state to maintain consistency
             for key, value in preserved_state.items():
                 setattr(self.state, key, value)
-            raise StateValidationError(f"Failed to update state: {e}")
+            raise StateValidationError(f"Failed to update state: {error}") from error
 
     def update_agency_references(self, chapter_data: ChapterData) -> None:
         """Track references to the agency element in chapters.
@@ -463,7 +491,7 @@ class AdventureStateManager:
             )
 
     def update_character_visuals(
-        self, state: AdventureState, updated_visuals: Dict[str, str]
+        self, state: AdventureState, updated_visuals: dict[str, str]
     ) -> None:
         """Update character visuals dictionary in the AdventureState.
 
@@ -486,7 +514,7 @@ class AdventureStateManager:
                 f"[CHAPTER {chapter_number}] State doesn't have character_visuals attribute, creating it"
             )
             # Add the attribute dynamically
-            setattr(state, "character_visuals", {})
+            state.character_visuals = {}
 
         # Get the current visuals
         current_visuals = getattr(state, "character_visuals", {})
@@ -557,10 +585,16 @@ class AdventureStateManager:
         if self.state is None:
             raise ValueError("State not initialized.")
 
-        logger.info(f"[CHAPTER CREATION] Appending new chapter: {chapter_data.chapter_number}")
+        logger.info(
+            f"[CHAPTER CREATION] Appending new chapter: {chapter_data.chapter_number}"
+        )
         logger.info(f"[CHAPTER CREATION] Chapter type: {chapter_data.chapter_type}")
-        logger.info(f"[CHAPTER CREATION] Current chapters before append: {len(self.state.chapters)}")
-        logger.info(f"[CHAPTER CREATION] Current storytelling phase: {self.state.current_storytelling_phase}")
+        logger.info(
+            f"[CHAPTER CREATION] Current chapters before append: {len(self.state.chapters)}"
+        )
+        logger.info(
+            f"[CHAPTER CREATION] Current storytelling phase: {self.state.current_storytelling_phase}"
+        )
 
         # Track agency references in the new chapter
         self.update_agency_references(chapter_data)
@@ -569,7 +603,9 @@ class AdventureStateManager:
         async with self.state.chapters_lock:
             self.state.chapters.append(chapter_data)
 
-        logger.info(f"[CHAPTER CREATION] Chapter appended! Total chapters now: {len(self.state.chapters)}")
+        logger.info(
+            f"[CHAPTER CREATION] Chapter appended! Total chapters now: {len(self.state.chapters)}"
+        )
 
         user_visible_count = len(
             [
@@ -607,8 +643,8 @@ class AdventureStateManager:
             )
 
     async def reconstruct_state_from_storage(
-        self, stored_state: Dict[str, Any]
-    ) -> Optional[AdventureState]:
+        self, stored_state: dict[str, Any]
+    ) -> AdventureState | None:
         """Reconstruct an AdventureState object from stored state data.
 
         This method handles retrieving state from storage and properly reconstructing it,
@@ -738,46 +774,16 @@ class AdventureStateManager:
                             f"Converted chapter_type to lowercase: {chapter_type_str}"
                         )
 
-                        # Map the lowercase string to proper ChapterType enum
-                        try:
-                            # Map string to ChapterType enum
-                            if chapter_type_str == "lesson":
-                                chapter["chapter_type"] = ChapterType.LESSON
-                                logger.debug(
-                                    f"Mapped string 'lesson' to ChapterType.LESSON enum for chapter {chapter_number}"
-                                )
-                            elif chapter_type_str == "story":
-                                chapter["chapter_type"] = ChapterType.STORY
-                                logger.debug(
-                                    f"Mapped string 'story' to ChapterType.STORY enum for chapter {chapter_number}"
-                                )
-                            elif chapter_type_str == "conclusion":
-                                chapter["chapter_type"] = ChapterType.CONCLUSION
-                                logger.info(
-                                    f"Found CONCLUSION chapter: {chapter_number}"
-                                )
-                            elif chapter_type_str == "reflect":
-                                chapter["chapter_type"] = ChapterType.REFLECT
-                                logger.debug(
-                                    f"Mapped string 'reflect' to ChapterType.REFLECT enum for chapter {chapter_number}"
-                                )
-                            elif chapter_type_str == "summary":
-                                chapter["chapter_type"] = ChapterType.SUMMARY
-                                logger.debug(
-                                    f"Mapped string 'summary' to ChapterType.SUMMARY enum for chapter {chapter_number}"
-                                )
-                            else:
-                                # Default to STORY if not recognized
-                                logger.warning(
-                                    f"Unrecognized chapter_type '{chapter_type_str}' for chapter {chapter_number}, defaulting to STORY"
-                                )
-                                chapter["chapter_type"] = ChapterType.STORY
-                        except Exception as e:
+                        mapped_type = _CHAPTER_TYPE_BY_VALUE.get(chapter_type_str)
+                        if mapped_type is None:
                             logger.warning(
-                                f"Error converting chapter_type to enum: {e}"
+                                f"Unrecognized chapter_type '{chapter_type_str}' for chapter {chapter_number}, defaulting to STORY"
                             )
-                            # Keep as string but ensure lowercase
-                            chapter["chapter_type"] = chapter_type_str
+                            mapped_type = ChapterType.STORY
+                        chapter["chapter_type"] = mapped_type
+                        logger.debug(
+                            f"Mapped chapter {chapter_number} type to {mapped_type.value}"
+                        )
 
                 # Special handling for the last chapter - force it to be CONCLUSION
                 chapter_number = chapter.get("chapter_number")
@@ -818,70 +824,94 @@ class AdventureStateManager:
                 # CORRUPTION FIX: If we have existing chapters but no planned_chapter_types,
                 # attempt to reconstruct the sequence from chapter content and types
                 if chapters and len(chapters) > 0:
-                    logger.warning(f"CORRUPTION DETECTED: Adventure has {len(chapters)} chapters but missing planned_chapter_types - attempting reconstruction")
-                    
+                    logger.warning(
+                        f"CORRUPTION DETECTED: Adventure has {len(chapters)} chapters but missing planned_chapter_types - attempting reconstruction"
+                    )
+
                     # Try to reconstruct planned_chapter_types by analyzing existing chapters
                     reconstructed_types = []
                     for i, chapter in enumerate(chapters):
-                        chapter_number = chapter.get('chapter_number', i + 1)
-                        chapter_content = chapter.get('content', '')
-                        chapter_question = chapter.get('question')
-                        current_type = chapter.get('chapter_type', 'story')
-                        
+                        chapter_number = chapter.get("chapter_number", i + 1)
+                        chapter_content = chapter.get("content", "")
+                        chapter_question = chapter.get("question")
+                        current_type = chapter.get("chapter_type", "story")
+
                         # Determine correct type based on content analysis
-                        if chapter_number == stored_state.get('story_length', 10):
+                        if chapter_number == stored_state.get("story_length", 10):
                             # Last chapter should be CONCLUSION
                             correct_type = ChapterType.CONCLUSION
-                            chapter['chapter_type'] = 'conclusion'
-                            logger.info(f"CORRUPTION FIX: Set chapter {chapter_number} to CONCLUSION")
+                            chapter["chapter_type"] = "conclusion"
+                            logger.info(
+                                f"CORRUPTION FIX: Set chapter {chapter_number} to CONCLUSION"
+                            )
                         elif chapter_question is not None:
                             # Has a question - should be LESSON
-                            correct_type = ChapterType.LESSON  
-                            chapter['chapter_type'] = 'lesson'
-                            logger.info(f"CORRUPTION FIX: Set chapter {chapter_number} to LESSON (has question)")
-                        elif 'reflect' in chapter_content.lower() or 'reflection' in chapter_content.lower():
+                            correct_type = ChapterType.LESSON
+                            chapter["chapter_type"] = "lesson"
+                            logger.info(
+                                f"CORRUPTION FIX: Set chapter {chapter_number} to LESSON (has question)"
+                            )
+                        elif (
+                            "reflect" in chapter_content.lower()
+                            or "reflection" in chapter_content.lower()
+                        ):
                             # Content suggests reflection - should be REFLECT
                             correct_type = ChapterType.REFLECT
-                            chapter['chapter_type'] = 'reflect'
-                            logger.info(f"CORRUPTION FIX: Set chapter {chapter_number} to REFLECT (reflection content)")
+                            chapter["chapter_type"] = "reflect"
+                            logger.info(
+                                f"CORRUPTION FIX: Set chapter {chapter_number} to REFLECT (reflection content)"
+                            )
                         else:
                             # Default to STORY
                             correct_type = ChapterType.STORY
-                            chapter['chapter_type'] = 'story'
-                            if current_type != 'story':
-                                logger.info(f"CORRUPTION FIX: Set chapter {chapter_number} to STORY")
-                        
+                            chapter["chapter_type"] = "story"
+                            if current_type != "story":
+                                logger.info(
+                                    f"CORRUPTION FIX: Set chapter {chapter_number} to STORY"
+                                )
+
                         reconstructed_types.append(correct_type)
-                    
+
                     # If we can't reconstruct the full sequence properly, regenerate it
-                    story_length = stored_state.get('story_length', 10)
+                    story_length = stored_state.get("story_length", 10)
                     if len(reconstructed_types) < story_length:
-                        logger.warning(f"CORRUPTION FIX: Could only reconstruct {len(reconstructed_types)}/{story_length} types - regenerating proper distribution")
-                        from app.services.chapter_manager import ChapterManager
+                        logger.warning(
+                            f"CORRUPTION FIX: Could only reconstruct {len(reconstructed_types)}/{story_length} types - regenerating proper distribution"
+                        )
                         try:
                             # Use proper chapter distribution instead of defaulting to STORY
                             available_questions = 3  # Default minimum
-                            proper_types = ChapterManager.determine_chapter_types(story_length, available_questions)
-                            
+                            proper_types = ChapterManager.determine_chapter_types(
+                                story_length, available_questions
+                            )
+
                             # Preserve any existing chapter types we successfully identified
                             for i, existing_type in enumerate(reconstructed_types):
                                 if i < len(proper_types):
                                     proper_types[i] = existing_type
-                            
+
                             reconstructed_types = proper_types
-                            logger.warning(f"CORRUPTION FIX: Used proper chapter distribution: {[ct.value for ct in reconstructed_types]}")
-                        except Exception as e:
-                            logger.error(f"CORRUPTION FIX: Failed to generate proper types: {e}")
+                            logger.warning(
+                                f"CORRUPTION FIX: Used proper chapter distribution: {[ct.value for ct in reconstructed_types]}"
+                            )
+                        except ValueError as error:
+                            logger.error(
+                                f"CORRUPTION FIX: Failed to generate proper types: {error}"
+                            )
                             # Fallback: extend with minimal valid sequence
                             while len(reconstructed_types) < story_length:
                                 if len(reconstructed_types) == story_length - 1:
                                     reconstructed_types.append(ChapterType.CONCLUSION)
                                 else:
                                     reconstructed_types.append(ChapterType.STORY)
-                    
+
                     stored_state["planned_chapter_types"] = reconstructed_types
-                    logger.warning(f"CORRUPTION FIX: Reconstructed planned_chapter_types from {len(chapters)} existing chapters")
-                    logger.info(f"CORRUPTION FIX: Reconstructed sequence: {[ct.value for ct in reconstructed_types]}")
+                    logger.warning(
+                        f"CORRUPTION FIX: Reconstructed planned_chapter_types from {len(chapters)} existing chapters"
+                    )
+                    logger.info(
+                        f"CORRUPTION FIX: Reconstructed sequence: {[ct.value for ct in reconstructed_types]}"
+                    )
                 else:
                     # Use ChapterType enum values for default sequence (no existing chapters)
                     stored_state["planned_chapter_types"] = [
@@ -896,7 +926,9 @@ class AdventureStateManager:
                         ChapterType.LESSON,
                         ChapterType.CONCLUSION,
                     ]
-                    logger.warning("Missing planned_chapter_types, using default sequence")
+                    logger.warning(
+                        "Missing planned_chapter_types, using default sequence"
+                    )
             else:
                 # Convert existing planned_chapter_types to ChapterType enum
                 planned_chapter_types = []
@@ -904,35 +936,19 @@ class AdventureStateManager:
                     if isinstance(chapter_type, str):
                         # Convert string to ChapterType enum
                         chapter_type_str = chapter_type.lower()
-                        try:
-                            if chapter_type_str == "lesson":
-                                planned_chapter_types.append(ChapterType.LESSON)
-                            elif chapter_type_str == "story":
-                                planned_chapter_types.append(ChapterType.STORY)
-                            elif chapter_type_str == "conclusion":
-                                planned_chapter_types.append(ChapterType.CONCLUSION)
-                            elif chapter_type_str == "reflect":
-                                planned_chapter_types.append(ChapterType.REFLECT)
-                            elif chapter_type_str == "summary":
-                                planned_chapter_types.append(ChapterType.SUMMARY)
-                            else:
-                                # Default to STORY for unrecognized types
-                                logger.warning(
-                                    f"Unrecognized planned chapter type: {chapter_type_str}, using STORY"
-                                )
-                                planned_chapter_types.append(ChapterType.STORY)
-                        except Exception as e:
+                        mapped_type = _CHAPTER_TYPE_BY_VALUE.get(chapter_type_str)
+                        if mapped_type is None:
                             logger.warning(
-                                f"Error converting planned chapter type: {e}"
+                                f"Unrecognized planned chapter type: {chapter_type_str}, using STORY"
                             )
-                            # Keep as lowercase string if conversion fails
-                            planned_chapter_types.append(chapter_type_str)
+                            mapped_type = ChapterType.STORY
+                        planned_chapter_types.append(mapped_type)
                     else:
                         # Keep as is if already a ChapterType enum
                         planned_chapter_types.append(chapter_type)
 
                 stored_state["planned_chapter_types"] = planned_chapter_types
-                logger.info(f"Converted planned_chapter_types to ChapterType enums")
+                logger.info("Converted planned_chapter_types to ChapterType enums")
 
             if "metadata" not in stored_state:
                 stored_state["metadata"] = {}
@@ -997,24 +1013,26 @@ class AdventureStateManager:
 
             # Convert the valid state dict to an AdventureState object
             try:
-                reconstructed_state = AdventureState.parse_obj(valid_state)
+                reconstructed_state = AdventureState.model_validate(valid_state)
                 logger.info(
                     "Successfully reconstructed AdventureState from stored data"
                 )
                 self.state = reconstructed_state  # Set the internal state
                 return self.state  # Return the set state
-            except Exception as e:
+            except ValidationError as error:
                 logger.error(
-                    f"Error creating AdventureState from valid_state: {str(e)}"
+                    f"Error creating AdventureState from valid_state: {error!s}"
                 )
                 logger.debug(f"Valid state that caused error: {valid_state}")
                 return None
 
-        except Exception as e:
-            logger.error(f"Error reconstructing state from storage: {str(e)}")
+        except (AttributeError, KeyError, TypeError, ValueError) as error:
+            logger.error(f"Error reconstructing state from storage: {error!s}")
             return None
 
-    async def format_adventure_summary_data(self, state: AdventureState, adventure_id: Optional[str] = None) -> Dict[str, Any]:
+    async def format_adventure_summary_data(
+        self, state: AdventureState, adventure_id: str | None = None
+    ) -> dict[str, Any]:
         """Format adventure state data for the React summary component.
 
         Args:
@@ -1311,19 +1329,23 @@ class AdventureStateManager:
 
         # Calculate statistics - exclude SUMMARY chapters from user-visible count
         user_chapters = [
-            chapter for chapter in state.chapters 
+            chapter
+            for chapter in state.chapters
             if chapter.chapter_type != ChapterType.SUMMARY
         ]
-        
+
         # Calculate actual time spent if adventure_id is available
         time_spent = "-- mins"
         if adventure_id:
             try:
-                from uuid import UUID
-                time_spent = await get_telemetry_service().get_adventure_total_duration(UUID(adventure_id))
-            except Exception as e:
-                logger.warning(f"Failed to get actual duration, using fallback: {e}")
-        
+                time_spent = await get_telemetry_service().get_adventure_total_duration(
+                    UUID(adventure_id)
+                )
+            except (SupabaseException, TypeError, ValueError) as error:
+                logger.warning(
+                    f"Failed to get actual duration, using fallback: {error}"
+                )
+
         statistics = {
             "chaptersCompleted": len(user_chapters),
             "questionsAnswered": len(educational_questions),

@@ -5,20 +5,13 @@ This script tests the generate_test_state utility to ensure it can generate
 realistic test states for the Learning Odyssey app.
 """
 
-import asyncio
-import json
-import os
-import sys
 import logging
-from typing import Dict, Any
-
-# Add the project root to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+from pathlib import Path
 
 # Import the generate_test_state utility
 from tests.utils.generate_test_state import (
-    generate_test_state,
     compare_state_structures,
+    generate_test_state,
     load_state_from_file,
 )
 
@@ -30,7 +23,7 @@ logging.basicConfig(
 logger = logging.getLogger("test_generate_state")
 
 
-async def test_mock_state_generation():
+async def test_mock_state_generation() -> None:
     """Test generating a mock state"""
     logger.info("Testing mock state generation")
 
@@ -56,10 +49,9 @@ async def test_mock_state_generation():
     )
 
     logger.info("Mock state generation test passed")
-    return mock_state
 
 
-async def test_state_comparison():
+async def test_state_comparison() -> None:
     """Test comparing state structures"""
     logger.info("Testing state comparison")
 
@@ -89,19 +81,16 @@ async def test_state_comparison():
     logger.info("State comparison test passed")
 
 
-async def test_save_and_load():
+async def test_save_and_load(tmp_path: Path) -> None:
     """Test saving and loading a state"""
     logger.info("Testing save and load")
 
-    # Generate a mock state
-    mock_state = await generate_test_state(use_mock=True)
-
     # Save to a temporary file
-    temp_file = "tests/utils/temp_test_state.json"
-    await generate_test_state(use_mock=True, output_file=temp_file)
+    temp_file = tmp_path / "test_state.json"
+    await generate_test_state(use_mock=True, output_file=str(temp_file))
 
     # Load the state
-    loaded_state = load_state_from_file(temp_file)
+    loaded_state = load_state_from_file(str(temp_file))
 
     # Compare the loaded state with a new mock state
     differences = compare_state_structures(
@@ -115,23 +104,4 @@ async def test_save_and_load():
     for diff in differences:
         logger.info(f"  - {diff}")
 
-    # Clean up
-    if os.path.exists(temp_file):
-        os.remove(temp_file)
-
     logger.info("Save and load test passed")
-
-
-async def run_tests():
-    """Run all tests"""
-    logger.info("Starting tests")
-
-    await test_mock_state_generation()
-    await test_state_comparison()
-    await test_save_and_load()
-
-    logger.info("All tests passed")
-
-
-if __name__ == "__main__":
-    asyncio.run(run_tests())

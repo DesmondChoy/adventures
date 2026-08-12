@@ -10,16 +10,19 @@ These utilities are designed to be used by test scripts to:
 3. Analyze simulation results for test assertions
 """
 
-import os
 import glob
 import json
+import logging
+import os
 import re
 import sys
 from datetime import datetime
-from typing import Dict, List, Optional, Union, Any
+from typing import Any
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+logger = logging.getLogger(__name__)
 
 
 def get_latest_simulation_log() -> str:
@@ -34,7 +37,7 @@ def get_latest_simulation_log() -> str:
     return max(log_files, key=os.path.getctime)
 
 
-def get_simulation_logs_by_date(date_str: str) -> List[str]:
+def get_simulation_logs_by_date(date_str: str) -> list[str]:
     """Get paths to simulation logs from a specific date.
 
     Args:
@@ -47,7 +50,7 @@ def get_simulation_logs_by_date(date_str: str) -> List[str]:
     return glob.glob(pattern)
 
 
-def get_simulation_log_by_run_id(run_id: str) -> Optional[str]:
+def get_simulation_log_by_run_id(run_id: str) -> str | None:
     """Find a simulation log by its run ID.
 
     Args:
@@ -62,11 +65,11 @@ def get_simulation_log_by_run_id(run_id: str) -> Optional[str]:
 
 
 def find_simulations_by_criteria(
-    story_category: Optional[str] = None,
-    lesson_topic: Optional[str] = None,
-    min_date: Optional[str] = None,
-    max_date: Optional[str] = None,
-) -> List[str]:
+    story_category: str | None = None,
+    lesson_topic: str | None = None,
+    min_date: str | None = None,
+    max_date: str | None = None,
+) -> list[str]:
     """Find simulation runs matching specific criteria.
 
     Args:
@@ -135,7 +138,7 @@ def find_simulations_by_criteria(
     return matching_runs
 
 
-def parse_simulation_log(log_file: str) -> Dict[str, Any]:
+def parse_simulation_log(log_file: str) -> dict[str, Any]:
     """Parse a simulation log file into structured data.
 
     Args:
@@ -335,14 +338,14 @@ def parse_simulation_log(log_file: str) -> Dict[str, Any]:
                         {"timestamp": timestamp, "message": message.strip()}
                     )
 
-            except Exception as e:
-                # Skip problematic lines
+            except (AttributeError, KeyError, TypeError, ValueError) as error:
+                logger.debug("Skipping malformed simulation log line: %s", error)
                 continue
 
     return result
 
 
-def get_chapter_sequence(log_file: str) -> List[str]:
+def get_chapter_sequence(log_file: str) -> list[str]:
     """Extract the sequence of chapter types from a simulation log.
 
     Args:
@@ -351,11 +354,6 @@ def get_chapter_sequence(log_file: str) -> List[str]:
     Returns:
         List[str]: Sequence of chapter types in order
     """
-    # For testing purposes, if a Final Chapter Sequence exists, use that
-    total_chapters, final_sequence = get_final_chapter_sequence(log_file)
-    if total_chapters is not None and final_sequence is not None:
-        return final_sequence
-
     # Extract chapter information directly from the log file
     with open(log_file, "r") as f:
         log_content = f.read()
@@ -372,18 +370,24 @@ def get_chapter_sequence(log_file: str) -> List[str]:
             # Return just the chapter types in order
             return [chapter[1] for chapter in chapters]
 
-    # Fallback to using parse_simulation_log if direct extraction fails
+    # Fall back to structured events parsed from the log.
     parsed_data = parse_simulation_log(log_file)
     # Sort by chapter number and extract types
     sorted_chapters = sorted(
         parsed_data["chapter_types"], key=lambda x: x["chapter_number"]
     )
-    return [chapter["type"] for chapter in sorted_chapters]
+    parsed_sequence = [chapter["type"] for chapter in sorted_chapters]
+    if parsed_sequence:
+        return parsed_sequence
+
+    # Planned sequences are a final fallback, not a substitute for actual events.
+    _, final_sequence = get_final_chapter_sequence(log_file)
+    return final_sequence or []
 
 
 def get_final_chapter_sequence(
     log_file: str,
-) -> tuple[Optional[int], Optional[List[str]]]:
+) -> tuple[int | None, list[str] | None]:
     """Extract the Final Chapter Sequence from a simulation log.
 
     This function looks for the debug log entry that contains the planned chapter sequence
@@ -488,7 +492,7 @@ def check_simulation_complete(log_file: str) -> bool:
     return parsed_data["complete"] and not parsed_data["errors"]
 
 
-def get_simulation_errors(log_file: str) -> List[Dict[str, str]]:
+def get_simulation_errors(log_file: str) -> list[dict[str, str]]:
     """Get all errors from a simulation run.
 
     Args:
@@ -502,8 +506,8 @@ def get_simulation_errors(log_file: str) -> List[Dict[str, str]]:
 
 
 def get_process_executions(
-    log_file: str, process_name: Optional[str] = None
-) -> List[Dict[str, Any]]:
+    log_file: str, process_name: str | None = None
+) -> list[dict[str, Any]]:
     """Get all process executions from a simulation run.
 
     Args:
@@ -556,7 +560,7 @@ def check_process_after_chapter_type(
     return False
 
 
-def get_llm_interactions(log_file: str) -> List[Dict[str, Any]]:
+def get_llm_interactions(log_file: str) -> list[dict[str, Any]]:
     """Extract LLM prompts and responses from a simulation log.
 
     Args:
@@ -571,7 +575,7 @@ def get_llm_interactions(log_file: str) -> List[Dict[str, Any]]:
     return []
 
 
-def get_state_transitions(log_file: str) -> List[Dict[str, Any]]:
+def get_state_transitions(log_file: str) -> list[dict[str, Any]]:
     """Get all state transitions from a simulation run.
 
     Args:
@@ -584,7 +588,7 @@ def get_state_transitions(log_file: str) -> List[Dict[str, Any]]:
     return parsed_data["state_transitions"]
 
 
-def verify_chapter_sequence_pattern(log_file: str, pattern: List[str]) -> bool:
+def verify_chapter_sequence_pattern(log_file: str, pattern: list[str]) -> bool:
     """Check if the chapter sequence follows a specific pattern.
 
     Args:
