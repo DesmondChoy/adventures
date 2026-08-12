@@ -13,13 +13,13 @@ Usage:
 """
 
 import asyncio
-import os
-import sys
 import json
 import logging
+import os
 import re
-from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, timedelta
+import sys
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 # Add project root to path for imports
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -27,8 +27,9 @@ project_root = os.path.abspath(os.path.join(script_dir, "../.."))
 sys.path.insert(0, project_root)
 
 # Import necessary components
-from app.services.llm.factory import LLMServiceFactory
-from app.services.llm.prompt_templates import SUMMARY_CHAPTER_PROMPT
+from app.services.llm.base import BaseLLMService  # noqa: E402
+from app.services.llm.factory import LLMServiceFactory  # noqa: E402
+from app.services.llm.prompt_templates import SUMMARY_CHAPTER_PROMPT  # noqa: E402
 
 # Configure logging
 logging.basicConfig(
@@ -36,8 +37,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger("chapter_summary_generator")
 
-# LLM service for generating summaries
-llm_service = LLMServiceFactory.create_for_use_case("chapter_summaries")
+_llm_service: Optional[BaseLLMService] = None
+
+
+def get_llm_service() -> BaseLLMService:
+    """Create the summary client only when generation reaches the LLM."""
+    global _llm_service
+    if _llm_service is None:
+        _llm_service = LLMServiceFactory.create_for_use_case("chapter_summaries")
+    return _llm_service
 
 
 class ChapterContentError(Exception):
@@ -111,14 +119,6 @@ async def generate_chapter_summary(
 
     logger.debug(f"Generating summary with prompt: {custom_prompt[:100]}...")
 
-    # Create a minimal state object for the LLM service
-    class MinimalState:
-        def __init__(self):
-            self.current_chapter_id = "summary"
-            self.story_length = 1
-            self.chapters = []
-            self.metadata = {"prompt_override": True}
-
     # Try direct API call first (non-streaming) for Gemini
     for retry in range(max_retries):
         try:
@@ -126,6 +126,7 @@ async def generate_chapter_summary(
                 f"Attempting direct API call (attempt {retry + 1}/{max_retries})"
             )
             from google import generativeai as genai
+
             from app.services.llm.providers import ModelConfig
 
             # Initialize the model with system prompt
@@ -176,6 +177,7 @@ async def generate_chapter_summary(
                 break  # Try streaming approach
 
     # Fall back to streaming approach
+    llm_service = get_llm_service()
     for retry in range(max_retries):
         try:
             logger.info(
@@ -823,8 +825,6 @@ def find_latest_simulation_state():
 
     # Pattern for simulation state files
     import glob
-    import re
-    from datetime import datetime
 
     pattern = os.path.join(logs_dir, "simulation_state_*.json")
 

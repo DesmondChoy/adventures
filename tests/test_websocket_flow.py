@@ -6,6 +6,11 @@ from uuid import uuid4
 
 import pytest
 
+import app.routers.websocket_router as websocket_router
+import app.services.websocket.choice_processor as choice_processor
+import app.services.websocket.core as websocket_core
+import app.services.websocket.image_generator as image_generator
+import app.services.websocket.stream_handler as stream_handler
 from app.models.story import (
     AdventureState,
     ChapterContent,
@@ -17,13 +22,8 @@ from app.routers.websocket_router import (
     _get_choice_id,
     _validate_adventure_ownership,
 )
-import app.routers.websocket_router as websocket_router
 from app.services.adventure_state_manager import AdventureStateManager
 from app.services.websocket.content_generator import parse_choice_text
-import app.services.websocket.core as websocket_core
-import app.services.websocket.choice_processor as choice_processor
-import app.services.websocket.image_generator as image_generator
-import app.services.websocket.stream_handler as stream_handler
 
 
 class _DummyWebSocket:
@@ -509,20 +509,20 @@ async def test_image_generation_uses_explicit_current_chapter(
         observed["image_prompt"] = prompt
         return "image-data"
 
+    fake_image_service = SimpleNamespace(
+        synthesize_image_prompt=fake_synthesize_image_prompt,
+        generate_image_async=fake_generate_image_async,
+    )
+
     monkeypatch.setattr(
         image_generator.chapter_manager,
         "generate_image_scene",
         fake_generate_image_scene,
     )
     monkeypatch.setattr(
-        image_generator.image_service,
-        "synthesize_image_prompt",
-        fake_synthesize_image_prompt,
-    )
-    monkeypatch.setattr(
-        image_generator.image_service,
-        "generate_image_async",
-        fake_generate_image_async,
+        image_generator,
+        "get_image_service",
+        lambda: fake_image_service,
     )
 
     image_tasks = await image_generator.start_image_generation_tasks(
@@ -715,15 +715,17 @@ async def test_conclusion_summary_update_keeps_authenticated_owner_scope(
         observed.update(kwargs)
         return "adventure-id"
 
+    fake_state_storage_service = SimpleNamespace(store_state=fake_store_state)
+
     monkeypatch.setattr(
         choice_processor.chapter_manager,
         "generate_chapter_summary",
         fake_generate_chapter_summary,
     )
     monkeypatch.setattr(
-        choice_processor.state_storage_service,
-        "store_state",
-        fake_store_state,
+        choice_processor,
+        "get_state_storage_service",
+        lambda: fake_state_storage_service,
     )
 
     state_id = await choice_processor.generate_conclusion_chapter_summary(

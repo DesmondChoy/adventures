@@ -12,7 +12,7 @@ This document outlines the plan for migrating the Summary Chapter feature from t
    - [x] Rebuild React app to reflect changes
 
 2. **Update Testing Infrastructure**
-   - [x] Create `test_summary_chapter.py` to test the summary chapter without generating all 10 chapters
+   - [x] Create `summary_chapter_preview.py` to test the summary chapter without generating all 10 chapters
    - [x] Ensure test script uses the permanent locations, not experimental ones
 
 3. **Verify Data Flow**
@@ -33,7 +33,7 @@ This document outlines the plan for migrating the Summary Chapter feature from t
 - The app has been rebuilt to reflect these changes
 
 ### Testing Infrastructure
-- Created `tests/test_summary_chapter.py` to test the summary chapter without generating all 10 chapters
+- Created `tests/summary_chapter_preview.py` to test the summary chapter without generating all 10 chapters
 - The test script uses simulation state files to generate summary data
 - The test script serves the React app from the permanent location (`app/static/summary-chapter/`)
 

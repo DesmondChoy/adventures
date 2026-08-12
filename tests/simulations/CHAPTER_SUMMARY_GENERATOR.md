@@ -108,7 +108,7 @@ If `--react-output` is also provided, that payload is written to disk.
 3. Preview the summary UI against that data:
 
    ```bash
-   python tests/test_summary_chapter.py \
+   python tests/summary_chapter_preview.py \
      --state-file logs/simulations/simulation_state_<timestamp>_<run_id>.json
    ```
 

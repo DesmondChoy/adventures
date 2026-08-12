@@ -1,16 +1,25 @@
-from typing import Dict, Optional, List, Tuple, Any
-import logging
 import asyncio
+import logging
 import re
+from typing import Any, Dict, List, Optional, Tuple
+
 from starlette.websockets import WebSocketDisconnect
 
-from app.models.story import ChapterType, ChapterContent, AdventureState, StoryChoice
-from app.services.image_generation_service import ImageGenerationService
+from app.models.story import AdventureState, ChapterContent, ChapterType
 from app.services.chapter_manager import ChapterManager
+from app.services.image_generation_service import ImageGenerationService
 
 logger = logging.getLogger("story_app")
-image_service = ImageGenerationService()
+_image_service: Optional[ImageGenerationService] = None
 chapter_manager = ChapterManager()
+
+
+def get_image_service() -> ImageGenerationService:
+    """Create the image client only when image generation starts."""
+    global _image_service
+    if _image_service is None:
+        _image_service = ImageGenerationService()
+    return _image_service
 
 
 def cancel_pending_image_tasks(
@@ -84,6 +93,8 @@ async def generate_agency_images(
     if not chapter_content.choices:
         logger.error("No choices found in chapter content")
         return image_tasks
+
+    image_service = get_image_service()
 
     # Retrieve the story visual sensory detail
     story_visual_sensory_detail = state.selected_sensory_details.get("visuals", "")
@@ -235,6 +246,8 @@ async def generate_chapter_image(
         )
         return image_tasks
 
+    image_service = get_image_service()
+
     try:
         # Prefer the numbered AdventureState chapter. The explicit content is
         # needed only by callers that intentionally start work before append.
@@ -364,7 +377,7 @@ async def generate_chapter_image(
 
                         # Log the newly extracted visuals
                         logger.info(
-                            f"\n=== NEWLY EXTRACTED CHARACTER VISUALS FOR CHAPTER 1 ==="
+                            "\n=== NEWLY EXTRACTED CHARACTER VISUALS FOR CHAPTER 1 ==="
                         )
                         for char_name, description in sorted(extracted_visuals.items()):
                             logger.info(f"- {char_name}: {description}")
@@ -431,7 +444,7 @@ async def generate_chapter_image(
                     asyncio.create_task(image_service.generate_image_async(prompt)),
                 )
             )
-            logger.info(f"Using fallback image generation with scene summary")
+            logger.info("Using fallback image generation with scene summary")
 
     except Exception as e:
         logger.error(f"Error generating chapter image: {str(e)}")

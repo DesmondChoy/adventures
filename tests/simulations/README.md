@@ -208,6 +208,6 @@ python tests/simulations/log_analyzer.py \
 
 1. Use `run_test_analysis.py` for routine smoke coverage.
 2. Use `generate_all_chapters.py` when you need a reusable adventure state.
-3. Use `generate_chapter_summaries.py` and `tests/test_summary_chapter.py`
+3. Use `generate_chapter_summaries.py` and `tests/summary_chapter_preview.py`
    when working on the summary experience.
 4. Use `log_analyzer.py` directly when investigating a specific failure.

@@ -1,48 +1,58 @@
-from typing import Dict, Any, Optional, Tuple, List
-from fastapi import WebSocket
+import asyncio
+import json
 import logging
 import re
-import json
-import asyncio
 import time  # Added import
+from typing import Any, Dict, Optional, Tuple
 from uuid import UUID
 
+from fastapi import WebSocket
+
 from app.models.story import (
-    ChapterType,
-    ChapterContent,
-    StoryResponse,
-    LessonResponse,
-    ChapterData,
     AdventureState,
+    ChapterContent,
+    ChapterData,
+    ChapterType,
+    LessonResponse,
+    StoryResponse,
 )
 from app.services.adventure_state_manager import AdventureStateManager
 from app.services.chapter_manager import ChapterManager
-from app.services.state_storage_service import StateStorageService
+from app.services.llm.base import BaseLLMService
 from app.services.llm.factory import LLMServiceFactory
 from app.services.llm.prompt_templates import CHARACTER_VISUAL_UPDATE_PROMPT
+from app.services.state_storage_service import StateStorageService
 from app.services.telemetry_service import TelemetryService
 
 from .content_generator import generate_chapter
-from .summary_generator import generate_summary_content, stream_summary_content
+from .summary_generator import generate_summary_content
 
 logger = logging.getLogger("story_app")
 chapter_manager = ChapterManager()
-state_storage_service = StateStorageService()
-# Lazy instantiation to avoid module-level factory creation
-_llm_service = None
+_state_storage_service: Optional[StateStorageService] = None
+_llm_service: Optional[BaseLLMService] = None
 
-def get_llm_service():
+
+def get_state_storage_service() -> StateStorageService:
+    """Create the storage client only when persistence is required."""
+    global _state_storage_service
+    if _state_storage_service is None:
+        _state_storage_service = StateStorageService()
+    return _state_storage_service
+
+
+def get_llm_service() -> BaseLLMService:
     """Get LLM service instance with lazy instantiation."""
     global _llm_service
     if _llm_service is None:
         _llm_service = LLMServiceFactory.create_for_use_case("character_visual_processing")
     return _llm_service
 
-# Lazy instantiation to avoid environment variable loading issues during import
-_telemetry_service = None
+
+_telemetry_service: Optional[TelemetryService] = None
 
 
-def get_telemetry_service():
+def get_telemetry_service() -> TelemetryService:
     """Get or create the telemetry service instance."""
     global _telemetry_service
     if _telemetry_service is None:
@@ -112,7 +122,7 @@ async def handle_reveal_summary(
             logger.error(f"Error logging 'choice_made' event for CONCLUSION chapter: {tel_e}")
 
         # Complete ALL state operations BEFORE sending navigation signal
-        conclusion_state_id = await generate_conclusion_chapter_summary(
+        await generate_conclusion_chapter_summary(
             conclusion_chapter, state, websocket, connection_data, send_ready_signal=False
         )
 
@@ -126,7 +136,7 @@ async def handle_reveal_summary(
         await state_manager.append_new_chapter(summary_chapter)
 
         # Save final complete state with all chapters
-        state_storage_service = StateStorageService()
+        state_storage_service = get_state_storage_service()
         adventure_id = connection_data.get("adventure_id") if connection_data else None
         
         final_state_id = await state_storage_service.store_state(
@@ -200,7 +210,7 @@ async def generate_conclusion_chapter_summary(
     """Generate and store summary for the conclusion chapter."""
     summary_stored = False
     try:
-        logger.info(f"Generating summary for CONCLUSION chapter")
+        logger.info("Generating summary for CONCLUSION chapter")
         summary_result = await chapter_manager.generate_chapter_summary(
             conclusion_chapter.content,
             " ",  # Whitespace for chosen_choice
@@ -231,7 +241,7 @@ async def generate_conclusion_chapter_summary(
                 f"Using existing adventure_id: {adventure_id} for state storage"
             )
 
-            state_id = await state_storage_service.store_state(
+            state_id = await get_state_storage_service().store_state(
                 state.model_dump(mode='json'),
                 adventure_id=adventure_id,
                 user_id=connection_data.get("user_id"),
@@ -242,7 +252,7 @@ async def generate_conclusion_chapter_summary(
             )
         else:
             # Create a new record if no adventure_id is available
-            state_id = await state_storage_service.store_state(
+            state_id = await get_state_storage_service().store_state(
                 state.model_dump(mode='json'),
                 explicit_is_complete=True,  # Mark as complete
             )
@@ -334,13 +344,13 @@ async def diagnose_character_visuals(chapter_content, existing_visuals=None):
         json_match = re.search(r"```json\s*(.*?)\s*```", response, re.DOTALL)
         if json_match:
             json_str = json_match.group(1)
-            logger.debug(f"Extracted JSON from markdown block")
+            logger.debug("Extracted JSON from markdown block")
         else:
             # If not found, look for any JSON-like structure with curly braces
             json_match = re.search(r"\{.*\}", response, re.DOTALL)
             if json_match:
                 json_str = json_match.group(0)
-                logger.debug(f"Extracted JSON-like structure")
+                logger.debug("Extracted JSON-like structure")
             else:
                 json_str = response
                 logger.debug("Using entire response as JSON")
@@ -633,20 +643,10 @@ Return ONLY a valid JSON with character names and descriptions.
         logger.info(
             f"Character visual update prompt for chapter {chapter_number} (content length: {len(chapter_content)} chars)"
         )
-        logger.info(f"=== END CHARACTER_VISUAL_UPDATE_PROMPT ===\n")
+        logger.info("=== END CHARACTER_VISUAL_UPDATE_PROMPT ===\n")
 
         # Keep detailed debug log for full prompt if needed
         logger.debug(f"Complete Character visual update prompt:\n{custom_prompt}")
-
-        # Create a minimal state object for the LLM call
-        class MinimalState:
-            def __init__(self):
-                self.current_chapter_id = "character_visual_update"
-                self.story_length = 1
-                self.chapters = []
-                self.metadata = {"prompt_override": True}
-
-        minimal_state = MinimalState()
 
         # Use the LLM service to generate the updated visuals
         try:
@@ -674,7 +674,7 @@ Return ONLY a valid JSON with character names and descriptions.
                 )
             else:
                 logger.info(f"Response:\n{response}")
-            logger.info(f"=== END RESPONSE ===\n")
+            logger.info("=== END RESPONSE ===\n")
 
             # Keep detailed debug log
             logger.debug(f"Raw LLM response: {response}")
@@ -712,7 +712,7 @@ Return ONLY a valid JSON with character names and descriptions.
             # Log the extracted character visuals
             for char_name, description in updated_visuals.items():
                 logger.info(f'- {char_name}: "{description}"')
-            logger.info(f"=== END CHARACTER VISUALS ===\n")
+            logger.info("=== END CHARACTER VISUALS ===\n")
 
             # Keep detailed debug log
             logger.debug(
@@ -741,7 +741,7 @@ Return ONLY a valid JSON with character names and descriptions.
                     logger.info(f'- {char_name}: "{description}"')
             else:
                 logger.info("- Empty (no character visuals being tracked)")
-            logger.info(f"=== END CHARACTER VISUALS ===\n")
+            logger.info("=== END CHARACTER VISUALS ===\n")
 
             logger.info(
                 f"[CHAPTER {chapter_number}] Successfully updated character visuals with {len(updated_visuals)} entries"
@@ -918,12 +918,12 @@ async def process_non_start_choice(
                 logger.error(f"Summary task crashed: {task.exception()}")
         
         task.add_done_callback(_log_task_error)
-        logger.info(f"[PERFORMANCE] Chapter summary task started in background after streaming completed")
+        logger.info("[PERFORMANCE] Chapter summary task started in background after streaming completed")
         return task
     
     # Store the deferred task to be executed after streaming
     state.deferred_task_factories.append(create_summary_task)
-    logger.info(f"[PERFORMANCE] Chapter summary task deferred, continuing with next chapter generation")
+    logger.info("[PERFORMANCE] Chapter summary task deferred, continuing with next chapter generation")
 
     # Defer character visual extraction until after streaming completes (Phase 2 streaming fix)
     logger.info(f"[PERFORMANCE] Deferring character visual extraction for chapter {previous_chapter.chapter_number} until after streaming")
@@ -939,12 +939,12 @@ async def process_non_start_choice(
                 logger.error(f"Character visual extraction task crashed: {task.exception()}")
         
         task.add_done_callback(_log_visual_task_error)
-        logger.info(f"[PERFORMANCE] Character visual extraction task started in background after streaming completed")
+        logger.info("[PERFORMANCE] Character visual extraction task started in background after streaming completed")
         return task
     
     # Store the deferred visual extraction task
     state.deferred_task_factories.append(create_visual_extraction_task)
-    logger.info(f"[PERFORMANCE] Character visual extraction deferred, continuing with next chapter generation")
+    logger.info("[PERFORMANCE] Character visual extraction deferred, continuing with next chapter generation")
     
     # Skip synchronous visual extraction for now - it will happen after streaming
     # No need to process visual extraction results here since it's deferred
@@ -963,7 +963,10 @@ async def process_non_start_choice(
     )
 
     # Use live streaming generation instead of blocking collection
-    from .stream_handler import stream_chapter_with_live_generation, create_and_append_chapter_direct
+    from .stream_handler import (
+        create_and_append_chapter_direct,
+        stream_chapter_with_live_generation,
+    )
     
     logger.info(f"[PERFORMANCE] Attempting live streaming for chapter {len(state.chapters) + 1}")
     try:
@@ -1028,14 +1031,17 @@ async def process_start_choice(
     )
 
     # Use live streaming generation instead of blocking collection
-    from .stream_handler import stream_chapter_with_live_generation, create_and_append_chapter_direct
+    from .stream_handler import (
+        create_and_append_chapter_direct,
+        stream_chapter_with_live_generation,
+    )
     
-    logger.info(f"[PERFORMANCE] Attempting live streaming for Chapter 1")
+    logger.info("[PERFORMANCE] Attempting live streaming for Chapter 1")
     try:
         content_to_stream, sampled_question, chapter_content = await stream_chapter_with_live_generation(
             story_category, lesson_topic, state, websocket, state_manager
         )
-        logger.info(f"[PERFORMANCE] Live streaming successful for Chapter 1")
+        logger.info("[PERFORMANCE] Live streaming successful for Chapter 1")
         
         # Create and append chapter without additional streaming (already done)
         new_chapter = await create_and_append_chapter_direct(

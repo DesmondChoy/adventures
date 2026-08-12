@@ -53,7 +53,7 @@ the current content library.
 The saved state file is the primary input for:
 
 - `tests/simulations/generate_chapter_summaries.py`
-- `tests/test_summary_chapter.py`
+- `tests/summary_chapter_preview.py`
 - `tests/test_summary_button_flow.py`
 
 ## Notes

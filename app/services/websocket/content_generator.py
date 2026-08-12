@@ -1,24 +1,33 @@
-from typing import Dict, Any, Optional, Tuple, List
 import logging
 import re
+from typing import Any, Dict, List, Optional, Tuple
 
+from app.data.lesson_loader import sample_question
+from app.data.story_loader import StoryLoader
 from app.models.story import (
-    ChapterType,
+    AdventureState,
     ChapterContent,
     ChapterContentValidator,
+    ChapterType,
     LessonResponse,
     StoryChoice,
-    AdventureState,
 )
-from app.services.llm.factory import LLMServiceFactory
 from app.services.chapter_manager import ChapterManager
-from app.data.story_loader import StoryLoader
-from app.data.lesson_loader import sample_question
+from app.services.llm.base import BaseLLMService
+from app.services.llm.factory import LLMServiceFactory
 
 logger = logging.getLogger("story_app")
-llm_service = LLMServiceFactory.create_for_use_case("story_generation")
+_llm_service: Optional[BaseLLMService] = None
 chapter_manager = ChapterManager()
 MAX_CHAPTER_GENERATION_ATTEMPTS = 3
+
+
+def get_llm_service() -> BaseLLMService:
+    """Create the story-generation client only when generation starts."""
+    global _llm_service
+    if _llm_service is None:
+        _llm_service = LLMServiceFactory.create_for_use_case("story_generation")
+    return _llm_service
 
 
 def clean_chapter_content(content: str) -> str:
@@ -171,6 +180,7 @@ async def generate_story_content(
     """Generate story content from the LLM."""
     try:
         story_content = ""
+        llm_service = get_llm_service()
         async for chunk in llm_service.generate_chapter_stream(
             story_config,
             state,
@@ -341,7 +351,7 @@ async def extract_regular_choices(
         choices = parse_choice_text(choices_text)
 
         if not choices:
-            logger.error(f"No choices found in choices text. Raw choices text:")
+            logger.error("No choices found in choices text. Raw choices text:")
             logger.error(choices_text)
             raise ValueError("No choices found in story content")
 

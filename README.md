@@ -187,7 +187,7 @@ repo root on `PYTHONPATH`.
 | Generate one reusable full-adventure state file | `python tests/simulations/generate_all_chapters.py --category enchanted_forest_tales --topic "Singapore History"` |
 | Generate chapter summaries from the latest saved simulation state | `python tests/simulations/generate_chapter_summaries.py --compact` |
 | Generate React-compatible summary JSON | `python tests/simulations/generate_chapter_summaries.py --react-json --react-output tests/summary_data.json` |
-| Preview the summary page with saved simulation data | `python tests/test_summary_chapter.py --state-file logs/simulations/simulation_state_<timestamp>_<run_id>.json --port 8001` |
+| Preview the summary page with saved simulation data | `python tests/summary_chapter_preview.py --state-file logs/simulations/simulation_state_<timestamp>_<run_id>.json --port 8001` |
 | Validate the summary button flow | `python tests/test_summary_button_flow.py --compare` |
 
 ### Utilities

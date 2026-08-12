@@ -1,18 +1,27 @@
-from typing import List
 import logging
+from typing import List, Optional
 
 from app.models.story import (
-    ChapterType,
-    ChapterData,
     AdventureState,
-    StoryResponse,
+    ChapterData,
+    ChapterType,
     LessonResponse,
+    StoryResponse,
 )
+from app.services.llm.base import BaseLLMService
 from app.services.llm.factory import LLMServiceFactory
 from app.services.llm.prompt_engineering import build_summary_chapter_prompt
 
 logger = logging.getLogger("story_app")
-llm_service = LLMServiceFactory.create_for_use_case("summary_generation")
+_llm_service: Optional[BaseLLMService] = None
+
+
+def get_llm_service() -> BaseLLMService:
+    """Create the summary client only when an LLM fallback is required."""
+    global _llm_service
+    if _llm_service is None:
+        _llm_service = LLMServiceFactory.create_for_use_case("summary_generation")
+    return _llm_service
 
 
 def _get_summary_choice_data(chapter: ChapterData) -> tuple[str, str]:
@@ -161,6 +170,7 @@ async def generate_fallback_summary(state: AdventureState) -> str:
 
     # Generate the summary content
     summary_content = ""
+    llm_service = get_llm_service()
     async for chunk in llm_service.generate_with_prompt(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
@@ -246,4 +256,4 @@ async def ensure_all_summaries_exist(state: AdventureState) -> None:
 
 
 # Import stream_summary_content from stream_handler
-from .stream_handler import stream_summary_content  # noqa: F401
+from .stream_handler import stream_summary_content  # noqa: E402, F401

@@ -19,29 +19,28 @@ Requirements:
 
 Usage:
     # Use the latest simulation state file:
-    python tests/test_summary_chapter.py
+    python tests/summary_chapter_preview.py
 
     # Use a specific simulation state file:
-    python tests/test_summary_chapter.py --state-file logs/simulations/your_file.json
+    python tests/summary_chapter_preview.py --state-file logs/simulations/your_file.json
 
     # Use a different port (default is 8001):
-    python tests/test_summary_chapter.py --port 8080
+    python tests/summary_chapter_preview.py --port 8080
 """
 
 import argparse
 import asyncio
-import json
 import os
 import sys
 import tempfile
 import webbrowser
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 # Add project root to path for imports
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -49,9 +48,9 @@ project_root = os.path.abspath(os.path.join(script_dir, ".."))
 sys.path.insert(0, project_root)
 
 # Import the generate_react_summary_data function
-from tests.simulations.generate_chapter_summaries import (
-    generate_react_summary_data,
+from tests.simulations.generate_chapter_summaries import (  # noqa: E402
     find_latest_simulation_state,
+    generate_react_summary_data,
 )
 
 # Create a temporary FastAPI app for testing
