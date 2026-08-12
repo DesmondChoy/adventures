@@ -355,6 +355,81 @@ async def test_process_choice_accepts_choice_key(
     }
 
 
+@pytest.mark.asyncio
+async def test_reveal_summary_retries_existing_summary_save(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    chapters = [
+        ChapterData(
+            chapter_number=1,
+            content="The journey begins.",
+            chapter_type=ChapterType.STORY,
+            chapter_content=ChapterContent(
+                content="The journey begins.",
+                choices=_story_choices(),
+            ),
+        ),
+        ChapterData(
+            chapter_number=2,
+            content="The journey continues.",
+            chapter_type=ChapterType.REFLECT,
+            chapter_content=ChapterContent(
+                content="The journey continues.",
+                choices=[],
+            ),
+        ),
+        ChapterData(
+            chapter_number=3,
+            content="The adventure ends.",
+            chapter_type=ChapterType.CONCLUSION,
+            chapter_content=ChapterContent(
+                content="The adventure ends.",
+                choices=[],
+            ),
+        ),
+        ChapterData(
+            chapter_number=4,
+            content="A complete memory lane.",
+            chapter_type=ChapterType.SUMMARY,
+            chapter_content=ChapterContent(
+                content="A complete memory lane.",
+                choices=[],
+            ),
+        ),
+    ]
+    state = _build_state(chapters)
+    state_manager = AdventureStateManager()
+    state_manager.state = state
+    websocket = _DummyWebSocket()
+    storage = SimpleNamespace(
+        store_state=AsyncMock(return_value="adventure-id")
+    )
+    monkeypatch.setattr(
+        choice_processor,
+        "get_state_storage_service",
+        lambda: storage,
+    )
+
+    result = await choice_processor.handle_reveal_summary(
+        state,
+        state_manager,
+        websocket,
+        {"adventure_id": "adventure-id", "user_id": None},
+    )
+
+    assert result == (None, None, False, False)
+    assert len(state.chapters) == 4
+    storage.store_state.assert_awaited_once()
+    assert websocket.json_messages[0] == {
+        "type": "summary_ready",
+        "state_id": "adventure-id",
+    }
+    assert websocket.json_messages[1]["type"] == "summary_complete"
+    assert websocket.json_messages[1]["state"]["current_chapter"][
+        "content"
+    ] == "A complete memory lane."
+
+
 @pytest.mark.parametrize(
     "choices_text",
     [

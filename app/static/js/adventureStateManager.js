@@ -34,10 +34,14 @@ export class AdventureStateManager {
     ensureClientUuid() {
         // Generate a UUID if one doesn't exist
         if (!localStorage.getItem(this.CLIENT_UUID_KEY)) {
-            // Use crypto.randomUUID() if available (modern browsers)
-            const uuid = crypto.randomUUID ? 
-                crypto.randomUUID() : 
-                this.generateFallbackUuid();
+            const cryptoApi = globalThis.crypto;
+            if (!cryptoApi) {
+                throw new Error('Secure UUID generation is unavailable in this browser.');
+            }
+
+            const uuid = typeof cryptoApi.randomUUID === 'function'
+                ? cryptoApi.randomUUID()
+                : this.generateFallbackUuid(cryptoApi);
                 
             localStorage.setItem(this.CLIENT_UUID_KEY, uuid);
         }
@@ -48,11 +52,22 @@ export class AdventureStateManager {
     }
     
     // Fallback UUID generator for older browsers
-    generateFallbackUuid() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            const r = Math.random() * 16 | 0;
-            const v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
+    generateFallbackUuid(cryptoApi = globalThis.crypto) {
+        if (typeof cryptoApi?.getRandomValues !== 'function') {
+            throw new Error('Secure UUID generation is unavailable in this browser.');
+        }
+
+        const bytes = cryptoApi.getRandomValues(new Uint8Array(16));
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+        const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0'));
+        return [
+            hex.slice(0, 4).join(''),
+            hex.slice(4, 6).join(''),
+            hex.slice(6, 8).join(''),
+            hex.slice(8, 10).join(''),
+            hex.slice(10, 16).join('')
+        ].join('-');
     }
 }

@@ -4,9 +4,9 @@
  */
 
 import { authManager } from './authManager.js?v=20260526a';
-import { AdventureStateManager } from './adventureStateManager.js?v=20260526a';
-import { WebSocketManager } from './webSocketManager.js?v=20260526a';
-import { stateManager, manageState } from './stateManager.js?v=20260526a';
+import { AdventureStateManager } from './adventureStateManager.js?v=20260812a';
+import { WebSocketManager } from './webSocketManager.js?v=20260812a';
+import { stateManager, manageState } from './stateManager.js?v=20260812a';
 import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260526a';
 import {
     showError,
@@ -28,7 +28,7 @@ import {
     startAdventure,
     initializeLoaderRetryButton,
     updateAdventureContextRibbon
-} from './uiManager.js?v=20260526a';
+} from './uiManager.js?v=20260812a';
 
 // Global application state
 // Guard against re-initialization if module is re-imported
@@ -229,8 +229,8 @@ export async function viewAdventureSummary() {
                     // Navigate to the summary page with this state_id
                     window.location.href = `/adventure/summary?state_id=${stateId}`;
                 }
-            } else if (data.type === 'error') {
-                // Stop summary timeout flow when backend sends an explicit error.
+            } else if (data.type === 'error' || data.type === 'save_failed') {
+                // Stop summary timeout flow when backend sends an explicit failure.
                 if (timeoutId) {
                     clearTimeout(timeoutId);
                     timeoutId = null;

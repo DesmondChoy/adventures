@@ -3,7 +3,7 @@
  * Handles DOM manipulation, UI updates, and user interface functions
  */
 
-import { stateManager, manageState } from './stateManager.js';
+import { stateManager, manageState } from './stateManager.js?v=20260812a';
 import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260526a';
 import { withCurrentModuleVersion } from './moduleVersion.js';
 
@@ -1378,11 +1378,13 @@ export async function handleMessage(event) {
 
         if (data.type === 'hide_loader') {
             hideLoader();
-        } else if (data.type === 'error') {
+        } else if (data.type === 'error' || data.type === 'save_failed') {
             hideLoader();
             const message = typeof data.message === 'string' && data.message.trim()
                 ? data.message
-                : 'An unexpected error occurred. Please try again.';
+                : data.type === 'save_failed'
+                    ? "We couldn't sync your latest progress. Please try again."
+                    : 'An unexpected error occurred. Please try again.';
             showError(message);
         } else if (data.type === 'story') {
             // When story content starts streaming, advance to step 3 and hide loader

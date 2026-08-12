@@ -1,21 +1,24 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 import asyncio
 import logging
 import os
-import jwt  # PyJWT
 from collections import defaultdict
 from typing import Optional
 from uuid import UUID
+
+import jwt  # PyJWT
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+
 from app.models.story import ChapterType
 from app.services.adventure_state_manager import AdventureStateManager
 from app.services.state_storage_service import StateStorageService
 from app.services.telemetry_service import TelemetryService
-from app.services.websocket.stream_handler import (
-    stream_chapter_content,
-)
 from app.services.websocket import (
     process_choice,
     send_story_complete,
+)
+from app.services.websocket.persistence import store_state_with_retry
+from app.services.websocket.stream_handler import (
+    stream_chapter_content,
 )
 
 router = APIRouter()
@@ -615,11 +618,16 @@ async def story_websocket(
                             if current_state_debug:
                                 logger.info(f"[WEBSOCKET ROUTER] State has {len(current_state_debug.chapters)} chapters")
                                 logger.info(f"[WEBSOCKET ROUTER] Current phase: {current_state_debug.current_storytelling_phase}")
-                            adventure_id = await state_storage_service.store_state(
+                            adventure_id = await store_state_with_retry(
+                                state_storage_service,
+                                websocket,
                                 state.model_dump(mode='json'),
+                                operation="initial adventure save",
                                 user_id=connection_data.get("user_id"),
                                 lesson_topic=lesson_topic,
                             )
+                            if adventure_id is None:
+                                continue
                             connection_data["adventure_id"] = adventure_id
                             logger.info(
                                 f"Stored new state with ID: {adventure_id} (user_id: {connection_data.get('user_id')})"
@@ -747,15 +755,19 @@ async def story_websocket(
                                 if current_state_debug:
                                     logger.info(f"[WEBSOCKET ROUTER] State has {len(current_state_debug.chapters)} chapters")
                                     logger.info(f"[WEBSOCKET ROUTER] Current phase: {current_state_debug.current_storytelling_phase}")
-                                await state_storage_service.store_state(
+                                completion_state_id = await store_state_with_retry(
+                                    state_storage_service,
+                                    websocket,
                                     current_state_for_completion.model_dump(mode='json'),
+                                    operation="conclusion progress save",
                                     adventure_id=connection_data["adventure_id"],
                                     user_id=connection_data.get("user_id"),
                                     explicit_is_complete=False,
                                 )
-                                logger.info(
-                                    f"Saved state after CONCLUSION chapter (Chapter {len(current_state_for_completion.chapters)}) generated (is_complete=False), before story_complete message. Adventure ID: {connection_data['adventure_id']}, User ID: {connection_data.get('user_id')}"
-                                )
+                                if completion_state_id is not None:
+                                    logger.info(
+                                        f"Saved state after CONCLUSION chapter (Chapter {len(current_state_for_completion.chapters)}) generated (is_complete=False), before story_complete message. Adventure ID: {connection_data['adventure_id']}, User ID: {connection_data.get('user_id')}"
+                                    )
                         except Exception as e:
                             logger.error(
                                 f"Error saving state before story_complete message: {e}"
@@ -788,14 +800,18 @@ async def story_websocket(
                             logger.info(f"[WEBSOCKET ROUTER] About to save state via WebSocket router")
                             logger.info(f"[WEBSOCKET ROUTER] State has {len(current_state.chapters)} chapters")
                             logger.info(f"[WEBSOCKET ROUTER] Current phase: {current_state.current_storytelling_phase}")
-                            await state_storage_service.store_state(
+                            saved_state_id = await store_state_with_retry(
+                                state_storage_service,
+                                websocket,
                                 current_state.model_dump(mode='json'),
+                                operation="chapter progress save",
                                 adventure_id=connection_data["adventure_id"],
                                 user_id=connection_data.get("user_id"),
                             )
-                            logger.info(
-                                f"Updated state in Supabase with ID: {connection_data['adventure_id']}, User ID: {connection_data.get('user_id')} (after regular chapter stream)"
-                            )
+                            if saved_state_id is not None:
+                                logger.info(
+                                    f"Updated state in Supabase with ID: {connection_data['adventure_id']}, User ID: {connection_data.get('user_id')} (after regular chapter stream)"
+                                )
                     except Exception as e:
                         logger.error(f"Error updating state in Supabase: {e}")
             except Exception as e:

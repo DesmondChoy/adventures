@@ -25,6 +25,7 @@ from app.services.state_storage_service import StateStorageService
 from app.services.telemetry_service import TelemetryService
 
 from .content_generator import generate_chapter
+from .persistence import store_state_with_retry
 from .summary_generator import generate_summary_content
 
 logger = logging.getLogger("story_app")
@@ -81,6 +82,30 @@ async def handle_reveal_summary(
         await asyncio.gather(*state.pending_background_tasks, return_exceptions=True)
         state.pending_background_tasks.clear()
         logger.info("[REVEAL SUMMARY] All pending summary tasks completed")
+
+    # A prior final save may have failed after the SUMMARY chapter was built.
+    # Reuse that in-memory chapter so the user's retry is idempotent.
+    if state.chapters and state.chapters[-1].chapter_type == ChapterType.SUMMARY:
+        summary_chapter = state.chapters[-1]
+        final_state_id = await store_state_with_retry(
+            get_state_storage_service(),
+            websocket,
+            state.model_dump(mode="json"),
+            operation="final summary save retry",
+            adventure_id=(
+                connection_data.get("adventure_id") if connection_data else None
+            ),
+            user_id=connection_data.get("user_id") if connection_data else None,
+            explicit_is_complete=True,
+        )
+        if final_state_id is not None:
+            await _send_summary_ready(
+                websocket,
+                state,
+                summary_chapter,
+                final_state_id,
+            )
+        return None, None, False, False
     
     # Ensure all chapter summaries exist (on-demand generation for missing ones)
     from app.services.websocket.summary_generator import ensure_all_summaries_exist
@@ -139,44 +164,26 @@ async def handle_reveal_summary(
         state_storage_service = get_state_storage_service()
         adventure_id = connection_data.get("adventure_id") if connection_data else None
         
-        final_state_id = await state_storage_service.store_state(
+        final_state_id = await store_state_with_retry(
+            state_storage_service,
+            websocket,
             state.model_dump(mode='json'),
+            operation="final summary save",
             adventure_id=adventure_id,
             user_id=connection_data.get("user_id") if connection_data else None,
             explicit_is_complete=True,
         )
+
+        if final_state_id is None:
+            return None, None, False, False
         
         logger.info(f"Saved final complete state with {len(state.chapters)} chapters, ID: {final_state_id}")
 
-        # NOW send navigation signal after all state is saved
-        await websocket.send_json({"type": "summary_ready", "state_id": final_state_id})
-        
-        # Skip streaming to avoid WebSocket disconnection errors  
-        logger.info("Summary ready signal sent, skipping streaming to prevent disconnection errors")
-
-        # Send the complete summary data
-        await websocket.send_json(
-            {
-                "type": "summary_complete",
-                "state": {
-                    "current_chapter_id": state.current_chapter_id,
-                    "current_chapter": {
-                        "chapter_number": summary_chapter.chapter_number,
-                        "content": summary_content,
-                        "chapter_type": ChapterType.SUMMARY.value,
-                    },
-                    "stats": {
-                        "total_lessons": state.total_lessons,
-                        "correct_lesson_answers": state.correct_lesson_answers,
-                        "completion_percentage": round(
-                            (state.correct_lesson_answers / state.total_lessons * 100)
-                            if state.total_lessons > 0
-                            else 0
-                        ),
-                    },
-                    "chapter_summaries": state.chapter_summaries,
-                },
-            }
+        await _send_summary_ready(
+            websocket,
+            state,
+            summary_chapter,
+            final_state_id,
         )
     else:
         logger.error(
@@ -198,6 +205,42 @@ async def handle_reveal_summary(
         )
 
     return None, None, False, False
+
+
+async def _send_summary_ready(
+    websocket: WebSocket,
+    state: AdventureState,
+    summary_chapter: ChapterData,
+    state_id: str,
+) -> None:
+    """Send navigation and summary payloads after a confirmed final save."""
+    await websocket.send_json({"type": "summary_ready", "state_id": state_id})
+    logger.info(
+        "Summary ready signal sent, skipping streaming to prevent disconnection errors"
+    )
+    await websocket.send_json(
+        {
+            "type": "summary_complete",
+            "state": {
+                "current_chapter_id": state.current_chapter_id,
+                "current_chapter": {
+                    "chapter_number": summary_chapter.chapter_number,
+                    "content": summary_chapter.content,
+                    "chapter_type": ChapterType.SUMMARY.value,
+                },
+                "stats": {
+                    "total_lessons": state.total_lessons,
+                    "correct_lesson_answers": state.correct_lesson_answers,
+                    "completion_percentage": round(
+                        (state.correct_lesson_answers / state.total_lessons * 100)
+                        if state.total_lessons > 0
+                        else 0
+                    ),
+                },
+                "chapter_summaries": state.chapter_summaries,
+            },
+        }
+    )
 
 
 async def generate_conclusion_chapter_summary(
@@ -241,24 +284,37 @@ async def generate_conclusion_chapter_summary(
                 f"Using existing adventure_id: {adventure_id} for state storage"
             )
 
-            state_id = await get_state_storage_service().store_state(
+            state_id = await store_state_with_retry(
+                get_state_storage_service(),
+                websocket,
                 state.model_dump(mode='json'),
+                operation="conclusion summary save",
+                notify_client=send_ready_signal,
                 adventure_id=adventure_id,
                 user_id=connection_data.get("user_id"),
                 explicit_is_complete=True,  # Mark as complete
             )
-            logger.info(
-                f"Updated state with ID: {state_id} (is_complete=True) after generating CONCLUSION chapter summary"
-            )
+            if state_id is not None:
+                logger.info(
+                    f"Updated state with ID: {state_id} (is_complete=True) after generating CONCLUSION chapter summary"
+                )
         else:
             # Create a new record if no adventure_id is available
-            state_id = await get_state_storage_service().store_state(
+            state_id = await store_state_with_retry(
+                get_state_storage_service(),
+                websocket,
                 state.model_dump(mode='json'),
+                operation="conclusion summary save",
+                notify_client=send_ready_signal,
                 explicit_is_complete=True,  # Mark as complete
             )
-            logger.info(
-                f"Stored new state with ID: {state_id} (is_complete=True) after generating CONCLUSION chapter summary"
-            )
+            if state_id is not None:
+                logger.info(
+                    f"Stored new state with ID: {state_id} (is_complete=True) after generating CONCLUSION chapter summary"
+                )
+
+        if state_id is None:
+            return None
 
         # Conditionally send ready signal based on parameter
         if send_ready_signal:

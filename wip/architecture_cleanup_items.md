@@ -4,9 +4,17 @@
 
 ## Implementation Status
 
-**Status: PENDING**
+**Status: IMPLEMENTED** (verified 2026-08-12)
 
-This document captures outstanding technical debt and cleanup items identified during an architecture review of the story/lesson selection and WebSocket flow.
+All cleanup items identified during the architecture review have been resolved.
+
+| Item | Status | Implementation |
+|------|--------|----------------|
+| Unused `state_manager` parameter | Resolved | The parameter is now used to append the generated summary chapter. |
+| Dead `diagnose_character_visuals` function | Resolved | The function is used by image generation and character-visual repair flows. |
+| `deferred_summary_tasks` execution | Resolved | Renamed task collections are documented and factories execute after streaming completes. |
+| Insecure fallback UUID generation | Resolved | Uses `crypto.randomUUID()` or a `crypto.getRandomValues()` UUID v4 fallback. |
+| Silent persistence failures | Resolved | Saves retry with exponential backoff; new inserts use an idempotent preallocated ID; terminal failures send `save_failed` to the client. |
 
 ---
 
@@ -236,6 +244,6 @@ except Exception as e:
 
 ## Questions to Resolve
 
-1. **`deferred_summary_tasks`**: Is there code executing these factories that was missed during review? Or is this pattern incomplete?
+1. **`deferred_summary_tasks`**: Resolved. The collections are now named `deferred_task_factories` and `pending_background_tasks`; factories execute through `execute_deferred_task_factories()` after streaming.
 
 2. **Silent save failures**: Is there a design reason for not notifying the client (e.g., the WebSocket is already closing and can't send messages)?

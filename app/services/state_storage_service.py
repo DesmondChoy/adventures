@@ -49,6 +49,7 @@ class StateStorageService:
         user_id: Optional[UUID] = None,  # Changed type hint to Optional[UUID]
         lesson_topic: Optional[str] = None,
         explicit_is_complete: Optional[bool] = None,  # New parameter
+        new_adventure_id: Optional[str] = None,
     ) -> str:
         """
         Store adventure state data in Supabase and return the unique ID.
@@ -59,6 +60,8 @@ class StateStorageService:
             state_data: The complete adventure state data
             adventure_id: Optional ID of an existing adventure to update
             user_id: Optional user ID (as UUID object) for authenticated users
+            new_adventure_id: Preallocated ID used to make creation retries
+                idempotent. Ignored when updating an existing adventure.
 
         Returns:
             str: The UUID of the stored adventure
@@ -243,8 +246,23 @@ class StateStorageService:
                             f"store_state: Proceeding to create new adventure for user {user_id} despite failure to abandon previous ones."
                         )
 
-                # Insert new record
-                response = self.supabase.table("adventures").insert(record).execute()
+                if new_adventure_id:
+                    record["id"] = new_adventure_id
+                    response = (
+                        self.supabase.table("adventures")
+                        .upsert(
+                            record,
+                            on_conflict="id",
+                            default_to_null=False,
+                        )
+                        .execute()
+                    )
+                else:
+                    response = (
+                        self.supabase.table("adventures")
+                        .insert(record)
+                        .execute()
+                    )
 
                 # Extract the ID from the response
                 if not response.data or len(response.data) == 0:
@@ -255,7 +273,7 @@ class StateStorageService:
                         "Failed to store state: No data returned from Supabase"
                     )
 
-                adventure_id = response.data[0]["id"]
+                adventure_id = new_adventure_id or response.data[0]["id"]
                 logger.info(
                     f"Stored state with {completed_chapter_count} chapters and {len(state_data.get('chapter_summaries', []))} summaries"
                 )
