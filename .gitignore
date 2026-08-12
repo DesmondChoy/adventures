@@ -58,3 +58,8 @@ node_modules/
 .playwright-mcp/
 playwright-report/
 test-results/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+.beads-credential-key
+.beads/proxieddb/

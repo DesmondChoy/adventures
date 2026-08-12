@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "adventures",
+  "project_id": "73867680-6c9c-46a7-a137-32afd1c11246"
+}
