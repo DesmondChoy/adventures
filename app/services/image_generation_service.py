@@ -1,5 +1,5 @@
 from google import genai
-from google.genai.types import GenerateImagesConfig
+from google.genai import types
 from app.services.llm.providers import ModelConfig
 from PIL import Image
 from io import BytesIO
@@ -16,11 +16,11 @@ logger = logging.getLogger("story_app")
 
 
 class ImageGenerationService:
-    """Service for generating images from text prompts using Gemini's Imagen API."""
+    """Service for generating images from text prompts using Gemini."""
 
     def __init__(self):
         """Initialize Gemini service with the specified model."""
-        self.model_name = "imagen-4.0-generate-001"
+        self.model_name = "gemini-3.1-flash-image"
 
         api_key = os.getenv("GOOGLE_API_KEY")
 
@@ -81,25 +81,39 @@ class ImageGenerationService:
                 )
                 logger.info("=" * 50 + "\n")
 
-                # Generate image using the client's models interface
-                response = self.client.models.generate_images(
+                # Generate a square 1K image using Nano Banana 2.
+                response = self.client.models.generate_content(
                     model=self.model_name,
-                    prompt=prompt,
-                    config=GenerateImagesConfig(number_of_images=1),
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_modalities=["IMAGE"],
+                        image_config=types.ImageConfig(
+                            aspect_ratio="1:1",
+                            image_size="1K",
+                        ),
+                    ),
                 )
 
                 # Extract image data from response
-                if response.generated_images:
+                image_bytes = None
+                for candidate in response.candidates or []:
+                    for part in getattr(candidate.content, "parts", None) or []:
+                        if part.inline_data and part.inline_data.data:
+                            image_bytes = part.inline_data.data
+                            break
+                    if image_bytes:
+                        break
+
+                if image_bytes:
                     try:
                         # Convert to base64
-                        image_bytes = response.generated_images[0].image.image_bytes
                         # Log essential file size for debug
                         logger.debug(
                             f"Found image data with size: {len(image_bytes)} bytes"
                         )
                         image = Image.open(BytesIO(image_bytes))
                         buffered = BytesIO()
-                        image.save(buffered, format="JPEG")
+                        image.convert("RGB").save(buffered, format="JPEG")
                         img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
                         logger.info(
                             f"Successfully generated image for prompt: {prompt[:50]}..."
