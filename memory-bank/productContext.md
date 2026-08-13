@@ -47,7 +47,7 @@ By leveraging LLMs for dynamic content generation and WebSockets for real-time i
 ### Adventure Progression (WebSocket Interaction)
 * WebSocket connection established (`/ws/story/{story_category}/{lesson_topic}`)
 * Backend sends content for current chapter, streaming it word-by-word
-* **Image Generation:** Relevant images are generated asynchronously using Google Imagen
+* **Image Generation:** Relevant images are generated asynchronously using Gemini 3.1 Flash Image (Nano Banana 2) with square 1K output
 * **Chapter Types:**
   - **STORY:** Narrative with 3 choices. First chapter includes crucial "Agency" choice
   - **LESSON:** Multiple-choice question with narrative context (Story Object Method)

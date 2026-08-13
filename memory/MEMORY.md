@@ -70,7 +70,7 @@
      - Ability: protagonist displays visual manifestation of ability
    - Character consistency: merges new descriptions with existing character_visuals
    - Fallback: omits sensory detail if contradicts scene (inside cave vs dawn sparkles)
-   - Output: 30-50 word synthesized prompt ready for Imagen
+   - Output: 30-50 word synthesized prompt ready for Gemini 3.1 Flash Image (Nano Banana 2)
 
 ### Character Visual Tracking
 - **Update Mechanism** (`CHARACTER_VISUAL_UPDATE_PROMPT`):

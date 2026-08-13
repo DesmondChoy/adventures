@@ -151,7 +151,7 @@ The following pieces of information are gathered as inputs for the synthesis pro
 
 ### Step 2: LLM-Powered Prompt Synthesis
 *   **Synthesizer LLM:** An LLM (specifically Gemini Flash) is invoked using the `IMAGE_SYNTHESIS_PROMPT`.
-*   **Task:** This meta-prompt instructs the LLM to act as an "Expert Prompt Engineer." Its task is to logically combine all the inputs from Step 1 into a single, coherent, and vivid visual scene description (target 30-50 words) suitable for the image generation model (Imagen).
+*   **Task:** This meta-prompt instructs the LLM to act as an "Expert Prompt Engineer." Its task is to logically combine all the inputs from Step 1 into a single, coherent, and vivid visual scene description (target 30-50 words) suitable for Gemini 3.1 Flash Image (Nano Banana 2).
 *   **Key Instructions for Synthesizer:**
     *   Prioritize the "Concise Scene Description" as the primary focus of the image.
     *   Integrate the "Protagonist Base Look" and "Agency Details" naturally into the scene.

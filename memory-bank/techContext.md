@@ -23,7 +23,7 @@
   * **Cost-Optimized Model Routing:**
     - Gemini 2.5 Flash (`gemini-2.5-flash`): Complex reasoning (story generation, image scenes)
     - Gemini 2.5 Flash Lite (`gemini-2.5-flash-lite-preview-06-17`): Simple processing (summaries, formatting, JSON extraction)
-  * `app/services/image_generation_service.py`: Gemini Imagen API with Flash Lite for prompt synthesis
+  * `app/services/image_generation_service.py`: Gemini 3.1 Flash Image (Nano Banana 2) via the Generate Content API, configured for square 1K output, with Flash Lite for prompt synthesis
   * Centralized model configuration in `ModelConfig` class with thinking budget support
   * **~50% cost reduction** through strategic Flash Lite usage on 6/8 LLM processes
   * Environment variables:

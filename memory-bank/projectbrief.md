@@ -51,7 +51,7 @@ Learning Odyssey solves these challenges through:
 ### 5. Technical Architecture
 - FastAPI backend with WebSocket real-time communication
 - Progressive enhancement (text first, images as available)
-- Asynchronous image generation via Google Imagen
+- Asynchronous image generation via Gemini 3.1 Flash Image (Nano Banana 2) with square 1K output
 - React-based Summary Chapter
 - Browser-based state persistence
 - Robust error handling and recovery
