@@ -12,6 +12,7 @@ from app.services.llm.prompt_templates import (
     SUMMARY_CHAPTER_PROMPT,
     IMAGE_SCENE_PROMPT,
     PREDEFINED_PROTAGONIST_DESCRIPTIONS,
+    get_random_protagonist_name,
 )
 
 logger = logging.getLogger("story_app")
@@ -591,10 +592,12 @@ class ChapterManager:
             selected_protagonist_desc = random.choice(
                 PREDEFINED_PROTAGONIST_DESCRIPTIONS
             )
+            selected_protagonist_name = get_random_protagonist_name()
 
             logger.info(
                 f"Selected protagonist description: {selected_protagonist_desc}"
             )
+            logger.info(f"Selected protagonist name: {selected_protagonist_name}")
 
             # Create adventure state with validated elements
             state = AdventureState(
@@ -611,6 +614,7 @@ class ChapterManager:
                 selected_moral_teaching=selected_elements["selected_moral_teaching"],
                 selected_plot_twist=selected_elements["selected_plot_twist"],
                 protagonist_description=selected_protagonist_desc,
+                protagonist_name=selected_protagonist_name,
             )
 
             # Store metadata for consistency checks and plot development

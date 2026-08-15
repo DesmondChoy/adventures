@@ -1024,6 +1024,7 @@ class AdventureStateManager:
                 "protagonist_description": stored_state.get(
                     "protagonist_description", ""
                 ),
+                "protagonist_name": stored_state.get("protagonist_name", ""),
                 "character_visuals": stored_state.get("character_visuals", {}),
                 "planned_chapter_types": stored_state["planned_chapter_types"],
                 "current_storytelling_phase": stored_state[

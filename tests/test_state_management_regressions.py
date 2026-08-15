@@ -46,6 +46,7 @@ async def test_reconstruction_preserves_character_visual_state() -> None:
         selected_moral_teaching="Ask for help",
         selected_plot_twist="The guide knew the path",
         protagonist_description="A child in a red raincoat",
+        protagonist_name="Mina",
         character_visuals={"Mina": "A child in a red raincoat"},
         chapters=[chapter],
         planned_chapter_types=[
@@ -69,6 +70,7 @@ async def test_reconstruction_preserves_character_visual_state() -> None:
 
     assert state is not None
     assert state.protagonist_description == "A child in a red raincoat"
+    assert state.protagonist_name == "Mina"
     assert state.character_visuals == {"Mina": "A child in a red raincoat"}
 
 

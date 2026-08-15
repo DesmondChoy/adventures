@@ -146,6 +146,10 @@ class AdventureState(BaseModel):
         default="",
         description="Base visual description of the protagonist",
     )
+    protagonist_name: str = Field(
+        default="",
+        description="Protagonist name selected once for the adventure",
+    )
     character_visuals: Dict[str, str] = Field(
         default_factory=dict,
         description="Stores current visual descriptions for characters (protagonist if changed, and NPCs). Key: character name, Value: description."
