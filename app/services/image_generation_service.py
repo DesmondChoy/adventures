@@ -1,6 +1,5 @@
 from google import genai
 from google.genai import types
-from app.services.llm.providers import ModelConfig
 from PIL import Image
 from io import BytesIO
 import base64
@@ -9,10 +8,27 @@ import asyncio
 import logging
 import re
 import time
-from typing import Dict, Optional
-from app.services.llm import LLMService
+from typing import Any, Dict, Optional
+from uuid import uuid4
 
 logger = logging.getLogger("story_app")
+
+
+def _image_log_context(
+    context: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    if not context:
+        return {}
+    return {
+        key: context[key]
+        for key in (
+            "adventure_id",
+            "chapter_number",
+            "chapter_type",
+            "choice_index",
+        )
+        if context.get(key) is not None
+    }
 
 
 class ImageGenerationService:
@@ -32,7 +48,12 @@ class ImageGenerationService:
         # Create a client with the API key
         self.client = genai.Client(api_key=api_key)
 
-    async def generate_image_async(self, prompt, retries=5):
+    async def generate_image_async(
+        self,
+        prompt: str,
+        retries: int = 5,
+        context: Optional[Dict[str, Any]] = None,
+    ):
         """Generate image asynchronously and return as base64 string.
 
         Args:
@@ -46,13 +67,18 @@ class ImageGenerationService:
             # Run in a thread pool to avoid blocking
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(
-                None, self._generate_image, prompt, retries
+                None, self._generate_image, prompt, retries, context
             )
         except Exception as e:
             logger.error(f"Image generation failed: {str(e)}")
             return None
 
-    def _generate_image(self, prompt, retries=5):
+    def _generate_image(
+        self,
+        prompt: str,
+        retries: int = 5,
+        context: Optional[Dict[str, Any]] = None,
+    ):
         """Internal method to call Gemini API.
 
         Args:
@@ -69,17 +95,24 @@ class ImageGenerationService:
 
         attempt = 0
         last_error = None
+        log_context = _image_log_context(context)
 
         while attempt <= retries:
+            llm_call_id = str(uuid4())
             try:
-                # Only log the complete prompt and model/attempt info - essential for debugging
-                logger.info("\n" + "=" * 50)
-                logger.info("COMPLETE IMAGE PROMPT SENT TO MODEL:")
-                logger.info(f"{prompt}")
                 logger.info(
-                    f"Model: {self.model_name} | Attempt: {attempt + 1}/{retries + 1}"
+                    "Gemini image request",
+                    extra={
+                        "llm_provider": "gemini",
+                        "llm_model": self.model_name,
+                        "llm_use_case": "image_generation",
+                        "llm_call_id": llm_call_id,
+                        "llm_prompt": prompt,
+                        "llm_prompt_chars": len(prompt),
+                        "llm_attempt": attempt + 1,
+                        **log_context,
+                    },
                 )
-                logger.info("=" * 50 + "\n")
 
                 # Generate a square 1K image using Nano Banana 2.
                 response = self.client.models.generate_content(
@@ -116,7 +149,15 @@ class ImageGenerationService:
                         image.convert("RGB").save(buffered, format="JPEG")
                         img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
                         logger.info(
-                            f"Successfully generated image for prompt: {prompt[:50]}..."
+                            "Gemini image response",
+                            extra={
+                                "llm_provider": "gemini",
+                                "llm_model": self.model_name,
+                                "llm_use_case": "image_generation",
+                                "llm_call_id": llm_call_id,
+                                "llm_response_bytes": len(image_bytes),
+                                **log_context,
+                            },
                         )
                         return img_str
                     except Exception as img_error:
@@ -126,7 +167,16 @@ class ImageGenerationService:
                             # Direct base64 encoding
                             img_str = base64.b64encode(image_bytes).decode("utf-8")
                             logger.info(
-                                f"Successfully generated image using alternative method"
+                                "Gemini image response",
+                                extra={
+                                    "llm_provider": "gemini",
+                                    "llm_model": self.model_name,
+                                    "llm_use_case": "image_generation",
+                                    "llm_call_id": llm_call_id,
+                                    "llm_response_bytes": len(image_bytes),
+                                    "image_encoding_fallback": True,
+                                    **log_context,
+                                },
                             )
                             return img_str
                         except Exception as alt_error:
@@ -136,7 +186,15 @@ class ImageGenerationService:
                             raise
 
                 logger.warning(
-                    f"No images generated for prompt (attempt {attempt + 1}/{retries + 1})"
+                    "Gemini image request returned no image",
+                    extra={
+                        "llm_provider": "gemini",
+                        "llm_model": self.model_name,
+                        "llm_use_case": "image_generation",
+                        "llm_call_id": llm_call_id,
+                        "llm_attempt": attempt + 1,
+                        **log_context,
+                    },
                 )
                 # If we got a response but no images, increment attempt and try again
                 attempt += 1
@@ -150,9 +208,20 @@ class ImageGenerationService:
                     time.sleep(backoff_time)
                 continue
 
-            except Exception as e:
-                logger.error(f"Image generation attempt {attempt + 1} failed: {str(e)}")
-                last_error = e
+            except Exception as error:
+                logger.exception(
+                    "Gemini image request failed",
+                    extra={
+                        "llm_provider": "gemini",
+                        "llm_model": self.model_name,
+                        "llm_use_case": "image_generation",
+                        "llm_call_id": llm_call_id,
+                        "llm_attempt": attempt + 1,
+                        "error_type": type(error).__name__,
+                        **log_context,
+                    },
+                )
+                last_error = error
                 attempt += 1
 
                 if attempt <= retries:
@@ -211,6 +280,7 @@ class ImageGenerationService:
         agency_details: Dict[str, str],
         story_visual_sensory_detail: str,
         character_visuals: Optional[Dict[str, str]] = None,
+        context: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Synthesize a coherent image prompt using LLM to combine multiple inputs.
 
@@ -237,16 +307,16 @@ class ImageGenerationService:
 
             # Log all image synthesis inputs at INFO level for consistent visibility across chapters
             logger.info("\n=== IMAGE SYNTHESIS INPUTS ===")
-            logger.info(f"Scene Description: {image_scene_description}")
-            logger.info(f"Protagonist Description: {protagonist_description}")
-            logger.info(f"Story Visual Sensory Detail: {story_visual_sensory_detail}")
+            logger.debug(f"Scene Description: {image_scene_description}")
+            logger.debug(f"Protagonist Description: {protagonist_description}")
+            logger.debug(f"Story Visual Sensory Detail: {story_visual_sensory_detail}")
 
             # Log agency details if available
             if agency_details:
                 logger.info("Agency Details:")
-                logger.info(f"- Category: {agency_details.get('category', 'N/A')}")
-                logger.info(f"- Name: {agency_details.get('name', 'N/A')}")
-                logger.info(
+                logger.debug(f"- Category: {agency_details.get('category', 'N/A')}")
+                logger.debug(f"- Name: {agency_details.get('name', 'N/A')}")
+                logger.debug(
                     f"- Visual Details: {agency_details.get('visual_details', 'N/A')}"
                 )
             else:
@@ -256,7 +326,7 @@ class ImageGenerationService:
             logger.info("Character Visuals:")
             if character_visuals and len(character_visuals) > 0:
                 for name, description in character_visuals.items():
-                    logger.info(f"- {name}: {description}")
+                    logger.debug(f"- {name}: {description}")
             else:
                 logger.info("- None available")
             logger.info("================================\n")
@@ -287,64 +357,32 @@ class ImageGenerationService:
 
             llm = LLMServiceFactory.create_for_use_case("image_prompt_synthesis")
 
-            # Check if we're using Gemini or OpenAI
-            is_gemini = (
-                isinstance(llm, LLMService) or "Gemini" in llm.__class__.__name__
-            )
-
             synthesized_prompt = ""
-            # For Gemini, use a direct approach instead of streaming
-            if is_gemini:
-                try:
-                    # Use unified genai client with new API
-                    system_prompt = "You are a helpful assistant that follows instructions precisely."
-                    combined_prompt = f"{system_prompt}\n\n{meta_prompt}"
-
-                    response = self.client.models.generate_content(
-                        model=llm.model,  # Use the Flash Lite model from the factory
-                        contents=combined_prompt,
-                        config=ModelConfig.get_gemini_config(),
-                    )
-
-                    # Extract the text directly
-                    synthesized_prompt = (response.text or "").strip()
-                except Exception as e:
-                    logger.error(f"Error with direct Gemini call: {str(e)}")
-                    # Fallback to streaming approach
-                    logger.info("Falling back to LLMService")
-
-                    chunks = []
-
-                    response_generator = llm.generate_with_prompt(
-                        system_prompt="You are a helpful assistant that follows instructions precisely.",
-                        user_prompt=meta_prompt,
-                    )
-                    async for chunk in response_generator:
-                        chunks.append(chunk)
-                    synthesized_prompt = "".join(chunks).strip()
-            else:
-                # For OpenAI, use the streaming approach
-                chunks = []
-                response_generator = llm.generate_with_prompt(
-                    system_prompt="You are a helpful assistant that follows instructions precisely.",
-                    user_prompt=meta_prompt,
-                )
-                async for chunk in response_generator:
-                    chunks.append(chunk)
-                synthesized_prompt = "".join(chunks).strip()
+            chunks = []
+            response_generator = llm.generate_with_prompt(
+                system_prompt="You are a helpful assistant that follows instructions precisely.",
+                user_prompt=meta_prompt,
+                context={
+                    **(context or {}),
+                    "skip_paragraph_formatting": True,
+                },
+            )
+            async for chunk in response_generator:
+                chunks.append(chunk)
+            synthesized_prompt = "".join(chunks).strip()
 
             # Ensure the prompt is not empty
             if not synthesized_prompt or len(synthesized_prompt) < 10:
                 # Use a fallback approach
                 fallback_prompt = f"Colorful storybook illustration of this scene: {image_scene_description}. Protagonist: {protagonist_description}. Agency: {agency_details.get('visual_details', '')}. Atmosphere: {story_visual_sensory_detail}."
                 logger.info("\n=== USING FALLBACK IMAGE PROMPT ===")
-                logger.info(fallback_prompt)
+                logger.debug(fallback_prompt)
                 logger.info("===================================\n")
                 return fallback_prompt
 
             # Log the synthesized prompt at INFO level
             logger.info("\n=== SYNTHESIZED IMAGE PROMPT ===")
-            logger.info(synthesized_prompt)
+            logger.debug(synthesized_prompt)
             logger.info("===============================\n")
 
             return synthesized_prompt
@@ -356,7 +394,7 @@ class ImageGenerationService:
 
             # Log this fallback prompt too
             logger.info("\n=== USING ERROR FALLBACK IMAGE PROMPT ===")
-            logger.info(fallback_prompt)
+            logger.debug(fallback_prompt)
             logger.info("========================================\n")
 
             return fallback_prompt

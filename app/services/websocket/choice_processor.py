@@ -33,6 +33,40 @@ chapter_manager = ChapterManager()
 _state_storage_service: Optional[StateStorageService] = None
 _llm_service: Optional[BaseLLMService] = None
 
+_NON_CHARACTER_VISUAL_NAMES = frozenset(
+    {
+        "background",
+        "bridge",
+        "crowd",
+        "crowds",
+        "forest",
+        "group",
+        "groups",
+        "musicians",
+        "people",
+        "performers",
+        "ribbons",
+        "river",
+        "rowers",
+        "scenery",
+        "shadow",
+        "shadows",
+        "sky",
+        "villagers",
+        "weather",
+    }
+)
+_NON_CHARACTER_VISUAL_PREFIXES = (
+    "a crowd of ",
+    "a group of ",
+    "crowd of ",
+    "group of ",
+    "many ",
+    "several ",
+    "the crowd of ",
+    "the group of ",
+)
+
 
 def get_state_storage_service() -> StateStorageService:
     """Create the storage client only when persistence is required."""
@@ -48,6 +82,16 @@ def get_llm_service() -> BaseLLMService:
     if _llm_service is None:
         _llm_service = LLMServiceFactory.create_for_use_case("character_visual_processing")
     return _llm_service
+
+
+def _chapter_llm_context(
+    state: AdventureState, chapter: ChapterData
+) -> dict[str, Any]:
+    return {
+        "adventure_id": state.metadata.get("adventure_id"),
+        "chapter_number": chapter.chapter_number,
+        "chapter_type": chapter.chapter_type.value,
+    }
 
 
 _telemetry_service: Optional[TelemetryService] = None
@@ -148,7 +192,12 @@ async def handle_reveal_summary(
 
         # Complete ALL state operations BEFORE sending navigation signal
         await generate_conclusion_chapter_summary(
-            conclusion_chapter, state, websocket, connection_data, send_ready_signal=False
+            conclusion_chapter,
+            state,
+            websocket,
+            connection_data,
+            send_ready_signal=False,
+            persist_state=False,
         )
 
         # Create and generate the SUMMARY chapter
@@ -249,6 +298,7 @@ async def generate_conclusion_chapter_summary(
     websocket: WebSocket,
     connection_data: Optional[Dict[str, Any]] = None,
     send_ready_signal: bool = True,
+    persist_state: bool = True,
 ) -> Optional[str]:
     """Generate and store summary for the conclusion chapter."""
     summary_stored = False
@@ -258,13 +308,14 @@ async def generate_conclusion_chapter_summary(
             conclusion_chapter.content,
             " ",  # Whitespace for chosen_choice
             " ",  # Whitespace for choice_context
+            context=_chapter_llm_context(state, conclusion_chapter),
         )
 
         # Extract title and summary from the result
         title = summary_result.get("title", "Chapter Summary")
         summary_text = summary_result.get("summary", "Summary not available")
 
-        logger.info(f"Generated CONCLUSION chapter summary: {summary_text[:100]}...")
+        logger.debug(f"Generated CONCLUSION chapter summary: {summary_text[:100]}...")
 
         await _store_summary_safe(
             conclusion_chapter,
@@ -273,6 +324,9 @@ async def generate_conclusion_chapter_summary(
             summary_text,
         )
         summary_stored = True
+
+        if not persist_state:
+            return None
 
         # Store the updated state in StateStorageService
         adventure_id = None
@@ -337,7 +391,11 @@ async def generate_conclusion_chapter_summary(
         return None
 
 
-async def diagnose_character_visuals(chapter_content, existing_visuals=None):
+async def diagnose_character_visuals(
+    chapter_content: str,
+    existing_visuals: Optional[dict[str, str]] = None,
+    context: Optional[dict[str, Any]] = None,
+):
     """Diagnostic function to test character visual extraction from chapter content.
 
     Args:
@@ -349,16 +407,16 @@ async def diagnose_character_visuals(chapter_content, existing_visuals=None):
     """
     if existing_visuals is None:
         existing_visuals = {}
+    existing_visuals = _sanitize_character_visuals(existing_visuals)
 
     logger.info("Running character visual diagnostic")
     logger.info(f"Chapter content length: {len(chapter_content)}")
-    logger.info(f"Existing visuals: {existing_visuals}")
+    logger.debug(f"Existing visuals: {existing_visuals}")
 
     # Format the prompt with chapter content and existing visuals
-    custom_prompt = CHARACTER_VISUAL_UPDATE_PROMPT.format(
-        chapter_content=chapter_content,
-        existing_visuals=json.dumps(existing_visuals, indent=2),
-    )
+    custom_prompt = CHARACTER_VISUAL_UPDATE_PROMPT.replace(
+        "{chapter_content}", chapter_content
+    ).replace("{existing_visuals}", json.dumps(existing_visuals, indent=2))
 
     # Log a content snippet for debugging
     content_snippet = (
@@ -385,7 +443,10 @@ async def diagnose_character_visuals(chapter_content, existing_visuals=None):
             state=minimal_state,
             question=None,
             previous_lessons=None,
-            context={"prompt_override": custom_prompt},
+            context={
+                **(context or {}),
+                "prompt_override": custom_prompt,
+            },
         ):
             chunks.append(chunk)
 
@@ -437,11 +498,14 @@ async def diagnose_character_visuals(chapter_content, existing_visuals=None):
             )
             return None
 
+        sanitized_visuals = _sanitize_character_visuals(updated_visuals)
         logger.info("Successfully parsed character visuals:")
-        for char_name, description in updated_visuals.items():
-            logger.info(f'Character: "{char_name}", Description: "{description}"')
+        for char_name, description in sanitized_visuals.items():
+            logger.debug(
+                f'Character: "{char_name}", Description: "{description}"'
+            )
 
-        return updated_visuals
+        return sanitized_visuals or None
 
     except Exception as e:
         logger.error(f"Error during character visual diagnostic: {e}")
@@ -480,7 +544,9 @@ async def fix_missing_character_visuals(
 
         # Extract visuals from this chapter's content
         chapter_visuals = await diagnose_character_visuals(
-            chapter.content, existing_visuals
+            chapter.content,
+            existing_visuals,
+            context=_chapter_llm_context(state, chapter),
         )
 
         if chapter_visuals:
@@ -493,7 +559,11 @@ async def fix_missing_character_visuals(
         logger.info(
             f"Updating state with {len(existing_visuals)} total character visuals"
         )
-        state_manager.update_character_visuals(state, existing_visuals)
+        state_manager.update_character_visuals(
+            state,
+            _sanitize_character_visuals(existing_visuals),
+            replace_existing=True,
+        )
         logger.info("Character visuals fix complete")
     else:
         logger.warning("No character visuals found in any chapters")
@@ -517,7 +587,9 @@ async def extract_character_visuals_from_response(response, chapter_number):
         f"[CHAPTER {chapter_number}] Extracting character visuals from response of length {len(response)}"
     )
     if response:
-        logger.info(f"[CHAPTER {chapter_number}] Response excerpt: {response[:100]}...")
+        logger.debug(
+            f"[CHAPTER {chapter_number}] Response excerpt: {response[:100]}..."
+        )
     else:
         logger.error(f"[CHAPTER {chapter_number}] Empty response received from LLM")
         return {}
@@ -576,6 +648,29 @@ async def extract_character_visuals_from_response(response, chapter_number):
     return {}
 
 
+def _is_character_visual_name(name: str) -> bool:
+    normalized = " ".join(name.strip().lower().split())
+    return bool(normalized) and normalized not in _NON_CHARACTER_VISUAL_NAMES and not any(
+        normalized.startswith(prefix) for prefix in _NON_CHARACTER_VISUAL_PREFIXES
+    )
+
+
+def _sanitize_character_visuals(visuals: object) -> dict[str, str]:
+    if not isinstance(visuals, dict):
+        return {}
+
+    sanitized: dict[str, str] = {}
+    for name, description in visuals.items():
+        if not isinstance(name, str) or not isinstance(description, str):
+            continue
+        clean_name = name.strip()
+        clean_description = description.strip()
+        if not clean_description or not _is_character_visual_name(clean_name):
+            continue
+        sanitized[clean_name] = clean_description
+    return sanitized
+
+
 def validate_character_visuals(visuals):
     """Validate that the extracted character visuals are in the expected format.
 
@@ -592,16 +687,30 @@ def validate_character_visuals(visuals):
     if len(visuals) == 0:
         return False
 
-    # Check that values are all strings
-    for name, description in visuals.items():
-        if not isinstance(name, str) or not isinstance(description, str):
-            return False
-
-    return True
+    return len(_sanitize_character_visuals(visuals)) == len(visuals)
 
 
 async def _update_character_visuals(
-    state: AdventureState, chapter_content: str, state_manager: AdventureStateManager
+    state: AdventureState,
+    chapter_content: str,
+    state_manager: AdventureStateManager,
+    chapter_number: int,
+) -> dict:
+    """Serialize character-visual extraction so updates cannot land out of order."""
+    async with state.character_visuals_lock:
+        return await _update_character_visuals_unlocked(
+            state,
+            chapter_content,
+            state_manager,
+            chapter_number,
+        )
+
+
+async def _update_character_visuals_unlocked(
+    state: AdventureState,
+    chapter_content: str,
+    state_manager: AdventureStateManager,
+    chapter_number: int,
 ) -> dict:
     """Update character visuals based on chapter content.
 
@@ -619,16 +728,21 @@ async def _update_character_visuals(
         dict: The updated visuals dictionary for immediate use or None on failure
     """
     try:
-        # Get chapter number for logging
-        chapter_number = len(state.chapters)
-
         logger.info(
             f"[CHAPTER {chapter_number}] Starting character visual update from chapter content"
         )
 
         # Get existing character visuals or empty dict - we need this for the prompt
         # but we'll avoid logging it to keep the terminal cleaner and more focused
-        existing_visuals = getattr(state, "character_visuals", {})
+        existing_visuals = _sanitize_character_visuals(
+            getattr(state, "character_visuals", {})
+        )
+        if existing_visuals != getattr(state, "character_visuals", {}):
+            state.character_visuals = dict(existing_visuals)
+            logger.warning(
+                "Removed non-character entries from tracked visuals",
+                extra={"chapter_number": chapter_number},
+            )
 
         # Just log how many existing visuals we have, not the details (we'll log final result at the end)
         logger.info(
@@ -715,30 +829,44 @@ Return ONLY a valid JSON with character names and descriptions.
             logger.info(
                 f"[CHAPTER {chapter_number}] Using non-streaming API for character visuals"
             )
-            response = await get_llm_service().generate_character_visuals_json(custom_prompt)
+            chapter = next(
+                (
+                    item
+                    for item in state.chapters
+                    if item.chapter_number == chapter_number
+                ),
+                None,
+            )
+            response = await get_llm_service().generate_character_visuals_json(
+                custom_prompt,
+                context={
+                    "adventure_id": state.metadata.get("adventure_id"),
+                    "chapter_number": chapter_number,
+                    "chapter_type": chapter.chapter_type.value if chapter else None,
+                },
+            )
 
             # Log the raw LLM response with distinctive markers
             logger.info(
                 f"\n=== LLM_RESPONSE: CHARACTER_VISUAL_UPDATE_PROMPT [CHAPTER {chapter_number}] ==="
             )
             # Avoid logging excessively long responses in INFO, but provide a meaningful excerpt
-            if len(response) > 1000:
-                logger.info(f"Response excerpt (first 500 chars):\n{response[:500]}")
-                logger.info(f"Response excerpt (last 500 chars):\n{response[-500:]}")
-                logger.info(
-                    f"Full response logged at DEBUG level (length: {len(response)} chars)"
-                )
-            else:
-                logger.info(f"Response:\n{response}")
+            logger.info(f"Response length: {len(response)} characters")
             logger.info("=== END RESPONSE ===\n")
 
             # Keep detailed debug log
             logger.debug(f"Raw LLM response: {response}")
 
             # Extract JSON directly from the complete response
-            updated_visuals = await extract_character_visuals_from_response(
+            extracted_visuals = await extract_character_visuals_from_response(
                 response, chapter_number
             )
+            updated_visuals = _sanitize_character_visuals(extracted_visuals)
+            if len(updated_visuals) != len(extracted_visuals):
+                logger.warning(
+                    "Discarded non-character visual entries from LLM response",
+                    extra={"chapter_number": chapter_number},
+                )
 
             if not validate_character_visuals(updated_visuals):
                 logger.error(
@@ -765,9 +893,9 @@ Return ONLY a valid JSON with character names and descriptions.
                 f"Successfully extracted {len(updated_visuals)} character descriptions"
             )
 
-            # Log the extracted character visuals
+            # Detailed generated descriptions remain development-only DEBUG data.
             for char_name, description in updated_visuals.items():
-                logger.info(f'- {char_name}: "{description}"')
+                logger.debug(f'- {char_name}: "{description}"')
             logger.info("=== END CHARACTER VISUALS ===\n")
 
             # Keep detailed debug log
@@ -782,8 +910,15 @@ Return ONLY a valid JSON with character names and descriptions.
                 )
                 state.character_visuals = {}
 
-            # Update the state with the new visuals
-            state_manager.update_character_visuals(state, updated_visuals)
+            # Preserve validated existing characters if the model accidentally
+            # omits them, while replacing the dictionary so polluted keys are removed.
+            tracked_visuals = {**existing_visuals, **updated_visuals}
+            state_manager.update_character_visuals(
+                state,
+                tracked_visuals,
+                chapter_number=chapter_number,
+                replace_existing=True,
+            )
 
             # Show the character visuals after updating - this is what matters to users
             logger.info(
@@ -794,7 +929,7 @@ Return ONLY a valid JSON with character names and descriptions.
             if after_visuals:
                 # Sort by key to make it easier to scan
                 for char_name, description in sorted(after_visuals.items()):
-                    logger.info(f'- {char_name}: "{description}"')
+                    logger.debug(f'- {char_name}: "{description}"')
             else:
                 logger.info("- Empty (no character visuals being tracked)")
             logger.info("=== END CHARACTER VISUALS ===\n")
@@ -803,7 +938,7 @@ Return ONLY a valid JSON with character names and descriptions.
                 f"[CHAPTER {chapter_number}] Successfully updated character visuals with {len(updated_visuals)} entries"
             )
 
-            return updated_visuals
+            return tracked_visuals
 
         except json.JSONDecodeError as e:
             logger.error(
@@ -1107,33 +1242,9 @@ async def process_start_choice(
         if not new_chapter:
             return None, None, False, False
             
-        # Defer character visual extraction to background (same as other chapters)
-        if new_chapter:
-            try:
-                logger.info("[PERFORMANCE] Deferring character visual extraction for Chapter 1 to background")
-                
-                # Create a deferred task factory for character visual extraction (same pattern as other chapters)
-                def create_visual_extraction_task():
-                    task = asyncio.create_task(_update_character_visuals_background(new_chapter, state, state_manager))
-                    state.pending_background_tasks.append(task)  # Reuse existing task tracking
-                    
-                    # Add error visibility callback
-                    def _log_visual_task_error(task: asyncio.Task) -> None:
-                        if task.exception():
-                            logger.error(f"Chapter 1 visual extraction task crashed: {task.exception()}")
-                    
-                    task.add_done_callback(_log_visual_task_error)
-                    logger.info("[PERFORMANCE] Chapter 1 visual extraction task started in background after streaming completed")
-                    return task
-                
-                # Store the deferred visual extraction task
-                state.deferred_task_factories.append(create_visual_extraction_task)
-                logger.info("[PERFORMANCE] Chapter 1 visual extraction task deferred for Chapter 1")
-            except Exception as e:
-                logger.error(f"Error setting up deferred character visual extraction for Chapter 1: {e}")
-                # Continue with the story flow even if visual extraction setup fails
-
-        # No need to process previous chapter for start choice
+        # Chapter 1 visual extraction is queued when its agency choice is
+        # processed, like every other completed chapter. Queuing it here too
+        # produced duplicate prompt/response pairs during Chapter 2.
         is_story_complete = False
         
         # Return with flag indicating content was already streamed live
@@ -1153,26 +1264,10 @@ async def process_start_choice(
         )
 
         if new_chapter:
-            # Extract character visuals immediately (fallback behavior)
-            try:
-                logger.info("\nExtracting character visuals from Chapter 1 content (fallback)")
-                updated_visuals = await _update_character_visuals(
-                    state, new_chapter.content, state_manager
-                )
-
-                if updated_visuals:
-                    logger.info(
-                        f"Successfully extracted {len(updated_visuals)} character visuals from first chapter"
-                    )
-                else:
-                    logger.warning(
-                        "Character visual extraction from first chapter returned no results"
-                    )
-            except Exception as e:
-                logger.error(
-                    f"Error during character visual extraction from first chapter: {e}"
-                )
-                # Continue with the story flow even if visual extraction fails
+            logger.info(
+                "Chapter 1 fallback generation completed; visual extraction will be "
+                "queued when its choice is processed"
+            )
 
         # No need to process previous chapter for start choice
         is_story_complete = False
@@ -1448,7 +1543,10 @@ async def _update_character_visuals_background(
         logger.info(f"[PERFORMANCE] Starting background character visual extraction for chapter {previous_chapter.chapter_number}")
         
         updated_visuals = await _update_character_visuals(
-            state, previous_chapter.content, state_manager
+            state,
+            previous_chapter.content,
+            state_manager,
+            chapter_number=previous_chapter.chapter_number,
         )
         
         if updated_visuals:
@@ -1484,7 +1582,10 @@ async def generate_chapter_summary_background(
             )
 
         summary_result = await chapter_manager.generate_chapter_summary(
-            previous_chapter.content, choice_text, choice_context
+            previous_chapter.content,
+            choice_text,
+            choice_context,
+            context=_chapter_llm_context(state, previous_chapter),
         )
 
         # Extract title and summary from the result
@@ -1529,7 +1630,10 @@ async def generate_chapter_summary(
             )
 
         summary_result = await chapter_manager.generate_chapter_summary(
-            previous_chapter.content, choice_text, choice_context
+            previous_chapter.content,
+            choice_text,
+            choice_context,
+            context=_chapter_llm_context(state, previous_chapter),
         )
 
         # Extract title and summary from the result

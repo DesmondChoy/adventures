@@ -1,59 +1,12 @@
-from typing import Any, Dict, Optional, List, AsyncGenerator
 from abc import ABC, abstractmethod
+from typing import Any, AsyncGenerator, Dict, List, Optional
+
 from app.models.story import AdventureState
 from app.services.llm.chapter_output import GeneratedChapter
-import logging
-from contextlib import asynccontextmanager
-
-logger = logging.getLogger("story_app")
 
 
 class BaseLLMService(ABC):
     """Abstract base class for LLM services."""
-
-    @asynccontextmanager
-    async def log_llm_interaction(self, prompt: str, context: Dict[str, Any] = None):
-        """Context manager to log LLM interactions with proper request context."""
-        if context is None:
-            context = {}
-
-        # Log the prompt
-        logger.info(
-            "Sending prompt to LLM",
-            extra={
-                "llm_prompt": prompt,
-                "session_id": context.get("session_id", "no_session"),
-                "request_id": context.get("request_id", "no_request_id"),
-            },
-        )
-
-        try:
-            yield
-        except Exception as e:
-            logger.error(
-                f"Error in LLM interaction: {str(e)}",
-                extra={
-                    "llm_prompt": prompt,
-                    "error": str(e),
-                    "session_id": context.get("session_id", "no_session"),
-                    "request_id": context.get("request_id", "no_request_id"),
-                },
-            )
-            raise
-
-    async def log_llm_response(self, response: str, context: Dict[str, Any] = None):
-        """Helper method to log LLM responses."""
-        if context is None:
-            context = {}
-
-        logger.info(
-            "Received response from LLM",
-            extra={
-                "llm_response": response,
-                "session_id": context.get("session_id", "no_session"),
-                "request_id": context.get("request_id", "no_request_id"),
-            },
-        )
 
     async def generate_structured_chapter(
         self,
@@ -94,6 +47,8 @@ class BaseLLMService(ABC):
     async def generate_character_visuals_json(
         self,
         custom_prompt: str,
+        use_case: str = "character_visuals",
+        context: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Generate character visuals JSON with direct response (no streaming).
         
@@ -103,6 +58,8 @@ class BaseLLMService(ABC):
         
         Args:
             custom_prompt: The prompt to send to the LLM
+            use_case: Audit label for the direct-text request
+            context: Correlation metadata for the request
             
         Returns:
             str: Complete response text from the LLM

@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
@@ -6,6 +7,7 @@ from pydantic import ValidationError
 from app.models.story import AdventureState, ChapterType
 from app.services.llm import prompt_engineering
 from app.services.llm.chapter_output import GeneratedChapter, StoryChapterResponse
+from app.services.llm.prompt_templates import AGENCY_GUIDANCE
 from app.services.websocket import content_generator
 
 
@@ -117,6 +119,38 @@ def test_build_prompt_appends_validation_feedback(
     assert user_prompt.endswith(
         "# Retry Correction\nReturn clean structured choices."
     )
+
+
+def test_system_prompt_does_not_duplicate_agency_category() -> None:
+    state = SimpleNamespace(
+        current_chapter_number=5,
+        metadata={
+            "agency": {
+                "category": "Take on a Profession",
+                "name": "Craftsperson",
+                "description": "Take on a Profession: Craftsperson - Build things.",
+            }
+        },
+        selected_narrative_elements={"settings": "Aurora Lagoon"},
+        selected_theme="Courage",
+        selected_moral_teaching="Bravery lights the way",
+    )
+
+    prompt = prompt_engineering.build_system_prompt(
+        cast(AdventureState, state)
+    )
+
+    assert "Take on a Profession: Craftsperson" in prompt
+    assert "Take on a Profession: Take on a Profession" not in prompt
+
+
+def test_reflect_agency_guidance_names_the_selected_agency() -> None:
+    guidance = AGENCY_GUIDANCE["correct"].format(
+        agency_type="choice",
+        agency_name="Craftsperson",
+    )
+
+    assert "choice (Craftsperson)" in guidance
 
 
 class _RetryingStructuredService:

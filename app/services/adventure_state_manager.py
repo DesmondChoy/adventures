@@ -121,6 +121,12 @@ class AdventureStateManager:
             current_phase = self.state.current_storytelling_phase
             content = chapter_data.get("content", "")
             plot_twist = self.state.selected_plot_twist
+            chapter_number = chapter_data.get("chapter_number")
+            validated_chapters = self.state.metadata.setdefault(
+                "plot_twist_validated_chapters", []
+            )
+            if chapter_number in validated_chapters:
+                return
 
             # Phase-specific validation
             if current_phase == "Exposition":
@@ -146,6 +152,7 @@ class AdventureStateManager:
             hints = self.state.metadata.get("previous_hints", [])
             hints.append(content)
             self.state.metadata["previous_hints"] = hints
+            validated_chapters.append(chapter_number)
 
         except (AttributeError, TypeError) as error:
             logger.exception("Plot twist progression validation failed")
@@ -491,7 +498,12 @@ class AdventureStateManager:
             )
 
     def update_character_visuals(
-        self, state: AdventureState, updated_visuals: dict[str, str]
+        self,
+        state: AdventureState,
+        updated_visuals: dict[str, str],
+        chapter_number: int | None = None,
+        *,
+        replace_existing: bool = False,
     ) -> None:
         """Update character visuals dictionary in the AdventureState.
 
@@ -500,7 +512,7 @@ class AdventureStateManager:
             updated_visuals: Dictionary with updated character visual descriptions
         """
         # Get chapter number for logging
-        chapter_number = len(state.chapters)
+        chapter_number = chapter_number or len(state.chapters)
 
         if not updated_visuals:
             logger.warning(
@@ -531,6 +543,19 @@ class AdventureStateManager:
             f"[CHAPTER {chapter_number}] AdventureState.character_visuals AFTER update:"
         )
 
+        if replace_existing:
+            removed = set(current_visuals) - set(updated_visuals)
+            state.character_visuals = dict(updated_visuals)
+            logger.info(
+                "Replaced character visuals from validated extraction",
+                extra={
+                    "chapter_number": chapter_number,
+                    "character_count": len(updated_visuals),
+                    "removed_character_count": len(removed),
+                },
+            )
+            return
+
         if not current_visuals:
             logger.info(
                 f"[CHAPTER {chapter_number}] Initializing character_visuals with first updates"
@@ -539,7 +564,7 @@ class AdventureStateManager:
 
             # Log all new entries
             for char_name, description in updated_visuals.items():
-                logger.info(
+                logger.debug(
                     f'[CHAPTER {chapter_number}] NEW: "{char_name}" - "{description}"'
                 )
 
@@ -558,7 +583,7 @@ class AdventureStateManager:
             if char_name not in current_visuals:
                 current_visuals[char_name] = visual_desc
                 new_count += 1
-                logger.info(
+                logger.debug(
                     f'[CHAPTER {chapter_number}] NEW: "{char_name}" - "{visual_desc}"'
                 )
             # Updated character
@@ -566,13 +591,13 @@ class AdventureStateManager:
                 old_desc = current_visuals[char_name]
                 current_visuals[char_name] = visual_desc
                 updates_count += 1
-                logger.info(f'[CHAPTER {chapter_number}] UPDATED: "{char_name}"')
-                logger.info(f'[CHAPTER {chapter_number}]   BEFORE: "{old_desc}"')
-                logger.info(f'[CHAPTER {chapter_number}]   AFTER:  "{visual_desc}"')
+                logger.debug(f'[CHAPTER {chapter_number}] UPDATED: "{char_name}"')
+                logger.debug(f'[CHAPTER {chapter_number}]   BEFORE: "{old_desc}"')
+                logger.debug(f'[CHAPTER {chapter_number}]   AFTER:  "{visual_desc}"')
             # Unchanged character
             else:
                 unchanged_count += 1
-                logger.info(
+                logger.debug(
                     f'[CHAPTER {chapter_number}] UNCHANGED: "{char_name}" - "{visual_desc}"'
                 )
 
@@ -595,6 +620,11 @@ class AdventureStateManager:
         logger.info(
             f"[CHAPTER CREATION] Current storytelling phase: {self.state.current_storytelling_phase}"
         )
+
+        if chapter_data.chapter_type != ChapterType.SUMMARY:
+            chapter_payload = chapter_data.model_dump(mode="json")
+            self.validate_element_consistency(chapter_payload)
+            self.validate_plot_twist_progression(chapter_payload)
 
         # Track agency references in the new chapter
         self.update_agency_references(chapter_data)

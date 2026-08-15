@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import random
 import logging
 import math
@@ -656,7 +656,9 @@ class ChapterManager:
 
     @staticmethod
     async def generate_image_scene(
-        chapter_content: str, character_visuals: Dict[str, str]
+        chapter_content: str,
+        character_visuals: Dict[str, str],
+        context: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Generate a description of the most visually striking moment from the chapter.
 
@@ -691,7 +693,10 @@ class ChapterManager:
                     "output constraints exactly."
                 ),
                 user_prompt=custom_prompt,
-                context={"skip_paragraph_formatting": True},
+                context={
+                    **(context or {}),
+                    "skip_paragraph_formatting": True,
+                },
             ):
                 chunks.append(chunk)
             raw_scene = "".join(chunks)
@@ -710,7 +715,7 @@ class ChapterManager:
                     first_para = paragraphs[0]
                     words = first_para.split()[:20]
                     scene = " ".join(words) + "..."
-                    logger.info(f"Using fallback image scene: {scene}")
+                    logger.debug(f"Using fallback image scene: {scene}")
                 else:
                     scene = "A dramatic moment from the story"
                     logger.info("Using generic fallback image scene")
@@ -728,7 +733,10 @@ class ChapterManager:
 
     @staticmethod
     async def generate_chapter_summary(
-        chapter_content: str, chosen_choice: str = None, choice_context: str = ""
+        chapter_content: str,
+        chosen_choice: str = None,
+        choice_context: str = "",
+        context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, str]:
         """Generate a concise summary of the chapter content.
 
@@ -756,12 +764,6 @@ class ChapterManager:
                 choice_context=choice_context,
             )
 
-            # Log the full prompt at INFO level to show in terminal
-            logger.info("\n" + "=" * 50)
-            logger.info("COMPLETE CHAPTER SUMMARY PROMPT SENT TO LLM:")
-            logger.info(f"{custom_prompt}")
-            logger.info("=" * 50 + "\n")
-
             # We need to override the prompt engineering system
             # Create a minimal AdventureState-like object with just what we need
             class MinimalState:
@@ -779,7 +781,11 @@ class ChapterManager:
             if is_gemini:
                 try:
                     # Use the LLM service for consistent API handling
-                    raw_summary = await llm.generate_character_visuals_json(custom_prompt)
+                    raw_summary = await llm.generate_character_visuals_json(
+                        custom_prompt,
+                        use_case="chapter_summary",
+                        context=context,
+                    )
                     logger.debug(f"Direct Gemini response: '{raw_summary}'")
                 except Exception as e:
                     logger.error(f"Error with direct Gemini call: {str(e)}")
@@ -790,7 +796,10 @@ class ChapterManager:
                         state=MinimalState(),
                         question=None,
                         previous_lessons=None,
-                        context={"prompt_override": custom_prompt},
+                        context={
+                            **(context or {}),
+                            "prompt_override": custom_prompt,
+                        },
                     ):
                         chunks.append(chunk)
                     raw_summary = "".join(chunks)
@@ -802,7 +811,10 @@ class ChapterManager:
                     state=MinimalState(),
                     question=None,
                     previous_lessons=None,
-                    context={"prompt_override": custom_prompt},
+                    context={
+                        **(context or {}),
+                        "prompt_override": custom_prompt,
+                    },
                 ):
                     chunks.append(chunk)
                 raw_summary = "".join(chunks)
@@ -855,7 +867,7 @@ class ChapterManager:
                     first_para = paragraphs[0]
                     words = first_para.split()[:30]
                     summary_text = " ".join(words) + "..."
-                    logger.info(f"Using fallback summary: {summary_text}")
+                    logger.debug(f"Using fallback summary: {summary_text}")
                 else:
                     summary_text = "A scene from the story"
                     logger.info("Using generic fallback summary")

@@ -19,6 +19,7 @@ from app.models.story import (
     StoryChoice,
 )
 from app.routers.websocket_router import (
+    _client_state_matches_server,
     _get_choice_id,
     _validate_adventure_ownership,
 )
@@ -205,7 +206,6 @@ async def test_specific_resume_handshake_restores_conclusion_controls(
             conclusion,
         ]
     )
-
     class FakeStateManager:
         async def reconstruct_state_from_storage(
             self,
@@ -300,6 +300,44 @@ def test_get_choice_id_normalizes_supported_payloads(
     payload: object, expected: str | None
 ) -> None:
     assert _get_choice_id(payload) == expected
+
+
+def test_stale_client_chapters_do_not_match_fresh_server_state() -> None:
+    server_state = SimpleNamespace(
+        chapters=[SimpleNamespace(chapter_number=1, content="Fresh adventure")]
+    )
+
+    assert not _client_state_matches_server(
+        {"chapters": [{"chapter_number": 1}]}, server_state
+    )
+    assert _client_state_matches_server(
+        {
+            "chapters": [
+                {"chapter_number": 1, "content": "Fresh adventure"}
+            ]
+        },
+        server_state,
+    )
+    assert not _client_state_matches_server(
+        {
+            "chapters": [
+                {"chapter_number": number}
+                for number in range(1, 11)
+            ]
+        },
+        server_state,
+    )
+
+
+def test_same_numbered_client_chapter_with_stale_content_does_not_match() -> None:
+    server_state = SimpleNamespace(
+        chapters=[SimpleNamespace(content="New adventure")]
+    )
+
+    assert not _client_state_matches_server(
+        {"chapters": [{"chapter_number": 1, "content": "Old adventure"}]},
+        server_state,
+    )
 
 
 @pytest.mark.asyncio
@@ -555,14 +593,19 @@ async def test_image_generation_uses_explicit_current_chapter(
     async def fake_generate_image_scene(
         content: str,
         _character_visuals: dict[str, str],
+        **_kwargs: Any,
     ) -> str:
         observed["scene_content"] = content
         return "Current scene"
 
-    async def fake_synthesize_image_prompt(*_args: Any) -> str:
+    async def fake_synthesize_image_prompt(
+        *_args: Any, **_kwargs: Any
+    ) -> str:
         return "Image prompt"
 
-    async def fake_generate_image_async(prompt: str) -> str:
+    async def fake_generate_image_async(
+        prompt: str, **_kwargs: Any
+    ) -> str:
         observed["image_prompt"] = prompt
         return "image-data"
 
@@ -754,6 +797,7 @@ async def test_conclusion_summary_update_keeps_authenticated_owner_scope(
             conclusion,
         ]
     )
+    state.metadata["adventure_id"] = "adventure-id"
     websocket = _DummyWebSocket()
     user_id = uuid4()
     observed: dict[str, Any] = {}
@@ -768,6 +812,7 @@ async def test_conclusion_summary_update_keeps_authenticated_owner_scope(
         state_data: dict[str, Any],
         **kwargs: Any,
     ) -> str:
+        observed["call_count"] = observed.get("call_count", 0) + 1
         observed["state_data"] = state_data
         observed.update(kwargs)
         return "adventure-id"
@@ -802,3 +847,113 @@ async def test_conclusion_summary_update_keeps_authenticated_owner_scope(
     assert observed["explicit_is_complete"] is True
     assert state.chapter_summaries[2] == "A complete adventure."
     assert state.summary_chapter_titles[2] == "The End"
+
+    state_id = await choice_processor.generate_conclusion_chapter_summary(
+        conclusion_chapter=conclusion,
+        state=state,
+        websocket=websocket,
+        connection_data={
+            "adventure_id": "adventure-id",
+            "user_id": user_id,
+        },
+        send_ready_signal=False,
+        persist_state=False,
+    )
+
+    assert state_id is None
+    assert observed["call_count"] == 1
+
+
+def test_character_visual_validation_rejects_generic_groups() -> None:
+    assert choice_processor.validate_character_visuals(
+        {"Mira": "A child with a red coat."}
+    )
+    assert not choice_processor.validate_character_visuals(
+        {"musicians": "A lively group in blue uniforms."}
+    )
+
+
+@pytest.mark.asyncio
+async def test_character_visual_updates_are_serialized_and_sanitized(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    chapters = [
+        ChapterData(
+            chapter_number=1,
+            content="Mira meets Rowan.",
+            chapter_type=ChapterType.STORY,
+            chapter_content=ChapterContent(
+                content="Mira meets Rowan.",
+                choices=_story_choices(),
+            ),
+        ),
+        ChapterData(
+            chapter_number=2,
+            content="Inez joins them.",
+            chapter_type=ChapterType.REFLECT,
+            chapter_content=ChapterContent(
+                content="Inez joins them.",
+                choices=[],
+            ),
+        ),
+    ]
+    state = _build_state(chapters)
+    state.metadata["adventure_id"] = "adventure-id"
+    state.character_visuals = {
+        "Mira": "A child with a red coat.",
+        "musicians": "A lively group in blue uniforms.",
+    }
+    state_manager = AdventureStateManager()
+    state_manager.state = state
+
+    class _VisualService:
+        def __init__(self) -> None:
+            self.active = 0
+            self.max_active = 0
+            self.call_count = 0
+            self.contexts: list[dict[str, Any] | None] = []
+
+        async def generate_character_visuals_json(
+            self,
+            _prompt: str,
+            use_case: str = "character_visuals",
+            context: dict[str, Any] | None = None,
+        ) -> str:
+            del use_case
+            self.active += 1
+            self.max_active = max(self.max_active, self.active)
+            self.contexts.append(context)
+            name = "Rowan" if self.call_count == 0 else "Inez"
+            self.call_count += 1
+            await asyncio.sleep(0.01)
+            self.active -= 1
+            return f'{{"{name}": "A distinct recurring character."}}'
+
+    service = _VisualService()
+    monkeypatch.setattr(choice_processor, "get_llm_service", lambda: service)
+
+    await asyncio.gather(
+        choice_processor._update_character_visuals(
+            state,
+            chapters[0].content,
+            state_manager,
+            chapter_number=1,
+        ),
+        choice_processor._update_character_visuals(
+            state,
+            chapters[1].content,
+            state_manager,
+            chapter_number=2,
+        ),
+    )
+
+    assert service.max_active == 1
+    assert state.character_visuals == {
+        "Mira": "A child with a red coat.",
+        "Rowan": "A distinct recurring character.",
+        "Inez": "A distinct recurring character.",
+    }
+    assert [context["chapter_number"] for context in service.contexts if context] == [
+        1,
+        2,
+    ]

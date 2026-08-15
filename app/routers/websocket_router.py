@@ -72,6 +72,31 @@ def _get_choice_id(choice_data: object) -> Optional[str]:
     return None
 
 
+def _client_state_matches_server(validated_state: object, current_state: object) -> bool:
+    """Return whether client chapters match the server-authoritative state."""
+    if not isinstance(validated_state, dict):
+        return False
+    client_chapters = validated_state.get("chapters", [])
+    if not isinstance(client_chapters, list):
+        return False
+    server_chapters = getattr(current_state, "chapters", [])
+    if len(client_chapters) != len(server_chapters):
+        return False
+
+    for client_chapter, server_chapter in zip(client_chapters, server_chapters):
+        if not isinstance(client_chapter, dict):
+            return False
+        if client_chapter.get("chapter_number") != getattr(
+            server_chapter, "chapter_number", None
+        ):
+            return False
+        client_content = client_chapter.get("content")
+        server_content = getattr(server_chapter, "content", None)
+        if not isinstance(client_content, str) or client_content != server_content:
+            return False
+    return True
+
+
 async def websocket_ping_task(websocket: WebSocket, stop_event: asyncio.Event):
     """Send periodic ping messages to keep the WebSocket connection alive.
 
@@ -409,6 +434,9 @@ async def story_websocket(
 
         # Send status based on whether an adventure was loaded (either specific or active)
         if loaded_state_from_storage and connection_data["adventure_id"]:
+            loaded_state_from_storage.metadata["adventure_id"] = connection_data[
+                "adventure_id"
+            ]
             # For resumed adventures, display the last completed chapter number (the one being re-displayed)
             # not the next chapter to be generated
             if loaded_state_from_storage.chapters:
@@ -595,7 +623,9 @@ async def story_websocket(
                         )
                         connection_data["adventure_id"] = None
                     from app.models.story import AdventureState
-                    total_chapters = validated_state.get("story_length", AdventureState.model_fields["story_length"].default)
+                    total_chapters = AdventureState.model_fields[
+                        "story_length"
+                    ].default
                     try:
                         state = state_manager.initialize_state(
                             total_chapters, lesson_topic, story_category, difficulty
@@ -629,6 +659,7 @@ async def story_websocket(
                             if adventure_id is None:
                                 continue
                             connection_data["adventure_id"] = adventure_id
+                            state.metadata["adventure_id"] = adventure_id
                             logger.info(
                                 f"Stored new state with ID: {adventure_id} (user_id: {connection_data.get('user_id')})"
                             )
@@ -676,8 +707,8 @@ async def story_websocket(
                         choice_id and choice_id.lower() == "reveal_summary"
                     )
 
-                    # Use server-authoritative state for summary reveal to avoid stale
-                    # client localStorage state overwriting the latest CONCLUSION state.
+                    # Client state is diagnostic only. AdventureState remains the
+                    # source of truth for every choice, including summary reveal.
                     if is_reveal_summary_choice:
                         logger.info(
                             "Skipping client state overwrite for reveal_summary",
@@ -693,8 +724,30 @@ async def story_websocket(
                         )
                         state = current_state
                     else:
-                        await state_manager.update_state_from_client(validated_state)
-                        state = state_manager.get_current_state()
+                        if not _client_state_matches_server(
+                            validated_state, current_state
+                        ):
+                            logger.warning(
+                                "Ignoring mismatched client adventure state",
+                                extra={
+                                    "adventure_id": connection_data.get(
+                                        "adventure_id"
+                                    ),
+                                    "server_chapter_count": len(
+                                        current_state.chapters
+                                    ),
+                                    "client_chapter_numbers": [
+                                        chapter.get("chapter_number")
+                                        for chapter in validated_state.get(
+                                            "chapters", []
+                                        )
+                                        if isinstance(chapter, dict)
+                                    ]
+                                    if isinstance(validated_state, dict)
+                                    else [],
+                                },
+                            )
+                        state = current_state
 
                 if state is None:
                     logger.error("State is None after initialization/update.")

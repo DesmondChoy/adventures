@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator, Callable
 from types import SimpleNamespace
 from typing import Any, cast
@@ -112,6 +113,7 @@ async def test_generate_with_prompt_can_skip_paragraph_repair(
 @pytest.mark.asyncio
 async def test_openai_structured_chapter_uses_luna_low_reasoning(
     monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     monkeypatch.setattr(providers, "build_prompt", lambda **_kwargs: ("system", "user"))
     parsed = StoryChapterResponse(
@@ -133,13 +135,14 @@ async def test_openai_structured_chapter_uses_luna_low_reasoning(
     state = SimpleNamespace(
         planned_chapter_types=[ChapterType.STORY],
         current_chapter_number=1,
-        metadata={},
+        metadata={"adventure_id": "adventure-123"},
     )
 
-    chapter = await service.generate_structured_chapter(
-        story_config={},
-        state=cast(AdventureState, state),
-    )
+    with caplog.at_level("INFO", logger="story_app"):
+        chapter = await service.generate_structured_chapter(
+            story_config={},
+            state=cast(AdventureState, state),
+        )
 
     assert chapter.choices == ("Cross it", "Follow the river", "Ask the wind")
     request = parse.await_args.kwargs
@@ -148,6 +151,24 @@ async def test_openai_structured_chapter_uses_luna_low_reasoning(
     assert request["text_format"] is StoryChapterResponse
     assert request["store"] is False
     assert "temperature" not in request
+    request_record = next(
+        record
+        for record in caplog.records
+        if record.message == "OpenAI structured chapter request"
+    )
+    response_record = next(
+        record
+        for record in caplog.records
+        if record.message == "OpenAI structured chapter validated"
+    )
+    assert request_record.llm_call_id == response_record.llm_call_id
+    assert request_record.adventure_id == "adventure-123"
+    assert response_record.adventure_id == "adventure-123"
+    assert request_record.llm_prompt == {"system": "system", "user": "user"}
+    assert response_record.llm_response == {
+        "content": "Mira reached the glowing bridge.",
+        "choices": ["Cross it", "Follow the river", "Ask the wind"],
+    }
 
 
 def test_openai_service_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -190,3 +211,118 @@ async def test_openai_empty_response_surfaces_refusal() -> None:
 
     with pytest.raises(ValueError, match="Request refused"):
         await service._generate_text("system", "user", use_case="test")
+
+
+@pytest.mark.asyncio
+async def test_openai_failed_request_retains_call_and_adventure_correlation(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    service = OpenAIService.__new__(OpenAIService)
+    service.model = "test-model"
+    service.client = SimpleNamespace(
+        responses=SimpleNamespace(
+            create=AsyncMock(side_effect=RuntimeError("temporary failure"))
+        )
+    )
+
+    with caplog.at_level("INFO", logger="story_app"):
+        with pytest.raises(RuntimeError, match="temporary failure"):
+            await service._generate_text(
+                "system",
+                "user",
+                use_case="test",
+                context={
+                    "adventure_id": "adventure-123",
+                    "chapter_number": 4,
+                    "chapter_type": "story",
+                },
+            )
+
+    request_record = next(
+        record
+        for record in caplog.records
+        if record.message == "OpenAI text request"
+    )
+    failure_record = next(
+        record
+        for record in caplog.records
+        if record.message == "OpenAI text request failed"
+    )
+    assert request_record.llm_call_id == failure_record.llm_call_id
+    assert failure_record.adventure_id == "adventure-123"
+    assert failure_record.chapter_number == 4
+
+
+@pytest.mark.asyncio
+async def test_openai_cancelled_request_has_correlated_terminal_log(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    service = OpenAIService.__new__(OpenAIService)
+    service.model = "test-model"
+    service.client = SimpleNamespace(
+        responses=SimpleNamespace(
+            create=AsyncMock(side_effect=asyncio.CancelledError())
+        )
+    )
+
+    with caplog.at_level("INFO", logger="story_app"):
+        with pytest.raises(asyncio.CancelledError):
+            await service._generate_text(
+                "system",
+                "user",
+                use_case="test",
+                context={"adventure_id": "adventure-123"},
+            )
+
+    request_record = next(
+        record
+        for record in caplog.records
+        if record.message == "OpenAI text request"
+    )
+    cancelled_record = next(
+        record
+        for record in caplog.records
+        if record.message == "OpenAI text request cancelled"
+    )
+    assert request_record.llm_call_id == cancelled_record.llm_call_id
+    assert cancelled_record.adventure_id == "adventure-123"
+
+
+@pytest.mark.asyncio
+async def test_gemini_direct_request_and_response_share_correlation(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    service = GeminiService.__new__(GeminiService)
+    service.model = "test-model"
+    service.client = SimpleNamespace(
+        models=SimpleNamespace(
+            generate_content=MagicMock(
+                return_value=SimpleNamespace(text='{"Mira": "Red coat"}')
+            )
+        )
+    )
+
+    with caplog.at_level("INFO", logger="story_app"):
+        response = await service.generate_character_visuals_json(
+            "prompt",
+            context={
+                "adventure_id": "adventure-123",
+                "chapter_number": 2,
+                "chapter_type": "reflect",
+            },
+        )
+
+    assert response == '{"Mira": "Red coat"}'
+    request_record = next(
+        record
+        for record in caplog.records
+        if record.message == "Gemini direct text request"
+    )
+    response_record = next(
+        record
+        for record in caplog.records
+        if record.message == "Gemini direct text response"
+    )
+    assert request_record.llm_call_id == response_record.llm_call_id
+    assert response_record.adventure_id == "adventure-123"
+    assert response_record.chapter_number == 2

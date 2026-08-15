@@ -174,6 +174,11 @@ async def generate_fallback_summary(state: AdventureState) -> str:
     async for chunk in llm_service.generate_with_prompt(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
+        context={
+            "adventure_id": state.metadata.get("adventure_id"),
+            "chapter_number": state.story_length + 1,
+            "chapter_type": ChapterType.SUMMARY.value,
+        },
     ):
         summary_content += chunk
 
@@ -198,6 +203,10 @@ async def ensure_all_summaries_exist(state: AdventureState) -> None:
     # chapter_summaries is a list, check if we have summaries for all chapters
     missing_chapters = []
     for chapter in state.chapters:
+        # CONCLUSION is handled separately by the reveal-summary flow so its
+        # telemetry, summary, and completed-state save occur exactly once.
+        if chapter.chapter_type == ChapterType.CONCLUSION:
+            continue
         chapter_index = chapter.chapter_number - 1  # Convert to 0-based index
         
         # Check if we have a summary at this index
@@ -224,7 +233,12 @@ async def ensure_all_summaries_exist(state: AdventureState) -> None:
             summary_result = await ChapterManager.generate_chapter_summary(
                 chapter_content=chapter.content,
                 chosen_choice=chosen_choice,
-                choice_context=choice_context
+                choice_context=choice_context,
+                context={
+                    "adventure_id": state.metadata.get("adventure_id"),
+                    "chapter_number": chapter.chapter_number,
+                    "chapter_type": chapter.chapter_type.value,
+                },
             )
             
             # Store in state (same format as regular summary generation)

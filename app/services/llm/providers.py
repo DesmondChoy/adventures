@@ -1,9 +1,14 @@
-from typing import Any, Dict, Optional, List, AsyncGenerator
 import hashlib
+import asyncio
+import logging
 import os
-from openai import AsyncOpenAI
+from typing import Any, AsyncGenerator, Dict, List, Optional
+from uuid import uuid4
+
 from google import genai
 from google.genai.types import GenerateContentConfig, ThinkingConfig
+from openai import AsyncOpenAI
+
 from app.models.story import AdventureState, ChapterType
 from app.services.llm.base import BaseLLMService
 from app.services.llm.chapter_output import (
@@ -11,14 +16,42 @@ from app.services.llm.chapter_output import (
     NarrativeChapterResponse,
     StoryChapterResponse,
 )
-from app.services.llm.prompt_engineering import build_prompt
 from app.services.llm.paragraph_formatter import (
     needs_paragraphing,
     regenerate_with_paragraphs,
 )
-import logging
+from app.services.llm.prompt_engineering import build_prompt
 
 logger = logging.getLogger("story_app")
+
+_LLM_CORRELATION_KEYS = ("adventure_id", "chapter_number", "chapter_type")
+
+
+def _llm_log_context(context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Return the safe, bounded metadata used to correlate LLM log records."""
+    if not context:
+        return {}
+    return {
+        key: context[key]
+        for key in _LLM_CORRELATION_KEYS
+        if context.get(key) is not None
+    }
+
+
+def _state_llm_context(state: AdventureState) -> Dict[str, Any]:
+    metadata = getattr(state, "metadata", {})
+    context: Dict[str, Any] = {
+        "adventure_id": metadata.get("adventure_id"),
+        "chapter_number": getattr(state, "current_chapter_number", None),
+    }
+    planned_types = getattr(state, "planned_chapter_types", [])
+    chapter_number = context["chapter_number"]
+    if isinstance(chapter_number, int) and 0 < chapter_number <= len(planned_types):
+        chapter_type = planned_types[chapter_number - 1]
+        context["chapter_type"] = (
+            chapter_type.value if isinstance(chapter_type, ChapterType) else chapter_type
+        )
+    return _llm_log_context(context)
 
 
 # Centralized Model Configuration
@@ -93,7 +126,13 @@ class OpenAIService(BaseLLMService):
             f"status={getattr(response, 'status', 'unknown')}, reason={reason}"
         )
 
-    def _log_response_metadata(self, response: Any, use_case: str) -> None:
+    def _log_response_metadata(
+        self,
+        response: Any,
+        use_case: str,
+        llm_call_id: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> None:
         usage = getattr(response, "usage", None)
         logger.info(
             "OpenAI Responses API completed",
@@ -101,10 +140,12 @@ class OpenAIService(BaseLLMService):
                 "llm_provider": "openai",
                 "llm_model": self.model,
                 "llm_use_case": use_case,
+                "llm_call_id": llm_call_id,
                 "llm_response_id": getattr(response, "id", None),
                 "llm_request_id": getattr(response, "_request_id", None),
                 "llm_status": getattr(response, "status", None),
                 "llm_usage": usage.model_dump() if usage else None,
+                **_llm_log_context(context),
             },
         )
 
@@ -114,21 +155,84 @@ class OpenAIService(BaseLLMService):
         user_prompt: str,
         *,
         use_case: str,
+        context: Optional[Dict[str, Any]] = None,
     ) -> str:
-        response = await self.client.responses.create(
-            model=self.model,
-            instructions=system_prompt,
-            input=user_prompt,
-            reasoning={"effort": ModelConfig.OPENAI_REASONING_EFFORT},
-            max_output_tokens=ModelConfig.OPENAI_MAX_OUTPUT_TOKENS,
-            store=False,
+        llm_call_id = str(uuid4())
+        log_context = _llm_log_context(context)
+        logger.info(
+            "OpenAI text request",
+            extra={
+                "llm_provider": "openai",
+                "llm_model": self.model,
+                "llm_use_case": use_case,
+                "llm_call_id": llm_call_id,
+                "llm_prompt": {"system": system_prompt, "user": user_prompt},
+                "llm_prompt_chars": {
+                    "system": len(system_prompt),
+                    "user": len(user_prompt),
+                },
+                **log_context,
+            },
         )
-        self._log_response_metadata(response, use_case)
-        self._ensure_completed(response)
-        response_text = response.output_text
-        if not response_text.strip():
-            refusal = self._refusal_text(response)
-            raise ValueError(refusal or "OpenAI response contained no text")
+        try:
+            response = await self.client.responses.create(
+                model=self.model,
+                instructions=system_prompt,
+                input=user_prompt,
+                reasoning={"effort": ModelConfig.OPENAI_REASONING_EFFORT},
+                max_output_tokens=ModelConfig.OPENAI_MAX_OUTPUT_TOKENS,
+                store=False,
+            )
+            self._log_response_metadata(
+                response, use_case, llm_call_id, context=log_context
+            )
+            self._ensure_completed(response)
+            response_text = response.output_text
+            if not response_text.strip():
+                refusal = self._refusal_text(response)
+                raise ValueError(refusal or "OpenAI response contained no text")
+        except asyncio.CancelledError:
+            logger.warning(
+                "OpenAI text request cancelled",
+                extra={
+                    "llm_provider": "openai",
+                    "llm_model": self.model,
+                    "llm_use_case": use_case,
+                    "llm_call_id": llm_call_id,
+                    **log_context,
+                },
+            )
+            raise
+        except Exception as error:
+            logger.exception(
+                "OpenAI text request failed",
+                extra={
+                    "llm_provider": "openai",
+                    "llm_model": self.model,
+                    "llm_use_case": use_case,
+                    "llm_call_id": llm_call_id,
+                    "llm_prompt": {"system": system_prompt, "user": user_prompt},
+                    "llm_prompt_chars": {
+                        "system": len(system_prompt),
+                        "user": len(user_prompt),
+                    },
+                    "error_type": type(error).__name__,
+                    **log_context,
+                },
+            )
+            raise
+        logger.info(
+            "OpenAI text response",
+            extra={
+                "llm_provider": "openai",
+                "llm_model": self.model,
+                "llm_use_case": use_case,
+                "llm_call_id": llm_call_id,
+                "llm_response": response_text,
+                "llm_response_chars": len(response_text),
+                **log_context,
+            },
+        )
         return response_text
 
     async def generate_structured_chapter(
@@ -169,6 +273,8 @@ class OpenAIService(BaseLLMService):
         if safety_identifier:
             request["safety_identifier"] = safety_identifier
 
+        llm_call_id = str(uuid4())
+        log_context = _state_llm_context(state)
         logger.info(
             "OpenAI structured chapter request",
             extra={
@@ -177,25 +283,69 @@ class OpenAIService(BaseLLMService):
                 "llm_reasoning_effort": ModelConfig.OPENAI_REASONING_EFFORT,
                 "chapter_number": state.current_chapter_number,
                 "chapter_type": chapter_type.value,
-                "llm_prompt": f"System: {system_prompt}\n\nUser: {user_prompt}",
+                "llm_call_id": llm_call_id,
+                "llm_prompt": {"system": system_prompt, "user": user_prompt},
+                "llm_prompt_chars": {
+                    "system": len(system_prompt),
+                    "user": len(user_prompt),
+                },
+                **log_context,
             },
         )
 
-        response = await self.client.responses.parse(**request)
-        self._log_response_metadata(response, "story_generation")
-        self._ensure_completed(response)
-        parsed = response.output_parsed
-        if parsed is None:
-            refusal = self._refusal_text(response)
-            raise ValueError(refusal or "OpenAI structured response could not be parsed")
-
-        if isinstance(parsed, StoryChapterResponse):
-            result = GeneratedChapter(
-                content=parsed.content,
-                choices=tuple(parsed.choices),
+        try:
+            response = await self.client.responses.parse(**request)
+            self._log_response_metadata(
+                response,
+                "story_generation",
+                llm_call_id,
+                context=log_context,
             )
-        else:
-            result = GeneratedChapter(content=parsed.content)
+            self._ensure_completed(response)
+            parsed = response.output_parsed
+            if parsed is None:
+                refusal = self._refusal_text(response)
+                raise ValueError(
+                    refusal or "OpenAI structured response could not be parsed"
+                )
+
+            if isinstance(parsed, StoryChapterResponse):
+                result = GeneratedChapter(
+                    content=parsed.content,
+                    choices=tuple(parsed.choices),
+                )
+            else:
+                result = GeneratedChapter(content=parsed.content)
+        except asyncio.CancelledError:
+            logger.warning(
+                "OpenAI structured chapter cancelled",
+                extra={
+                    "llm_provider": "openai",
+                    "llm_model": self.model,
+                    "llm_use_case": "story_generation",
+                    "llm_call_id": llm_call_id,
+                    **log_context,
+                },
+            )
+            raise
+        except Exception as error:
+            logger.exception(
+                "OpenAI structured chapter failed",
+                extra={
+                    "llm_provider": "openai",
+                    "llm_model": self.model,
+                    "llm_use_case": "story_generation",
+                    "llm_call_id": llm_call_id,
+                    "llm_prompt": {"system": system_prompt, "user": user_prompt},
+                    "llm_prompt_chars": {
+                        "system": len(system_prompt),
+                        "user": len(user_prompt),
+                    },
+                    "error_type": type(error).__name__,
+                    **log_context,
+                },
+            )
+            raise
 
         logger.info(
             "OpenAI structured chapter validated",
@@ -203,17 +353,30 @@ class OpenAIService(BaseLLMService):
                 "chapter_number": state.current_chapter_number,
                 "chapter_type": chapter_type.value,
                 "choice_count": len(result.choices),
-                "llm_response": result.content,
+                "llm_call_id": llm_call_id,
+                "llm_use_case": "story_generation",
+                "llm_response": {
+                    "content": result.content,
+                    "choices": list(result.choices),
+                },
+                "llm_response_chars": len(result.content),
+                **log_context,
             },
         )
         return result
 
-    async def generate_character_visuals_json(self, custom_prompt: str) -> str:
+    async def generate_character_visuals_json(
+        self,
+        custom_prompt: str,
+        use_case: str = "character_visuals",
+        context: Optional[Dict[str, Any]] = None,
+    ) -> str:
         """Generate a complete visual-description response."""
         return await self._generate_text(
             "You are a visual detail extractor for a storytelling application.",
             custom_prompt,
-            use_case="character_visuals",
+            use_case=use_case,
+            context=context,
         )
 
     async def generate_with_prompt(
@@ -223,15 +386,12 @@ class OpenAIService(BaseLLMService):
         context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[str, None]:
         """Generate custom text through Responses and yield the validated result."""
-        logger.info(
-            "LLM Custom Prompt Request",
-            extra={"llm_prompt": f"System: {system_prompt}\n\nUser: {user_prompt}"},
-        )
         try:
             result = await self._generate_text(
                 system_prompt,
                 user_prompt,
                 use_case="custom_prompt",
+                context=context,
             )
             skip_paragraph_formatting = bool(
                 context and context.get("skip_paragraph_formatting")
@@ -243,21 +403,18 @@ class OpenAIService(BaseLLMService):
                         system_prompt,
                         user_prompt,
                         use_case="custom_prompt_paragraph_retry",
+                        context=context,
                     )
 
-                result = await regenerate_with_paragraphs(result, _regenerate, self)
+                result = await regenerate_with_paragraphs(
+                    result,
+                    _regenerate,
+                    self,
+                    context=context,
+                )
             yield result
-            logger.info("LLM Response", extra={"llm_response": result})
 
-        except Exception as e:
-            logger.error(
-                "LLM Request Failed",
-                extra={
-                    "error_type": type(e).__name__,
-                    "error_message": str(e),
-                    "llm_prompt": f"System: {system_prompt}\n\nUser: {user_prompt}",
-                },
-            )
+        except Exception:
             raise
 
     async def generate_chapter_stream(
@@ -276,10 +433,13 @@ class OpenAIService(BaseLLMService):
             context=context,
         )
 
+        log_context = _state_llm_context(state)
+        log_context.update(context or {})
+
         async for chunk in self.generate_with_prompt(
             system_prompt,
             user_prompt,
-            context=context,
+            context=log_context,
         ):
             yield chunk
 
@@ -299,6 +459,8 @@ class GeminiService(BaseLLMService):
     async def generate_character_visuals_json(
         self,
         custom_prompt: str,
+        use_case: str = "character_visuals",
+        context: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Generate character visuals JSON with direct response (no streaming).
 
@@ -318,7 +480,23 @@ class GeminiService(BaseLLMService):
         )
         user_prompt = custom_prompt
 
-        logger.debug("CHARACTER VISUAL JSON REQUEST (Gemini)")
+        llm_call_id = str(uuid4())
+        log_context = _llm_log_context(context)
+        logger.info(
+            "Gemini direct text request",
+            extra={
+                "llm_provider": "gemini",
+                "llm_model": self.model,
+                "llm_use_case": use_case,
+                "llm_call_id": llm_call_id,
+                "llm_prompt": {"system": system_prompt, "user": user_prompt},
+                "llm_prompt_chars": {
+                    "system": len(system_prompt),
+                    "user": len(user_prompt),
+                },
+                **log_context,
+            },
+        )
 
         try:
             # Generate complete response in one call (no streaming) using new API
@@ -332,17 +510,38 @@ class GeminiService(BaseLLMService):
 
             # Extract the text
             response_text = response.text or ""
-
-            # logger.info("\n=== CHARACTER VISUAL JSON RESPONSE ===")
-            # logger.info(f"Response excerpt:\n{response_text[:300]}...")
-            # logger.info(f"Response length: {len(response_text)} characters")
-            # logger.info("========================\n")
+            logger.info(
+                "Gemini direct text response",
+                extra={
+                    "llm_provider": "gemini",
+                    "llm_model": self.model,
+                    "llm_use_case": use_case,
+                    "llm_call_id": llm_call_id,
+                    "llm_response": response_text,
+                    "llm_response_chars": len(response_text),
+                    **log_context,
+                },
+            )
 
             return response_text
 
-        except Exception as e:
-            logger.error(f"Error generating character visuals JSON: {str(e)}")
-            logger.error(f"Error type: {type(e).__name__}")
+        except Exception as error:
+            logger.exception(
+                "Gemini direct text request failed",
+                extra={
+                    "llm_provider": "gemini",
+                    "llm_model": self.model,
+                    "llm_use_case": use_case,
+                    "llm_call_id": llm_call_id,
+                    "llm_prompt": {"system": system_prompt, "user": user_prompt},
+                    "llm_prompt_chars": {
+                        "system": len(system_prompt),
+                        "user": len(user_prompt),
+                    },
+                    "error_type": type(error).__name__,
+                    **log_context,
+                },
+            )
             return ""  # Return empty string on error
 
     async def generate_with_prompt(
@@ -352,9 +551,22 @@ class GeminiService(BaseLLMService):
         context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[str, None]:
         """Generate content with custom system and user prompts as a stream of chunks."""
+        llm_call_id = str(uuid4())
+        log_context = _llm_log_context(context)
         logger.info(
             "LLM Custom Prompt Request (Gemini)",
-            extra={"llm_prompt": f"System: {system_prompt}\n\nUser: {user_prompt}"},
+            extra={
+                "llm_provider": "gemini",
+                "llm_model": self.model,
+                "llm_use_case": "custom_prompt",
+                "llm_call_id": llm_call_id,
+                "llm_prompt": {"system": system_prompt, "user": user_prompt},
+                "llm_prompt_chars": {
+                    "system": len(system_prompt),
+                    "user": len(user_prompt),
+                },
+                **log_context,
+            },
         )
 
         try:
@@ -399,32 +611,68 @@ class GeminiService(BaseLLMService):
 
             if needs_formatting:
                 async def _regenerate():
-                    cp = f"{system_prompt}\n\n{user_prompt}"
-                    retry_resp = self.client.models.generate_content(
-                        model=self.model,
-                        contents=cp,
-                        config=ModelConfig.get_gemini_config(),
-                    )
-                    return retry_resp.text or ""
+                    retry_chunks = []
+                    async for retry_chunk in self.generate_with_prompt(
+                        system_prompt,
+                        user_prompt,
+                        context={
+                            **(context or {}),
+                            "skip_paragraph_formatting": True,
+                        },
+                    ):
+                        retry_chunks.append(retry_chunk)
+                    return "".join(retry_chunks)
 
                 result = await regenerate_with_paragraphs(
-                    full_response, _regenerate, llm_service=self
+                    full_response,
+                    _regenerate,
+                    llm_service=self,
+                    context=context,
                 )
                 yield result
                 full_response = result
 
             logger.info(
                 "LLM Response (Gemini)",
-                extra={"llm_response": full_response},
+                extra={
+                    "llm_provider": "gemini",
+                    "llm_model": self.model,
+                    "llm_use_case": "custom_prompt",
+                    "llm_call_id": llm_call_id,
+                    "llm_response": full_response,
+                    "llm_response_chars": len(full_response),
+                    **log_context,
+                },
             )
 
-        except Exception as e:
-            logger.error(
+        except (asyncio.CancelledError, GeneratorExit) as error:
+            logger.warning(
+                "Gemini request cancelled",
+                extra={
+                    "llm_provider": "gemini",
+                    "llm_model": self.model,
+                    "llm_use_case": "custom_prompt",
+                    "llm_call_id": llm_call_id,
+                    "error_type": type(error).__name__,
+                    **log_context,
+                },
+            )
+            raise
+        except Exception as error:
+            logger.exception(
                 "LLM Request Failed (Gemini)",
                 extra={
-                    "error_type": type(e).__name__,
-                    "error_message": str(e),
-                    "llm_prompt": f"System: {system_prompt}\n\nUser: {user_prompt}",
+                    "llm_provider": "gemini",
+                    "llm_model": self.model,
+                    "llm_use_case": "custom_prompt",
+                    "llm_call_id": llm_call_id,
+                    "error_type": type(error).__name__,
+                    "llm_prompt": {"system": system_prompt, "user": user_prompt},
+                    "llm_prompt_chars": {
+                        "system": len(system_prompt),
+                        "user": len(user_prompt),
+                    },
+                    **log_context,
                 },
             )
             raise
@@ -446,73 +694,11 @@ class GeminiService(BaseLLMService):
             context=context,
         )
 
-        # Log the prompts at INFO level
-        logger.info("\n=== LLM Prompt Request (Gemini) ===")
-        logger.info(f"System Prompt:\n{system_prompt}")
-        logger.info(f"User Prompt:\n{user_prompt}")
-        logger.info("========================\n")
-
-        try:
-            # Generate content with streaming using new API
-            combined_prompt = f"{system_prompt}\n\n{user_prompt}"
-            response = self.client.models.generate_content_stream(
-                model=self.model,
-                contents=combined_prompt,
-                config=ModelConfig.get_gemini_config(),
-            )
-
-            # Collect buffer to check if paragraphing is needed
-            buffer_size = 400
-            collected_text = ""
-            full_response = ""
-            buffer_complete = False
-            needs_formatting = False
-
-            for chunk in response:
-                if chunk.text:
-                    content = chunk.text
-                    full_response += content
-                    collected_text += content
-
-                    if not buffer_complete and len(collected_text) >= buffer_size:
-                        buffer_complete = True
-                        needs_formatting = needs_paragraphing(collected_text)
-                        if not needs_formatting:
-                            yield collected_text
-                            collected_text = ""
-                    elif buffer_complete and not needs_formatting:
-                        yield content
-
-            if not buffer_complete and collected_text:
-                yield collected_text
-
-            if needs_formatting:
-                async def _regenerate():
-                    cp = f"{system_prompt}\n\n{user_prompt}"
-                    retry_resp = self.client.models.generate_content(
-                        model=self.model,
-                        contents=cp,
-                        config=ModelConfig.get_gemini_config(),
-                    )
-                    return retry_resp.text or ""
-
-                result = await regenerate_with_paragraphs(
-                    full_response, _regenerate, llm_service=self
-                )
-                yield result
-                full_response = result
-
-            logger.info(
-                "LLM Response (Gemini)",
-                extra={"llm_response": full_response},
-            )
-
-        except Exception as e:
-            logger.error(
-                "LLM Request Failed (Gemini)",
-                extra={
-                    "error_type": type(e).__name__,
-                    "error_message": str(e),
-                },
-            )
-            raise
+        log_context = _state_llm_context(state)
+        log_context.update(context or {})
+        async for chunk in self.generate_with_prompt(
+            system_prompt,
+            user_prompt,
+            context=log_context,
+        ):
+            yield chunk

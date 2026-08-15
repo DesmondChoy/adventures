@@ -101,7 +101,7 @@ def build_system_prompt(state: AdventureState) -> str:
     if state.current_chapter_number > 1 and "agency" in state.metadata:
         agency = state.metadata["agency"]
         agency_category = agency.get("category", "choice")
-        agency_name = agency.get("description", "from Chapter 1")
+        agency_name = agency.get("name", "from Chapter 1")
     
     return SYSTEM_PROMPT_TEMPLATE.format(
         settings=state.selected_narrative_elements["settings"],
@@ -481,27 +481,37 @@ def build_reflect_chapter_prompt(
         if "agency_evolution" not in state.metadata:
             state.metadata["agency_evolution"] = []
 
-        state.metadata["agency_evolution"].append(
-            {
-                "chapter": state.current_chapter_number,
-                "chapter_type": "REFLECT",
-                "is_correct": is_correct,
-                "timestamp": datetime.now().isoformat(),
-            }
-        )
+        if not any(
+            entry.get("chapter") == state.current_chapter_number
+            for entry in state.metadata["agency_evolution"]
+            if isinstance(entry, dict)
+        ):
+            state.metadata["agency_evolution"].append(
+                {
+                    "chapter": state.current_chapter_number,
+                    "chapter_type": "REFLECT",
+                    "is_correct": is_correct,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
 
     # Track reflection in metadata
     if "reflect_challenge_history" not in state.metadata:
         state.metadata["reflect_challenge_history"] = []
 
-    state.metadata["reflect_challenge_history"].append(
-        {
-            "chapter": state.current_chapter_number,
-            "is_correct": is_correct,
-            "timestamp": datetime.now().isoformat(),
-            "approach": "narrative_driven",
-        }
-    )
+    if not any(
+        entry.get("chapter") == state.current_chapter_number
+        for entry in state.metadata["reflect_challenge_history"]
+        if isinstance(entry, dict)
+    ):
+        state.metadata["reflect_challenge_history"].append(
+            {
+                "chapter": state.current_chapter_number,
+                "is_correct": is_correct,
+                "timestamp": datetime.now().isoformat(),
+                "approach": "narrative_driven",
+            }
+        )
 
     # Also store the most recent reflection type for easy access
     state.metadata["last_reflect_approach"] = "narrative_driven"

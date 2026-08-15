@@ -142,7 +142,7 @@ summary experience.
 | `SUPABASE_ANON_KEY` | Yes | Browser-side Supabase client for login and client flows. |
 | `SUPABASE_SERVICE_KEY` | Yes | Server-side Supabase access for adventures, telemetry, and feedback storage. |
 | `SUPABASE_JWT_SECRET` | Yes | JWT verification for authenticated summary, resume, and WebSocket flows. |
-| `APP_ENVIRONMENT` | Recommended | Environment label stored with telemetry and feedback records. |
+| `APP_ENVIRONMENT` | Recommended | Environment label for telemetry and logging. Set to `production`/`prod` to omit LLM bodies from rotating logs. |
 | `OPENAI_API_KEY` | Yes | GPT-5.6 Luna story and image-scene text generation. |
 | `ALLOWED_HOSTS` | Optional | Comma-separated host allowlist for `TrustedHostMiddleware`. |
 | `PROXY_TRUSTED_HOSTS` | Optional | Comma-separated trusted proxy hosts for proxy-header handling. |

@@ -3,7 +3,7 @@
  * Handles DOM manipulation, UI updates, and user interface functions
  */
 
-import { stateManager, manageState } from './stateManager.js?v=20260815a';
+import { stateManager, manageState } from './stateManager.js?v=20260815b';
 import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260526a';
 import { withCurrentModuleVersion } from './moduleVersion.js';
 
@@ -1450,6 +1450,17 @@ export async function handleMessage(event) {
             // Store the adventure_id for persistence
             if (data.adventure_id && window.appState?.wsManager) {
                 window.appState.wsManager.setAdventureId(data.adventure_id);
+            }
+
+            if (data.type === 'adventure_created') {
+                // The server started a fresh adventure. Discard chapters from a
+                // previously completed local adventure before the first choice.
+                manageState('update', {
+                    current_chapter_id: 'start',
+                    chapters: [],
+                    story_length: data.total_chapters || 10,
+                    current_storytelling_phase: 'Exposition'
+                });
             }
 
             // CRITICAL: When resuming an adventure, save state to localStorage

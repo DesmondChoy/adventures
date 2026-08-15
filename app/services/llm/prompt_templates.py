@@ -593,12 +593,12 @@ INCORRECT_ANSWER_CONSEQUENCES = """## Learning Impact
 
 AGENCY_GUIDANCE = {
     "correct": """## Agency Evolution
-Agency choice made in Chapter 1 should evolve through this correct understanding by:
+The character's {agency_type} ({agency_name}) chosen in Chapter 1 should evolve through this correct understanding by:
 - Revealing a new capability or aspect of their agency element OR
 - Using it to overcome a challenge in a meaningful way OR
 - Deepening the connection between character and their agency choice""",
     "incorrect": """## Agency Evolution
-Agency choice made in Chapter 1 should adapt through this learning experience by:
+The character's {agency_type} ({agency_name}) chosen in Chapter 1 should adapt through this learning experience by:
 - Incorporating the new knowledge they've gained  OR
 - Providing a different perspective on the problem
 - Demonstrating resilience and growth through the challenge""",
@@ -705,12 +705,14 @@ EXISTING VISUALS:
 
 INSTRUCTIONS:
 - CRITICALLY IMPORTANT: Thoroughly scan the entire chapter for ANY character descriptions, no matter how brief or scattered
+- Track only individualized characters: named characters or clearly recurring beings with a distinct identity
+- Do not create entries for crowds, professions, generic groups, scenery, locations, weather, props, symbols, or abstract shapes (for example: "musicians", "rowers", "ribbons", "the bridge", or "a shadow")
 - Pay special attention to paragraphs that introduce new characters or scenes
 - Search for descriptive language about physical appearance, clothing, accessories, or anything visual
 - Look for character names followed by descriptions: "That's Giggles," The Showman sighed. "A particularly stout clown with bright orange hair"
 - Look for subtle phrases like "the tall woman with red hair" or "his weathered face crinkled into a smile"
 - For named characters (like "Giggles", "Sarah", "The Showman"), extract even minimal visual details
-- If a character is mentioned without a detailed description, still include them with whatever visual cues you can find
+- If an individualized character is mentioned without new visual detail, preserve its existing description; do not invent a new placeholder entry
 - Sometimes descriptions are split across multiple paragraphs - connect these details for a complete character description
 - For each character mentioned in the chapter, including the protagonist and NPCs:
   * If the character is new (not in EXISTING VISUALS), create a detailed visual description based on any appearance details in the chapter
@@ -741,7 +743,7 @@ Return ONLY a valid JSON object with the updated character visuals, formatted ex
 }
 ```
 
-IMPORTANT: Even if you find only minimal descriptions, include them in the output. If you can't find any descriptions at all, at minimum include characters' names with placeholder descriptions noting they need more visual details.
+IMPORTANT: If the chapter provides no new individualized character and no visual update to an existing character, return the existing visuals unchanged. Never add placeholder descriptions.
 
 Do not include any explanations, only return the JSON.
 """

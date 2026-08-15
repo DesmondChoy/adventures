@@ -97,3 +97,20 @@ def test_agency_reference_tracking_uses_the_selected_agency() -> None:
         reference["has_reference"]
         for reference in state.metadata["agency"]["references"]
     ] == [False, True]
+
+
+def test_plot_twist_validation_is_idempotent_per_chapter() -> None:
+    state = AdventureState(
+        current_chapter_id="chapter_2",
+        current_storytelling_phase="Rising",
+        selected_plot_twist="A hidden map appears",
+    )
+    manager = AdventureStateManager()
+    manager.state = state
+    chapter = {"chapter_number": 1, "content": "A compass glowed."}
+
+    manager.validate_plot_twist_progression(chapter)
+    manager.validate_plot_twist_progression(chapter)
+
+    assert state.metadata["previous_hints"] == ["A compass glowed."]
+    assert state.metadata["plot_twist_validated_chapters"] == [1]

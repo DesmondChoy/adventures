@@ -1,3 +1,5 @@
+from unittest.mock import AsyncMock
+
 import pytest
 
 from app.models.story import (
@@ -65,8 +67,14 @@ async def test_ensure_all_summaries_exist_handles_lesson_response(
         chapter_content: str,
         chosen_choice: str | None = None,
         choice_context: str = "",
+        context: dict[str, object] | None = None,
     ) -> dict[str, str]:
         assert chapter_content == "Lesson chapter content."
+        assert context == {
+            "adventure_id": None,
+            "chapter_number": 1,
+            "chapter_type": "lesson",
+        }
         observed.append((chosen_choice, choice_context))
         return {"title": "Lesson 1", "summary": "Generated lesson summary"}
 
@@ -81,3 +89,33 @@ async def test_ensure_all_summaries_exist_handles_lesson_response(
     assert observed == [("4", " (Correct answer)")]
     assert state.chapter_summaries == ["Generated lesson summary"]
     assert state.summary_chapter_titles == ["Lesson 1"]
+
+
+@pytest.mark.asyncio
+async def test_ensure_all_summaries_exist_leaves_conclusion_to_reveal_flow(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    state = _build_lesson_state()
+    conclusion = state.chapters[0].model_copy(
+        update={
+            "chapter_type": ChapterType.CONCLUSION,
+            "response": None,
+            "chapter_content": ChapterContent(
+                content="The journey ends.",
+                choices=[],
+            ),
+            "content": "The journey ends.",
+        }
+    )
+    state.chapters = [conclusion]
+    generate = AsyncMock()
+    monkeypatch.setattr(
+        ChapterManager,
+        "generate_chapter_summary",
+        generate,
+    )
+
+    await ensure_all_summaries_exist(state)
+
+    generate.assert_not_awaited()
+    assert state.chapter_summaries == []

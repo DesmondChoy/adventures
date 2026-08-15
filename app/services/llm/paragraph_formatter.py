@@ -4,9 +4,9 @@ Paragraph formatting utilities for LLM responses.
 This module provides functions to detect and fix text that lacks proper paragraph formatting.
 """
 
-import re
 import logging
-from typing import Tuple
+import re
+from typing import Any, Dict, Optional, Tuple
 
 logger = logging.getLogger("story_app")
 
@@ -45,7 +45,10 @@ def needs_paragraphing(text: str) -> bool:
 
 
 async def reformat_text_with_paragraphs(
-    text: str, max_attempts: int = 3, llm_service=None
+    text: str,
+    max_attempts: int = 3,
+    llm_service=None,
+    context: Optional[Dict[str, Any]] = None,
 ) -> str:
     """
     Reformat text with proper paragraph breaks using a lightweight LLM service.
@@ -101,7 +104,7 @@ async def reformat_text_with_paragraphs(
             """
 
             # Log the full reformatting prompt
-            logger.info(
+            logger.debug(
                 f"Paragraph reformatting attempt {attempt + 1}/{max_attempts}",
                 extra={
                     "reformatting_prompt": prompt,
@@ -118,13 +121,16 @@ async def reformat_text_with_paragraphs(
             response_generator = llm_service.generate_with_prompt(
                 system_prompt=system_prompt,
                 user_prompt=prompt,
-                context={"skip_paragraph_formatting": True},
+                context={
+                    **(context or {}),
+                    "skip_paragraph_formatting": True,
+                },
             )
             async for chunk in response_generator:
                 reformatted_text += chunk
 
             # Log the reformatted response
-            logger.info(
+            logger.debug(
                 f"Received reformatted text (attempt {attempt + 1}/{max_attempts})",
                 extra={
                     "reformatted_text": reformatted_text[:100] + "..."
@@ -166,6 +172,7 @@ async def regenerate_with_paragraphs(
     regenerate_fn,
     llm_service=None,
     max_attempts: int = 3,
+    context: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Try regenerating text to get proper paragraph formatting, with reformat fallback.
 
@@ -207,7 +214,10 @@ async def regenerate_with_paragraphs(
         f"All {max_attempts} regeneration attempts failed, falling back to reformatting"
     )
     reformatted_text = await reformat_text_with_paragraphs(
-        full_response, 3, llm_service
+        full_response,
+        3,
+        llm_service,
+        context=context,
     )
     logger.info("Sent reformatted text with paragraph formatting")
     return reformatted_text

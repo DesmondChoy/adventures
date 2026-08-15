@@ -14,6 +14,27 @@ _image_service: Optional[ImageGenerationService] = None
 chapter_manager = ChapterManager()
 
 
+def _image_llm_context(
+    state: AdventureState,
+    chapter_number: int,
+    chapter_type: Optional[ChapterType] = None,
+) -> Dict[str, Any]:
+    if chapter_type is None and 0 < chapter_number <= len(
+        state.planned_chapter_types
+    ):
+        planned_type = state.planned_chapter_types[chapter_number - 1]
+        chapter_type = (
+            planned_type
+            if isinstance(planned_type, ChapterType)
+            else ChapterType(planned_type)
+        )
+    return {
+        "adventure_id": state.metadata.get("adventure_id"),
+        "chapter_number": chapter_number,
+        "chapter_type": chapter_type.value if chapter_type else None,
+    }
+
+
 def get_image_service() -> ImageGenerationService:
     """Create the image client only when image generation starts."""
     global _image_service
@@ -124,7 +145,20 @@ async def generate_agency_images(
 
             # Create the image generation task - no need to log prompts here as they'll be logged in the image service
             image_tasks.append(
-                (i, asyncio.create_task(image_service.generate_image_async(prompt)))
+                (
+                    i,
+                    asyncio.create_task(
+                        image_service.generate_image_async(
+                            prompt,
+                            context={
+                                **_image_llm_context(
+                                    state, 1, ChapterType.STORY
+                                ),
+                                "choice_index": i,
+                            },
+                        )
+                    ),
+                )
             )
             logger.info(f"Started image generation task for choice {i + 1}")
         except Exception as e:
@@ -247,6 +281,7 @@ async def generate_chapter_image(
         return image_tasks
 
     image_service = get_image_service()
+    llm_context = _image_llm_context(state, current_chapter_number)
 
     try:
         # Prefer the numbered AdventureState chapter. The explicit content is
@@ -292,10 +327,11 @@ async def generate_chapter_image(
                     agency_details,
                     story_visual_sensory_detail,
                     character_visuals,
+                    context=llm_context,
                 )
 
                 # DEBUG: Log the prompt value just before creating the task
-                logger.info(
+                logger.debug(
                     f"DEBUG: Value of 'prompt' being passed to generate_image_async: {prompt}"
                 )
 
@@ -303,7 +339,11 @@ async def generate_chapter_image(
                 image_tasks.append(
                     (
                         "chapter",
-                        asyncio.create_task(image_service.generate_image_async(prompt)),
+                        asyncio.create_task(
+                            image_service.generate_image_async(
+                                prompt, context=llm_context
+                            )
+                        ),
                     )
                 )
                 return image_tasks
@@ -322,17 +362,23 @@ async def generate_chapter_image(
 
             # Generate a description of the most visually striking moment
             image_scene = await chapter_manager.generate_image_scene(
-                current_content, character_visuals
+                current_content,
+                character_visuals,
+                context={
+                    "adventure_id": state.metadata.get("adventure_id"),
+                    "chapter_number": current_chapter_number,
+                    "chapter_type": llm_context.get("chapter_type"),
+                },
             )
             logger.info(f"\n=== IMAGE SCENE FOR CHAPTER {current_chapter_number} ===")
-            logger.info(image_scene)
+            logger.debug(image_scene)
             logger.info("=======================================\n")
 
             # Get protagonist description
             protagonist_description = getattr(
                 state, "protagonist_description", "A young adventurer"
             )
-            logger.info(f"Protagonist description: {protagonist_description}")
+            logger.debug(f"Protagonist description: {protagonist_description}")
 
             # Get agency details
             agency_details = state.metadata.get("agency", {})
@@ -348,7 +394,7 @@ async def generate_chapter_image(
             )
             if character_visuals and len(character_visuals) > 0:
                 for char_name, description in sorted(character_visuals.items()):
-                    logger.info(f"- {char_name}: {description}")
+                    logger.debug(f"- {char_name}: {description}")
             else:
                 logger.info("- No character visuals available")
             logger.info("==============================================\n")
@@ -363,7 +409,9 @@ async def generate_chapter_image(
                 try:
                     # Use the diagnostic function to extract character visuals
                     extracted_visuals = await diagnose_character_visuals(
-                        current_content, {}
+                        current_content,
+                        {},
+                        context=llm_context,
                     )
 
                     if extracted_visuals:
@@ -380,7 +428,7 @@ async def generate_chapter_image(
                             "\n=== NEWLY EXTRACTED CHARACTER VISUALS FOR CHAPTER 1 ==="
                         )
                         for char_name, description in sorted(extracted_visuals.items()):
-                            logger.info(f"- {char_name}: {description}")
+                            logger.debug(f"- {char_name}: {description}")
                         logger.info(
                             "=================================================\n"
                         )
@@ -396,13 +444,18 @@ async def generate_chapter_image(
                 agency_details,
                 story_visual_sensory_detail,
                 character_visuals,
+                context=llm_context,
             )
 
             # Create the image generation task
             image_tasks.append(
                 (
                     "chapter",
-                    asyncio.create_task(image_service.generate_image_async(prompt)),
+                    asyncio.create_task(
+                        image_service.generate_image_async(
+                            prompt, context=llm_context
+                        )
+                    ),
                 )
             )
 
@@ -435,13 +488,18 @@ async def generate_chapter_image(
                 agency_details,
                 story_visual_sensory_detail,
                 character_visuals,
+                context=llm_context,
             )
 
             # Create the image generation task
             image_tasks.append(
                 (
                     "chapter",
-                    asyncio.create_task(image_service.generate_image_async(prompt)),
+                    asyncio.create_task(
+                        image_service.generate_image_async(
+                            prompt, context=llm_context
+                        )
+                    ),
                 )
             )
             logger.info("Using fallback image generation with scene summary")

@@ -1,10 +1,48 @@
-import logging
-import json
-import sys
-import os
 import io
+import json
+import logging
+import os
+import sys
+from datetime import datetime, timezone
+from logging.handlers import RotatingFileHandler
 from typing import Any, Dict
-from datetime import datetime
+
+_STANDARD_LOG_RECORD_FIELDS = set(logging.makeLogRecord({}).__dict__)
+
+
+class JsonLogFormatter(logging.Formatter):
+    """Serialize messages and structured ``extra`` fields as valid JSON lines."""
+
+    def __init__(self, *, include_llm_bodies: bool = True) -> None:
+        super().__init__()
+        self.include_llm_bodies = include_llm_bodies
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload: Dict[str, Any] = {
+            "timestamp": datetime.fromtimestamp(
+                record.created, tz=timezone.utc
+            ).isoformat(),
+            "level": record.levelname,
+            "message": record.getMessage(),
+        }
+        llm_body_present = False
+        for key, value in record.__dict__.items():
+            if key not in _STANDARD_LOG_RECORD_FIELDS and not key.startswith("_"):
+                if key in {"llm_prompt", "llm_response"}:
+                    llm_body_present = True
+                    if not self.include_llm_bodies:
+                        continue
+                payload[key] = value
+        if llm_body_present:
+            payload["llm_bodies_included"] = self.include_llm_bodies
+        if record.exc_info:
+            if self.include_llm_bodies or not getattr(
+                record, "llm_call_id", None
+            ):
+                payload["exception"] = self.formatException(record.exc_info)
+            else:
+                payload["exception_type"] = record.exc_info[0].__name__
+        return json.dumps(payload, ensure_ascii=False, default=str)
 
 
 class StructuredLogger(logging.Logger):
@@ -76,13 +114,23 @@ class StructuredLogger(logging.Logger):
         self._log_structured(logging.DEBUG, msg, args, **kwargs)
 
 
+def _is_production_environment() -> bool:
+    app_environment = os.getenv("APP_ENVIRONMENT", "").strip().lower()
+    if app_environment in {"production", "prod"}:
+        return True
+    return bool(
+        os.getenv("RAILWAY_ENVIRONMENT")
+        or os.getenv("RAILWAY_ENVIRONMENT_NAME")
+    )
+
+
 def setup_logging():
     # Ensure logs directory exists
     os.makedirs("logs", exist_ok=True)
 
-    logging.setLoggerClass(StructuredLogger)
     logger = logging.getLogger("story_app")
     logger.setLevel(logging.DEBUG)  # Keep logger level at DEBUG to capture all logs
+    is_production = _is_production_environment()
 
     try:
         # Console handler - show INFO and above in console to reduce verbosity
@@ -92,7 +140,7 @@ def setup_logging():
             sys.stdout.buffer, encoding="utf-8", errors="replace"
         )
         console_handler = logging.StreamHandler(utf8_stdout)
-        console_handler.setLevel(logging.DEBUG)  # Changed from INFO to DEBUG
+        console_handler.setLevel(logging.INFO if is_production else logging.DEBUG)
         # Use a basic formatter for the console to avoid double printing from StructuredLogger
         console_formatter = logging.Formatter("%(message)s")
         console_handler.setFormatter(console_formatter)
@@ -100,15 +148,18 @@ def setup_logging():
 
         # File handler for persistent logs - keep all logs
         # Ensure file handler also uses UTF-8
-        file_handler = logging.FileHandler("logs/fastapi_server.log", encoding="utf-8")
+        file_handler = RotatingFileHandler(
+            "logs/fastapi_server.log",
+            maxBytes=10 * 1024 * 1024,
+            backupCount=5,
+            encoding="utf-8",
+        )
         file_handler.setLevel(
             logging.INFO
         )  # Keep file handler at INFO or DEBUG, depending on your needs. INFO is fine to reduce file size.
-        # Use a JSON formatter for the file to keep structured logs
-        json_formatter = logging.Formatter(
-            '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s"}'
-        )  # Basic JSON structure
-        file_handler.setFormatter(json_formatter)
+        file_handler.setFormatter(
+            JsonLogFormatter(include_llm_bodies=not is_production)
+        )
         logger.addHandler(file_handler)
     except Exception as e:
         print(f"Failed to setup logging handlers: {str(e)}")

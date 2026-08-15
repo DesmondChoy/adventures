@@ -206,6 +206,13 @@ class AdventureState(BaseModel):
             self._chapters_lock = asyncio.Lock()
         return self._chapters_lock
 
+    @property
+    def character_visuals_lock(self) -> asyncio.Lock:
+        """Serialize character-visual extraction and state replacement."""
+        if not hasattr(self, "_character_visuals_lock"):
+            self._character_visuals_lock = asyncio.Lock()
+        return self._character_visuals_lock
+
     @field_validator("selected_narrative_elements")
     @classmethod
     def validate_narrative_elements(cls, v: Dict[str, str]) -> Dict[str, str]:
