@@ -1,6 +1,8 @@
 import logging
-import re
 from typing import Any, Dict, List, Optional, Tuple
+
+from openai import AuthenticationError, PermissionDeniedError
+from pydantic import ValidationError
 
 from app.data.lesson_loader import sample_question
 from app.data.story_loader import StoryLoader
@@ -31,25 +33,11 @@ def get_llm_service() -> BaseLLMService:
 
 
 def clean_chapter_content(content: str) -> str:
-    """Clean chapter content using Pydantic validator or regex fallback."""
-    try:
-        cleaned_content = ChapterContentValidator(content=content).content
-        if cleaned_content != content:
-            logger.info(
-                "Content was cleaned by ChapterContentValidator"
-            )
-        return cleaned_content.strip()
-    except Exception as e:
-        logger.error(f"Error in Pydantic validation: {e}")
-        # Fallback to regex if Pydantic validation fails
-        cleaned_content = re.sub(
-            r"^(?:#{1,6}\s+)?chapter(?:\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))?:?\s*",
-            "",
-            content,
-            flags=re.IGNORECASE,
-        )
-        logger.debug("Fallback to regex cleaning")
-        return cleaned_content.strip()
+    """Normalize a validated chapter without masking validation failures."""
+    cleaned_content = ChapterContentValidator(content=content).content
+    if cleaned_content != content:
+        logger.info("Content was cleaned by ChapterContentValidator")
+    return cleaned_content.strip()
 
 
 async def generate_chapter(
@@ -171,34 +159,6 @@ async def load_lesson_question(lesson_topic: str, state: AdventureState) -> Dict
         raise
 
 
-async def generate_story_content(
-    story_config: Dict[str, Any],
-    state: AdventureState,
-    question: Optional[Dict[str, Any]],
-    previous_lessons: List[LessonResponse]
-) -> str:
-    """Generate story content from the LLM."""
-    try:
-        story_content = ""
-        llm_service = get_llm_service()
-        async for chunk in llm_service.generate_chapter_stream(
-            story_config,
-            state,
-            question,
-            previous_lessons,
-        ):
-            story_content += chunk
-
-        story_content = clean_generated_content(story_content)
-        return story_content
-    except Exception as e:
-        logger.error("\n=== ERROR: LLM Request Failed ===")
-        logger.error(f"Error type: {type(e).__name__}")
-        logger.error(f"Error message: {str(e)}")
-        logger.error("===============================\n")
-        raise
-
-
 async def generate_chapter_content_with_retries(
     story_config: Dict[str, Any],
     state: AdventureState,
@@ -208,85 +168,73 @@ async def generate_chapter_content_with_retries(
     previous_lessons: Optional[List[LessonResponse]] = None,
     max_attempts: int = MAX_CHAPTER_GENERATION_ATTEMPTS,
 ) -> ChapterContent:
-    """Generate chapter content, retrying until valid choices are produced."""
+    """Generate a structured chapter, retrying any generation or validation error."""
     attempt_error: Optional[Exception] = None
+    retry_context: Optional[Dict[str, str]] = None
 
     for attempt in range(1, max_attempts + 1):
-        story_content = await generate_story_content(
-            story_config, state, question, previous_lessons or []
-        )
         try:
-            story_choices, cleaned_content = await extract_story_choices(
-                chapter_type, story_content, question, current_chapter_number
+            generated = await get_llm_service().generate_structured_chapter(
+                story_config=story_config,
+                state=state,
+                question=question,
+                previous_lessons=previous_lessons or [],
+                context=retry_context,
             )
+            cleaned_content = clean_chapter_content(generated.content)
+
+            if chapter_type == ChapterType.LESSON and question:
+                story_choices = create_lesson_choices(question)
+            elif chapter_type in (ChapterType.STORY, ChapterType.REFLECT):
+                if len(generated.choices) != 3:
+                    raise ValueError(
+                        f"{chapter_type.value.capitalize()} chapters must have "
+                        "exactly 3 choices"
+                    )
+                story_choices = [
+                    StoryChoice(
+                        text=choice_text,
+                        next_chapter=f"chapter_{current_chapter_number}_{index}",
+                    )
+                    for index, choice_text in enumerate(generated.choices)
+                ]
+            else:
+                if generated.choices:
+                    raise ValueError(
+                        f"{chapter_type.value.capitalize()} chapters cannot have choices"
+                    )
+                story_choices = []
+
             return ChapterContent(content=cleaned_content, choices=story_choices)
+        except (AuthenticationError, PermissionDeniedError):
+            logger.exception(
+                "OpenAI credentials cannot generate story content; aborting without retry"
+            )
+            raise
         except Exception as exc:
             attempt_error = exc
+            if isinstance(exc, (ValidationError, ValueError)):
+                retry_context = {
+                    "validation_feedback": (
+                        "The previous response failed the chapter output contract. "
+                        "Regenerate it from scratch. Put only narrative prose in "
+                        "`content`; for story or reflect chapters, put exactly three "
+                        "distinct, complete choices in `choices` with no labels, "
+                        "numbering, brackets, placeholders, or <CHOICES> markup."
+                    )
+                }
             logger.warning(
-                "Chapter generation attempt %s/%s failed choice validation: %s",
+                "Chapter generation attempt %s/%s failed validation: %s",
                 attempt,
                 max_attempts,
                 exc,
+                exc_info=True,
             )
 
     raise ValueError(
-        "Failed to generate chapter content with valid choices after "
+        "Failed to generate valid structured chapter content after "
         f"{max_attempts} attempts"
     ) from attempt_error
-
-
-def clean_generated_content(content: str) -> str:
-    """Clean generated content using Pydantic validator or regex fallback."""
-    try:
-        validated_content = ChapterContentValidator(content=content).content
-        if validated_content != content:
-            logger.info("Content was cleaned by ChapterContentValidator")
-            logger.debug(f"Original content started with: {content[:50]}...")
-            logger.debug(
-                f"Cleaned content starts with: {validated_content[:50]}..."
-            )
-        return validated_content
-    except Exception as e:
-        logger.error(f"Error in Pydantic validation: {e}")
-        # Fallback to regex if Pydantic validation fails
-        cleaned_content = re.sub(
-            r"^(?:#{1,6}\s+)?chapter(?:\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))?:?\s*",
-            "",
-            content,
-            flags=re.IGNORECASE,
-        )
-        logger.debug("Fallback to regex cleaning after Pydantic validation failure")
-        
-        # Check for dialogue formatting issues in the generated content
-        if re.match(
-            r"^(chirped|said|whispered|shouted|called|murmured|exclaimed|replied|asked|answered|responded)\b",
-            cleaned_content.strip(),
-        ):
-            logger.warning(
-                "Generated content starts with dialogue verb - possible missing character name"
-            )
-        
-        return cleaned_content
-
-
-async def extract_story_choices(
-    chapter_type: ChapterType,
-    story_content: str,
-    question: Optional[Dict[str, Any]],
-    current_chapter_number: int
-) -> Tuple[List[StoryChoice], str]:
-    """Extract story choices based on chapter type.
-    
-    Returns:
-        Tuple containing (list of story choices, cleaned story content without choices section)
-    """
-    # Extract choices based on chapter type
-    if chapter_type == ChapterType.LESSON and question:
-        return create_lesson_choices(question), story_content
-    elif chapter_type == ChapterType.STORY or chapter_type == ChapterType.REFLECT:
-        return await extract_regular_choices(chapter_type, story_content, current_chapter_number)
-    else:  # CONCLUSION chapter
-        return [], story_content  # No choices for conclusion chapters
 
 
 def create_lesson_choices(question: Dict[str, Any]) -> List[StoryChoice]:
@@ -302,92 +250,3 @@ def create_lesson_choices(question: Dict[str, Any]) -> List[StoryChoice]:
             )
         )
     return story_choices
-
-
-async def extract_regular_choices(
-    chapter_type: ChapterType,
-    story_content: str,
-    current_chapter_number: int
-) -> Tuple[List[StoryChoice], str]:
-    """Extract choices from STORY or REFLECT chapter content.
-    
-    Returns:
-        Tuple containing (list of story choices, cleaned story content without choices section)
-    """
-    logger.debug(f"Extracting choices for {chapter_type.value} chapter")
-
-    # Add more detailed logging for REFLECT chapters
-    if chapter_type == ChapterType.REFLECT:
-        logger.debug("Processing REFLECT chapter choices")
-        logger.debug(f"Content length: {len(story_content)}")
-        # Log the last 200 characters to see if <CHOICES> section is present
-        logger.debug(
-            f"Content tail: {story_content[-200:] if len(story_content) > 200 else story_content}"
-        )
-    
-    clean_content = story_content
-    try:
-        # First extract the choices section
-        choices_match = re.search(
-            r"<CHOICES>\s*(.*?)\s*</CHOICES>",
-            story_content,
-            re.DOTALL | re.IGNORECASE,
-        )
-
-        if not choices_match:
-            logger.error(
-                "Could not find choice markers in story content. Raw content:"
-            )
-            logger.error(story_content)
-            raise ValueError("Could not find choice markers in story content")
-
-        # Extract choices text and clean up story content
-        choices_text = choices_match.group(1).strip()
-        clean_content = story_content[: choices_match.start()].strip()
-        # Clean the content
-        clean_content = clean_generated_content(clean_content)
-
-        # Extract choices from the choices text
-        choices = parse_choice_text(choices_text)
-
-        if not choices:
-            logger.error("No choices found in choices text. Raw choices text:")
-            logger.error(choices_text)
-            raise ValueError("No choices found in story content")
-
-        if len(choices) != 3:
-            logger.error(
-                f"Expected exactly 3 choices but found {len(choices)}. Raw choices text:"
-            )
-            logger.error(choices_text)
-            raise ValueError("Story chapters must end with exactly 3 choices")
-
-        story_choices = [
-            StoryChoice(
-                text=choice_text,
-                next_chapter=f"chapter_{current_chapter_number}_{i}",
-            )
-            for i, choice_text in enumerate(choices)
-        ]
-        
-        return story_choices, clean_content
-    except Exception as e:
-        logger.error(f"Error parsing choices: {e}")
-        raise
-
-
-def parse_choice_text(choices_text: str) -> List[str]:
-    """Parse the choices text to extract individual choices."""
-    choice_pattern = (
-        r"Choice\s*[ABC]\s*:\s*(.*?)"
-        r"(?=\s*Choice\s*[ABC]\s*:|\s*$)"
-    )
-    return [
-        match.group(1).strip()
-        for match in re.finditer(
-            choice_pattern,
-            choices_text,
-            re.IGNORECASE | re.DOTALL,
-        )
-        if match.group(1).strip()
-    ]

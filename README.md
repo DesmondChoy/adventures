@@ -1,7 +1,7 @@
 # Learning Odyssey
 
 Learning Odyssey is an educational adventure platform built with FastAPI,
-WebSockets, Supabase, and Gemini models. It delivers 10-chapter,
+WebSockets, Supabase, OpenAI, and Gemini models. It delivers 10-chapter,
 story-driven learning sessions where players choose a story world and a
 lesson topic, make an agency choice in the opening chapter, answer lesson
 questions, revisit ideas in reflect chapters, and finish with a dedicated
@@ -39,9 +39,9 @@ summary experience.
   `StateStorageService` manage flow, persistence, reconstruction, and
   server-authoritative state handling. `AdventureState` is the single source
   of truth.
-- AI services: `app/services/llm/` routes complex generation work to Gemini
-  Flash and lighter work such as summaries, prompt synthesis, and formatting
-  to Flash Lite through `LLMServiceFactory`.
+- AI services: `app/services/llm/` routes story and image-scene text generation
+  to GPT-5.6 Luna with low reasoning through the Responses API. Summaries,
+  prompt synthesis, and formatting remain on Gemini Flash Lite.
 - Frontend: Jinja templates and modular ES modules drive login, selection,
   live chapter streaming, resume modals, context ribbon, and feedback UX.
   The summary page is served as a separate built bundle from
@@ -89,7 +89,8 @@ summary experience.
 - Python 3.10 or newer
 - Node.js and npm
 - A Supabase project
-- A Google API key for Gemini-based text and image generation
+- An OpenAI API key for story and image-scene text generation
+- A Google API key for Gemini Flash Lite support tasks and image generation
 
 ### Local setup
 
@@ -136,13 +137,13 @@ summary experience.
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `SECRET_KEY` | Yes | Session middleware secret. The app refuses to start without it. |
-| `GOOGLE_API_KEY` | Yes | Gemini text generation and image-generation workflows. |
+| `GOOGLE_API_KEY` | Yes | Gemini Flash Lite support tasks and image-generation workflows. |
 | `SUPABASE_URL` | Yes | Supabase project URL injected into the backend and templates. |
 | `SUPABASE_ANON_KEY` | Yes | Browser-side Supabase client for login and client flows. |
 | `SUPABASE_SERVICE_KEY` | Yes | Server-side Supabase access for adventures, telemetry, and feedback storage. |
 | `SUPABASE_JWT_SECRET` | Yes | JWT verification for authenticated summary, resume, and WebSocket flows. |
 | `APP_ENVIRONMENT` | Recommended | Environment label stored with telemetry and feedback records. |
-| `OPENAI_API_KEY` | Optional | Alternate LLM client support present in the codebase. |
+| `OPENAI_API_KEY` | Yes | GPT-5.6 Luna story and image-scene text generation. |
 | `ALLOWED_HOSTS` | Optional | Comma-separated host allowlist for `TrustedHostMiddleware`. |
 | `PROXY_TRUSTED_HOSTS` | Optional | Comma-separated trusted proxy hosts for proxy-header handling. |
 | `CORS_ALLOW_ORIGINS` | Optional | Comma-separated CORS allowlist. Defaults to local dev origins. |

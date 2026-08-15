@@ -4,9 +4,9 @@
  */
 
 import { authManager } from './authManager.js?v=20260526a';
-import { AdventureStateManager } from './adventureStateManager.js?v=20260812a';
-import { WebSocketManager } from './webSocketManager.js?v=20260812a';
-import { stateManager, manageState } from './stateManager.js?v=20260812a';
+import { AdventureStateManager } from './adventureStateManager.js?v=20260815a';
+import { WebSocketManager } from './webSocketManager.js?v=20260815a';
+import { stateManager, manageState } from './stateManager.js?v=20260815a';
 import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260526a';
 import {
     showError,
@@ -28,7 +28,7 @@ import {
     startAdventure,
     initializeLoaderRetryButton,
     updateAdventureContextRibbon
-} from './uiManager.js?v=20260812a';
+} from './uiManager.js?v=20260815a';
 
 // Global application state
 // Guard against re-initialization if module is re-imported
@@ -179,7 +179,7 @@ export async function viewAdventureSummary() {
 
     // Set up timeout for WebSocket response
     timeoutId = setTimeout(() => {
-        console.error('WebSocket timeout: No summary_ready response received within 20 seconds');
+        console.error('WebSocket timeout: No summary_ready response received within 60 seconds');
         timeoutId = null;
 
         // Restore original handler to avoid stacking nested temporary handlers.
@@ -191,7 +191,7 @@ export async function viewAdventureSummary() {
         if (!hasRedirected) {
             showError('Summary generation is taking longer than usual. Still trying...');
         }
-    }, 20000); // Allow slower summary generation without breaking auth/token handoff
+    }, 60000); // Summary creation may need to finish the final Flash Lite summary first
 
     // Override ONLY the onmessage handler temporarily
     window.appState.storyWebSocket.onmessage = function (event) {

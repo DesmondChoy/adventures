@@ -23,7 +23,6 @@ from app.routers.websocket_router import (
     _validate_adventure_ownership,
 )
 from app.services.adventure_state_manager import AdventureStateManager
-from app.services.websocket.content_generator import parse_choice_text
 
 
 class _DummyWebSocket:
@@ -428,23 +427,6 @@ async def test_reveal_summary_retries_existing_summary_save(
     assert websocket.json_messages[1]["state"]["current_chapter"][
         "content"
     ] == "A complete memory lane."
-
-
-@pytest.mark.parametrize(
-    "choices_text",
-    [
-        "Choice A: Follow the river\nChoice B: Climb the hill\nChoice C: Wait",
-        "Choice A: Follow the river. Choice B: Climb the hill. Choice C: Wait.",
-    ],
-)
-def test_parse_choice_text_handles_multiline_and_single_line(
-    choices_text: str,
-) -> None:
-    assert parse_choice_text(choices_text) == [
-        "Follow the river" if "\n" in choices_text else "Follow the river.",
-        "Climb the hill" if "\n" in choices_text else "Climb the hill.",
-        "Wait" if "\n" in choices_text else "Wait.",
-    ]
 
 
 @pytest.mark.asyncio

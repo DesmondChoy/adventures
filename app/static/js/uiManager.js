@@ -3,7 +3,7 @@
  * Handles DOM manipulation, UI updates, and user interface functions
  */
 
-import { stateManager, manageState } from './stateManager.js?v=20260812a';
+import { stateManager, manageState } from './stateManager.js?v=20260815a';
 import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260526a';
 import { withCurrentModuleVersion } from './moduleVersion.js';
 

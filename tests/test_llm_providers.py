@@ -6,17 +6,11 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 import app.services.llm.providers as providers
-from app.models.story import AdventureState
-from app.services.llm.providers import GeminiService, OpenAIService
+from app.models.story import AdventureState, ChapterType
+from app.services.llm.chapter_output import StoryChapterResponse
+from app.services.llm.providers import GeminiService, ModelConfig, OpenAIService
 
 ServiceFactory = Callable[[list[str]], OpenAIService | GeminiService]
-
-
-async def _openai_chunks(parts: list[str]) -> AsyncIterator[SimpleNamespace]:
-    for part in parts:
-        yield SimpleNamespace(
-            choices=[SimpleNamespace(delta=SimpleNamespace(content=part))]
-        )
 
 
 async def _collect_text(stream: AsyncIterator[str]) -> str:
@@ -27,10 +21,16 @@ def _openai_service(parts: list[str]) -> OpenAIService:
     service = OpenAIService.__new__(OpenAIService)
     service.model = "test-model"
     service.client = SimpleNamespace(
-        chat=SimpleNamespace(
-            completions=SimpleNamespace(
-                create=AsyncMock(return_value=_openai_chunks(parts))
-            )
+        responses=SimpleNamespace(
+            create=AsyncMock(
+                return_value=SimpleNamespace(
+                    id="response-id",
+                    status="completed",
+                    output_text="".join(parts),
+                    output=[],
+                    usage=None,
+                )
+            ),
         )
     )
     return service
@@ -107,3 +107,86 @@ async def test_generate_with_prompt_can_skip_paragraph_repair(
     )
 
     assert result == response
+
+
+@pytest.mark.asyncio
+async def test_openai_structured_chapter_uses_luna_low_reasoning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(providers, "build_prompt", lambda **_kwargs: ("system", "user"))
+    parsed = StoryChapterResponse(
+        content="Mira reached the glowing bridge.",
+        choices=["Cross it", "Follow the river", "Ask the wind"],
+    )
+    parse = AsyncMock(
+        return_value=SimpleNamespace(
+            id="response-id",
+            status="completed",
+            output_parsed=parsed,
+            output=[],
+            usage=None,
+        )
+    )
+    service = OpenAIService.__new__(OpenAIService)
+    service.model = ModelConfig.OPENAI_MODEL
+    service.client = SimpleNamespace(responses=SimpleNamespace(parse=parse))
+    state = SimpleNamespace(
+        planned_chapter_types=[ChapterType.STORY],
+        current_chapter_number=1,
+        metadata={},
+    )
+
+    chapter = await service.generate_structured_chapter(
+        story_config={},
+        state=cast(AdventureState, state),
+    )
+
+    assert chapter.choices == ("Cross it", "Follow the river", "Ask the wind")
+    request = parse.await_args.kwargs
+    assert request["model"] == "gpt-5.6-luna"
+    assert request["reasoning"] == {"effort": "low"}
+    assert request["text_format"] is StoryChapterResponse
+    assert request["store"] is False
+    assert "temperature" not in request
+
+
+def test_openai_service_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    with pytest.raises(RuntimeError, match="OPENAI_API_KEY is required"):
+        OpenAIService()
+
+
+def test_openai_incomplete_response_is_rejected() -> None:
+    response = SimpleNamespace(
+        status="incomplete",
+        incomplete_details=SimpleNamespace(reason="max_output_tokens"),
+    )
+
+    with pytest.raises(ValueError, match="max_output_tokens"):
+        OpenAIService._ensure_completed(response)
+
+
+@pytest.mark.asyncio
+async def test_openai_empty_response_surfaces_refusal() -> None:
+    response = SimpleNamespace(
+        id="response-id",
+        status="completed",
+        output_text="",
+        output=[
+            SimpleNamespace(
+                content=[
+                    SimpleNamespace(type="refusal", refusal="Request refused")
+                ]
+            )
+        ],
+        usage=None,
+    )
+    service = OpenAIService.__new__(OpenAIService)
+    service.model = "test-model"
+    service.client = SimpleNamespace(
+        responses=SimpleNamespace(create=AsyncMock(return_value=response))
+    )
+
+    with pytest.raises(ValueError, match="Request refused"):
+        await service._generate_text("system", "user", use_case="test")

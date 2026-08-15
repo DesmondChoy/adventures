@@ -140,7 +140,7 @@ Your chapter should captivate young minds with vivid storytelling that makes the
 # CRITICAL RULES
 1. Narrative Structure: Begin directly (never with "Chapter X") and end at natural decision points
 2. Educational Integration: Ensure lessons feel organic to the story, never forced or artificial
-3. Choice Format: Use <CHOICES> tags, format as "Choice [A/B/C]: [description]" on single lines, make choices meaningful and distinct
+3. Choice Output: For story and reflect chapters, return exactly three meaningful, distinct descriptions in the structured `choices` field. Keep all choice text out of the narrative `content` field
 4. Character Descriptions: VERY IMPORTANT - For EVERY character (including protagonist):
    - When first introducing any character, provide 2-3 detailed sentences about their visual appearance
    - Always describe clothing, physical features (hair, eyes, height, build), and any distinctive characteristics - keep it clear, specific, and easy to visualize
@@ -176,18 +176,18 @@ FIRST_CHAPTER_PROMPT = """# Current Context
 # Agency Options
 {agency_options}
 
-# Choice Format Specification
-<CHOICES>
-Choice A: {agency_category_name}: {option_a} - [Offer a sneak peek of the potential actions unlocked with this agency choice]
-Choice B: {agency_category_name}: {option_b} - [Offer a sneak peek of the potential actions unlocked with this agency choice]
-Choice C: {agency_category_name}: {option_c} - [Offer a sneak peek of the potential actions unlocked with this agency choice]
-</CHOICES>
+# Structured Choice Requirements
+- Return three choice descriptions in the structured `choices` field, in this order:
+  1. {agency_category_name}: {option_a} - offer a short preview of a possible action
+  2. {agency_category_name}: {option_b} - offer a short preview of a possible action
+  3. {agency_category_name}: {option_c} - offer a short preview of a possible action
+- Do not put choice labels, formatting instructions, or choice descriptions in `content`
 
 # CRITICAL REQUIREMENTS
 1. Each choice MUST use EXACTLY ONE of the three {agency_category_name} options provided above
-2. Use Choice A with {option_a}, Choice B with {option_b}, and Choice C with {option_c}
-3. Format each choice as "{agency_category_name}: [Option Name] - [action]"
-4. [action] should present open-ended possibilities without suggesting narrative conclusions."""
+2. Preserve the required order: {option_a} first, {option_b} second, and {option_c} third
+3. Begin each choice with its assigned category and option name, followed by " - " and its action
+4. Each action should present open-ended possibilities without suggesting narrative conclusions."""
 
 STORY_CHAPTER_PROMPT = """# Current Context
 - Chapter: {chapter_number} of {story_length}
@@ -207,12 +207,7 @@ STORY_CHAPTER_PROMPT = """# Current Context
 
 {plot_twist_guidance}
 
-# Choice Format Specification
-<CHOICES>
-Choice A: [First meaningful option]
-Choice B: [Second meaningful option]
-Choice C: [Third meaningful option]
-</CHOICES>"""
+{choice_format}"""
 
 LESSON_CHAPTER_PROMPT = """# Current Context
 - Chapter: {chapter_number} of {story_length}
@@ -243,7 +238,7 @@ LESSON_CHAPTER_PROMPT = """# Current Context
 
 YOU MUST NOT:
 - Mention/Reference any of the Available Answers
-- Include any choices or <CHOICES> tags in LESSON chapters. The options above are provided for information only and will be handled by the application."""
+- Include interactive options in LESSON chapter `content`. The available answers above are provided for narrative context only and will be handled by the application."""
 
 REFLECT_CHAPTER_PROMPT = """# Current Context
 - Chapter: {chapter_number} of {story_length}
@@ -270,19 +265,12 @@ REFLECT_CHAPTER_PROMPT = """# Current Context
 Create three story-driven choices that reflect different ways to process what was learned.
 Each choice should advance the plot in meaningful ways without being labeled as "correct" or "incorrect".
 
-# Choice Format Specification
-<CHOICES>
-Choice A: [First story-driven choice]
-Choice B: [Second story-driven choice]
-Choice C: [Third story-driven choice]
-</CHOICES>
+{reflect_choice_format}
 
 # CRITICAL RULES
-1. Format: Start and end with <CHOICES> tags on their own lines
-2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
-3. Content: Make each choice meaningful, distinct, and advance the story in different ways
-4. Narrative Focus: All choices should be story-driven without any being labeled as "correct" or "incorrect"
-5. Character Growth: Each choice should reflect a different way the character might process or apply what they've learned"""
+1. Content: Make each choice meaningful, distinct, and advance the story in different ways
+2. Narrative Focus: All choices should be story-driven without any being labeled as "correct" or "incorrect"
+3. Character Growth: Each choice should reflect a different way the character might process or apply what they've learned"""
 
 CONCLUSION_CHAPTER_PROMPT = """# Current Context
 - Chapter: {chapter_number} of {story_length}
@@ -391,19 +379,13 @@ The Protagonist is:
 # --------------------------
 
 # Base choice format (common elements for all phases)
-BASE_CHOICE_FORMAT = """# Choice Format
-Use this EXACT format for the choices, with NO indentation and NO line breaks within choices:
-
-<CHOICES>
-Choice A: [First choice description]
-Choice B: [Second choice description]
-Choice C: [Third choice description]
-</CHOICES>
+BASE_CHOICE_FORMAT = """# Structured Choice Requirements
+Return exactly three complete choice descriptions in the structured `choices` field.
 
 # CRITICAL RULES
-1. Format: Start and end with <CHOICES> tags on their own lines
-2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
-3. Content: Make each choice meaningful, distinct, and advance the plot in interesting ways"""
+1. Keep choice descriptions out of the narrative `content` field
+2. Do not add labels such as "Choice A" or formatting wrappers
+3. Make each choice meaningful, distinct, and able to advance the plot in an interesting way"""
 
 # Phase-specific choice guidance that aligns with existing phase guidance
 CHOICE_PHASE_GUIDANCE: Dict[str, str] = {
@@ -423,21 +405,15 @@ def get_choice_instructions(phase: str) -> str:
 
 
 # Reflect choice format
-REFLECT_CHOICE_FORMAT = """# Choice Format
-Use this EXACT format for the choices, with NO indentation and NO line breaks within choices:
-
-<CHOICES>
-Choice A: [First story-driven choice]
-Choice B: [Second story-driven choice]
-Choice C: [Third story-driven choice]
-</CHOICES>
+REFLECT_CHOICE_FORMAT = """# Structured Choice Requirements
+Return exactly three complete story-driven descriptions in the structured `choices` field.
 
 # CRITICAL RULES
-1. Format: Start and end with <CHOICES> tags on their own lines
-2. Each choice: Begin with "Choice [A/B/C]: " and contain the complete description on a single line
-3. Content: Make each choice meaningful, distinct, and advance the story in different ways
-4. Narrative Focus: All choices should be story-driven without any being labeled as "correct" or "incorrect"
-5. Character Growth: Each choice should reflect a different way the character might process or apply what they've learned"""
+1. Keep choice descriptions out of the narrative `content` field
+2. Do not add labels or formatting wrappers
+3. Make each choice meaningful, distinct, and advance the story in different ways
+4. Do not label any choice as "correct" or "incorrect"
+5. Each choice should reflect a different way the character might process or apply what they learned"""
 
 # Agency choice categories
 # -----------------------

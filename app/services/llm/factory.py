@@ -1,68 +1,81 @@
-"""
-LLM Service Factory for routing between Flash and Flash Lite models.
+"""LLM provider routing by application use case."""
 
-Provides centralized model selection based on use case complexity:
-- Flash: Complex reasoning (story generation, image scenes)
-- Flash Lite: Simple processing (summaries, formatting, JSON extraction)
-"""
+from dataclasses import dataclass
+from typing import ClassVar, Literal
 
-from typing import Optional
 from .base import BaseLLMService
-from .providers import GeminiService, ModelConfig
+from .providers import GeminiService, ModelConfig, OpenAIService
+
+
+@dataclass(frozen=True)
+class UseCaseConfig:
+    provider: Literal["openai", "gemini"]
+    model: str
 
 
 class LLMServiceFactory:
-    """Factory for creating appropriate LLM service instances based on use case complexity."""
-    
-    # Use case to model mapping
-    USE_CASE_MODEL_MAP = {
-        # Complex reasoning - keep Flash for quality
-        "story_generation": ModelConfig.GEMINI_MODEL,
-        "image_scene_generation": ModelConfig.GEMINI_MODEL,
-        
-        # Simple processing - use Flash Lite for cost efficiency
-        "character_visual_processing": ModelConfig.GEMINI_FLASH_LITE_MODEL,
-        "summary_generation": ModelConfig.GEMINI_FLASH_LITE_MODEL,
-        "paragraph_formatting": ModelConfig.GEMINI_FLASH_LITE_MODEL,
-        "chapter_summaries": ModelConfig.GEMINI_FLASH_LITE_MODEL,
-        "fallback_summaries": ModelConfig.GEMINI_FLASH_LITE_MODEL,
-        "image_prompt_synthesis": ModelConfig.GEMINI_FLASH_LITE_MODEL,
-        
-        # Default fallback
-        "default": ModelConfig.GEMINI_MODEL,
+    """Create the configured provider for a known LLM use case."""
+
+    USE_CASE_CONFIG_MAP: ClassVar[dict[str, UseCaseConfig]] = {
+        # Narrative and related scene analysis use GPT-5.6 Luna.
+        "story_generation": UseCaseConfig(
+            provider="openai",
+            model=ModelConfig.STORY_GENERATION_MODEL,
+        ),
+        "image_scene_generation": UseCaseConfig(
+            provider="openai",
+            model=ModelConfig.IMAGE_SCENE_MODEL,
+        ),
+        # Lightweight support work remains on Gemini Flash Lite.
+        "character_visual_processing": UseCaseConfig(
+            provider="gemini",
+            model=ModelConfig.CHARACTER_VISUAL_MODEL,
+        ),
+        "summary_generation": UseCaseConfig(
+            provider="gemini",
+            model=ModelConfig.SUMMARY_MODEL,
+        ),
+        "paragraph_formatting": UseCaseConfig(
+            provider="gemini",
+            model=ModelConfig.PARAGRAPH_FORMAT_MODEL,
+        ),
+        "chapter_summaries": UseCaseConfig(
+            provider="gemini",
+            model=ModelConfig.CHAPTER_SUMMARY_MODEL,
+        ),
+        "fallback_summaries": UseCaseConfig(
+            provider="gemini",
+            model=ModelConfig.CHAPTER_SUMMARY_MODEL,
+        ),
+        "image_prompt_synthesis": UseCaseConfig(
+            provider="gemini",
+            model=ModelConfig.IMAGE_PROMPT_MODEL,
+        ),
     }
-    
+
+    @classmethod
+    def _config_for(cls, use_case: str) -> UseCaseConfig:
+        try:
+            return cls.USE_CASE_CONFIG_MAP[use_case]
+        except KeyError as exc:
+            raise ValueError(f"Unknown LLM use case: {use_case}") from exc
+
     @classmethod
     def create_for_use_case(cls, use_case: str) -> BaseLLMService:
-        """
-        Create appropriate LLM service based on use case complexity.
-        
-        Args:
-            use_case: The specific use case determining model complexity needs
-            
-        Returns:
-            Configured LLM service instance with appropriate model
-        """
-        model = cls.USE_CASE_MODEL_MAP.get(use_case, cls.USE_CASE_MODEL_MAP["default"])
-        return GeminiService(model=model)
-    
-    @classmethod
-    def create_flash(cls) -> BaseLLMService:
-        """Create Flash service for complex reasoning tasks."""
-        return GeminiService(model=ModelConfig.GEMINI_MODEL)
-    
+        config = cls._config_for(use_case)
+        if config.provider == "openai":
+            return OpenAIService(model=config.model)
+        return GeminiService(model=config.model)
+
     @classmethod
     def create_flash_lite(cls) -> BaseLLMService:
-        """Create Flash Lite service for simple processing tasks."""
+        """Create a Gemini Flash Lite service for explicit support-task use."""
         return GeminiService(model=ModelConfig.GEMINI_FLASH_LITE_MODEL)
-    
+
     @classmethod
     def get_model_for_use_case(cls, use_case: str) -> str:
-        """Get the model name for a specific use case."""
-        return cls.USE_CASE_MODEL_MAP.get(use_case, cls.USE_CASE_MODEL_MAP["default"])
-    
+        return cls._config_for(use_case).model
+
     @classmethod
     def is_flash_lite_use_case(cls, use_case: str) -> bool:
-        """Check if a use case should use Flash Lite model."""
-        return cls.get_model_for_use_case(use_case) == ModelConfig.GEMINI_FLASH_LITE_MODEL
-
+        return cls._config_for(use_case).model == ModelConfig.GEMINI_FLASH_LITE_MODEL

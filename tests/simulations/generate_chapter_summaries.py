@@ -131,7 +131,7 @@ async def generate_chapter_summary(
 
             # Initialize the model with system prompt
             model = genai.GenerativeModel(
-                model_name=ModelConfig.GEMINI_MODEL,
+                model_name=ModelConfig.GEMINI_FLASH_LITE_MODEL,
                 system_instruction="You are a helpful assistant that follows instructions precisely.",
             )
 

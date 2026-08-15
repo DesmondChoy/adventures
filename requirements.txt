@@ -36,11 +36,11 @@ idna==3.10
 iniconfig==2.0.0
 itsdangerous==2.1.2
 Jinja2==3.1.5
-jiter==0.8.2
+jiter==0.16.0
 MarkupSafe==3.0.2
 multidict==6.3.2
 numpy==2.2.2
-openai==1.61.0
+openai==2.45.0
 packaging==24.2
 pandas==2.2.3
 pillow==11.1.0

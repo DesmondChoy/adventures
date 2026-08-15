@@ -683,51 +683,18 @@ class ChapterManager:
             logger.debug("IMAGE_SCENE_PROMPT SENT TO LLM:")
             logger.debug(f"{custom_prompt}")
 
-            # We need to override the prompt engineering system
-            # Create a minimal AdventureState-like object with just what we need
-            class MinimalState:
-                def __init__(self):
-                    self.current_chapter_id = "image_scene"
-                    self.story_length = 1
-                    self.chapters = []
-                    self.metadata = {"prompt_override": True}
-
-            # Check if we're using Gemini or OpenAI
-            is_gemini = "Gemini" in llm.__class__.__name__
             logger.debug(f"Using LLM service for image scene: {llm.__class__.__name__}")
-
-            # For Gemini, use the LLM service instead of direct calls
-            if is_gemini:
-                try:
-                    # Use the LLM service for consistent API handling
-                    raw_scene = await llm.generate_character_visuals_json(custom_prompt)
-                except Exception as e:
-                    logger.error(
-                        f"Error with direct Gemini call for image scene: {str(e)}"
-                    )
-                    # Fallback to streaming approach
-                    chunks = []
-                    async for chunk in llm.generate_chapter_stream(
-                        story_config={},
-                        state=MinimalState(),
-                        question=None,
-                        previous_lessons=None,
-                        context={"prompt_override": custom_prompt},
-                    ):
-                        chunks.append(chunk)
-                    raw_scene = "".join(chunks)
-            else:
-                # For OpenAI, use the streaming approach
-                chunks = []
-                async for chunk in llm.generate_chapter_stream(
-                    story_config={},
-                    state=MinimalState(),
-                    question=None,
-                    previous_lessons=None,
-                    context={"prompt_override": custom_prompt},
-                ):
-                    chunks.append(chunk)
-                raw_scene = "".join(chunks)
+            chunks = []
+            async for chunk in llm.generate_with_prompt(
+                system_prompt=(
+                    "Select one visually striking scene and follow the requested "
+                    "output constraints exactly."
+                ),
+                user_prompt=custom_prompt,
+                context={"skip_paragraph_formatting": True},
+            ):
+                chunks.append(chunk)
+            raw_scene = "".join(chunks)
 
             # Strip whitespace
             scene = raw_scene.strip()

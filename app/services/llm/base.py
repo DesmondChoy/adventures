@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional, List, AsyncGenerator
 from abc import ABC, abstractmethod
 from app.models.story import AdventureState
+from app.services.llm.chapter_output import GeneratedChapter
 import logging
 from contextlib import asynccontextmanager
 
@@ -52,6 +53,19 @@ class BaseLLMService(ABC):
                 "session_id": context.get("session_id", "no_session"),
                 "request_id": context.get("request_id", "no_request_id"),
             },
+        )
+
+    async def generate_structured_chapter(
+        self,
+        story_config: Dict[str, Any],
+        state: AdventureState,
+        question: Optional[Dict[str, Any]] = None,
+        previous_lessons: Optional[List[Dict[str, Any]]] = None,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> GeneratedChapter:
+        """Generate a validated chapter using the provider's structured output API."""
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not support structured chapter generation"
         )
 
     @abstractmethod

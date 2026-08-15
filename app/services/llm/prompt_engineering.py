@@ -347,6 +347,7 @@ It should be present and meaningful without following a predictable pattern.
         lesson_history=lesson_history,
         agency_guidance=agency_guidance,
         plot_twist_guidance=plot_twist_guidance,
+        choice_format=choice_format,
     )
 
 
@@ -751,5 +752,11 @@ def build_prompt(
 
     # Build the user prompt
     user_prompt = build_user_prompt(state, lesson_question, previous_lessons)
+
+    if context and context.get("validation_feedback"):
+        user_prompt += (
+            "\n\n# Retry Correction\n"
+            f"{context['validation_feedback']}"
+        )
 
     return system_prompt, user_prompt
