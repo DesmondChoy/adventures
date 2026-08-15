@@ -50,8 +50,9 @@ summary experience.
   and user feedback. Telemetry powers summary statistics, and the optional
   `feedback-notify` Edge Function can send feedback emails through Resend.
 - Testing: pytest covers backend services and data loaders, simulation
-  scripts exercise the WebSocket flow end-to-end, and Playwright guards the
-  carousel UI on desktop and mobile.
+  scripts exercise the WebSocket flow, deterministic Playwright tests guard
+  the complete browser UI and focused regressions, and Codex Browser performs
+  the live model-driven release journey.
 
 ## Content Library
 
@@ -175,8 +176,18 @@ repo root on `PYTHONPATH`.
 
 | Task | Command |
 | --- | --- |
+| Run all local Playwright tests | `npm run test:browser` |
+| Run deterministic CI browser tests | `npm run test:browser:ci` |
 | Run carousel visual regression tests | `npm run test:visual:carousel` |
 | Refresh carousel screenshots | `npm run test:visual:carousel:update` |
+| Audit a completed live E2E run in Supabase | `.venv/bin/python tools/audit_e2e_supabase.py --state-id <uuid>` |
+
+Pull requests run the deterministic Chromium browser suite. Scheduled and
+manual CI runs add WebKit/mobile coverage and the macOS carousel snapshots.
+For release validation, use `.agents/skills/playwright-test/SKILL.md`: run the
+automated preflight first, complete the real 10-chapter journey and Memory Lane
+handoff in Codex Browser, then audit the saved adventure and telemetry directly
+in Supabase.
 
 ### Simulations and summary tooling
 

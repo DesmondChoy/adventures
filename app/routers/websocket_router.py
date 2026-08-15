@@ -591,6 +591,9 @@ async def story_websocket(
                         state=current_state,
                         connection_data=connection_data,
                         already_streamed=False,
+                        story_category=story_category,
+                        lesson_topic=lesson_topic,
+                        is_resumption=True,
                     )
                     connection_data.pop("resumed_session_just_sent_chapter", None)
                     continue
@@ -774,6 +777,9 @@ async def story_websocket(
                         state=current_state,
                         connection_data=connection_data,
                         already_streamed=False,
+                        story_category=story_category,
+                        lesson_topic=lesson_topic,
+                        is_resumption=True,
                     )
                     if "resumed_session_just_sent_chapter" in connection_data:
                         del connection_data["resumed_session_just_sent_chapter"]
@@ -830,6 +836,9 @@ async def story_websocket(
                         state=state_manager.get_current_state(),
                         connection_data=connection_data,
                         already_streamed=already_streamed,
+                        story_category=story_category,
+                        lesson_topic=lesson_topic,
+                        is_resumption=False,
                     )
                     continue
 

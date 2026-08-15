@@ -1,6 +1,8 @@
 {
   "name": "coya_app_2025",
   "scripts": {
+    "test:browser": "playwright test",
+    "test:browser:ci": "playwright test --grep-invert @visual",
     "test:visual:carousel": "playwright test tests/playwright/carousel-visual.spec.ts",
     "test:visual:carousel:update": "playwright test tests/playwright/carousel-visual.spec.ts --update-snapshots"
   },

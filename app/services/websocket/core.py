@@ -93,6 +93,9 @@ async def send_story_complete(
     state: AdventureState,
     connection_data: Optional[Dict[str, Any]] = None,
     already_streamed: bool = False,
+    story_category: Optional[str] = None,
+    lesson_topic: Optional[str] = None,
+    is_resumption: bool = False,
 ) -> None:
     """Send story completion data to the client.
 
@@ -101,9 +104,12 @@ async def send_story_complete(
         state: The current state
         connection_data: Optional connection-specific data including adventure_id
         already_streamed: If True, skip streaming content as it was already live-streamed
+        story_category: Story category used for telemetry metadata.
+        lesson_topic: Lesson topic used for telemetry metadata.
+        is_resumption: Whether the conclusion is being replayed after a resume.
     """
-    from .stream_handler import stream_conclusion_content
-    from .image_generator import start_image_generation_tasks, process_image_tasks
+    from .image_generator import process_image_tasks, start_image_generation_tasks
+    from .stream_handler import _record_chapter_viewed, stream_conclusion_content
 
     if not state.chapters:
         logger.error("send_story_complete called with empty chapters list")
@@ -128,6 +134,19 @@ async def send_story_complete(
     # Stream the content first (only if not already streamed)
     if not already_streamed:
         await stream_conclusion_content(final_chapter.content, websocket)
+
+    await _record_chapter_viewed(
+        state=state,
+        chapter_number=final_chapter.chapter_number,
+        chapter_type=final_chapter.chapter_type,
+        adventure_id=(
+            connection_data.get("adventure_id") if connection_data else None
+        ),
+        story_category=story_category,
+        lesson_topic=lesson_topic,
+        connection_data=connection_data,
+        is_resumption=is_resumption,
+    )
 
     # Send story_complete IMMEDIATELY - don't wait for image generation
     # This ensures the Memory Lane button appears right away

@@ -571,6 +571,84 @@ async def test_already_streamed_chapter_runs_post_stream_flow(
 
 
 @pytest.mark.asyncio
+async def test_story_complete_logs_conclusion_view(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    conclusion_content = ChapterContent(
+        content="The adventure reaches its conclusion.",
+        choices=[],
+    )
+    conclusion = ChapterData(
+        chapter_number=3,
+        content=conclusion_content.content,
+        chapter_type=ChapterType.CONCLUSION,
+        chapter_content=conclusion_content,
+    )
+    state = _build_state(
+        [
+            ChapterData(
+                chapter_number=1,
+                content="The adventure begins.",
+                chapter_type=ChapterType.STORY,
+                chapter_content=ChapterContent(
+                    content="The adventure begins.",
+                    choices=_story_choices(),
+                ),
+            ),
+            ChapterData(
+                chapter_number=2,
+                content="The hero reflects.",
+                chapter_type=ChapterType.REFLECT,
+                chapter_content=ChapterContent(
+                    content="The hero reflects.",
+                    choices=_story_choices(),
+                ),
+            ),
+            conclusion,
+        ]
+    )
+    websocket = _DummyWebSocket()
+    adventure_id = str(uuid4())
+    record_chapter_viewed = AsyncMock()
+    monkeypatch.setattr(
+        stream_handler,
+        "_record_chapter_viewed",
+        record_chapter_viewed,
+    )
+    monkeypatch.setattr(
+        image_generator,
+        "start_image_generation_tasks",
+        AsyncMock(return_value=[]),
+    )
+
+    connection_data = {"adventure_id": adventure_id, "user_id": None}
+    await websocket_core.send_story_complete(
+        websocket=websocket,
+        state=state,
+        connection_data=connection_data,
+        already_streamed=True,
+        story_category="forest",
+        lesson_topic="maps",
+        is_resumption=False,
+    )
+
+    record_chapter_viewed.assert_awaited_once_with(
+        state=state,
+        chapter_number=3,
+        chapter_type=ChapterType.CONCLUSION,
+        adventure_id=adventure_id,
+        story_category="forest",
+        lesson_topic="maps",
+        connection_data=connection_data,
+        is_resumption=False,
+    )
+    assert any(
+        message["type"] == "story_complete"
+        for message in websocket.json_messages
+    )
+
+
+@pytest.mark.asyncio
 async def test_image_generation_uses_explicit_current_chapter(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

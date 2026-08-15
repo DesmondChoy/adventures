@@ -30,7 +30,9 @@ async function expectCarouselScreenshot(
   });
 }
 
-test('category and lesson carousels render correctly on desktop and mobile', async ({ page }) => {
+test('@visual category and lesson carousels render correctly on desktop and mobile', async ({
+  page,
+}) => {
   await installFakeSupabase(page);
   await ensureSelectionPage(page);
   await waitForCarousel(page, 'categoryCarousel');

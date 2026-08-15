@@ -1,88 +1,20 @@
-import { expect, type Page, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
-import { ensureSelectionPage, installFakeSupabase, waitForCarousel } from './helpers';
+import { expect, test } from '@playwright/test';
+
+import {
+  ensureSelectionPage,
+  installFakeStorySocket,
+  installFakeSupabase,
+  waitForCarousel,
+} from './helpers';
 
 const CHAPTER_ONE_MARKER = 'CHAPTER_ONE_MARKER: Diego finds the first glowing orb.';
 const CHAPTER_TWO_MARKER = 'CHAPTER_TWO_MARKER: Diego steps into the next light-cloud.';
-
-async function installFakeStorySocket(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    class FakeStoryWebSocket extends EventTarget {
-      static readonly CONNECTING = 0;
-      static readonly OPEN = 1;
-      static readonly CLOSING = 2;
-      static readonly CLOSED = 3;
-
-      readonly url: string;
-      readonly sentMessages: string[] = [];
-      readyState = FakeStoryWebSocket.CONNECTING;
-      onopen: ((event: Event) => void) | null = null;
-      onmessage: ((event: MessageEvent) => void) | null = null;
-      onerror: ((event: Event) => void) | null = null;
-      onclose: ((event: CloseEvent) => void) | null = null;
-
-      constructor(url: string | URL) {
-        super();
-        this.url = String(url);
-
-        const fakeServer = (window as any).__fakeStoryServer;
-        fakeServer.sockets.push(this);
-
-        setTimeout(() => {
-          this.readyState = FakeStoryWebSocket.OPEN;
-          const event = new Event('open');
-          this.onopen?.(event);
-          this.dispatchEvent(event);
-        }, 0);
-      }
-
-      send(message: string): void {
-        this.sentMessages.push(message);
-        (window as any).__fakeStoryServer.sentMessages.push(message);
-      }
-
-      close(): void {
-        if (this.readyState === FakeStoryWebSocket.CLOSED) {
-          return;
-        }
-
-        this.readyState = FakeStoryWebSocket.CLOSED;
-        const event = new CloseEvent('close', { wasClean: true });
-        this.onclose?.(event);
-        this.dispatchEvent(event);
-      }
-
-      emit(payload: unknown): void {
-        const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
-        const event = new MessageEvent('message', { data });
-        this.onmessage?.(event);
-        this.dispatchEvent(event);
-      }
-    }
-
-    (window as any).__fakeStoryServer = {
-      sockets: [] as FakeStoryWebSocket[],
-      sentMessages: [] as string[],
-      emit(payload: unknown): void {
-        const socket = this.sockets[this.sockets.length - 1];
-        if (!socket) {
-          throw new Error('No fake story WebSocket is connected');
-        }
-        socket.emit(payload);
-      },
-      streamChapter(chapterNumber: number, content: string): void {
-        this.emit({
-          type: 'chapter_update',
-          current_chapter: chapterNumber,
-          total_chapters: 10,
-        });
-        this.emit({ type: 'story', content });
-      },
-    };
-
-    (window as any).WebSocket = FakeStoryWebSocket;
-  });
-}
+const RESUMED_CHAPTER_MARKER = 'RESUMED_CHAPTER_MARKER: The saved journey continues.';
+const RESUME_IMAGE = readFileSync(
+  'app/static/images/stories/clockwork_sky_city.jpg',
+).toString('base64');
 
 test('chapter transition clears previous story content before new streaming chunks', async ({
   page,
@@ -126,4 +58,127 @@ test('chapter transition clears previous story content before new streaming chun
 
   const streamedText = await page.locator('#storyContent').innerText();
   expect(streamedText.trim().startsWith(CHAPTER_TWO_MARKER)).toBe(true);
+});
+
+test('resumed chapter replaces stale local progress and keeps an early image update', async ({
+  page,
+}) => {
+  const staleState = {
+    storyCategory: 'festival_of_lights_and_colors',
+    lessonTopic: 'Music and Sound',
+    story_length: 10,
+    chapters: Array.from({ length: 10 }, (_, index) => ({
+      chapter_number: index + 1,
+      content: `Stale chapter ${index + 1}`,
+    })),
+    metadata: {},
+  };
+
+  await installFakeSupabase(page);
+  await installFakeStorySocket(page);
+  await page.addInitScript((state) => {
+    window.localStorage.setItem('adventure_state', JSON.stringify(state));
+  }, staleState);
+  await page.route('**/api/loading-phrases', async (route) => {
+    await route.fulfill({ json: { phrases: ['Restoring the adventure...'] } });
+  });
+  await page.route('**/api/feedback/check**', async (route) => {
+    await route.fulfill({ json: { has_given_feedback: true } });
+  });
+
+  await ensureSelectionPage(page);
+  await page.waitForFunction(() => (window as any).__fakeStoryServer.sockets.length === 1);
+
+  await page.evaluate(
+    ({ image, marker }) => {
+      const server = (window as any).__fakeStoryServer;
+      const state = {
+        current_chapter: {
+          chapter_number: 2,
+          chapter_type: 'story',
+        },
+        story_length: 10,
+        stats: {
+          total_lessons: 0,
+          correct_lesson_answers: 0,
+          completion_percentage: 0,
+        },
+      };
+
+      server.emit({
+        type: 'adventure_loaded',
+        adventure_id: 'resumed-adventure',
+        story_category: 'festival_of_lights_and_colors',
+        lesson_topic: 'Music and Sound',
+        current_chapter: 2,
+        total_chapters: 10,
+        state,
+      });
+      server.emit({ type: 'story', content: marker });
+      server.emit({
+        type: 'choices',
+        choices: [1, 2, 3].map((number) => ({
+          id: `resumed-choice-${number}`,
+          text: `Resumed choice ${number}`,
+        })),
+      });
+
+      server.onSend = function (message: string): void {
+        const payload = JSON.parse(message);
+        if (!payload.choice || payload.choice === 'start') {
+          return;
+        }
+
+        this.emit({
+          type: 'chapter_update',
+          current_chapter: 3,
+          total_chapters: 10,
+          state: {
+            ...state,
+            current_chapter: { chapter_number: 3, chapter_type: 'story' },
+          },
+        });
+        setTimeout(() => {
+          // Real image generation can beat the loader fade-out. This update must
+          // survive underneath the loader and be visible once story text arrives.
+          this.emit({
+            type: 'chapter_image_update',
+            chapter_number: 3,
+            image_data: image,
+          });
+          this.emit({ type: 'story', content: 'CHAPTER_THREE_AFTER_RESUME' });
+          this.emit({
+            type: 'choices',
+            choices: [1, 2, 3].map((number) => ({
+              id: `chapter-3-choice-${number}`,
+              text: `Chapter 3 choice ${number}`,
+            })),
+          });
+        }, 50);
+      };
+    },
+    { image: RESUME_IMAGE, marker: RESUMED_CHAPTER_MARKER },
+  );
+
+  await expect(page.locator('#current-chapter')).toHaveText('2');
+  await expect(page.locator('#storyContent')).toContainText(RESUMED_CHAPTER_MARKER);
+  await page.locator('#choicesContainer button.choice-card').first().click();
+
+  await expect(page.locator('#current-chapter')).toHaveText('3');
+  await expect(page.locator('#storyContent')).toContainText('CHAPTER_THREE_AFTER_RESUME');
+  await expect(page.locator('#chapterImage')).toHaveAttribute(
+    'alt',
+    'Illustration for Chapter 3',
+  );
+  await expect(page.locator('#chapterImageContainer')).toBeVisible();
+
+  const sentChoice = await page.evaluate(() => {
+    const messages = (window as any).__fakeStoryServer.sentMessages
+      .map((message: string) => JSON.parse(message))
+      .filter((message: any) => message.choice && message.choice !== 'start');
+    return messages.at(-1);
+  });
+  expect(sentChoice.choice.chapter_number).toBe(2);
+  expect(sentChoice.state.chapters).toHaveLength(2);
+  expect(sentChoice.state.chapters.at(-1).chapter_number).toBe(2);
 });

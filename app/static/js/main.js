@@ -4,9 +4,9 @@
  */
 
 import { authManager } from './authManager.js?v=20260526a';
-import { AdventureStateManager } from './adventureStateManager.js?v=20260815b';
-import { WebSocketManager } from './webSocketManager.js?v=20260815b';
-import { stateManager, manageState } from './stateManager.js?v=20260815b';
+import { AdventureStateManager } from './adventureStateManager.js?v=20260815c';
+import { WebSocketManager } from './webSocketManager.js?v=20260815c';
+import { stateManager, manageState } from './stateManager.js?v=20260815c';
 import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260526a';
 import {
     showError,
@@ -28,7 +28,7 @@ import {
     startAdventure,
     initializeLoaderRetryButton,
     updateAdventureContextRibbon
-} from './uiManager.js?v=20260815b';
+} from './uiManager.js?v=20260815c';
 
 // Global application state
 // Guard against re-initialization if module is re-imported
@@ -97,13 +97,20 @@ export function makeChoice(choiceId, choiceText) {
         clearActiveParagraphs();
 
         const existingState = stateManager.loadState() || {};
-        const currentChapter = existingState.chapters || [];
+        const currentChapters = existingState.chapters || [];
+        const displayedChapter = Number.parseInt(
+            document.getElementById('current-chapter')?.textContent || '',
+            10
+        );
+        const chapterNumber = Number.isInteger(displayedChapter) && displayedChapter > 0
+            ? displayedChapter
+            : currentChapters.length + 1;
 
         // Create new chapter data with complete structure
         // Preserve the current chapter's choices for state reconstruction on reconnect
         const preservedChoices = getCurrentChapterChoices();
         const newChapter = {
-            chapter_number: currentChapter.length + 1,
+            chapter_number: chapterNumber,
             content: document.getElementById('storyContent').textContent,
             // chapter_type will be set by the server based on adventure flow
             response: {
@@ -118,14 +125,16 @@ export function makeChoice(choiceId, choiceText) {
 
         const updatedState = manageState('update', {
             current_chapter_id: choiceId,
-            chapters: [...currentChapter, newChapter]
+            // A resumed chapter may already have a placeholder entry. Replace it
+            // and discard any stale chapters from a different local adventure.
+            chapters: [...currentChapters.slice(0, chapterNumber - 1), newChapter]
         });
 
         // Don't call updateProgress here - let the backend handle chapter display updates
 
         // CRITICAL: Advance image chapter and hide container BEFORE sending message
         // This prevents race condition where server responds with stale image before these lines run
-        const nextChapter = currentChapter.length + 2; // +1 for 0-based, +1 for next chapter
+        const nextChapter = chapterNumber + 1;
         advanceExpectedImageChapter(nextChapter);
         resetDisplayedImageChapter(); // Allow next chapter's image to be shown
         hideChapterImage();
@@ -136,7 +145,7 @@ export function makeChoice(choiceId, choiceText) {
             choice: {
                 id: choiceId,
                 text: choiceText,
-                chapter_number: currentChapter.length + 1
+                chapter_number: chapterNumber
             }
         });
 

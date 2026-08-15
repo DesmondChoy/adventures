@@ -3,7 +3,7 @@
  * Handles DOM manipulation, UI updates, and user interface functions
  */
 
-import { stateManager, manageState } from './stateManager.js?v=20260815b';
+import { stateManager, manageState } from './stateManager.js?v=20260815c';
 import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260526a';
 import { withCurrentModuleVersion } from './moduleVersion.js';
 
@@ -931,8 +931,9 @@ export function addParagraphListeners() {
 export function appendStoryText(text) {
     const storyContent = document.getElementById('storyContent');
     
-    // Safeguard: Ensure previous chapter image is hidden when new text starts streaming
-    if (streamBuffer === '') {
+    // Hide only an older chapter's image. A valid image can arrive before the
+    // first story chunk and must not be discarded.
+    if (streamBuffer === '' && displayedImageChapter < minExpectedImageChapter) {
         hideChapterImage();
     }
     
@@ -1117,16 +1118,9 @@ export function updateChoiceWithImage(choiceIndex, imageData) {
 }
 
 export function updateChapterImage(chapterNumber, imageData) {
-    // Filter 1: Don't display images while loader is visible (transition in progress)
-    // This catches race conditions where the image WebSocket message arrives
-    // just as the user clicks a choice button
-    const loaderOverlay = document.getElementById('loaderOverlay');
-    if (loaderOverlay && !loaderOverlay.classList.contains('hidden')) {
-        console.log(`[IMAGE DEBUG] Rejecting image for chapter ${chapterNumber} - loader is visible`);
-        return;
-    }
-
-    // Filter 2: Only update if this is a newer or equal chapter (prevents regression)
+    // Only update if this is a newer or equal chapter (prevents regression).
+    // The loader can still be visible when a valid image arrives; it overlays the
+    // image until the story is ready, so rejecting here would lose the only update.
     if (displayedImageChapter > 0 && chapterNumber < displayedImageChapter) {
         console.log(`[IMAGE DEBUG] Rejecting image for chapter ${chapterNumber} - already showed chapter ${displayedImageChapter}`);
         return;
@@ -1456,6 +1450,7 @@ export async function handleMessage(event) {
                 // The server started a fresh adventure. Discard chapters from a
                 // previously completed local adventure before the first choice.
                 manageState('update', {
+                    adventure_id: data.adventure_id,
                     current_chapter_id: 'start',
                     chapters: [],
                     story_length: data.total_chapters || 10,
@@ -1472,11 +1467,13 @@ export async function handleMessage(event) {
                 updateAdventureContextRibbon(data.story_category, data.lesson_topic);
 
                 const existingState = stateManager.loadState();
-                const hasValidState = existingState?.chapters?.length > 0 &&
-                                      existingState?.storyCategory &&
-                                      existingState?.lessonTopic;
+                const hasMatchingState = existingState?.chapters?.length > 0 &&
+                                         existingState?.storyCategory &&
+                                         existingState?.lessonTopic &&
+                                         existingState?.adventure_id &&
+                                         String(existingState.adventure_id) === String(data.adventure_id);
 
-                if (!hasValidState) {
+                if (!hasMatchingState) {
                     const currentChapter = data.current_chapter || 1;
                     // Create a minimal chapter entry so the resume condition passes
                     // The actual content will be streamed and displayed via other message types
@@ -1489,6 +1486,7 @@ export async function handleMessage(event) {
                         });
                     }
                     manageState('update', {
+                        adventure_id: data.adventure_id,
                         storyCategory: data.story_category,
                         lessonTopic: data.lesson_topic,
                         chapters: placeholderChapters,

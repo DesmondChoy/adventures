@@ -1,6 +1,5 @@
 ---
-description: Run the Learning Odyssey E2E suite with Playwright MCP, prioritizing a real 10-chapter browser adventure plus Memory Lane summary validation.
-allowed-tools: mcp__playwright__*, Bash(npx:*), Bash(npm:*), Bash(uvicorn:*), Bash(source:*), Bash(lsof:*), Bash(kill:*), Read
+description: Run the Learning Odyssey E2E suite with deterministic Playwright preflight coverage followed by a real 10-chapter Codex Browser journey, Memory Lane validation, and a read-only Supabase persistence and telemetry audit.
 ---
 
 Run the Learning Odyssey end-to-end suite. The default mission is a real
@@ -12,9 +11,11 @@ Default run order:
 
 1. Run the automated Playwright preflight.
 2. If preflight fails, stop and report the exact failure.
-3. If preflight passes, load Playwright MCP and complete the full 10-chapter
-   browser adventure.
+3. If preflight passes, use Codex Browser to complete the full 10-chapter
+   browser adventure. Use Playwright MCP only when the built-in browser is not
+   available in the current Codex surface.
 4. Click Memory Lane, wait for the summary screen, and validate it.
+5. Audit the completed adventure and its telemetry directly in Supabase.
 
 Only skip the full browser adventure when the user explicitly asks for
 `fast-only`, `automated-only`, or targeted regression checks.
@@ -58,19 +59,21 @@ npm run test:visual:carousel:update
 ```
 
 If the preflight fails, stop. The full live adventure will mostly waste time.
-If the preflight passes, continue to the full Playwright MCP run.
+If the preflight passes, continue to the full Codex Browser run.
 
-## Full MCP Path
+## Full Codex Browser Path
 
-This is the priority path. Use Playwright MCP to exercise the real browser app
-through:
+This is the priority path. Use the in-app Codex Browser to exercise the real
+browser app through:
 
 - real WebSocket lifecycle
 - real LLM/content streaming
 - real image generation
 - real Chapter 10 -> Memory Lane -> summary page handoff
 
-Do not stop after the automated preflight unless the user asked for that.
+Do not stop after the automated preflight unless the user asked for that. Keep
+the live task phased and inspect rendered state after every chapter. Enable
+Browser Developer mode when console, network, or DOM evidence is needed.
 
 ### Check if Server is Running
 
@@ -100,7 +103,7 @@ Wait 3-5 seconds for the server to start, then verify it's running with `lsof -i
 6. Verify the continue button enables
 7. Continue to the lesson carousel
 8. Verify the lesson carousel is visible, rotates, and selection enables start
-9. Check console for JavaScript errors with `browser_console_messages`
+9. Inspect the Browser console for JavaScript errors
 
 ### Validation
 
@@ -156,7 +159,7 @@ Loop through each chapter with these validations.
    - Chapters 1-9: exactly 3 choice buttons
    - Chapter 10 (CONCLUSION): 0 choice buttons, then Memory Lane controls
 7. Wait for image to load (5-15 seconds after content finishes)
-8. Check console for errors with `browser_console_messages`
+8. Inspect the Browser console for errors
 9. Chapters 1-9: click a choice button to proceed. Chapter 10: stop after
    Memory Lane controls appear.
 
@@ -225,14 +228,42 @@ anything clearly generic.
 | Summary redirects without state | `summary_ready` handoff failed | Check `viewAdventureSummary()` and `uiManager.js` summary fallback |
 | Summary API unauthorized | Auth token not carried to summary app | Check `summary_access_token` and `summary-state-handler.js` fallback |
 
+## Phase 5: Supabase Audit
+
+Use the exact `state_id` from the validated Memory Lane URL. Run the checked-in
+read-only audit against the same Supabase project used by the live app:
+
+```bash
+.venv/bin/python tools/audit_e2e_supabase.py --state-id <state-id>
+```
+
+The command uses `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` from the local
+environment. Never print either value. It must report `PASS` and validate:
+
+- the completed adventure has its authenticated owner, client UUID, world,
+  topic, and environment
+- persisted state contains Chapters 1-10 plus the internal summary chapter
+- Chapter 10 is `conclusion`, the final internal chapter is `summary`, and all
+  chapter content is non-empty
+- 10 meaningful, unique titles and summaries are stored
+- all three lesson questions and answers are stored
+- `adventure_started`, `chapter_viewed`, `choice_made`, and `summary_viewed`
+  events are linked to the same adventure and owner
+- `chapter_viewed` covers Chapters 1-10; resumption duplicates are allowed
+- `choice_made` occurs exactly once for Chapters 1-10
+- telemetry chapter types and environment match the persisted adventure
+
+If the audit fails, the E2E run fails. Report the missing or inconsistent rows;
+do not compensate by editing Supabase data.
+
 ## Anomaly Handling Protocol
 
 When ANY anomaly occurs:
 
 1. **Stop testing immediately** - Do not continue through remaining chapters
-2. **Check console** with `browser_console_messages` for JavaScript errors
+2. **Check the Browser console** for JavaScript errors
 3. Take a snapshot if the visible state matters
-4. **Close browser** with `browser_close`
+4. **Close the Browser tab**
 5. **Review backend logs** for API or WebSocket errors
 6. **Consult documentation:**
    - `memory-bank/` - Architectural decisions, system patterns
@@ -270,6 +301,13 @@ After completing (or stopping due to failure), generate this report:
 - Chapters Completed = 10: ✓/✗
 - Questions Answered = 3: ✓/✗
 - Meaningful titles: ✓/✗
+
+### Supabase Audit
+- Adventure persistence: ✓/✗
+- Chapter and summary state: ✓/✗
+- Lesson answers: ✓/✗
+- Telemetry event coverage: ✓/✗
+- Ownership and environment linkage: ✓/✗
 
 ### Recent Regression Probes
 - No duplicate module / carousel init failure: ✓/✗

@@ -38,6 +38,88 @@ export async function installFakeSupabase(page: Page): Promise<void> {
   });
 }
 
+export async function installFakeStorySocket(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    class FakeStoryWebSocket extends EventTarget {
+      static readonly CONNECTING = 0;
+      static readonly OPEN = 1;
+      static readonly CLOSING = 2;
+      static readonly CLOSED = 3;
+
+      readonly url: string;
+      readonly sentMessages: string[] = [];
+      readyState = FakeStoryWebSocket.CONNECTING;
+      onopen: ((event: Event) => void) | null = null;
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      onerror: ((event: Event) => void) | null = null;
+      onclose: ((event: CloseEvent) => void) | null = null;
+
+      constructor(url: string | URL) {
+        super();
+        this.url = String(url);
+
+        const fakeServer = (window as any).__fakeStoryServer;
+        fakeServer.sockets.push(this);
+
+        setTimeout(() => {
+          this.readyState = FakeStoryWebSocket.OPEN;
+          const event = new Event('open');
+          this.onopen?.(event);
+          this.dispatchEvent(event);
+        }, 0);
+      }
+
+      send(message: string): void {
+        this.sentMessages.push(message);
+        const fakeServer = (window as any).__fakeStoryServer;
+        fakeServer.sentMessages.push(message);
+        fakeServer.onSend?.(message, this);
+      }
+
+      close(): void {
+        if (this.readyState === FakeStoryWebSocket.CLOSED) {
+          return;
+        }
+
+        this.readyState = FakeStoryWebSocket.CLOSED;
+        const event = new CloseEvent('close', { wasClean: true });
+        this.onclose?.(event);
+        this.dispatchEvent(event);
+      }
+
+      emit(payload: unknown): void {
+        const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+        const event = new MessageEvent('message', { data });
+        this.onmessage?.(event);
+        this.dispatchEvent(event);
+      }
+    }
+
+    (window as any).__fakeStoryServer = {
+      sockets: [] as FakeStoryWebSocket[],
+      sentMessages: [] as string[],
+      onSend: null as null | ((message: string, socket: FakeStoryWebSocket) => void),
+      emit(payload: unknown): void {
+        const socket = this.sockets[this.sockets.length - 1];
+        if (!socket) {
+          throw new Error('No fake story WebSocket is connected');
+        }
+        socket.emit(payload);
+      },
+      streamChapter(chapterNumber: number, content: string): void {
+        this.emit({
+          type: 'chapter_update',
+          current_chapter: chapterNumber,
+          total_chapters: 10,
+        });
+        this.emit({ type: 'story', content });
+      },
+    };
+
+    (window as any).WebSocket = FakeStoryWebSocket;
+  });
+}
+
 export async function ensureSelectionPage(page: Page): Promise<void> {
   await page.goto('/select');
 
