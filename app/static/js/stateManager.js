@@ -3,7 +3,7 @@
  * Handles adventure state operations and management
  */
 
-import { AdventureStateManager } from './adventureStateManager.js?v=20260815c';
+import { AdventureStateManager } from './adventureStateManager.js?v=20260816c';
 
 // Create a global state manager instance
 const stateManager = new AdventureStateManager();

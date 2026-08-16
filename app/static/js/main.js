@@ -4,9 +4,9 @@
  */
 
 import { authManager } from './authManager.js?v=20260526a';
-import { AdventureStateManager } from './adventureStateManager.js?v=20260815c';
-import { WebSocketManager } from './webSocketManager.js?v=20260815c';
-import { stateManager, manageState } from './stateManager.js?v=20260815c';
+import { AdventureStateManager } from './adventureStateManager.js?v=20260816c';
+import { WebSocketManager } from './webSocketManager.js?v=20260816c';
+import { stateManager, manageState } from './stateManager.js?v=20260816c';
 import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260526a';
 import {
     showError,
@@ -28,7 +28,7 @@ import {
     startAdventure,
     initializeLoaderRetryButton,
     updateAdventureContextRibbon
-} from './uiManager.js?v=20260815c';
+} from './uiManager.js?v=20260816c';
 
 // Global application state
 // Guard against re-initialization if module is re-imported

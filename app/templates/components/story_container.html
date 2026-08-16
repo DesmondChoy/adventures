@@ -1,10 +1,40 @@
 <div id="storyContainer" class="mt-8 max-w-2xl mx-auto hidden screen-transition">
     <div class="rounded-xl p-6">
-        <!-- Header Controls (Chapter indicator and Font Size) -->
-        <div class="w-full flex items-center justify-between mb-6 header-controls">
-            <div class="text-sm font-medium">
-                Chapter <span id="current-chapter">1</span> of <span id="total-chapters">-</span>
+        <!-- Compact reader header: remains visible while reading long chapters. -->
+        <header id="readerHeader" class="reader-header">
+            <div class="reader-header-main">
+                <a href="/" class="reader-brand" aria-label="Learning Odyssey home">Learning Odyssey</a>
+
+                <div id="adventureContextRibbon" class="adventure-context-ribbon hidden">
+                    <div id="contextMarquee" class="context-marquee">
+                        <div id="contextMarqueeTrack" class="context-marquee-track">
+                            <span id="contextPrimary" class="context-copy">
+                                <span class="context-item">Exploring <span id="contextWorldName" class="context-world"></span></span>
+                                <span class="context-separator">&middot;</span>
+                                <span class="context-item">Discovering <span id="contextLessonTopic" class="context-topic"></span></span>
+                            </span>
+                            <span class="context-copy context-copy-duplicate" aria-hidden="true">
+                                <span class="context-item">Exploring <span id="contextWorldNameDuplicate" class="context-world"></span></span>
+                                <span class="context-separator">&middot;</span>
+                                <span class="context-item">Discovering <span id="contextLessonTopicDuplicate" class="context-topic"></span></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="readerChapterLabel" class="reader-chapter" aria-live="polite">
+                    Chapter <span id="current-chapter">1</span> of <span id="total-chapters">-</span>
+                </div>
             </div>
+
+            <div id="chapterProgress" class="reader-progress" role="progressbar"
+                 aria-labelledby="readerChapterLabel" aria-valuemin="1">
+                <span id="chapterProgressFill" class="reader-progress-fill"></span>
+            </div>
+        </header>
+
+        <!-- Reading controls remain available without crowding the sticky header. -->
+        <div class="w-full flex items-center justify-end mb-6 header-controls">
             <div class="font-size-controls">
                 <button id="decrease-font" class="font-size-btn" aria-label="Decrease font size">-</button>
                 <span id="font-size-percentage" class="font-size-percentage">100%</span>

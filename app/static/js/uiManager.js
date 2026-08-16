@@ -3,7 +3,7 @@
  * Handles DOM manipulation, UI updates, and user interface functions
  */
 
-import { stateManager, manageState } from './stateManager.js?v=20260815c';
+import { stateManager, manageState } from './stateManager.js?v=20260816c';
 import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260526a';
 import { withCurrentModuleVersion } from './moduleVersion.js';
 
@@ -458,11 +458,19 @@ export function hideLoader() {
 export function updateProgress(currentChapter, totalChapters) {
     const currentEl = document.getElementById('current-chapter');
     const totalEl = document.getElementById('total-chapters');
+    const progressEl = document.getElementById('chapterProgress');
+    const progressFillEl = document.getElementById('chapterProgressFill');
 
     // Handle special initial state
     if (totalChapters === '-' || totalChapters === null || totalChapters === undefined) {
         if (currentEl) currentEl.textContent = currentChapter;
         if (totalEl) totalEl.textContent = '-';
+        if (progressFillEl) progressFillEl.style.width = '0%';
+        if (progressEl) {
+            progressEl.removeAttribute('aria-valuenow');
+            progressEl.removeAttribute('aria-valuemax');
+            progressEl.setAttribute('aria-valuetext', `Chapter ${currentChapter}, total unknown`);
+        }
         return;
     }
 
@@ -475,6 +483,14 @@ export function updateProgress(currentChapter, totalChapters) {
 
     if (currentEl) currentEl.textContent = currentChapter;
     if (totalEl) totalEl.textContent = totalChapters;
+    if (progressFillEl) {
+        progressFillEl.style.width = `${(currentChapter / totalChapters) * 100}%`;
+    }
+    if (progressEl) {
+        progressEl.setAttribute('aria-valuenow', String(currentChapter));
+        progressEl.setAttribute('aria-valuemax', String(totalChapters));
+        progressEl.setAttribute('aria-valuetext', `Chapter ${currentChapter} of ${totalChapters}`);
+    }
 
     // Dispatch event for new chapter loaded (for font size manager)
     document.dispatchEvent(new CustomEvent('newChapterLoaded'));
@@ -484,19 +500,55 @@ export function updateProgress(currentChapter, totalChapters) {
  * Update the adventure context ribbon with world and topic names.
  * Called on new adventure start and on resume (adventure_loaded).
  */
+let contextTickerResizeObserver = null;
+
+function refreshAdventureContextTicker() {
+    const ribbon = document.getElementById('adventureContextRibbon');
+    const marquee = document.getElementById('contextMarquee');
+    const primaryCopy = document.getElementById('contextPrimary');
+    if (!ribbon || !marquee || !primaryCopy) return;
+
+    ribbon.classList.remove('is-overflowing');
+    ribbon.style.removeProperty('--context-ticker-duration');
+
+    requestAnimationFrame(() => {
+        const shouldScroll = primaryCopy.scrollWidth > marquee.clientWidth;
+        if (!shouldScroll) return;
+
+        const durationSeconds = Math.max(14, (primaryCopy.scrollWidth + 40) / 26);
+        ribbon.style.setProperty('--context-ticker-duration', `${durationSeconds}s`);
+        ribbon.classList.add('is-overflowing');
+    });
+}
+
 export function updateAdventureContextRibbon(worldName, lessonTopic) {
     const ribbon = document.getElementById('adventureContextRibbon');
     const worldEl = document.getElementById('contextWorldName');
     const topicEl = document.getElementById('contextLessonTopic');
-    if (!ribbon || !worldEl || !topicEl) return;
+    const duplicateWorldEl = document.getElementById('contextWorldNameDuplicate');
+    const duplicateTopicEl = document.getElementById('contextLessonTopicDuplicate');
+    const marquee = document.getElementById('contextMarquee');
+    if (!ribbon || !worldEl || !topicEl || !duplicateWorldEl || !duplicateTopicEl || !marquee) return;
 
     if (worldName && lessonTopic) {
-        worldEl.textContent = toTitleCase(worldName);
-        topicEl.textContent = toTitleCase(lessonTopic);
+        const displayWorldName = toTitleCase(worldName);
+        const displayLessonTopic = toTitleCase(lessonTopic);
+        worldEl.textContent = displayWorldName;
+        topicEl.textContent = displayLessonTopic;
+        duplicateWorldEl.textContent = displayWorldName;
+        duplicateTopicEl.textContent = displayLessonTopic;
+        ribbon.setAttribute('aria-label', `Exploring ${displayWorldName}. Discovering ${displayLessonTopic}.`);
         ribbon.classList.remove('hidden');
-        // Trigger fade-in on next frame
+
+        if (!contextTickerResizeObserver && window.ResizeObserver) {
+            contextTickerResizeObserver = new ResizeObserver(refreshAdventureContextTicker);
+        }
+        contextTickerResizeObserver?.disconnect();
+        contextTickerResizeObserver?.observe(marquee);
+
         requestAnimationFrame(() => {
             ribbon.classList.add('visible');
+            refreshAdventureContextTicker();
         });
     }
 }
@@ -526,6 +578,18 @@ function handleChapterProgress(data) {
     if (currentChapter && totalChapters) {
         updateProgress(currentChapter, totalChapters);
     }
+}
+
+function scrollToChapterStart() {
+    const storyContainer = document.getElementById('storyContainer');
+    const readerHeader = document.getElementById('readerHeader');
+    if (!storyContainer) return;
+
+    requestAnimationFrame(() => {
+        const storyTop = storyContainer.getBoundingClientRect().top + window.scrollY;
+        const readerOffset = readerHeader?.offsetTop || 0;
+        window.scrollTo({ top: Math.max(0, storyTop + readerOffset), behavior: 'auto' });
+    });
 }
 
 function getDisplayedChapterNumber() {
@@ -1505,13 +1569,9 @@ export async function handleMessage(event) {
                 handleChapterProgress(data);
             }
 
-            // Ensure viewport is at the top when a new chapter starts or an adventure loads
+            // Put the new chapter directly below the compact sticky reader header.
             if (data.type === 'chapter_update' || data.type === 'adventure_loaded') {
-                try {
-                    window.scrollTo(0, 0);
-                } catch (e) {
-                    // no-op
-                }
+                scrollToChapterStart();
             }
 
             // Hide the previous chapter's image ONLY when a new chapter starts (chapter_update)

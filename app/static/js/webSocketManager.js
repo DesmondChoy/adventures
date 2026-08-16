@@ -3,7 +3,7 @@
  * Handles WebSocket connections, reconnection logic, and message handling
  */
 
-import { AdventureStateManager } from './adventureStateManager.js?v=20260815c';
+import { AdventureStateManager } from './adventureStateManager.js?v=20260816c';
 import { withCurrentModuleVersion } from './moduleVersion.js';
 
 function withModuleVersion(modulePath) {

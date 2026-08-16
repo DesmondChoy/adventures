@@ -46,15 +46,48 @@ test('chapter transition clears previous story content before new streaming chun
   }, CHAPTER_ONE_MARKER);
 
   await expect(page.locator('#current-chapter')).toHaveText('1');
+  await expect(page.locator('#total-chapters')).toHaveText('10');
+  await expect(page.locator('#contextWorldName')).toHaveText('Festival Of Lights And Colors');
+  await expect(page.locator('#contextLessonTopic')).toHaveText('Astronomy');
+  await expect(page.locator('#chapterProgress')).toHaveAttribute('aria-valuenow', '1');
+  await expect(page.locator('#chapterProgressFill')).toHaveAttribute('style', /width: 10%/);
   await expect(page.locator('#storyContent')).toContainText(CHAPTER_ONE_MARKER);
+
+  await page.locator('#storyContainer').evaluate((element) => {
+    element.style.maxWidth = '34rem';
+  });
+  await expect(page.locator('#adventureContextRibbon')).toHaveClass(/is-overflowing/);
+  await expect(page.locator('#contextMarqueeTrack')).toHaveCSS('animation-name', 'context-ticker');
+  await expect(page.locator('.context-copy-duplicate')).toBeVisible();
+
+  await page.locator('#storyContent').evaluate((element) => {
+    element.style.minHeight = '1500px';
+  });
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect.poll(async () => page.locator('#readerHeader').evaluate(
+    (element) => Math.round(element.getBoundingClientRect().top),
+  )).toBe(0);
 
   await page.evaluate((content) => {
     (window as any).__fakeStoryServer.streamChapter(2, content);
   }, CHAPTER_TWO_MARKER);
 
   await expect(page.locator('#current-chapter')).toHaveText('2');
+  await expect(page.locator('#chapterProgress')).toHaveAttribute('aria-valuenow', '2');
   await expect(page.locator('#storyContent')).toContainText(CHAPTER_TWO_MARKER);
   await expect(page.locator('#storyContent')).not.toContainText(CHAPTER_ONE_MARKER);
+
+  const chapterPosition = await page.evaluate(() => {
+    const storyContainer = document.getElementById('storyContainer')!;
+    const readerHeader = document.getElementById('readerHeader')!;
+    return {
+      scrollY: window.scrollY,
+      readerTop: storyContainer.getBoundingClientRect().top
+        + window.scrollY
+        + readerHeader.offsetTop,
+    };
+  });
+  expect(Math.abs(chapterPosition.scrollY - chapterPosition.readerTop)).toBeLessThan(2);
 
   const streamedText = await page.locator('#storyContent').innerText();
   expect(streamedText.trim().startsWith(CHAPTER_TWO_MARKER)).toBe(true);
