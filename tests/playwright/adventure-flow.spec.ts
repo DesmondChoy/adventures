@@ -6,6 +6,7 @@ import {
   ensureSelectionPage,
   installFakeStorySocket,
   installFakeSupabase,
+  selectCarouselCard,
   waitForCarousel,
 } from './helpers';
 
@@ -154,12 +155,16 @@ test('completes the deterministic selection-to-Memory-Lane browser flow', async 
     { chapterImage: CHAPTER_IMAGE, summaryStateId: SUMMARY_STATE_ID },
   );
 
-  await page.locator('[data-category="clockwork_sky_city"]').click();
+  await selectCarouselCard(
+    page,
+    'storyCategoryScreen',
+    '[data-category="clockwork_sky_city"]',
+  );
   await expect(page.locator('#category-continue-btn')).toBeEnabled();
   await page.locator('#category-continue-btn').click();
   await waitForCarousel(page, 'lessonCarousel');
 
-  await page.locator('[data-topic="Astronomy"]').click();
+  await selectCarouselCard(page, 'lessonTopicScreen', '[data-topic="Astronomy"]');
   await expect(page.locator('#lesson-start-btn')).toBeEnabled();
   await page.locator('#lesson-start-btn').click();
 

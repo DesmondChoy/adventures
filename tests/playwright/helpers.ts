@@ -145,3 +145,29 @@ export async function waitForCarousel(page: Page, carouselId: string): Promise<v
     return !!instance && !!element && cardCount > 0 && has3dTransform;
   }, carouselId);
 }
+
+export async function selectCarouselCard(
+  page: Page,
+  screenId: string,
+  cardSelector: string,
+): Promise<void> {
+  const screen = page.locator(`#${screenId}`);
+  const cards = screen.locator('.carousel-card');
+  const targetCard = screen.locator(cardSelector);
+  const nextButton = screen.getByRole('button', { name: 'Next', exact: true });
+
+  await expect(targetCard).toHaveCount(1);
+  const cardCount = await cards.count();
+
+  for (let step = 0; step < cardCount; step += 1) {
+    if (await targetCard.evaluate((card) => card.classList.contains('active'))) {
+      await targetCard.click();
+      await expect(targetCard).toHaveAttribute('aria-selected', 'true');
+      return;
+    }
+
+    await nextButton.click();
+  }
+
+  throw new Error(`Carousel card never became active: ${cardSelector}`);
+}
