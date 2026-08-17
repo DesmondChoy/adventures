@@ -1,6 +1,28 @@
 # Active Context
 
-## Current Focus: UI/UX Improvements Phase 2 Completion (As of 2026-01-30)
+## Current Focus (As of 2026-08-17)
+
+- Story and image-scene text now use GPT-5.6 Luna with low reasoning through
+  OpenAI Responses; chapter output is typed and validated before delivery.
+- Gemini Flash Lite owns summaries, formatting, character visuals, and
+  image-prompt synthesis. Gemini 3.1 Flash Image generates square 1K images.
+- `AdventureState` persists one sampled `protagonist_name`; retry and resume
+  reuse it alongside durable visual and agency state.
+- LLM request/response records share `llm_call_id`. OpenAI requests use
+  `store=False`, and production logs omit prompt and response bodies.
+- Browser regression now includes a deterministic ten-chapter flow. Release
+  validation adds a real Codex Browser journey, Memory Lane, and a read-only
+  Supabase persistence/telemetry audit.
+- The reader has a sticky chapter header, accessible progress indicator, and
+  responsive story-world/topic ticker with reduced-motion behavior.
+- WebSocket persistence uses bounded retries, stable IDs for creation retries,
+  and a visible `save_failed` terminal state.
+
+Current operational guidance lives in `README.md`, `AGENTS.md`, and
+`memory-bank/testingGuidelines.md`. The dated material below is historical and
+must not override current code or those documents.
+
+## Historical Snapshot: UI/UX Improvements Phase 2 (2026-01-30)
 
 ✅ **LATEST ACHIEVEMENT (2026-01-30):** Chapter Image Flash on Loading Screen FIXED! Race condition where images would briefly flash on the loader when clicking choices before image arrival is now resolved. Added loader visibility check as a third filter in `updateChapterImage()` - since the loader is shown synchronously in `makeChoice()`, it serves as a reliable state flag to reject stale images during transitions.
 

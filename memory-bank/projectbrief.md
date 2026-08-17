@@ -12,7 +12,7 @@ Traditional educational platforms often lack:
 
 Learning Odyssey solves these challenges through:
 1. Pre-defined educational content with dynamic narrative delivery
-2. User-selected topics and adventure length
+2. User-selected story worlds and lesson topics within a fixed 10-chapter flow
 3. LLM-generated narrative choices and resolutions
 4. Real-time state synchronization
 5. Agency system with meaningful character choices
@@ -26,18 +26,18 @@ Learning Odyssey solves these challenges through:
 - Comprehensive serialization and recovery
 
 ### 2. LLM Integration
-- Provider abstraction layer (GPT-4o/Gemini compatibility)
-- Standardized prompt engineering system
-- Response formatting and validation
-- Narrative generation with phase-specific guidance
+- Explicit use-case routing: GPT-5.6 Luna for story and image-scene text,
+  Gemini Flash Lite for support tasks
+- OpenAI Responses structured outputs for chapter narrative and choice fields
+- Pydantic validation with up to three generation attempts
+- Standardized prompt engineering with phase-specific narrative guidance
 
 ### 3. Content Flow
 - First chapter: STORY with agency choice
 - Second-to-last chapter: STORY for pivotal choices
 - Last chapter: CONCLUSION with resolution (no choices)
 - After CONCLUSION: SUMMARY with statistics and chapter recaps
-- 50% of remaining chapters: LESSON (educational content)
-- 50% of LESSON chapters: REFLECT (follow LESSON chapters)
+- Exactly three LESSON chapters and one REFLECT chapter in each 10-chapter plan
 - REFLECT chapters only after LESSON chapters
 - STORY chapters must follow REFLECT chapters
 
@@ -50,10 +50,13 @@ Learning Odyssey solves these challenges through:
 
 ### 5. Technical Architecture
 - FastAPI backend with WebSocket real-time communication
-- Progressive enhancement (text first, images as available)
+- Structured chapter generation before word-by-word delivery; images remain
+  progressive enhancements
 - Asynchronous image generation via Gemini 3.1 Flash Image (Nano Banana 2) with square 1K output
 - React-based Summary Chapter
-- Browser-based state persistence
+- Browser state plus server-authoritative Supabase persistence, retryable saves,
+  and visible terminal save failures
+- Sticky reader header with chapter progress and responsive context ticker
 - Robust error handling and recovery
 
 ## Core Development Principles
@@ -65,7 +68,7 @@ Learning Odyssey solves these challenges through:
 ### Technical Requirements
 - Real-time state synchronization
 - Consistent chapter flow
-- Cross-provider LLM support
+- Provider-specific LLM routing with validated output contracts
 - Comprehensive test coverage
 - Robust error handling
 - Graceful degradation

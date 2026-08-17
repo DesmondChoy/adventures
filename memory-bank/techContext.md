@@ -17,19 +17,26 @@
   * `app/auth/dependencies.py` for FastAPI JWT verification dependency (though primarily WebSocket auth is used for core adventure flow).
 
 ### AI Integration
-- **Dual-Model LLM Architecture**
-  * `app/services/llm/factory.py`: Factory pattern for optimal model selection
-  * `app/services/llm/providers.py`: Supports GPT-4o/Gemini 2.5 Flash/Flash Lite with centralized configuration
-  * **Cost-Optimized Model Routing:**
-    - Gemini 2.5 Flash (`gemini-2.5-flash`): Complex reasoning (story generation, image scenes)
-    - Gemini 2.5 Flash Lite (`gemini-2.5-flash-lite-preview-06-17`): Simple processing (summaries, formatting, JSON extraction)
+- **Use-Case-Routed LLM Architecture**
+  * `app/services/llm/factory.py`: Explicit provider and model selection for
+    each supported use case
+  * `app/services/llm/providers.py`: OpenAI Responses and Gemini Generate
+    Content implementations with centralized configuration
+  * **Model Routing:**
+    - GPT-5.6 Luna (`gpt-5.6-luna`, low reasoning): story chapters and
+      image-scene text
+    - Gemini 2.5 Flash Lite (`gemini-2.5-flash-lite`, 512-token thinking
+      budget): summaries, formatting, character visuals, and image-prompt
+      synthesis
+  * Story and reflect chapters use OpenAI structured outputs with Pydantic
+    schemas; narrative and choices are validated before client delivery
   * `app/services/image_generation_service.py`: Gemini 3.1 Flash Image (Nano Banana 2) via the Generate Content API, configured for square 1K output, with Flash Lite for prompt synthesis
-  * Centralized model configuration in `ModelConfig` class with thinking budget support
-  * **~50% cost reduction** through strategic Flash Lite usage on 6/8 LLM processes
+  * Centralized model and provider assignments in `ModelConfig` and
+    `LLMServiceFactory`
   * Environment variables:
     ```
     GOOGLE_API_KEY=your_google_key  # Used for both LLM and image generation
-    OPENAI_API_KEY=your_openai_key  # Optional alternative for LLM only
+    OPENAI_API_KEY=your_openai_key  # Required for story and image-scene text
     SUPABASE_JWT_SECRET=your_supabase_jwt_secret # For backend JWT validation
     ```
 
@@ -76,6 +83,8 @@
   * Modular CSS organization (`app/static/css/`)
   * Typography system with educational focus
   * Word-by-word content streaming with Markdown support
+  * Sticky reader header with accessible chapter progress and an
+    overflow-aware story-world/topic ticker
   * Progressive enhancement for images
 
 ## Core Data Structures
@@ -104,6 +113,7 @@ class AdventureState:
     selected_moral_teaching: str
     selected_plot_twist: str
     protagonist_description: str # Base visual description of the protagonist
+    protagonist_name: str # Sampled once and persisted for the adventure
     
     # Summary chapter data
     chapter_summaries: List[str]  # Summaries for SUMMARY chapter
@@ -112,8 +122,8 @@ class AdventureState:
     
     # Performance optimization fields
     summary_lock: asyncio.Lock  # Thread-safe lock for background summary operations
-    pending_summary_tasks: List[asyncio.Task]  # Tracks background tasks for synchronization
-    deferred_summary_tasks: List[Callable]  # Task factories for deferred execution after streaming
+    pending_background_tasks: List[asyncio.Task]  # Running tasks awaited before summary reveal
+    deferred_task_factories: List[Callable]  # Runtime-only factories started after streaming
     
     # Tracking
     metadata: Dict[str, Any]  # Stores agency, challenge history, etc.
@@ -154,23 +164,24 @@ class ChapterType(str, Enum):
   * `build_user_prompt()`: Creates chapter-specific prompts
   * `_get_phase_guidance()`: Adds phase-specific guidance
 
-- **Dual-Model Provider Architecture**
-  * Factory pattern (`LLMServiceFactory`) for automatic model selection based on use case complexity
-  * Supports GPT-4o and Gemini 2.5 Flash/Flash Lite using unified `google-genai` SDK
-  * **Model Assignment Strategy:**
-    - Flash: `story_generation`, `image_scene_generation` (29% of operations)
-    - Flash Lite: `summary_generation`, `paragraph_formatting`, `character_visual_processing`, `image_prompt_synthesis`, `chapter_summaries`, `fallback_summaries` (71% of operations)
-  * Centralized model configuration with `ModelConfig` class
-  * 1024 token thinking budget for enhanced reasoning across all Gemini operations
-  * Standardized response handling across providers
-  * Error recovery mechanisms
-  * Paragraph formatting integration with Flash Lite optimization
-  * Migrated from deprecated `google-generativeai` to `google-genai`
+- **Provider Routing and Output Contracts**
+  * `LLMServiceFactory` maps each known use case to an explicit provider and
+    model; unknown use cases fail instead of silently selecting a fallback
+  * GPT-5.6 Luna handles `story_generation` and `image_scene_generation`
+    through the OpenAI Responses API with low reasoning and `store=False`
+  * Gemini Flash Lite handles summaries, paragraph formatting, character
+    visual extraction, and image-prompt synthesis through `google-genai`
+  * `StoryChapterResponse` requires exactly three distinct choices while
+    `NarrativeChapterResponse` forbids choices for lesson and conclusion output
+  * Generation and schema validation failures retry up to three times;
+    authentication and permission failures abort immediately
+  * Request and response records share an `llm_call_id`; production logging
+    omits prompt and response bodies
 
 ### Image Generation
 - Implements a **two-step image prompt synthesis pattern**:
   1. Generates a concise scene description from chapter content (`IMAGE_SCENE_PROMPT`).
-  2. Uses `ImageGenerationService.synthesize_image_prompt` with an LLM (Gemini Flash) and `IMAGE_SYNTHESIS_PROMPT` to combine the scene description, protagonist base look (`state.protagonist_description`), agency details, story sensory visuals, and evolved character visuals (`state.character_visuals`) into a final, rich prompt.
+  2. Uses `ImageGenerationService.synthesize_image_prompt` with Gemini Flash Lite and `IMAGE_SYNTHESIS_PROMPT` to combine the scene description, protagonist base look (`state.protagonist_description`), agency details, story sensory visuals, and evolved character visuals (`state.character_visuals`) into a final, rich prompt.
 - Asynchronous image generation (`generate_image_async()`) using the synthesized prompt.
 - 5 retries with exponential backoff.
 - Base64 encoding for WebSocket transmission.
@@ -236,6 +247,7 @@ def update_agency_references(self, chapter_data: ChapterData) -> None:
 ### Test Suite
 - `test_summary_button_flow.py`: Tests summary button
 - `test_state_storage_reconstruction.py`: Tests state reconstruction
-- `test_summary_chapter.py`: Tests summary functionality
+- `test_summary_service.py`: Tests summary assembly and API-facing data
+- `summary_chapter_preview.py`: Previews the served summary UI with saved state
 - `test_chapter_sequence_validation.py`: Verifies chapter sequences
 - `test_chapter_type_assignment.py`: Tests type assignment

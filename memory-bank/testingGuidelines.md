@@ -1,293 +1,154 @@
 # Testing Guidelines for Learning Odyssey
 
-## General Testing Principles
+## Core Rules
 
-- **Handling Dynamic Narrative Content:**
-  - **DO NOT assert against specific LLM-generated narrative text (sentences, paragraphs, character names, etc.).** This content is variable and will break tests.
-  - **Focus tests on:**
-    - Correct state transitions (`AdventureState` updates).
-    - Structural correctness of data (e.g., does a chapter have content? Does a summary have a title?).
-    - Presence and type correctness of expected data fields.
-    - Correct function calls and interactions between services.
-    - Validation of chapter types (`ChapterType`) and sequence.
-  - Use mocking to provide structurally correct, but not specific, narrative content when testing components that consume it.
+- Use `.venv/bin/python -m pytest`, not direct execution of `tests/test_*.py`.
+- Assert structure, state transitions, ownership, and message order. Narrative
+  prose, character details, and plots are model-generated and must not be
+  hardcoded in application tests.
+- `AdventureState` is authoritative. Chapter-flow assertions must use
+  `state.story_length`, `planned_chapter_types`, and `ChapterType`.
+- Start with the smallest relevant test, then widen validation in proportion to
+  the change.
 
-## State Testing
+## Python Tests
 
-### Summary Button Testing
-Run `test_summary_button_flow.py` to verify the "Take a Trip Down Memory Lane" button functionality:
+Run the full suite:
+
 ```bash
-# Run with default settings (uses realistic state generation)
-python tests/test_summary_button_flow.py
-
-# Run with synthetic hardcoded state
-python tests/test_summary_button_flow.py --synthetic
-
-# Load state from a file
-python tests/test_summary_button_flow.py --file path/to/state.json
-
-# Use specific story category and lesson topic
-python tests/test_summary_button_flow.py --category "enchanted_forest_tales" --topic "Singapore History"
-
-# Compare synthetic and realistic states
-python tests/test_summary_button_flow.py --compare
+.venv/bin/python -m pytest -q
 ```
 
-This test verifies:
-1. State storage in StateStorageService
-2. State retrieval from StateStorageService
-3. State reconstruction with case sensitivity handling
-4. Summary data formatting
-5. Chapter summaries, educational questions, and statistics
+Useful focused groups:
 
-### Chapter Summary Fix Testing
-Run `test_chapter_summary_fix.py` to verify the chapter summary inconsistencies fix:
-```bash
-python tests/test_chapter_summary_fix.py
-```
+| Area | Command |
+| --- | --- |
+| LLM routing and structured chapter output | `.venv/bin/python -m pytest tests/test_llm_factory.py tests/test_llm_providers.py tests/test_chapter_output.py -q` |
+| State reconstruction and persistence | `.venv/bin/python -m pytest tests/test_state_management_regressions.py tests/test_state_storage_reconstruction.py tests/test_websocket_persistence.py -q` |
+| WebSocket flow and message ordering | `.venv/bin/python -m pytest tests/test_websocket_flow.py tests/test_stream_handler_previous_lessons.py -q` |
+| Memory Lane summary | `.venv/bin/python -m pytest tests/test_summary_button_flow.py tests/test_summary_service.py tests/test_summary_questions.py tests/test_summary_generator_backfill.py -q` |
+| Data loaders and chapter sequencing | `.venv/bin/python -m pytest tests/data tests/simulations/test_chapter_sequence_validation.py tests/simulations/test_chapter_type_assignment.py -q` |
+| LLM logging privacy | `.venv/bin/python -m pytest tests/test_logging_config.py -q` |
 
-This test verifies:
-1. Missing chapter summaries are generated during state storage
-2. The CONCLUSION chapter summary is properly generated with a placeholder choice
-3. All chapter summaries are stored in the state
-4. Chapter titles are properly generated and stored
+### Chapter sequence contract
 
-### Case Sensitivity Testing
-Run `test_state_storage_reconstruction.py` to verify case sensitivity handling:
-```bash
-python tests/test_state_storage_reconstruction.py
-```
+Every adventure has 10 planned chapters:
 
-This test verifies:
-1. Uppercase chapter types are correctly converted to lowercase
-2. Planned chapter types are correctly converted to lowercase
-3. Chapter 10 is correctly treated as a CONCLUSION chapter
-4. Summary data is correctly formatted with lowercase chapter types
+- Chapter 1 is STORY.
+- Chapter 9 is STORY.
+- Chapter 10 is CONCLUSION.
+- Exactly three chapters are LESSON.
+- Exactly one REFLECT follows a LESSON and is followed by STORY.
+- LESSON chapters are never consecutive.
+- At least three lesson questions must be available.
 
-## Story Simulation Testing
+The SUMMARY chapter is created only after the conclusion and is not part of
+`planned_chapter_types`.
 
-### Full Adventure Simulation
-Run `generate_all_chapters.py` to simulate a complete adventure:
-```bash
-# Run with default settings
-python tests/simulations/generate_all_chapters.py
+### Structured chapter contract
 
-# Specify category and topic
-python tests/simulations/generate_all_chapters.py --category "enchanted_forest_tales" --topic "Singapore History"
+- STORY and REFLECT output contains narrative plus exactly three distinct,
+  complete choices.
+- LESSON choices come from the sampled lesson question.
+- CONCLUSION output contains narrative and no choices.
+- Reject choice labels, numbering, bracketed placeholders, legacy `<CHOICES>`
+  markup, duplicate choices, and choices embedded in narrative prose.
+- `chapter_update` must precede chapter content on the WebSocket.
 
-# Save to specific output file
-python tests/simulations/generate_all_chapters.py --output "tests/data/test_adventure.json"
-```
+## Browser Regression
 
-This simulation:
-1. Generates a complete 10-chapter adventure (9 interactive + 1 conclusion)
-2. Creates chapter summaries for each chapter
-3. Captures all WebSocket messages and responses
-4. Records the complete AdventureState
-5. Saves the simulation state to a JSON file
+Install Node dependencies once with `npm install`, then use:
 
-### Chapter Summary Generation
-Run `generate_chapter_summaries.py` to generate summaries from a simulation state:
-```bash
-# Generate chapter summaries
-python tests/simulations/generate_chapter_summaries.py --state-file "tests/data/test_adventure.json"
+| Scope | Command |
+| --- | --- |
+| All local Playwright tests | `npm run test:browser` |
+| Deterministic Chromium CI suite | `npm run test:browser:ci` |
+| Carousel visual regression | `npm run test:visual:carousel` |
+| Refresh carousel snapshots | `npm run test:visual:carousel:update` |
 
-# Generate React-compatible JSON
-python tests/simulations/generate_chapter_summaries.py --react-json --state-file "tests/data/test_adventure.json"
+The deterministic suite covers the selection flow, ten mocked chapters,
+Memory Lane handoff, transition clearing, sticky reader progress, context
+ticker behavior, and focused carousel regressions. Pull requests run Chromium;
+scheduled and manual workflows add WebKit/mobile and macOS visual snapshots.
 
-# Add delay between API calls
-python tests/simulations/generate_chapter_summaries.py --delay 2
-```
+## Live Release Journey
 
-This script:
-1. Extracts chapter content from a simulation state
-2. Generates summaries using the LLM
-3. Extracts educational questions and statistics
-4. Formats data for React or for testing
+Use `.agents/skills/playwright-test/SKILL.md` for release validation:
 
-## Chapter Management Testing
+1. Run the deterministic preflight.
+2. Complete a real model-driven 10-chapter journey in Codex Browser.
+3. Open Memory Lane and capture its `state_id`.
+4. Run the read-only persistence and telemetry audit:
 
-### Chapter Sequence Validation
-Run `test_chapter_sequence_validation.py` to verify chapter sequencing:
-```bash
-python tests/simulations/test_chapter_sequence_validation.py
-```
-
-This test verifies:
-1. First chapter is STORY type
-2. Second-to-last chapter is STORY type
-3. Last chapter is CONCLUSION type
-4. 50% of remaining chapters are LESSON type
-5. No consecutive LESSON chapters
-6. REFLECT chapters follow LESSON chapters
-7. STORY chapters follow REFLECT chapters
-
-### Chapter Type Assignment
-Run `test_chapter_type_assignment.py` to verify chapter type assignment:
-```bash
-python tests/simulations/test_chapter_type_assignment.py
-```
-
-This test verifies:
-1. Chapter types are assigned according to the rules
-2. The correct ratio of LESSON/REFLECT/STORY chapters is maintained
-3. Chapter sequence constraints are enforced
-
-## Data Testing
-
-### Story Loader Testing
-Run `test_story_loader.py` to verify story loading:
-```bash
-python tests/data/test_story_loader.py
-```
-
-This test verifies:
-1. Story files are loaded correctly
-2. Required elements are present
-3. File encoding is handled properly
-
-### Lesson Loader Testing
-Run `test_lesson_loader.py` to verify lesson loading:
-```bash
-python tests/data/test_lesson_loader.py
-```
-
-This test verifies:
-1. Lesson files are loaded correctly
-2. Question format is valid
-3. Sufficient questions are available
-
-## Frontend Testing Guidelines
-
-### Carousel Component Testing
-Test `carousel-manager.js` functionality manually:
-* Test with keyboard navigation (arrow keys and Enter)
-* Test with touch gestures (swipe left/right)
-* Test with button clicks (navigation arrows)
-* Test selection functionality
-* Verify persistent selection
-
-### Font Size Manager Testing
-Test `font-size-manager.js` functionality manually:
-* Test size adjustment controls
-* Verify persistence across page reloads
-* Test show/hide behavior on scroll
-* Verify accessibility on different devices
-
-## Critical Debugging Guidelines
-
-### WebSocket Connection Debugging
-When debugging WebSocket issues:
-1. Check connection establishment in browser console
-2. Verify correct URL format (`/ws/story/{story_category}/{lesson_topic}`)
-3. Check message handling in `websocket_router.py`
-4. Check disconnection handling and reconnection logic
-5. Use WebSocket.onclose and WebSocket.onerror handlers for diagnostics
-
-### Subprocess Execution
-1. Always use `sys.executable` instead of "python" when creating subprocess commands:
-   ```python
-   # Correct way to create a subprocess
-   cmd = [sys.executable, "path/to/script.py"]
-   
-   # Incorrect way (may use wrong Python interpreter)
-   cmd = ["python", "path/to/script.py"]
+   ```bash
+   .venv/bin/python tools/audit_e2e_supabase.py --state-id <uuid>
    ```
-2. This ensures the subprocess uses the same Python interpreter as the main script, with access to all installed packages in the virtual environment.
 
-### State Validation
-1. Check question history in `AdventureState`
-2. Verify answer selections in `AdventureState`
-3. Validate chapter types in `AdventureState`
-4. Confirm state transitions in `adventure_state_manager.py`
-5. Verify agency tracking in `state.metadata["agency"]`
+Do not call a release journey complete from Playwright alone; the live path must
+also prove model generation, final persistence, summary retrieval, and expected
+telemetry.
 
-### Image Generation Debugging
-1. Verify API Configuration:
-   - Check `GOOGLE_API_KEY` environment variable
-   - Confirm API initialization in `image_generation_service.py`
-2. Check Request Flow:
-   - Trace prompt construction
-   - Verify API call parameters
-   - Check response handling
-3. Analyze Error Handling:
-   - Verify retry mechanism (5 retries with exponential backoff)
-   - Check null response handling
-   - Confirm fallback behavior
-4. Agency Choice Visual Details:
-   - Verify agency name extraction from choice texts
-   - Check visual details extraction
-   - Confirm category-specific prefixes
+## Simulations and Summary Preview
 
-## Key Error Handling Strategies
+| Task | Command |
+| --- | --- |
+| Automated simulation with server management | `.venv/bin/python tests/simulations/run_test_analysis.py --runs 3` |
+| Analyze the newest simulation log | `.venv/bin/python tests/simulations/run_test_analysis.py --analyze-only` |
+| Raw WebSocket simulations against a running server | `.venv/bin/python tests/simulations/adventure_test_runner.py --runs 5 --host localhost --port 8000` |
+| Generate a reusable full-adventure state | `.venv/bin/python tests/simulations/generate_all_chapters.py --category enchanted_forest_tales --topic "Singapore History"` |
+| Generate summaries from the latest saved state | `.venv/bin/python tests/simulations/generate_chapter_summaries.py --compact` |
+| Preview Memory Lane from saved state | `.venv/bin/python tests/summary_chapter_preview.py --state-file <simulation-state.json> --port 8001` |
 
-### Question Errors
-- Handle sampling failures in `chapter_manager.py`
-- Manage shuffle errors in `chapter_manager.py`
-- Track invalid answers in `websocket_service.py`
-- Handle missing questions in `chapter_manager.py`
+Detailed simulation options live in `tests/simulations/README.md`.
 
-### State Errors
-- Handle synchronization failures in `adventure_state_manager.py`
-- Implement recovery mechanisms in `adventure_state_manager.py`
-- Maintain error boundaries in `adventure_state_manager.py`
-- Log state transitions in `adventure_state_manager.py`
+## Security and Persistence Checks
 
-### WebSocket Errors
-- Handle connection drops in `websocket_router.py`
-- Manage reconnection attempts in client-side code
-- Process choice errors in `websocket_service.py`
-- Handle streaming issues in `websocket_service.py`
+- Authenticated adventure lookup and resume must use `user_id`; never fall back
+  to `client_uuid` for an authenticated user.
+- Guest access may use `client_uuid` only when no authenticated `user_id` is
+  present.
+- Persistence tests must cover bounded retries, one stable ID for creation
+  retries, ownership-aware updates, and the terminal `save_failed` event.
+- Runtime tasks, task factories, callables, and locks must remain excluded from
+  serialized state; durable fields such as `protagonist_name`, agency metadata,
+  chapter types, and character visuals must round-trip.
+- Run deployment guardrails when deployment, secrets, Docker inputs, or CI
+  configuration changes:
 
-### Image Generation Errors
-- Handle API failures in `image_generation_service.py`
-- Implement retry mechanism with exponential backoff
-- Add robust null checking for responses
-- Provide graceful degradation when images fail
+  ```bash
+  bash tools/check_deployment_security.sh
+  ```
 
-## Authentication and Authorization Testing
+## Debugging Checklist
 
-With the introduction of Supabase Auth, specific testing for authentication and authorization flows is crucial.
+### WebSocket flow
 
-### Key Areas to Test:
-1.  **Google Login Flow:**
-    *   Verify successful login via Google.
-    *   Confirm JWT is received by the frontend.
-    *   Confirm JWT is correctly passed to the WebSocket backend.
-    *   Verify backend successfully decodes JWT and extracts `user_id`.
-    *   Ensure `user_id` is correctly associated with new `adventures` records.
-    *   Ensure `user_id` is correctly associated with `telemetry_events` records.
-2.  **Anonymous Sign-In Flow ("Continue as Guest"):**
-    *   Verify successful anonymous sign-in.
-    *   Confirm a Supabase-managed JWT is received and used.
-    *   Verify backend processes this JWT and extracts the anonymous `user_id`.
-    *   Ensure this anonymous `user_id` is linked to `adventures` and `telemetry_events`.
-3.  **Adventure Resumption (Authenticated Users):**
-    *   Test resuming an incomplete adventure for a Google-authenticated user.
-    *   Test resuming an incomplete adventure for an anonymous (guest) user.
-    *   Verify `StateStorageService.get_active_adventure_id` correctly prioritizes and uses `user_id`.
-4.  **Logout Functionality:**
-    *   Verify user is redirected to the login page (`/`) after logout.
-    *   Confirm session is cleared (e.g., Supabase JS client clears its storage).
-    *   Verify subsequent attempts to access protected routes (e.g., `/select`) fail or redirect to login.
-5.  **Unauthenticated Access:**
-    *   Verify that attempting to access protected routes like `/select` directly without an active session redirects to the login page.
-6.  **RLS Policy Verification (Client-Side Simulation):**
-    *   **Manual/Simulated Tests:** Since direct client-side RLS testing can be complex, simulate scenarios:
-        *   Using a valid user's JWT (e.g., obtained from browser developer tools during a test session), try to use the Supabase JS client library directly (or via `curl` with appropriate headers if testing API endpoints protected by RLS) to:
-            *   Select adventures belonging to another user (should fail or return empty).
-            *   Update an adventure belonging to another user (should fail).
-            *   Insert an adventure with a `user_id` different from `auth.uid()` (should fail, unless it's a guest adventure where `user_id` is `NULL`).
-            *   Attempt similar restricted operations on `telemetry_events`.
-    *   **Focus:** Ensure users can only access/modify data permitted by the defined RLS policies (e.g., "Users can select their own or guest adventures", "Users can update their own adventures").
-7.  **Foreign Key `ON DELETE SET NULL` Behavior:**
-    *   (If feasible and safe in a test environment) Test deleting a user from `auth.users` in the Supabase dashboard.
-    *   Verify that corresponding `user_id` fields in `adventures` and `telemetry_events` tables are set to `NULL` for that user's records.
-8.  **JWT Expiration and Refresh:**
-    *   Observe behavior when a JWT expires. The Supabase JS client should handle token refresh. Ensure the application continues to function seamlessly.
-    *   Test scenarios where token refresh might fail and ensure graceful error handling or redirection.
+1. Verify `/ws/story/{story_category}/{lesson_topic}` and its query parameters.
+2. Confirm `chapter_update` arrives before chapter text.
+3. Confirm story/reflect choices appear only after all three pass validation.
+4. Inspect reconnection and ownership logs before changing state recovery.
+5. Distinguish harmless post-close disconnect noise from a user-visible error.
 
-### Debugging Authentication:
-*   **Frontend:** Use browser developer tools to inspect `localStorage` for Supabase session data and network requests for JWTs.
-*   **Backend:** Check `websocket_router.py` logs for JWT decoding status, `user_id` extraction, and any errors.
-*   **Supabase Dashboard:** Review Auth logs and user table in the Supabase dashboard.
+### LLM calls
+
+1. Confirm the use case maps to the expected provider in
+   `LLMServiceFactory.USE_CASE_CONFIG_MAP`.
+2. Correlate request, response, cancellation, or failure records with
+   `llm_call_id`.
+3. In production, verify prompt and response bodies are absent while bounded
+   metadata remains.
+4. Treat authentication and permission failures as non-retryable for story
+   generation.
+
+### Image generation
+
+1. Verify `GOOGLE_API_KEY` and the Gemini 3.1 Flash Image request settings.
+2. Trace image-scene text, Flash Lite prompt synthesis, and final image request
+   as separate calls.
+3. Confirm the five-retry exponential-backoff path and no-image handling.
+4. Check protagonist, agency, sensory, and evolved character visual inputs.
+
+### Subprocesses
+
+Use `sys.executable` in Python subprocess commands so child processes use the
+same virtual environment as the test runner.

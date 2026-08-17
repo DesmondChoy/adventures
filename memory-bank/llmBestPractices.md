@@ -3,14 +3,16 @@
 ## LLM Service Provider Differences
 
 ### 1. Streaming Response Handling
-- OpenAI and Gemini APIs handle streaming responses differently
-- For OpenAI: Async streaming works reliably with `async for chunk in response`
-- For Gemini: Direct API calls are more reliable than streaming for short responses
+- OpenAI and Gemini APIs serve different roles in the current routing contract
+- Story chapters use OpenAI Responses structured output and must be fully
+  generated and validated before their narrative is streamed to the browser
+- Gemini Flash Lite may stream support text, while direct calls remain useful
+  when complete JSON or short responses are required
 - When implementing features that use LLM responses:
-  * Check which service is being used: `isinstance(llm, LLMService) or "Gemini" in llm.__class__.__name__`
-  * Implement service-specific handling for critical features
+  * Select the service through `LLMServiceFactory.create_for_use_case()`
+  * Keep provider-specific behavior inside the provider implementation
   * For short, single-response use cases (like summaries), prefer direct API calls with Gemini
-  * For long, streaming responses, implement robust chunk collection
+  * Never send unvalidated story choices while a model response is still forming
 
 ### 2. Error Handling Differences
 - OpenAI errors typically include detailed error messages and status codes
@@ -20,11 +22,14 @@
 - Log both the error type and message for debugging
 
 ### 3. Response Format Differences
-- OpenAI responses typically follow requested formats more consistently
-- Gemini may require more explicit formatting instructions
-- When parsing responses, implement flexible parsing that can handle variations
-- Add validation to ensure critical information is extracted correctly
-- Consider using regex patterns that can handle different response structures
+- Use OpenAI structured outputs plus `StoryChapterResponse` or
+  `NarrativeChapterResponse` for chapter generation
+- Keep narrative prose in `content`; keep story/reflect choices in the typed
+  `choices` field and require exactly three distinct values
+- Reject labels, numbering, bracketed placeholders, and legacy `<CHOICES>`
+  markup instead of repairing malformed chapter output
+- Use explicit validation for critical information and retry from scratch when
+  the schema fails
 - For critical format requirements, use the Format Example Pattern:
   * Provide both incorrect and correct examples in prompts
   * Show the incorrect example first to highlight what to avoid
@@ -150,7 +155,7 @@ The following pieces of information are gathered as inputs for the synthesis pro
     *   Sourced from `state.character_visuals`.
 
 ### Step 2: LLM-Powered Prompt Synthesis
-*   **Synthesizer LLM:** An LLM (specifically Gemini Flash) is invoked using the `IMAGE_SYNTHESIS_PROMPT`.
+*   **Synthesizer LLM:** Gemini Flash Lite is invoked using the `IMAGE_SYNTHESIS_PROMPT`.
 *   **Task:** This meta-prompt instructs the LLM to act as an "Expert Prompt Engineer." Its task is to logically combine all the inputs from Step 1 into a single, coherent, and vivid visual scene description (target 30-50 words) suitable for Gemini 3.1 Flash Image (Nano Banana 2).
 *   **Key Instructions for Synthesizer:**
     *   Prioritize the "Concise Scene Description" as the primary focus of the image.

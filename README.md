@@ -21,8 +21,9 @@ summary experience.
   character and agency visuals.
 - Resume and abandon flows for authenticated and guest adventures backed by
   Supabase persistence.
-- A gameplay context ribbon that keeps the active story world and lesson
-  topic visible.
+- A sticky reader header with chapter progress and an overflow-aware context
+  ticker that keeps the active story world and lesson topic visible, including
+  mobile and reduced-motion fallbacks.
 - A loading overlay with 45 rotating phrases served by
   `/api/loading-phrases`.
 - A once-per-user feedback prompt after chapter 5, with optional follow-up
@@ -40,8 +41,9 @@ summary experience.
   server-authoritative state handling. `AdventureState` is the single source
   of truth.
 - AI services: `app/services/llm/` routes story and image-scene text generation
-  to GPT-5.6 Luna with low reasoning through the Responses API. Summaries,
-  prompt synthesis, and formatting remain on Gemini Flash Lite.
+  to GPT-5.6 Luna with low reasoning through the Responses API. Story and
+  reflect chapters use structured outputs with exactly three validated choices;
+  summaries, prompt synthesis, and formatting remain on Gemini Flash Lite.
 - Frontend: Jinja templates and modular ES modules drive login, selection,
   live chapter streaming, resume modals, context ribbon, and feedback UX.
   The summary page is served as a separate built bundle from
@@ -200,7 +202,7 @@ in Supabase.
 | Generate chapter summaries from the latest saved simulation state | `python tests/simulations/generate_chapter_summaries.py --compact` |
 | Generate React-compatible summary JSON | `python tests/simulations/generate_chapter_summaries.py --react-json --react-output tests/summary_data.json` |
 | Preview the summary page with saved simulation data | `python tests/summary_chapter_preview.py --state-file logs/simulations/simulation_state_<timestamp>_<run_id>.json --port 8001` |
-| Validate the summary button flow | `python tests/test_summary_button_flow.py --compare` |
+| Validate the summary button flow | `python -m pytest tests/test_summary_button_flow.py -q` |
 
 ### Utilities
 
@@ -222,6 +224,7 @@ rebuild it.
 | --- | --- |
 | `GET /` | Landing page with Google login and guest entry. |
 | `GET /select` | Story-world and lesson-topic selection flow. |
+| `GET /story/{chapter}` | Legacy chapter URL that renders the current single-page adventure flow for chapters 1-10. |
 | `GET /adventure/summary` | Standalone summary front-end. |
 | `GET /api/loading-phrases` | Returns the rotating loader phrase list. |
 

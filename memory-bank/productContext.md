@@ -36,17 +36,21 @@ By leveraging LLMs for dynamic content generation and WebSockets for real-time i
 ## 3. User Experience Flow
 
 ### Initialization
-* User accesses the web application (at `/` or `/adventure`)
-* Presented with choices for a **Story Category** and a **Lesson Topic** via interactive carousels
+* User enters at `/`, then signs in with Google or continues as a guest
+* `/select` presents **Story Category** and **Lesson Topic** carousels
 * Upon confirmation, an `AdventureState` is initialized with:
   - Chosen category/topic
   - Predefined `story_length` (10 chapters)
-  - Sequence of `planned_chapter_types` (STORY, LESSON, REFLECT, CONCLUSION, SUMMARY)
+  - Sequence of 10 `planned_chapter_types` values (STORY, LESSON, REFLECT,
+    and CONCLUSION); SUMMARY is created only after the adventure
+  - One sampled protagonist name and base visual description, persisted for
+    retries and resume
   - Randomly selected core narrative elements based on the chosen story category
 
 ### Adventure Progression (WebSocket Interaction)
 * WebSocket connection established (`/ws/story/{story_category}/{lesson_topic}`)
-* Backend sends content for current chapter, streaming it word-by-word
+* Backend generates and validates a complete structured chapter, sends the
+  chapter update, then delivers the approved narrative word-by-word
 * **Image Generation:** Relevant images are generated asynchronously using Gemini 3.1 Flash Image (Nano Banana 2) with square 1K output
 * **Chapter Types:**
   - **STORY:** Narrative with 3 choices. First chapter includes crucial "Agency" choice
@@ -98,6 +102,7 @@ By leveraging LLMs for dynamic content generation and WebSockets for real-time i
    * Simple, clear interface
    * Carousel UI for selections
    * Clear choice presentation
+   * Sticky chapter progress and story-world/topic context while reading
    * Smooth transitions between screens
 
 5. **Rewarding & Reflective:**
@@ -114,5 +119,6 @@ By leveraging LLMs for dynamic content generation and WebSockets for real-time i
 7. **Reliable:**
    * WebSocket reconnection logic
    * Race condition handling
+   * Retryable, idempotent state saves with visible terminal failures
    * LLM/image generation fallbacks
    * Graceful degradation

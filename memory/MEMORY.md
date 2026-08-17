@@ -3,10 +3,14 @@
 ## AI/LLM Pipeline - Comprehensive Analysis
 
 ### LLM Factory & Model Architecture
-- **Dual-model routing system**: Flash (complex tasks) vs Flash Lite (simple processing)
-- **Complex reasoning (Flash)**: `story_generation`, `image_scene_generation` (~29% of ops)
-- **Simple processing (Flash Lite)**: `summary_generation`, `paragraph_formatting`, `character_visual_processing`, `image_prompt_synthesis` (~71% of ops)
-- **Models**: Gemini 2.5 Flash & Flash Lite (cost optimization ~50% reduction)
+- **Use-case routing**: OpenAI for narrative work, Gemini for support work
+- **GPT-5.6 Luna with low reasoning**: `story_generation`, `image_scene_generation`
+- **Gemini 2.5 Flash Lite with a 512-token thinking budget**:
+  `summary_generation`, `paragraph_formatting`,
+  `character_visual_processing`, `image_prompt_synthesis`,
+  `chapter_summaries`, `fallback_summaries`
+- **Chapter contract**: OpenAI Responses structured outputs, validated before
+  narrative or choices reach the client
 
 ### Prompt Templates & Engineering
 **Sophistication Level: ADVANCED - Multi-stage with Context Awareness**
@@ -22,7 +26,7 @@
    - Protagonist visual baseline establishment
    - Agency decision mechanics: 3 distinct sensory-enhanced options
    - Includes visual/sound/smell sensory details
-   - Choice format: strict `<CHOICES>` tags with peek into unlocked actions
+   - Choice format: three typed `choices` values with a peek into unlocked actions
 
 3. **Story Chapter Prompt** (`STORY_CHAPTER_PROMPT`):
    - Previous impact guidance (consequences from last lesson)
@@ -83,7 +87,8 @@
 ### Content Generation Validation
 - **Story chapter validation**: Exactly 3 choices required
 - **Retry logic**: Up to 3 attempts if validation fails
-- **Choice extraction**: Regex parsing for `<CHOICES>` tags with single-line format
+- **Choice validation**: Pydantic structured-output schemas keep choices out of
+  narrative content and reject labels, placeholders, markup, and duplicates
 - **Lesson choices**: Derived from question answers (auto-generated)
 - **Reflection choices**: 3 story-driven alternatives for processing learning
 
@@ -122,7 +127,10 @@
 
 ### LLM Service Implementations
 - **GeminiService**: Uses google-genai client, supports streaming & non-streaming
-- **OpenAIService**: Uses AsyncOpenAI client, streaming with buffer-based paragraph detection
+- **OpenAIService**: Uses AsyncOpenAI Responses calls, including typed parsing
+  for chapters; approved narrative is streamed separately by the WebSocket layer
 - **Paragraph Formatting**: Auto-detects if content needs reformatting, regenerates with proper structure
-- **Thinking Budget**: 512 tokens for complex reasoning tasks (story/image generation)
-- **Logging**: Comprehensive prompt/response logging with session context
+- **Reasoning**: GPT-5.6 Luna uses low reasoning; Gemini Flash Lite uses a
+  512-token thinking budget for support tasks
+- **Logging**: Request/response pairs share `llm_call_id`; production logs omit
+  prompt and response bodies, and OpenAI requests use `store=False`

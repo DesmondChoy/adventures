@@ -1,5 +1,48 @@
 # Progress Log
 
+This is a chronological history. For current behavior and validation commands,
+use `memory-bank/activeContext.md`, `README.md`, and
+`memory-bank/testingGuidelines.md`. Older sections titled "Current Status" or
+"Next Steps" are dated snapshots, not present-tense authority.
+
+## 2026-08-17: Documentation Drift Audit
+
+- Reconciled the August 11-16 commit range with maintained documentation.
+- Updated model routing, structured chapter output, state persistence,
+  protagonist continuity, logging privacy, browser E2E, test commands, and the
+  sticky reader UI.
+- Preserved dated implementation entries below as history while separating
+  them from current guidance.
+
+## 2026-08-16: Browser CI and Sticky Reader Header
+
+- Added a sticky reader header with accessible chapter progress and a
+  responsive story-world/topic ticker, including mobile and reduced-motion
+  behavior.
+- Stabilized headless carousel selection through visible navigation controls.
+- Ensured every browser CI job creates the `.venv` expected by Playwright's
+  FastAPI web server.
+
+## 2026-08-15: LLM, State, Logging, and Release Validation
+
+- Routed story and image-scene text to GPT-5.6 Luna with low reasoning through
+  OpenAI Responses; chapter narrative and choices now use typed output schemas.
+- Persisted one sampled `protagonist_name` through retries, storage, and resume.
+- Added correlated `llm_call_id` request/response logging, `store=False`, and
+  production omission of prompt and response bodies.
+- Added deterministic ten-chapter Playwright coverage plus the real Codex
+  Browser journey, Memory Lane handoff, and read-only Supabase audit contract.
+
+## 2026-08-11 to 2026-08-13: Flow Hardening and Image Migration
+
+- Hardened ownership, state reconstruction, conclusion resume, choice handling,
+  agency continuity, and image/state recovery paths.
+- Added retryable, idempotent WebSocket persistence with visible terminal save
+  failure handling.
+- Restored hermetic pytest coverage and CI-safe lazy service initialization.
+- Migrated image generation to Gemini 3.1 Flash Image (Nano Banana 2), square
+  1K output.
+
 ## Recently Completed (Last 14 Days)
 
 ### 2026-01-30: Chapter Image Flash on Loading Screen - FIXED
@@ -1423,7 +1466,7 @@
 - Improved error handling and logging for better debugging
 - Created test script to verify generate_test_state.py functionality
 
-## Current Status
+## Historical Status Snapshot
 
 ### Core Features
 - Complete adventure flow with dynamic chapter sequencing
@@ -1451,7 +1494,7 @@
 - **WebSocket Disconnection Error:** Navigating from adventure to summary page can cause `ConnectionClosedOK` errors in logs as the server attempts to send to a closed WebSocket. (Noted in `wip/implemented/summary_chapter_race_condition.md`)
 - **Resuming Chapter Image Display (Chapters 1-9):** Original images for resumed chapters (1-9) are not currently re-displayed. (Noted in `wip/supabase_integration.md`)
 
-## Next Steps
+## Historical Next Steps
 
 1.  **Complete Streaming Delay Bug Fix (High Priority)**
     *   **Implement Phase 3:** Content generation streaming fix to eliminate 1-3 second blocking delay

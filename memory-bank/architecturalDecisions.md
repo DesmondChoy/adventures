@@ -110,10 +110,11 @@ Learning Odyssey requires sequential chapter generation due to:
   * Single source of truth for all state
   * Complete state serialization
   * Pre-determined chapter sequence via `planned_chapter_types`
+  * Samples and persists one `protagonist_name` for retry and resume continuity
   * Metadata tracking for agency, elements, and challenge types
   * Critical properties preserved during updates
 
-- **Client-Side State** (`app/templates/index.html`)
+- **Client-Side State** (`app/static/js/adventureStateManager.js`)
   * `AdventureStateManager` uses localStorage
   * Exponential backoff (1s to 30s) with max 5 reconnection attempts
   * Automatic state restoration on reconnect
@@ -124,8 +125,7 @@ Learning Odyssey requires sequential chapter generation due to:
   * Second-to-last chapter: STORY
   * Last chapter: CONCLUSION (no choices)
   * After CONCLUSION: SUMMARY (statistics and chapter recaps)
-  * 50% of remaining chapters: LESSON (subject to question availability)
-  * 50% of LESSON chapters: REFLECT (follow LESSON chapters)
+  * Exactly three LESSON chapters and one REFLECT chapter
   * No consecutive LESSON chapters
   * STORY chapters follow REFLECT chapters
 
@@ -161,8 +161,8 @@ Learning Odyssey requires sequential chapter generation due to:
 - **Content Generator** (`content_generator.py`)
   * Creates content for different chapter types
   * Coordinates with Chapter Manager
-  * Handles content validation and cleaning
-  * Manages content structure
+  * Requests typed OpenAI Responses output and validates narrative/choice fields
+  * Retries generation or schema failures up to three times before delivery
 
 - **Stream Handler** (`stream_handler.py`)
   * Streams chapter content to clients
@@ -190,10 +190,11 @@ Learning Odyssey requires sequential chapter generation due to:
   * `_get_phase_guidance()`: Adds phase-specific guidance
 
 - **Provider Abstraction** (`app/services/llm/providers.py`)
-  * Supports GPT-4o and Gemini
-  * Standardized response handling
-  * Error recovery mechanisms
-  * Paragraph formatting integration
+  * Routes story and image-scene text to GPT-5.6 Luna through OpenAI Responses
+  * Routes summaries, formatting, visual extraction, and prompt synthesis to
+    Gemini Flash Lite
+  * Uses structured schemas for chapter output and correlation IDs for logs
+  * Disables OpenAI response storage and omits LLM bodies from production logs
 
 - **Paragraph Formatting** (`app/services/llm/paragraph_formatter.py`)
   * Regeneration-first approach for improperly formatted text
@@ -206,7 +207,8 @@ Learning Odyssey requires sequential chapter generation due to:
   * 5 retries with exponential backoff
   * Base64 encoding for WebSocket transmission
   * Progressive enhancement (text first, images as available)
-  * Enhanced prompt construction with `enhance_prompt()`
+  * Flash Lite prompt synthesis with `synthesize_image_prompt()` before Gemini
+    3.1 Flash Image generation
 
 - **Agency Visual Details Enhancement**
   * Stores complete agency information during Chapter 1 choice selection
@@ -271,6 +273,8 @@ Learning Odyssey requires sequential chapter generation due to:
     - `stats_display.html`: Adventure statistics display
     - `story_container.html`: Main story content container
   * `macros/form_macros.html`: Reusable template functions
+  * `components/story_container.html`: Sticky reader header, accessible chapter
+    progress, and responsive context ticker
 
 ### 8. User Authentication and Session Management
 - **Strategy:** Optional user authentication is implemented using Supabase Auth, supporting Google Sign-In and anonymous guest sessions.

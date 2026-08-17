@@ -2,45 +2,28 @@
 
 ## Key Design Patterns
 
-### 1. Live Streaming Performance Pattern (Critical Performance)
-- **Chunk-by-Chunk Streaming with Parameter Verification:**
-  * **Live Generation:** Uses `stream_chapter_with_live_generation()` for immediate LLM chunk streaming without intermediate collection
-  * **Parameter Signature Matching:** Critical that function calls match exact parameter signatures - mismatches cause silent fallbacks to slow methods
-  * **Fallback Protection:** Live streaming failures gracefully fall back to traditional word-by-word method with error logging
-  * **Performance Impact:** 50-70% faster chapter generation vs blocking collection + word-by-word streaming
-- **Implementation Example (`app/services/websocket/choice_processor.py`):**
-  ```python
-  # CORRECT - Parameters match function signature exactly
-  content_to_stream, sampled_question, chapter_content = await stream_chapter_with_live_generation(
-      story_category, lesson_topic, state, websocket, state_manager
-  )
-  
-  # INCORRECT - Extra parameter causes exception and fallback to slow method
-  content_to_stream, sampled_question, chapter_content = await stream_chapter_with_live_generation(
-      story_category, lesson_topic, state, websocket, state_manager, connection_data  # BREAKS STREAMING
-  )
-  ```
-- **Function Signature Verification Pattern:**
-  ```python
-  # Always verify function signatures before calling
-  async def stream_chapter_with_live_generation(
-      story_category: str,
-      lesson_topic: str, 
-      state: AdventureState,
-      websocket: WebSocket,
-      state_manager: AdventureStateManager
-  ) -> Tuple[str, Optional[dict], ChapterContent]:
-      # NO connection_data parameter - would cause TypeError if passed
-  ```
-- **Consistent Implementation Across Chapter Types:**
-  - Chapter 1: `process_start_choice()` uses live streaming (fixed parameter mismatch)
-  - Chapters 2-10: `process_non_start_choice()` uses live streaming  
-  - All chapters now have consistent chunk-by-chunk streaming performance
+### 1. Validated Chapter Delivery Pattern
+- **Generate before delivery:** `stream_chapter_with_live_generation()` retains
+  its legacy name, but it now obtains a complete OpenAI Responses structured
+  result before streaming any narrative text.
+- **Typed contract:** `StoryChapterResponse` requires narrative plus exactly
+  three distinct choices; `NarrativeChapterResponse` allows narrative only.
+- **Validation boundary:** Pydantic rejects empty narrative, choice markup,
+  labels, placeholders, duplicate choices, and choices leaking into prose.
+- **Retry policy:** Generation or validation failures receive up to three
+  attempts. OpenAI authentication and permission failures abort immediately.
+- **Client sequence:** Send `chapter_update`, generate and validate the chapter,
+  stream the approved narrative word-by-word, execute deferred task factories,
+  replace the displayed content with the canonical text, then send choices.
+- **Safety invariant:** Story and reflect choices never reach the browser until
+  the complete three-choice set has passed validation.
 
 ### 2. Async Background Task Pattern (Performance Optimization)
 - **Background Task Management with Race Condition Prevention:**
   * **Thread-Safe State Mutation:** Uses `async with state.summary_lock` to prevent race conditions during concurrent background operations
-  * **Task Tracking:** `pending_summary_tasks` field tracks all background tasks for proper cleanup and synchronization
+  * **Task Tracking:** `pending_background_tasks` tracks running tasks for cleanup and synchronization
+  * **Deferred Work:** `deferred_task_factories` holds runtime-only factories
+    that start summaries and character-visual extraction after chapter streaming
   * **Synchronization Points:** Critical operations (like summary screen display) await all pending tasks before proceeding
   * **Error Isolation:** Background task failures don't crash main application flow
 - **Implementation Example (`app/services/websocket/choice_processor.py`):**
@@ -61,7 +44,7 @@
   
   # Usage in main flow
   task = asyncio.create_task(generate_chapter_summary_background(previous_chapter, state))
-  state.pending_summary_tasks.append(task)
+  state.pending_background_tasks.append(task)
   task.add_done_callback(lambda t: logger.error(f"Summary task crashed: {t.exception()}") if t.exception() else None)
   ```
 - **Thread-Safe State Storage:**
@@ -82,9 +65,9 @@
   ```python
   async def handle_reveal_summary(...):
       # Wait for any pending summary tasks to complete
-      if state.pending_summary_tasks:
-          await asyncio.gather(*state.pending_summary_tasks, return_exceptions=True)
-          state.pending_summary_tasks.clear()
+      if state.pending_background_tasks:
+          await asyncio.gather(*state.pending_background_tasks, return_exceptions=True)
+          state.pending_background_tasks.clear()
       # ... proceed with summary display ...
   ```
 - **Benefits:**
@@ -100,10 +83,15 @@
   * Provides methods (`store_state`, `get_state`, `get_active_adventure_id`) for CRUD operations on the `adventures` table.
   * Handles JSON serialization/deserialization for the `state_data` column.
   * Implements an upsert mechanism in `store_state` (update if `adventure_id` exists, insert otherwise).
+  * WebSocket saves use `store_state_with_retry()` for three bounded attempts
+    with exponential backoff. New records receive one preallocated ID so
+    creation retries are idempotent; terminal failures emit `save_failed` when
+    the socket is still usable.
   * Extracts key fields (`story_category`, `lesson_topic`, `is_complete`, `completed_chapter_count`, `environment`) into dedicated columns for querying, while storing the full state in `state_data`.
   * Enables persistent adventure state across sessions and server restarts.
   * Handles `user_id` (from authenticated users) by converting it to a string before database operations to prevent serialization errors.
-  * Prioritizes `user_id` over `client_uuid` for retrieving active adventures if `user_id` is available.
+  * Uses `user_id` exclusively for authenticated active-adventure lookup;
+    `client_uuid` is only a guest lookup key when no authenticated user exists.
   ```python
   # Example Initialization in StateStorageService
   class StateStorageService:
@@ -408,8 +396,13 @@
   * This task uses the `CHARACTER_VISUAL_UPDATE_PROMPT` with the latest chapter content and the current `state.character_visuals` as input.
   * The LLM identifies new characters or visual changes to existing ones and returns an updated JSON dictionary of visuals.
   * Robust JSON extraction and error handling are employed.
-- **Synchronous Extraction Fix:**
-  * The call to `_update_character_visuals` is made synchronously (awaited) within `choice_processor.py` after a timing issue was identified with fully asynchronous calls, ensuring visual data is processed reliably before subsequent steps that might depend on it. Non-streaming LLM calls are used for this extraction to get complete JSON objects. (Details in `wip/implemented/character_visual_extraction_timing_fix.md`).
+- **Deferred Extraction:**
+  * `choice_processor.py` queues a factory in `state.deferred_task_factories`.
+    After chapter text finishes streaming, the factory starts one background
+    extraction task and records it in `state.pending_background_tasks`.
+  * Character-visual state replacement remains serialized by
+    `state.character_visuals_lock`, and summary reveal awaits pending work.
+    Gemini uses a complete non-streaming response for the JSON object.
 - **Intelligent Merging (`AdventureStateManager.update_character_visuals`):**
   * The `AdventureStateManager` takes the updated visuals dictionary from the LLM.
   * It intelligently merges this with the existing `state.character_visuals`, only updating descriptions for characters that are new or have changed, preserving existing descriptions otherwise.
@@ -463,7 +456,7 @@
   * **Story Visual Sensory Detail:** An overall visual mood/style element for the story, from `state.selected_sensory_details['visuals']`.
   * **Evolved Character Visuals:** The latest available `state.character_visuals` dictionary, containing up-to-date descriptions for the protagonist (if evolved) and NPCs.
 - **Step 2: LLM-Powered Prompt Synthesis (`ImageGenerationService.synthesize_image_prompt`):**
-  * An LLM (Gemini Flash) is invoked with a specialized meta-prompt (`IMAGE_SYNTHESIS_PROMPT`).
+  * Gemini Flash Lite is invoked with a specialized meta-prompt (`IMAGE_SYNTHESIS_PROMPT`).
   * This meta-prompt instructs the LLM to logically combine all the above inputs into a single, coherent, and vivid visual scene description (target 30-50 words) suitable for Gemini 3.1 Flash Image (Nano Banana 2).
   * The LLM is guided to prioritize the immediate `Image Scene Description` while integrating the protagonist's look, agency, and relevant NPC visuals from `state.character_visuals` if they appear in the scene.
 - **Step 3: Image Generation:**
@@ -575,39 +568,26 @@
   * `app/services/adventure_state_manager.py` - Character visual updates
   * `app/services/websocket/choice_processor.py` - Character visual extraction
 
-### 21. LLM Factory Pattern for Cost Optimization
-- **Architecture:** Centralized factory pattern for automatic model selection based on task complexity
-- **Implementation:** `app/services/llm/factory.py` with `LLMServiceFactory` class
+### 21. LLM Factory and Provider Routing Pattern
+- **Architecture:** `LLMServiceFactory` maps every supported use case to an
+  explicit provider and model; unknown use cases raise `ValueError`.
 - **Model Assignment Strategy:**
-  * **Flash (Complex Reasoning - 29% of operations):**
-    - `story_generation`: Creative narrative writing with character development
-    - `image_scene_generation`: Visual storytelling requiring rich descriptive language
-  * **Flash Lite (Simple Processing - 71% of operations):**
-    - `summary_generation`: Template-based content summarization
-    - `paragraph_formatting`: Text structure improvement
-    - `character_visual_processing`: JSON extraction from narrative text
-    - `image_prompt_synthesis`: Structured prompt assembly for image generation
-    - `chapter_summaries`: Test utility summarization
-    - `fallback_summaries`: Emergency content generation
+  * **GPT-5.6 Luna, low reasoning:** `story_generation` and
+    `image_scene_generation`
+  * **Gemini 2.5 Flash Lite, 512-token thinking budget:**
+    `summary_generation`, `paragraph_formatting`,
+    `character_visual_processing`, `image_prompt_synthesis`,
+    `chapter_summaries`, and `fallback_summaries`
 - **Usage Pattern:**
   ```python
   from app.services.llm.factory import LLMServiceFactory
-  
-  # Automatic model selection based on complexity
-  llm_service = LLMServiceFactory.create_for_use_case("summary_generation")  # Flash Lite
-  story_service = LLMServiceFactory.create_for_use_case("story_generation")   # Flash
-  
-  # Direct model access when needed
-  flash_service = LLMServiceFactory.create_flash()
-  lite_service = LLMServiceFactory.create_flash_lite()
+
+  summary_service = LLMServiceFactory.create_for_use_case("summary_generation")
+  story_service = LLMServiceFactory.create_for_use_case("story_generation")
   ```
-- **Implementation Status:** ✅ **COMPLETED** with lazy instantiation pattern to prevent WebSocket timeouts
-- **Module-Level Issue Resolved:** Replaced direct factory instantiation with lazy loading pattern:
+- **Lazy instantiation:** Provider clients are still created on first use to
+  avoid import-time failures in application and test startup:
   ```python
-  # Problematic (causing WebSocket timeouts):
-  llm_service = LLMServiceFactory.create_for_use_case("character_visual_processing")
-  
-  # Fixed (lazy instantiation):
   def get_llm_service():
       global _llm_service
       if _llm_service is None:
@@ -615,10 +595,10 @@
       return _llm_service
   ```
 - **Benefits:**
-  * **Cost Reduction:** ~50% savings through strategic Flash Lite usage
-  * **Quality Preservation:** Complex reasoning tasks maintain full Flash capabilities
+  * **Explicit Ownership:** Narrative and support tasks have unambiguous providers
+  * **Validated Narrative:** Story output uses OpenAI structured schemas
   * **Centralized Configuration:** Easy to adjust model assignments
-  * **WebSocket Stability:** Lazy instantiation prevents module-level initialization delays
+  * **WebSocket Stability:** Lazy instantiation avoids module-level client setup
   * **Maintainability:** Clear separation between cost optimization and business logic
 
 ### 22. Chapter Opening Enhancement System
@@ -673,50 +653,23 @@
 - **Implementation Status:** ✅ **COMPLETED** (2025-07-15)
 - **Files Modified:** `app/static/js/uiManager.js` (disabled auto-scroll in appendStoryText function)
 
-### 24. Live Streaming Optimization Pattern
-- **Problem:** Content generation blocks streaming by collecting entire LLM response before streaming begins
-- **Root Cause Analysis:** Multiple blocking operations created 4-8 second delays before streaming could start
-- **Performance Impact:** Users wait 4-8 seconds seeing only loading screens instead of immediate content
-- **Bottlenecks Identified:**
-  * **Chapter summary generation**: 1-3 seconds blocking (RESOLVED via async background tasks)
-  * **Character visual extraction**: 1-3 seconds blocking (RESOLVED via background deferral)
-  * **Content generation blocking**: 1-3 seconds collecting LLM response before streaming (RESOLVED via live streaming)
-  * **First chapter inconsistency**: Used word-by-word streaming instead of chunk streaming (RESOLVED)
-- **Multi-Phase Solution (All COMPLETED):**
+### 24. Deferred Post-Streaming Work Pattern
+- **Purpose:** Keep summary generation and character-visual extraction out of
+  the reader-facing text-delivery path without weakening chapter validation.
+- **Current flow:**
   ```python
-  # PHASE 1 - Background Summary Tasks (COMPLETED):
-  asyncio.create_task(generate_chapter_summary_background(previous_chapter, state))
-  
-  # PHASE 2 - Deferred Character Visuals (COMPLETED):
-  state.deferred_summary_tasks.append(create_visual_extraction_task)
-  
-  # PHASE 3 - Live Streaming Generation (COMPLETED):
-  async for chunk in get_llm_service().generate_chapter_stream():
-      await websocket.send_text(chunk)  # Stream immediately
-      accumulated_content += chunk
-  
-  # PHASE 4 - First Chapter Consistency (COMPLETED):
-  # process_start_choice() now uses same live streaming as other chapters
+  state.deferred_task_factories.append(create_summary_task)
+  state.deferred_task_factories.append(create_visual_extraction_task)
+
+  # After the approved chapter narrative finishes streaming:
+  await execute_deferred_task_factories(state)
   ```
-- **Architecture Benefits:**
-  * **Immediate Feedback:** Content streams as LLM generates it (50-70% faster)
-  * **Background Processing:** Non-critical tasks run after streaming completes
-  * **Consistent Performance:** All chapters use same live streaming approach
-  * **Quality Preservation:** All content processing maintained through post-streaming cleanup
-- **Technical Implementation:**
-  * **Files Modified:**
-    - `app/services/websocket/stream_handler.py` (live streaming function)
-    - `app/services/websocket/choice_processor.py` (background task deferral + first chapter live streaming)
-    - `app/services/websocket/core.py` (first chapter WebSocket parameter)
-    - `app/static/js/uiManager.js` (choice duplication fix)
-  * **Key Features:**
-    - Direct LLM streaming without intermediate collection
-    - Deferred task execution after streaming completes
-    - Graceful fallback to traditional method if live streaming fails
-    - Content replacement to clean choice text duplication
-- **Implementation Status:** ✅ **FULLY COMPLETED** (2025-07-20)
-- **Performance Results:**
-  * **50-70% faster chapter transitions** across all chapters
-  * **Eliminated 2-5 second streaming delays**
-  * **Consistent chunk-by-chunk streaming** from Chapter 1 through completion
-  * **Maintained all functionality** while achieving dramatic performance improvement
+- **Task lifecycle:** Factories create tasks only after text delivery and append
+  them to `state.pending_background_tasks`. Summary reveal awaits and clears
+  those tasks before building the final summary.
+- **Persistence boundary:** Runtime tasks, factories, and locks are excluded
+  from serialization; only durable `AdventureState` fields round-trip.
+- **Tradeoff:** Model generation is intentionally complete before narrative
+  delivery so the application can enforce the typed choice contract. The
+  browser still receives approved prose word-by-word, while non-critical
+  follow-up work remains asynchronous.
