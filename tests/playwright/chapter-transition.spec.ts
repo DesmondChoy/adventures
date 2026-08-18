@@ -53,12 +53,21 @@ test('chapter transition clears previous story content before new streaming chun
   await expect(page.locator('#chapterProgressFill')).toHaveAttribute('style', /width: 10%/);
   await expect(page.locator('#storyContent')).toContainText(CHAPTER_ONE_MARKER);
 
-  await page.locator('#storyContainer').evaluate((element) => {
-    element.style.maxWidth = '34rem';
-  });
-  await expect(page.locator('#adventureContextRibbon')).toHaveClass(/is-overflowing/);
-  await expect(page.locator('#contextMarqueeTrack')).toHaveCSS('animation-name', 'context-ticker');
-  await expect(page.locator('.context-copy-duplicate')).toBeVisible();
+  const contextTrack = page.locator('#contextMarqueeTrack');
+  const duplicateContext = page.locator('.context-copy-duplicate');
+  const isMobile = (page.viewportSize()?.width ?? Number.POSITIVE_INFINITY) <= 768;
+  if (isMobile) {
+    await expect(page.locator('#contextPrimary')).toBeVisible();
+    await expect(contextTrack).toHaveCSS('animation-name', 'none');
+    await expect(duplicateContext).toBeHidden();
+  } else {
+    await page.locator('#storyContainer').evaluate((element) => {
+      element.style.maxWidth = '34rem';
+    });
+    await expect(page.locator('#adventureContextRibbon')).toHaveClass(/is-overflowing/);
+    await expect(contextTrack).toHaveCSS('animation-name', 'context-ticker');
+    await expect(duplicateContext).toBeVisible();
+  }
 
   await page.locator('#storyContent').evaluate((element) => {
     element.style.minHeight = '1500px';

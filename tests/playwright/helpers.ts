@@ -158,6 +158,7 @@ export async function selectCarouselCard(
 
   await expect(targetCard).toHaveCount(1);
   const cardCount = await cards.count();
+  const hasVisibleNavigation = await nextButton.isVisible();
 
   for (let step = 0; step < cardCount; step += 1) {
     if (await targetCard.evaluate((card) => card.classList.contains('active'))) {
@@ -166,7 +167,11 @@ export async function selectCarouselCard(
       return;
     }
 
-    await nextButton.click();
+    if (hasVisibleNavigation) {
+      await nextButton.click();
+    } else {
+      await page.keyboard.press('ArrowRight');
+    }
   }
 
   throw new Error(`Carousel card never became active: ${cardSelector}`);
