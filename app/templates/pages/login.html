@@ -3,385 +3,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Choose a fantasy world and a topic, then follow your curiosity through an illustrated, ten-chapter learning adventure shaped by your choices.">
+    <meta name="theme-color" content="#102f3d">
     <title>Learning Odyssey - Educational Adventures</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/resume-modal.css">
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/landing.css?v=20260905c">
+    <link rel="preload" as="image" href="/static/images/stories/clockwork_sky_city.jpg">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Preload hero image with responsive hints -->
-    <link rel="preload" as="image"
-          href="/static/images/optimized/learning-adventure-library@1024.webp"
-          imagesrcset="/static/images/optimized/learning-adventure-library@1024.webp 1024w"
-          imagesizes="(min-width: 1024px) 50vw, 90vw"
-          fetchpriority="high" />
-
-    <style>
-        .glass {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        .animate-float {
-            animation: float 6s ease-in-out infinite;
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-        .btn-hover:hover {
-            transform: translateY(-2px);
-            transition: all 0.2s;
-        }
-        .crimson-text {
-            font-family: 'Crimson Text', Georgia, serif;
-        }
-        .hi { 
-            color: var(--color-primary, #0d9488); 
-            font-weight: bold; 
-        }
-        .typewriter-line { 
-            white-space: nowrap; 
-        }
-        @keyframes blink { 
-            0%, 50% { opacity: 1; } 
-            51%, 100% { opacity: 0; } 
-        }
-        #typewriter-cursor { 
-            animation: blink 1s infinite; 
-        }
-        
-        /* Professional Meteor Shower Animation */
-        .meteor {
-            position: absolute;
-            width: 400px;
-            height: 2px;
-            transform: rotate(-45deg);
-            background-image: linear-gradient(to right, #ffffff, #ffaa44, #ff8833, rgba(255, 136, 51, 0.6), rgba(255, 170, 68, 0.2), transparent);
-            z-index: 999999;
-            pointer-events: none;
-            opacity: 0; /* Start invisible */
-        }
-        
-        .meteor:before {
-            content: "";
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            margin-top: -3px;
-            background: #ffffff;
-            box-shadow: 0 0 20px 5px #ffaa44, 0 0 40px 8px rgba(255, 170, 68, 0.6);
-        }
-        
-        @keyframes meteor {
-            0% {
-                opacity: 1;
-                margin-top: -300px;
-                margin-right: -300px;
-            }
-            12% {
-                opacity: 0;
-            }
-            15% {
-                margin-top: 300px;
-                margin-left: -600px;
-                opacity: 0;
-            }
-            100% {
-                opacity: 0;
-            }
-        }
-        
-        .meteor-1 { top: 50px; left: 10%; animation: meteor 12s linear infinite 6s; }
-        .meteor-2 { top: 80px; left: 20%; animation: meteor 15s linear infinite 4s; }
-        .meteor-3 { top: 120px; left: 50%; animation: meteor 14s linear infinite 2s; }
-        .meteor-4 { top: 200px; left: 80%; animation: meteor 16s linear infinite 8s; }
-        .meteor-5 { top: 60px; left: 70%; animation: meteor 13s linear infinite 10s; }
-    </style>
+    <script src="/static/js/landing.js?v=20260905b" defer></script>
 </head>
-<body class="bg-gray-50 font-sans">
-    <!-- Header -->
-    <header class="fixed w-full bg-transparent z-50">
-        <div class="container mx-auto px-6 py-4">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center">
-                    <!-- Brand name removed - now in hero section bubble -->
+<body class="landing-page">
+    <a class="skip-link" href="#main">Skip to content</a>
+    {% set worlds = [
+        {
+            'id': 'sky', 'name': 'Clockwork Sky City', 'short': 'Sky city',
+            'image': 'clockwork_sky_city',
+            'alt': 'Golden clockwork towers and airships floating above the clouds',
+            'description': 'Airships overhead. Gears underfoot. A city of inventions waiting to be explored.'
+        },
+        {
+            'id': 'sea', 'name': 'Underwater Kingdom', 'short': 'Underwater',
+            'image': 'underwater_kingdom_of_sunken_ships',
+            'alt': 'Glowing jellyfish and sunken ships around a turquoise underwater palace',
+            'description': 'Follow the jellyfish past sunken ships into a kingdom hidden beneath the waves.'
+        },
+        {
+            'id': 'drawing', 'name': 'Inside Your Own Drawing', 'short': 'Drawing world',
+            'image': 'living_inside_your_own_drawing',
+            'alt': 'Friendly pencils and erasers having a tiny tea party in a moonlit garden',
+            'description': 'Pencils have personalities. Doodles come to life. Step into a world made of imagination.'
+        }
+    ] %}
+    <div class="header-shell" id="top">
+        <header class="site-header page-width">
+            <a class="wordmark" href="#top" aria-label="Learning Odyssey home">
+                <svg class="brand-mark" viewBox="0 0 36 36" fill="none" aria-hidden="true"><path d="M18 29V12M18 12C13 7 6 8 3 10v18c5-3 10-2 15 1 5-3 10-4 15-1V10c-3-2-10-3-15 2Z" stroke="currentColor" stroke-width="1.5"/><path d="m18 1 1.4 4.6L24 7l-4.6 1.4L18 13l-1.4-4.6L12 7l4.6-1.4L18 1Z" fill="currentColor"/></svg>
+                <span>Learning Odyssey</span>
+            </a>
+            <nav class="header-nav" aria-label="Main navigation">
+                <a href="#worlds">Explore worlds</a>
+                <a href="#how-it-works">How it works</a>
+            </nav>
+        </header>
+    </div>
+    <main id="main">
+        <div class="opening">
+            <section class="hero page-width" aria-labelledby="hero-heading">
+                <div class="hero-copy">
+                    <h1 id="hero-heading">Choose a world.<br>Follow your curiosity.</h1>
+                    <p class="hero-description">Pick a world and a topic. Then discover new ideas through a ten-chapter adventure shaped by your choices.</p>
+                    <div class="entry-actions" id="begin">
+                        <button id="continue-guest" class="action action-gold" type="button">Try an adventure <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                        <button id="login-google" class="action action-outline" type="button">Continue with Google</button>
+                    </div>
+                    <p class="entry-note">Free to explore. No account needed to try.</p>
+                    <p id="guest-warning" class="guest-warning hidden" role="status">As a guest, your adventure progress is tied to this browser session. For persistent progress, please log in.</p>
+                    <a class="hero-discover" href="#how-it-works">Take a look inside <span aria-hidden="true">↓</span></a>
                 </div>
-                <nav class="hidden md:flex space-x-8">
-                    <a href="#how-it-works" class="text-gray-600 hover:text-blue-600">How It Works</a>
-                    <a href="#features" class="text-gray-600 hover:text-blue-600">Features</a>
-                </nav>
-                <!-- Login/Guest buttons will be in the main hero section -->
+
+                <div class="world-window" data-preview-group>
+                    <div class="portal-surround">
+                        <svg class="portal-star star-one" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="m16 1 3 12 12 3-12 3-3 12-3-12-12-3 12-3Z" stroke="currentColor"/></svg>
+                        <svg class="portal-star star-two" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="m16 1 3 12 12 3-12 3-3 12-3-12-12-3 12-3Z" stroke="currentColor"/></svg>
+                        <div class="portal-frame">
+                            {% for world in worlds %}
+                            <figure id="portal-{{ world.id }}" class="portal-scene" data-preview-panel {% if not loop.first %}hidden{% endif %}>
+                                <img src="/static/images/stories/{{ world.image }}.jpg" alt="{{ world.alt }}" width="848" height="1264" {% if loop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %} decoding="async">
+                                <figcaption><span>A window into</span><strong>{{ world.name }}</strong></figcaption>
+                            </figure>
+                            {% endfor %}
+                        </div>
+                        <span class="portal-foot" aria-hidden="true">✧</span>
+                    </div>
+                    <div class="world-switches" role="group" aria-label="Preview a story world">
+                        {% for world in worlds %}
+                        <button class="world-switch" type="button" data-preview-target="portal-{{ world.id }}" aria-controls="portal-{{ world.id }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ world.short }}</button>
+                        {% endfor %}
+                    </div>
+                    <p class="window-hint">Three little windows. Ten whole worlds to explore.</p>
+                </div>
+            </section>
+            <div class="opening-foot page-width">
+                <span>Stories to step into. Ideas to take with you.</span>
+                <span aria-hidden="true">✦</span>
+                <span>Every adventure begins with curiosity.</span>
             </div>
         </div>
-    </header>
 
-    <!-- Professional Meteor Shower -->
-    <div class="meteor meteor-1"></div>
-    <div class="meteor meteor-2"></div>
-    <div class="meteor meteor-3"></div>
-    <div class="meteor meteor-4"></div>
-    <div class="meteor meteor-5"></div>
-
-    <!-- Hero Section -->
-    <section class="relative min-h-screen bg-gradient-to-b from-white to-white flex items-center justify-center overflow-hidden pt-16">
-        <!-- Background elements -->
-        <div class="absolute inset-0 overflow-hidden">
-            <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-50 animate-float" style="background-color: var(--color-accent-light, rgba(13, 148, 136, 0.05));"></div>
-            <div class="absolute top-1/4 right-1/3 w-24 h-24 bg-purple-100 rounded-full opacity-30 animate-float"></div>
-            <div class="absolute bottom-1/3 left-1/4 w-32 h-32 bg-green-100 rounded-full opacity-40 animate-float"></div>
-            <div class="absolute -bottom-10 -right-10 w-36 h-36 bg-yellow-100 rounded-full opacity-50 animate-float"></div>
-        </div>
-
-        <div class="max-w-7xl mx-auto px-6 z-10 pb-20">
-            <div class="flex flex-col md:flex-row items-center justify-between gap-12">
-                <!-- Text Content -->
-                <div class="md:w-1/2 text-center md:text-left">
-                    <!-- Option 1: Elegant Serif -->
-                    <h1 class="crimson-text text-4xl sm:text-5xl md:text-6xl font-bold mb-6" style="color: var(--color-primary, #0d9488); text-shadow: 0 2px 4px rgba(13, 148, 136, 0.3); letter-spacing: -0.02em;">
-                        Learning Odyssey
-                    </h1>
-
-                    <p class="crimson-text typewriter-line inline-block mb-6 px-5 py-3 rounded-full text-lg sm:text-xl font-bold" style="background-color: var(--color-accent-light, rgba(13, 148, 136, 0.05)); color: #374151;">
-                        <span id="typewriter-text">Quest through worlds that teach</span><span id="typewriter-cursor">|</span>
-                    </p>
-
-                    <div class="crimson-text text-lg text-gray-600 mb-8 max-w-lg mx-auto md:mx-0 space-y-4">
-                        <p>Every adventure begins with YOUR choice of companion, artifact, profession, or special ability. Will you befriend a wise owl or craft a magical lantern? Command the elements or whisper to animals?</p>
-                        
-                        <p>Watch as your unique power evolves through an epic journey where your decisions shape the story and learning happens like magic.</p>
+        <section class="worlds-section section-space page-width" id="worlds" aria-labelledby="worlds-heading">
+            <div class="section-heading">
+                <div><p class="section-intro">Choose your story world.</p><h2 id="worlds-heading">Where will you go first?</h2></div>
+                <p>10 fantasy worlds, 10 topics, AI-generated prose and illustrations. Your adventure has never been told before.</p>
+            </div>
+            <div class="world-gallery">
+                {% for world in worlds %}
+                <article class="world-card">
+                    <a class="world-art" href="#begin" aria-label="Start an adventure and choose your world: {{ world.name }}">
+                        <img src="/static/images/stories/{{ world.image }}.jpg" alt="{{ world.alt }}" width="848" height="1264" loading="lazy" decoding="async">
+                        <span class="world-invitation">Your story could begin here <span aria-hidden="true">↗</span></span>
+                    </a>
+                    <h3>{{ world.name }}</h3>
+                    <p>{{ world.description }}</p>
+                </article>
+                {% endfor %}
+            </div>
+            <div class="topic-shelf">
+                <div><h3>And what will you discover?</h3><p>500 questions across 10 subjects, woven directly into the story.</p></div>
+                {% set preview_topics = ['Astronomy', 'Dinosaurs', 'Oceans', 'Ancient civilisations', 'Music & sound'] %}
+                <div class="topic-ticker" data-topic-ticker>
+                    <ul class="sr-only" aria-label="A few of the topics you can explore">
+                        {% for topic in preview_topics %}<li>{{ topic }}</li>{% endfor %}
+                    </ul>
+                    <div class="topic-display" aria-hidden="true">
+                        <span class="topic-name is-current">{{ preview_topics[0] }}</span>
+                        <span class="topic-name"></span>
                     </div>
+                    <button class="topic-rotation-control" type="button" aria-label="Pause topic rotation" hidden>Pause</button>
+                </div>
+            </div>
+        </section>
 
-                    <div class="mb-4">
-                        <h3 class="text-lg font-semibold text-gray-700 mb-3 text-center md:text-left">Begin your free adventure:</h3>
-                        <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-                            <button id="login-google" style="background-color: var(--color-primary, #0d9488);" class="text-white px-6 py-3 rounded-md hover:bg-teal-700 transition btn-hover inline-block text-center" onmouseover="this.style.backgroundColor='var(--color-primary-dark, #0f766e)'" onmouseout="this.style.backgroundColor='var(--color-primary, #0d9488)'">
-                                Login with Google
+        <section class="inside-section section-space" id="how-it-works" aria-labelledby="inside-heading">
+            <div class="page-width">
+                <div class="section-heading inside-heading"><div><p class="section-intro">How it works</p><h2 id="inside-heading">A little peek at the adventure.</h2></div><p>Choose a setting. Make a decision. Discover something you didn’t know.</p></div>
+                <div class="walkthrough" data-preview-group>
+                    <div class="walkthrough-copy">
+                        <div class="journey-steps" role="group" aria-label="Explore how an adventure works">
+                            <button class="journey-step" type="button" data-preview-target="example-world"
+                                    aria-controls="example-world" aria-pressed="true">
+                                <span class="step-number" aria-hidden="true">1</span>
+                                <span>
+                                    <strong>Pick a world and a topic</strong>
+                                    <span>Start somewhere extraordinary, then choose what you’d like to learn about.</span>
+                                </span>
                             </button>
-                            <button id="continue-guest" class="bg-gray-600 text-white px-6 py-3 rounded-md hover:bg-gray-700 transition btn-hover inline-block text-center">
-                                Continue as Guest
+                            <button class="journey-step" type="button" data-preview-target="example-story"
+                                    aria-controls="example-story" aria-pressed="false">
+                                <span class="step-number" aria-hidden="true">2</span>
+                                <span>
+                                    <strong>Shape the story</strong>
+                                    <span>Choose from three paths in each story chapter. The plot, your powers, and even the artwork change based on what you choose.</span>
+                                </span>
+                            </button>
+                            <button class="journey-step" type="button" data-preview-target="example-lesson"
+                                    aria-controls="example-lesson" aria-pressed="false">
+                                <span class="step-number" aria-hidden="true">3</span>
+                                <span>
+                                    <strong>Discover as you go</strong>
+                                    <span>Questions about science, history, and the world become part of your adventure.</span>
+                                </span>
                             </button>
                         </div>
-                    </div>
-                    <p id="guest-warning" class="text-sm text-yellow-700 bg-yellow-100 border border-yellow-300 p-2 rounded-md hidden max-w-md mx-auto md:mx-0 text-center">
-                        As a guest, your adventure progress is tied to this browser session. For persistent progress, please log in.
-                    </p>
-
-
-                    <div class="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-lg mx-auto md:mx-0">
-                        <div class="flex flex-col items-center">
-                            <div class="h-12 w-12 rounded-full flex items-center justify-center mb-2" style="background-color: var(--color-accent-light, rgba(13, 148, 136, 0.05));">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" style="color: var(--color-primary, #0d9488);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path d="M12 14l9-5-9-5-9 5 9 5z" />
-                                    <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
-                                </svg>
+                        <div class="illustration-note" id="features">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5L12 2Z" stroke="currentColor" stroke-width="1.3"/></svg>
+                            <div>
+                                <h3>Illustrated by AI</h3>
+                                <p>Every chapter comes with a unique illustration that evolves with your character across the adventure.</p>
                             </div>
-                            <span class="text-sm text-gray-600">Educational</span>
                         </div>
-                        <div class="flex flex-col items-center">
-                            <div class="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mb-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                </svg>
+                    </div>
+                    <div class="example-book">
+                        <div class="book-binding" aria-hidden="true"></div>
+                        <figure class="example-panel" id="example-world" data-preview-panel>
+                            <figcaption><span>Choose your story world.</span><a href="/static/images/adventure-selection.png?v=20260901a" target="_blank" rel="noopener">View full example <span class="sr-only">in a new tab</span><span aria-hidden="true">↗</span></a></figcaption>
+                            <div class="example-panel-body">
+                                <img src="/static/images/adventure-selection.png?v=20260901a" alt="The world selection screen showing Clockwork Sky City" width="720" height="456" loading="lazy" decoding="async">
+                                <p class="example-note">Next, choose a topic to weave into your story.</p>
                             </div>
-                            <span class="text-sm text-gray-600">Engaging</span>
-                        </div>
-                        <div class="flex flex-col items-center">
-                            <div class="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center mb-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                                </svg>
-                            </div>
-                            <span class="text-sm text-gray-600">Interactive</span>
-                        </div>
-                        <div class="flex flex-col items-center">
-                            <div class="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center mb-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                                </svg>
-                            </div>
-                            <span class="text-sm text-gray-600">Magical</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Hero Image -->
-                <div class="md:w-1/2">
-                    <div class="relative">
-                        <div class="absolute inset-0 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl transform rotate-3 scale-95 opacity-70"></div>
-                        <div class="rounded-2xl relative shadow-xl">
-                            <picture>
-                                <source type="image/webp"
-                                        srcset="/static/images/optimized/learning-adventure-library@1024.webp 1024w"
-                                        sizes="(min-width: 1024px) 50vw, 90vw">
-                                <img
-                                    src="/static/images/learning-adventure-library.png"
-                                    alt="Magical Library Portal - Explore Infinite Possibilities"
-                                    class="w-full h-auto rounded-xl shadow-md"
-                                    loading="eager"
-                                    fetchpriority="high"
-                                    decoding="async"
-                                    width="1024" height="1024"
-                                />
-                            </picture>
-                        </div>
+                        </figure>
+                        <figure class="example-panel" id="example-story" data-preview-panel hidden>
+                            <figcaption><span>A choice in chapter 3</span><a href="/static/images/monster-encounter.png?v=20260905c" target="_blank" rel="noopener">View full example <span class="sr-only">in a new tab</span><span aria-hidden="true">↗</span></a></figcaption>
+                            <img src="/static/images/monster-encounter.png?v=20260905c" alt="A vine-framed Clockwork Sky City chapter offering three paths: an airship, a workshop, or a locked archive" width="1065" height="1457" loading="lazy" decoding="async">
+                        </figure>
+                        <figure class="example-panel" id="example-lesson" data-preview-panel hidden>
+                            <figcaption><span>A question in chapter 2</span><a href="/static/images/red-green-portal.png?v=20260905c" target="_blank" rel="noopener">View full example <span class="sr-only">in a new tab</span><span aria-hidden="true">↗</span></a></figcaption>
+                            <img src="/static/images/red-green-portal.png?v=20260905c" alt="A vine-framed Clockwork Sky City chapter with a glowing map and a question about Inca knotted strings" width="1065" height="1392" loading="lazy" decoding="async">
+                        </figure>
                     </div>
                 </div>
             </div>
+        </section>
+
+        <section class="closing-section section-space" aria-labelledby="closing-heading">
+            <div class="closing-orbit" aria-hidden="true"></div>
+            <div class="page-width closing-content">
+                <span class="closing-star" aria-hidden="true">✧</span>
+                <h2 id="closing-heading">Your next adventure<br>is just a choice away.</h2>
+                <p>A new world. A curious question. A story with you in it.</p>
+                <a class="action action-gold" href="#begin">Begin your free adventure</a>
+            </div>
+        </section>
+    </main>
+    <footer class="site-footer page-width">
+        <div>
+            <a class="wordmark" href="#top">Learning Odyssey</a>
+            <p>Stories, choices, and a little more wonder.</p>
         </div>
-    </section>
-
-    <!-- How It Works Section -->
-    <section id="how-it-works" class="py-20" style="background: rgba(253, 252, 247, 0.9);">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
-                <p class="text-lg text-gray-600 max-w-2xl mx-auto">Every adventure is one of a kind. Here's how yours begins.</p>
-            </div>
-
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
-                <div class="text-center">
-                    <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6" style="background-color: var(--color-accent-light, rgba(13, 148, 136, 0.05));">
-                        <span class="text-2xl font-bold" style="color: var(--color-primary, #0d9488);">1</span>
-                    </div>
-                    <h3 class="text-xl font-semibold mb-3">Pick a World</h3>
-                    <p class="text-gray-600">Clockwork sky cities, underwater kingdoms, a world inside your own drawing — choose the realm where your story unfolds.</p>
-                    <div class="mt-6">
-                        <img src="/static/images/adventure-selection.png?v=20260901a" alt="Clockwork Sky City selected on the live world carousel" class="mx-auto rounded-lg shadow-md w-72 h-80 object-cover" loading="lazy" decoding="async" width="300" height="420">
-                        <p class="text-sm text-gray-500 mt-2 italic">Clockwork Sky City, live select screen</p>
-                    </div>
-                </div>
-
-                <div class="text-center">
-                    <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6" style="background-color: var(--color-accent-light, rgba(13, 148, 136, 0.05));">
-                        <span class="text-2xl font-bold" style="color: var(--color-primary, #0d9488);">2</span>
-                    </div>
-                    <h3 class="text-xl font-semibold mb-3">Shape the Story</h3>
-                    <p class="text-gray-600">Befriend a companion, craft a magical artifact, or gain a special ability. Every choice you make changes what happens next.</p>
-                    <div class="mt-6">
-                        <img src="/static/images/red-green-portal.png?v=20260901a" alt="Chapter 2 plate and quiz choices from a live Clockwork Sky City adventure" class="mx-auto rounded-lg shadow-md w-72 h-80 object-cover" loading="lazy" decoding="async" width="300" height="420">
-                        <p class="text-sm text-gray-500 mt-2 italic">Chapter 2</p>
-                    </div>
-                </div>
-
-                <div class="text-center md:col-span-2 lg:col-span-1 md:w-full md:max-w-sm md:justify-self-center lg:max-w-none">
-                    <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6" style="background-color: var(--color-accent-light, rgba(13, 148, 136, 0.05));">
-                        <span class="text-2xl font-bold" style="color: var(--color-primary, #0d9488);">3</span>
-                    </div>
-                    <h3 class="text-xl font-semibold mb-3">Explore as You Go</h3>
-                    <p class="text-gray-600">Real questions about science, history, and the world are woven into the narrative, making each answer part of the adventure.</p>
-                    <div class="mt-6">
-                        <img src="/static/images/monster-encounter.png?v=20260901a" alt="Chapter 3 plate and story choices from a live Clockwork Sky City adventure" class="mx-auto rounded-lg shadow-md w-72 h-80 object-cover" loading="lazy" decoding="async" width="300" height="420">
-                        <p class="text-sm text-gray-500 mt-2 italic">Chapter 3</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Features Section -->
-    <section id="features" class="py-20 bg-gray-50">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl md:text-4xl font-bold mb-4">Key Features</h2>
-                <p class="text-lg text-gray-600 max-w-2xl mx-auto">What makes every adventure special.</p>
-            </div>
-
-            <div class="grid md:grid-cols-2 gap-10">
-                <div class="p-8 rounded-xl shadow-md" style="background: rgba(253, 252, 247, 0.9);">
-                    <div class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mb-6">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-semibold mb-3">No Two Stories Alike</h3>
-                    <p class="text-gray-600">10 fantasy worlds, 10 topics, AI-generated prose and illustrations. Your adventure has never been told before.</p>
-                </div>
-
-                <div class="p-8 rounded-xl shadow-md" style="background: rgba(253, 252, 247, 0.9);">
-                    <div class="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mb-6">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-semibold mb-3">Illustrated by AI</h3>
-                    <p class="text-gray-600">Every chapter comes with a unique illustration that evolves with your character across the adventure.</p>
-                </div>
-
-                <div class="p-8 rounded-xl shadow-md" style="background: rgba(253, 252, 247, 0.9);">
-                    <div class="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mb-6">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-semibold mb-3">From Astronomy to Ancient Civilisations</h3>
-                    <p class="text-gray-600">500 questions across 10 subjects, woven directly into the story.</p>
-                </div>
-
-                <div class="p-8 rounded-xl shadow-md" style="background: rgba(253, 252, 247, 0.9);">
-                    <div class="bg-yellow-100 w-12 h-12 rounded-full flex items-center justify-center mb-6">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-semibold mb-3">Choices That Matter</h3>
-                    <p class="text-gray-600">Three decisions every chapter. Pick wisely — the plot, your powers, and even the artwork change based on what you choose.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-
-
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-12">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="flex flex-col md:flex-row justify-between">
-                <div class="mb-8 md:mb-0">
-                    <h2 class="text-xl font-bold mb-4">Learning Odyssey</h2>
-                    <p class="text-gray-400 max-w-xs">Educational adventures that blend stories, choices, and questions.</p>
-                </div>
-                <div class="grid grid-cols-1 gap-8">
-                    <div>
-                        <h3 class="text-lg font-semibold mb-4">Navigation</h3>
-                        <ul class="space-y-2">
-                            <li><a href="#" class="text-gray-400 hover:text-white">Home</a></li>
-                            <li><a href="#how-it-works" class="text-gray-400 hover:text-white">How It Works</a></li>
-                            <li><a href="#features" class="text-gray-400 hover:text-white">Features</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            <div class="border-t border-gray-700 mt-12 pt-8 text-center text-gray-400">
-                <p>&copy; 2026 Learning Odyssey. All rights reserved.</p>
-            </div>
-        </div>
+        <nav aria-label="Footer navigation">
+            <a href="#top">Home</a>
+            <a href="#worlds">Explore worlds</a>
+            <a href="#how-it-works">How it works</a>
+        </nav>
+        <p class="copyright">&copy; 2026 Learning Odyssey</p>
     </footer>
 
     {% include 'components/resume_modal.html' %}
 
     <script>
-        // Smooth scrolling for anchor links
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const targetId = this.getAttribute('href');
-                    if (targetId === '#') return;
-                    
-                    const targetElement = document.querySelector(targetId);
-                    if (targetElement) {
-                        window.scrollTo({
-                            top: targetElement.getBoundingClientRect().top + window.scrollY - 100,
-                            behavior: 'smooth'
-                        });
-                    }
-                });
-            });
-        });
-
         // Supabase Client Initialization and Auth Logic for login.html
         const LOGIN_PAGE_SUPABASE_URL = '{{ supabase_url }}'; 
         const LOGIN_PAGE_SUPABASE_ANON_KEY = '{{ supabase_anon_key }}'; 
@@ -734,130 +565,6 @@
             if(guestLoginButton) guestLoginButton.disabled = true;
             // You could also inject an error message into the DOM here.
         }
-
-        // Typewriter effect
-        const phrases = [
-            "Quest Through <span class='hi'>Worlds That Teach</span>",
-            "Where Decisions <span class='hi'>Craft Knowledge</span>", 
-            "Epic Journeys, <span class='hi'>Real-World Learning</span>",
-            "Forge Paths, <span class='hi'>Reinforce</span> Understanding",
-            "Lead Adventures, <span class='hi'>Unlock Wisdom</span>"
-        ];
-        
-        let currentPhraseIndex = 0;
-        let currentCharIndex = 0;
-        let isTyping = true;
-        
-        const typewriterText = document.getElementById('typewriter-text');
-        const typewriterCursor = document.getElementById('typewriter-cursor');
-        
-        function typewriterEffect() {
-            const currentPhrase = phrases[currentPhraseIndex];
-            // Create a temporary div to get the plain text length for character counting
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = currentPhrase;
-            const plainText = tempDiv.textContent || tempDiv.innerText || '';
-            
-            if (isTyping) {
-                // Typing phase
-                if (currentCharIndex < plainText.length) {
-                    // Create substring of plain text and then apply HTML formatting
-                    const partialText = plainText.substring(0, currentCharIndex + 1);
-                    typewriterText.innerHTML = applyFormattingToPartialText(currentPhrase, partialText);
-                    currentCharIndex++;
-                    setTimeout(typewriterEffect, 50); // Typing speed
-                } else {
-                    // Finished typing, wait then start erasing
-                    setTimeout(() => {
-                        isTyping = false;
-                        typewriterEffect();
-                    }, 2000); // Pause before erasing
-                }
-            } else {
-                // Erasing phase
-                if (currentCharIndex > 0) {
-                    const partialText = plainText.substring(0, currentCharIndex - 1);
-                    typewriterText.innerHTML = applyFormattingToPartialText(currentPhrase, partialText);
-                    currentCharIndex--;
-                    setTimeout(typewriterEffect, 25); // Erasing speed (faster)
-                } else {
-                    // Finished erasing, move to next phrase
-                    currentPhraseIndex = (currentPhraseIndex + 1) % phrases.length;
-                    isTyping = true;
-                    setTimeout(typewriterEffect, 500); // Pause before typing next phrase
-                }
-            }
-        }
-        
-        function applyFormattingToPartialText(fullHtml, partialText) {
-            // If partial text is empty, return empty
-            if (!partialText) return '';
-            
-            // Create temp div to extract plain text from HTML
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = fullHtml;
-            const fullPlainText = tempDiv.textContent || tempDiv.innerText || '';
-            
-            // If partial text matches or exceeds full text, return full HTML
-            if (partialText.length >= fullPlainText.length) {
-                return fullHtml;
-            }
-            
-            // Otherwise, we need to carefully reconstruct the HTML up to the partial text length
-            // For simplicity, we'll use a more direct approach
-            let result = '';
-            let charCount = 0;
-            let inTag = false;
-            let i = 0;
-            
-            while (i < fullHtml.length && charCount < partialText.length) {
-                const char = fullHtml[i];
-                
-                if (char === '<') {
-                    inTag = true;
-                    result += char;
-                } else if (char === '>') {
-                    inTag = false;
-                    result += char;
-                } else if (!inTag) {
-                    if (charCount < partialText.length) {
-                        result += char;
-                        charCount++;
-                    }
-                } else {
-                    result += char;
-                }
-                i++;
-            }
-            
-            // Close any open tags
-            const openTags = [];
-            let tempResult = result;
-            const tagRegex = /<(\/?)([\w\s="':;-]+)>/g;
-            let match;
-            
-            while ((match = tagRegex.exec(result)) !== null) {
-                if (!match[1]) { // Opening tag
-                    const tagName = match[2].split(' ')[0];
-                    openTags.push(tagName);
-                } else { // Closing tag
-                    openTags.pop();
-                }
-            }
-            
-            // Close remaining open tags
-            for (let j = openTags.length - 1; j >= 0; j--) {
-                result += `</${openTags[j]}>`;
-            }
-            
-            return result;
-        }
-        
-        // Start typewriter effect after page loads
-        setTimeout(typewriterEffect, 1000);
-        
-
-        
 
     </script>
 </body>
