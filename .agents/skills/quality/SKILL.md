@@ -38,9 +38,8 @@ Choose routine implementation details autonomously. Explain tradeoffs when a
 finding requires a change to requirements or a project contract; seek user input
 only when a material decision cannot be resolved from the existing request.
 
-After fixes, run the smallest relevant validation and broaden it in proportion
-to the change. Use existing tests where they provide meaningful evidence;
-report checks that could not run.
+After fixes, follow the validation policy in `AGENTS.md`. Use existing tests
+where they provide meaningful evidence; report checks that could not run.
 
 ## Report
 
