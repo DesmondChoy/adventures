@@ -15,7 +15,8 @@
 ## Working Agreements
 
 - Inspect existing definitions and nearby call sites before changing or using repository symbols.
-- Match the conventions of the module being edited; avoid unrelated refactors and new dependencies.
+- Within the requested scope, choose implementation and debugging methods autonomously. Treat established patterns as defaults. When a better design requires changing a project contract, explain the tradeoff and update the implementation, tests, and documentation together.
+- Match the conventions of the module being edited and avoid unrelated refactors. Prefer existing dependencies; add a dependency within scope when its benefit justifies the maintenance cost, and explain that tradeoff.
 - Use `.venv/bin/python` for Python commands, or activate `.venv` first.
 - Run the smallest relevant validation first, then broader checks in proportion to the change.
 

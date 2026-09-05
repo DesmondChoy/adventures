@@ -65,7 +65,7 @@
   - `CHARACTER_VISUAL_UPDATE_PROMPT` scans all chapter content for character descriptions
   - Extracted descriptions stored in `state.character_visuals` for image generation
   - Two-step image synthesis requires consistent character data across entire adventure
-* **Never remove character description rules from system prompt** - this would break visual continuity
+* **Required outcome:** Preserve character visual continuity and the extraction contract that supplies image generation. When changing or replacing the prompt rules, validate the replacement across chapter progression and resume, and update the affected implementation, tests, and documentation together.
 * GOOD: "Describe supporting characters when they first appear"
 * BAD: "Help CHARACTER_VISUAL_UPDATE_PROMPT track characters"
 

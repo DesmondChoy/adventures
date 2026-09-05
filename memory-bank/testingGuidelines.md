@@ -73,7 +73,7 @@ scheduled and manual workflows add WebKit/mobile and macOS visual snapshots.
 
 ## Live Release Journey
 
-Use `.agents/skills/playwright-test/SKILL.md` for release validation:
+For release validation:
 
 1. Run the deterministic preflight.
 2. Complete a real model-driven 10-chapter journey in Codex Browser.
@@ -87,6 +87,13 @@ Use `.agents/skills/playwright-test/SKILL.md` for release validation:
 Do not call a release journey complete from Playwright alone; the live path must
 also prove model generation, final persistence, summary retrieval, and expected
 telemetry.
+
+On failure, record the exact issue and preserve the browser state and relevant
+console, network, and backend evidence. Pause dependent progression when the
+failure invalidates later results; continue useful diagnosis and independent
+checks. Keep the browser tab available while it helps reproduce the issue.
+Apply fixes within the requested scope and rerun affected checks before claiming
+success. Report findings without edits when the request is read-only.
 
 ## Simulations and Summary Preview
 

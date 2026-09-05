@@ -561,7 +561,7 @@
   # 3. update_character_visuals() stores them in state.character_visuals
   # 4. Image generation uses these for visual consistency
   ```
-- **Critical Rule:** Never remove character description requirements from `SYSTEM_PROMPT_TEMPLATE` as this would break the visual consistency system that is core to the user experience
+- **Required outcome:** Preserve character visual continuity and the extraction contract that supplies image generation. Changes to `SYSTEM_PROMPT_TEMPLATE` or its replacement must validate that outcome across chapter progression and resume, with affected implementation, tests, and documentation updated together.
 - **Files Involved:**
   * `app/services/llm/prompt_templates.py` - Character description rules
   * `app/services/image_generation_service.py` - Two-step image synthesis

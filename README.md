@@ -186,8 +186,9 @@ repo root on `PYTHONPATH`.
 
 Pull requests run the deterministic Chromium browser suite. Scheduled and
 manual CI runs add WebKit/mobile coverage and the macOS carousel snapshots.
-For release validation, use `.agents/skills/playwright-test/SKILL.md`: run the
-automated preflight first, complete the real 10-chapter journey and Memory Lane
+For release validation, follow the
+[live release journey](memory-bank/testingGuidelines.md#live-release-journey):
+run the automated preflight first, complete the real 10-chapter journey and Memory Lane
 handoff in Codex Browser, then audit the saved adventure and telemetry directly
 in Supabase.
 

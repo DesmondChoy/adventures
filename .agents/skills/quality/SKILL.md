@@ -1,82 +1,49 @@
 ---
-description: Review recent code changes with "fresh eyes" and fix any issues found. Use before commits to catch bugs that accumulate during implementation.
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git show:*), Read, Edit, Glob, Grep
+name: quality
+description: Review scoped changes for correctness and regressions before committing or when a quality review is requested. Fix findings within authorized implementation scope; keep read-only reviews read-only.
 ---
 
-Review all code changes with "fresh eyes" before committing. This catches bugs that accumulate during implementation when focus is on making things work.
+# Quality
 
-## Why This Matters
+Review the intended changes before committing and when a quality review is
+requested. Use the tools available in the current environment.
 
-During implementation, we focus on "does it work?" and can miss:
-- Logic errors that compile but behave incorrectly
-- Missing error handling for edge cases
-- Type mismatches or implicit conversions
-- Dead code or unused imports
-- Integration issues between components
+## Establish Scope and Context
 
-## Process
+Inspect `git status --short` and the diff for the requested changes. Include
+relevant staged, unstaged, and untracked files; preserve unrelated user work.
 
-### 1. Identify Changed Files
+Start with the scoped diff, affected definitions, callers, and tests. Expand to
+complete files or other modules when needed to understand behavior and risk.
+For documentation and skill changes, check instruction consistency, references,
+and examples against the maintained implementation.
 
-```bash
-git status
-git diff HEAD --name-only
-```
+## Assess the Change
 
-### 2. Read ENTIRE Files (Not Just Diffs)
+- Check intended behavior, edge cases, error handling, and regressions.
+- Trace changed types, signatures, API contracts, state transitions, and
+  persistence through affected consumers.
+- Apply the project invariants in `AGENTS.md` where relevant.
+- Identify dead code and accidental debugging residue introduced by the change.
+  Preserve intentional diagnostics; assess logging content, purpose, and
+  exposure instead of treating debug-level logging as a defect.
 
-For each changed file, read the **complete file** to understand full context. Diffs show what changed but hide the surrounding code that may be affected.
+## Act Within the Request
 
-### 3. Review Checklist
+Fix findings within authorized implementation scope, including necessary
+supporting changes. Report unrelated findings without expanding the task.
+For read-only reviews, report findings without changing files or tracker state.
 
-For each file, check:
+Choose routine implementation details autonomously. Explain tradeoffs when a
+finding requires a change to requirements or a project contract; seek user input
+only when a material decision cannot be resolved from the existing request.
 
-**Logic & Correctness**
-- [ ] Does the logic match the intended behavior?
-- [ ] Are edge cases handled (null, empty, boundary values)?
-- [ ] Are error conditions caught and handled appropriately?
+After fixes, run the smallest relevant validation and broaden it in proportion
+to the change. Use existing tests where they provide meaningful evidence;
+report checks that could not run.
 
-**Type Safety**
-- [ ] Are types consistent throughout the call chain?
-- [ ] Are there implicit type conversions that could fail?
+## Report
 
-**Integration**
-- [ ] Do function signatures match their call sites?
-- [ ] Are API contracts (request/response shapes) consistent?
-- [ ] Do state updates flow correctly between components?
-
-**Code Hygiene**
-- [ ] Remove dead code, unused imports, commented-out code
-- [ ] Remove debug statements (console.log, print, logging.debug, etc.)
-- [ ] Are variable names clear and consistent?
-
-### 4. Fix Issues Immediately
-
-When you find an issue:
-1. Fix it using the Edit tool
-2. Document what you fixed in the summary
-
-Do NOT just flag issues—fix them. Only flag issues that require human judgment (design decisions, unclear requirements).
-
-### 5. Report Summary
-
-After reviewing all files, provide:
-
-```
-## Quality Review Summary
-
-**Files Reviewed:** <list>
-
-**Issues Fixed:**
-- <file>: <what was fixed and why>
-
-**Issues for Human Review:** (if any)
-- <file>: <issue that requires human decision>
-
-**Confidence:** <High/Medium/Low> - <brief explanation>
-```
-
-## When to Run
-
-- Before any `git commit`
-- When requested with `/quality`
+Summarize the scope reviewed, issues fixed or actionable findings with file
+locations, validation results, and any remaining uncertainty. If no actionable
+findings remain, say so without implying that unperformed checks passed.
