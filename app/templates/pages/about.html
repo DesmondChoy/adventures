@@ -1,0 +1,47 @@
+{% extends "layouts/info_layout.html" %}
+
+{% block title %}About Learning Odyssey — Free AI Adventures for Kids{% endblock %}
+{% block meta_description %}Learning Odyssey is a free AI choose-your-adventure app for kids roughly ages 7–12. Pick a fantasy world and a topic, then play a ten-chapter illustrated story where science and history questions are woven into the plot.{% endblock %}
+{% block canonical %}https://learning-odyssey.up.railway.app/about{% endblock %}
+{% block og_title %}About Learning Odyssey{% endblock %}
+{% block og_description %}Free AI choose-your-adventure storytelling for kids ~7–12, with real learning questions inside the story.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  "name": "About Learning Odyssey",
+  "url": "https://learning-odyssey.up.railway.app/about",
+  "description": "Free AI choose-your-adventure storytelling for kids roughly ages 7–12, with science and history woven into illustrated ten-chapter adventures.",
+  "isPartOf": {
+    "@type": "WebApplication",
+    "name": "Learning Odyssey",
+    "url": "https://learning-odyssey.up.railway.app/"
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<h1>About Learning Odyssey</h1>
+<p class="lede">A free AI storytelling app where kids choose a world, follow their curiosity, and learn inside the adventure.</p>
+
+<p>Learning Odyssey is built for children roughly <strong>ages 7–12</strong> (elementary / early middle). You pick a fantasy story world and a learning topic. Then you play a <strong>ten-chapter</strong> illustrated adventure shaped by your choices.</p>
+
+<p>Unlike bedtime-story generators that only personalize a tale, Learning Odyssey weaves <strong>curriculum-style questions</strong> — science, history, and the world around us — directly into the plot. There are hundreds of questions across subjects like astronomy, dinosaurs, oceans, ancient civilisations, and more.</p>
+
+<h2>How it works</h2>
+<ul>
+    <li>Choose a story world (ten fantasy settings).</li>
+    <li>Choose a topic you want to discover.</li>
+    <li>Make choices each chapter — the plot, powers, and artwork can change.</li>
+    <li>Answer questions that belong in the story, not as a separate worksheet.</li>
+</ul>
+
+<h2>Free to try</h2>
+<p>You can start as a guest with <strong>no account required</strong>. Optional Google sign-in is available if you want progress saved beyond the browser session.</p>
+
+<p><a href="/">Try an adventure</a> · <a href="/faq">FAQ</a> · <a href="/privacy">Privacy</a></p>
+<p class="info-updated">Last updated: September 2026</p>
+{% endblock %}
