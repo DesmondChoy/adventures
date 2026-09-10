@@ -1,0 +1,92 @@
+{% extends "layouts/info_layout.html" %}
+
+{% block title %}FAQ — Learning Odyssey{% endblock %}
+{% block meta_description %}FAQ for Learning Odyssey: free AI choose-your-adventure stories for kids ages 7–12, no account needed to try, learning questions woven into the plot.{% endblock %}
+{% block canonical %}https://learning-odyssey.up.railway.app/faq{% endblock %}
+{% block og_title %}Learning Odyssey FAQ{% endblock %}
+{% block og_description %}Is it free? What ages? Do kids need an account? How is it different from other AI story apps?{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is Learning Odyssey?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Learning Odyssey is a free web app where kids pick a fantasy world and a learning topic, then play a ten-chapter illustrated adventure shaped by their choices. Science and history questions are woven into the story."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What ages is Learning Odyssey for?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "It is designed for children roughly ages 7–12 (elementary and early middle school). Younger kids can play with a parent; older kids may still enjoy the adventures depending on reading comfort."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is Learning Odyssey free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. You can try an adventure without creating an account."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do kids need an account?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Guest play works in the browser. Google sign-in is optional if you want progress saved beyond the current browser session."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is Learning Odyssey different from other AI kids story apps?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Most AI kids apps generate personalized bedtime stories. Learning Odyssey is choose-your-adventure: kids make choices that shape the plot, with hundreds of curriculum-style questions across subjects woven into the narrative, plus AI illustrations that evolve with the character."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What subjects can kids explore?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Topics include areas like astronomy, dinosaurs, oceans, ancient civilisations, music and sound, and more — chosen when you start an adventure and woven into the story chapters."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<h1>Frequently asked questions</h1>
+<p class="lede">Short answers for parents and kids curious about Learning Odyssey.</p>
+
+<h2>What is Learning Odyssey?</h2>
+<p>A free web app where kids pick a fantasy world and a learning topic, then play a ten-chapter illustrated adventure shaped by their choices. Science and history questions are woven into the story.</p>
+
+<h2>What ages is it for?</h2>
+<p>Roughly <strong>ages 7–12</strong> (elementary / early middle). Younger children can play with a parent; older kids may still enjoy it depending on reading comfort.</p>
+
+<h2>Is it free?</h2>
+<p>Yes. You can try an adventure without creating an account.</p>
+
+<h2>Do kids need an account?</h2>
+<p>No. Guest play works in the browser. Optional Google sign-in is there if you want progress saved beyond this browser session.</p>
+
+<h2>How is it different from other AI kids story apps?</h2>
+<p>Most generate personalized bedtime stories. Learning Odyssey is <strong>choose-your-adventure</strong>: choices shape the plot, with hundreds of curriculum-style questions across subjects woven into the narrative, plus AI illustrations that evolve with the character.</p>
+
+<h2>What subjects can kids explore?</h2>
+<p>Topics include areas like astronomy, dinosaurs, oceans, ancient civilisations, music and sound, and more — you pick a topic when the adventure begins.</p>
+
+<p><a href="/">Start an adventure</a> · <a href="/about">About</a> · <a href="/privacy">Privacy</a></p>
+<p class="info-updated">Last updated: September 2026</p>
+{% endblock %}

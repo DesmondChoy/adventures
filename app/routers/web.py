@@ -238,6 +238,24 @@ async def root(request: Request):
         raise
 
 
+@router.get("/about")
+async def about_page(request: Request):
+    """Public about page for SEO/AEO and trust."""
+    return templates.TemplateResponse("pages/about.html", {"request": request})
+
+
+@router.get("/faq")
+async def faq_page(request: Request):
+    """Public FAQ page with FAQPage schema for answer-engine citation."""
+    return templates.TemplateResponse("pages/faq.html", {"request": request})
+
+
+@router.get("/privacy")
+async def privacy_page(request: Request):
+    """Public privacy notice for a kids-oriented learning app."""
+    return templates.TemplateResponse("pages/privacy.html", {"request": request})
+
+
 @router.get("/story/{chapter}")
 async def story_page(request: Request, chapter: int):
     """Render the story page for the given chapter."""

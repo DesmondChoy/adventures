@@ -1,0 +1,49 @@
+{% extends "layouts/info_layout.html" %}
+
+{% block title %}Privacy — Learning Odyssey{% endblock %}
+{% block meta_description %}Privacy notice for Learning Odyssey, a free AI storytelling app for kids roughly ages 7–12. How guest play, optional Google sign-in, and story data work.{% endblock %}
+{% block canonical %}https://learning-odyssey.up.railway.app/privacy{% endblock %}
+{% block og_title %}Privacy — Learning Odyssey{% endblock %}
+{% block og_description %}How Learning Odyssey handles guest play, optional Google sign-in, and adventure data for a kids learning app.{% endblock %}
+
+{% block content %}
+<h1>Privacy</h1>
+<p class="lede">Learning Odyssey is a free educational storytelling app aimed at kids roughly ages 7–12. This page explains what we collect in plain language.</p>
+
+<h2>Who it’s for</h2>
+<p>The experience is designed for children roughly ages 7–12. Parents and guardians should decide whether guest play or signed-in play is right for their child.</p>
+
+<h2>What you can do without an account</h2>
+<p>You can try an adventure as a <strong>guest</strong>. Guest progress is tied to the browser session (and related browser storage). Clearing site data or switching devices typically means that guest progress is lost.</p>
+
+<h2>Optional Google sign-in</h2>
+<p>If you choose <strong>Continue with Google</strong>, we use Google authentication (via our auth provider) so progress can persist across sessions. We receive basic account identifiers needed to keep you signed in and to associate adventures with your account — not your Google password.</p>
+
+<h2>Adventure and learning data</h2>
+<p>To run the product we store adventure-related information such as the world and topic you chose, chapter progress, choices, and answers needed to continue the story. Generated story text and illustrations are created to deliver the adventure.</p>
+
+<h2>Feedback and optional contact details</h2>
+<p>After chapter 5, we may ask you to rate the adventure. If you submit feedback, we store your rating and any comments you choose to provide, linked to your adventure and account or guest identifier. Guests who leave negative feedback can optionally provide an email address or phone number so we can follow up. Comments and contact details are optional.</p>
+
+<h2>Usage information</h2>
+<p>We record events such as chapters viewed and choices made, including timestamps and time spent. These records are linked to the adventure and, when signed in, your account. We use them to understand how the app is used and to show time-spent statistics in the adventure summary.</p>
+
+<h2>Cookies and similar storage</h2>
+<p>We use cookies or local/session storage for things like keeping a session, remembering guest identifiers, and resuming an in-progress adventure.</p>
+
+<h2>Third-party services</h2>
+<p>The app relies on infrastructure and services such as hosting, authentication, and AI model providers to generate story content and illustrations. Those providers process data as needed to provide their service.</p>
+<p>We store adventure, feedback, and usage data with Supabase. If feedback email notifications are enabled, the feedback and any contact details you provide are sent to the maintainer through Resend, an email delivery provider.</p>
+
+<h2>What we don’t do</h2>
+<ul>
+    <li>We don’t sell children’s personal information.</li>
+    <li>We don’t show third-party advertising in the adventure experience.</li>
+</ul>
+
+<h2>Contact</h2>
+<p>Questions about this notice: reach the maintainer via the <a href="https://github.com/DesmondChoy/adventures">project repository</a>.</p>
+
+<p><a href="/">Home</a> · <a href="/about">About</a> · <a href="/faq">FAQ</a></p>
+<p class="info-updated">Last updated: September 2026</p>
+{% endblock %}

@@ -146,7 +146,8 @@
 .site-footer { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 30px; padding-block: 45px 30px; }
 .site-footer .wordmark { font-size: 25px; }
 .site-footer p { font-size: 13px; margin-top: 10px; color: var(--muted); }
-.site-footer nav { display: flex; gap: 25px; font-size: 13px; }
+.site-footer nav { display: flex; flex-wrap: wrap; gap: 12px 25px; font-size: 13px; }
+.site-footer nav a { white-space: nowrap; }
 .site-footer .copyright { grid-column: 1 / -1; font-size: 12px; padding-top: 20px; border-top: 1px solid var(--line); }
 
 @media (prefers-reduced-motion: no-preference) {
