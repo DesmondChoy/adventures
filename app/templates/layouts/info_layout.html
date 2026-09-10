@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{% block meta_description %}{% endblock %}">
+    <meta name="theme-color" content="#102f3d">
+    <title>{% block title %}Learning Odyssey{% endblock %}</title>
+    <link rel="canonical" href="{% block canonical %}https://learning-odyssey.up.railway.app/{% endblock %}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{% block og_url %}{{ self.canonical() }}{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{% endblock %}">
+    <meta property="og:image" content="https://learning-odyssey.up.railway.app/static/images/stories/clockwork_sky_city.jpg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}{{ self.og_title() }}{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}{{ self.og_description() }}{% endblock %}">
+    {% block head_extra %}{% endblock %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/landing.css?v=20260905c">
+    <style>
+        .info-main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+        .info-main h1 { font-size: clamp(1.75rem, 4vw, 2.4rem); margin: 0 0 0.75rem; line-height: 1.2; }
+        .info-main .lede { font-size: 1.15rem; opacity: 0.9; margin: 0 0 2rem; }
+        .info-main h2 { font-size: 1.25rem; margin: 2rem 0 0.6rem; }
+        .info-main p, .info-main li { line-height: 1.65; margin: 0 0 0.9rem; }
+        .info-main ul { padding-left: 1.2rem; margin: 0 0 1rem; }
+        .info-main a { text-decoration: underline; text-underline-offset: 2px; }
+        .info-updated { font-size: 0.9rem; opacity: 0.7; margin-top: 2.5rem; }
+    </style>
+</head>
+<body class="landing-page">
+    <div class="header-shell" id="top">
+        <header class="site-header page-width">
+            <a class="wordmark" href="/" aria-label="Learning Odyssey home">
+                <svg class="brand-mark" viewBox="0 0 36 36" fill="none" aria-hidden="true"><path d="M18 29V12M18 12C13 7 6 8 3 10v18c5-3 10-2 15 1 5-3 10-4 15-1V10c-3-2-10-3-15 2Z" stroke="currentColor" stroke-width="1.5"/><path d="m18 1 1.4 4.6L24 7l-4.6 1.4L18 13l-1.4-4.6L12 7l4.6-1.4L18 1Z" fill="currentColor"/></svg>
+                <span>Learning Odyssey</span>
+            </a>
+            <nav class="header-nav" aria-label="Main navigation">
+                <a href="/#worlds">Explore worlds</a>
+                <a href="/#how-it-works">How it works</a>
+                <a href="/">Try an adventure</a>
+            </nav>
+        </header>
+    </div>
+    <main id="main" class="info-main page-width">
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="site-footer page-width">
+        <div>
+            <a class="wordmark" href="/">Learning Odyssey</a>
+            <p>Stories, choices, and a little more wonder.</p>
+        </div>
+        <nav aria-label="Footer navigation">
+            <a href="/">Home</a>
+            <a href="/about">About</a>
+            <a href="/faq">FAQ</a>
+            <a href="/privacy">Privacy</a>
+        </nav>
+        <p class="copyright">&copy; 2026 Learning Odyssey</p>
+    </footer>
+</body>
+</html>
