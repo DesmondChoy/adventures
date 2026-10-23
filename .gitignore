@@ -40,6 +40,9 @@ ENV/
 logs/
 *.log
 
+# Generated local reports and media
+/output/
+
 # Database
 *.db
 *.sqlite3

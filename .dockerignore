@@ -9,6 +9,7 @@ __pycache__/
 *.py[cod]
 *.log
 logs/
+output/
 .playwright-mcp/
 memory-bank/
 wip/
