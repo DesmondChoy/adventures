@@ -7,7 +7,7 @@ annotated-types==0.7.0
 anyio==4.8.0
 attrs==25.3.0
 cachetools==5.5.1
-certifi==2025.1.31
+certifi==2026.10.19
 charset-normalizer==3.4.1
 click==8.1.8
 colorama==0.4.6
@@ -21,7 +21,6 @@ google-auth==2.56.3
 google-auth-httplib2==0.2.0
 google-genai==2.17.0
 googleapis-common-protos==1.66.0
-gotrue==2.12.0
 greenlet==3.1.1
 grpcio==1.70.0
 grpcio-status==1.70.0
@@ -45,7 +44,7 @@ packaging==24.2
 pandas==2.2.3
 pillow==11.1.0
 pluggy==1.5.0
-postgrest==1.0.1
+postgrest==2.33.0
 propcache==0.3.1
 proto-plus==1.26.0
 protobuf==5.29.3
@@ -55,7 +54,7 @@ pyasn1_modules==0.4.1
 pydantic==2.13.4
 pydantic-settings==2.7.1
 pydantic_core==2.46.4
-PyJWT==2.10.1
+PyJWT==2.15.1
 pyparsing==3.2.1
 pytest==8.3.4
 pytest-asyncio==0.25.3
@@ -66,7 +65,7 @@ python-json-logger==2.0.7
 python-multipart==0.0.20
 pytz==2024.2
 PyYAML==6.0.1
-realtime==2.4.2
+realtime==2.33.0
 requests==2.32.3
 rsa==4.9
 six==1.17.0
@@ -74,11 +73,12 @@ slowapi==0.1.9
 sniffio==1.3.1
 SQLAlchemy==2.0.23
 starlette==0.45.3
-storage3==0.11.3
+storage3==2.33.0
 StrEnum==0.4.15
 structlog==24.1.0
-supabase==2.15.0
-supafunc==0.9.4
+supabase==2.33.0
+supabase-auth==2.33.0
+supabase-functions==2.33.0
 tqdm==4.67.1
 typing_extensions==4.16.0
 tzdata==2024.2
@@ -86,4 +86,4 @@ uritemplate==4.1.1
 urllib3==2.3.0
 uvicorn==0.34.0
 websockets==14.2
-yarl==1.19.0
+yarl==1.25.1

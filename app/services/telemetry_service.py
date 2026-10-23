@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any
 from uuid import UUID
 
 from supabase import create_client, Client as AsyncSupabaseClient  # Changed import
-from supabase.lib.client_options import ClientOptions  # Changed import
+from supabase.lib.client_options import SyncClientOptions  # Changed import
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class TelemetryService:
             # Using supabase_py_async for consistency if other async operations are planned
             # If only sync operations are needed, supabase-py could also be used.
             # For now, assuming async client might be beneficial.
-            options = ClientOptions(
+            options = SyncClientOptions(
                 persist_session=False, auto_refresh_token=False
             )  # Adjust as needed
             self.supabase: AsyncSupabaseClient = create_client(  # Changed type hint

@@ -137,11 +137,10 @@ async def test_explicit_resume_rejects_mismatched_database_owner(
         get_active_adventure_id=AsyncMock(return_value=None),
     )
     websocket = _DummyWebSocket()
-    monkeypatch.setenv("SUPABASE_JWT_SECRET", "test-secret")
     monkeypatch.setattr(
-        websocket_router.jwt,
-        "decode",
-        lambda *_args, **_kwargs: {"sub": str(current_user_id)},
+        websocket_router,
+        "verify_supabase_access_token",
+        AsyncMock(return_value=current_user_id),
     )
     monkeypatch.setattr(websocket_router, "AdventureStateManager", lambda: manager)
     monkeypatch.setattr(websocket_router, "StateStorageService", lambda: storage)
@@ -1035,3 +1034,86 @@ async def test_character_visual_updates_are_serialized_and_sanitized(
         1,
         2,
     ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "failure, expected_code",
+    [
+        (websocket_router.InvalidAccessToken(), 1008),
+        (websocket_router.AuthenticationUnavailable(), 1013),
+    ],
+)
+async def test_supplied_websocket_token_failure_cannot_fall_back_to_guest(
+    monkeypatch, failure, expected_code
+):
+    websocket = _DummyWebSocket()
+    websocket.close = AsyncMock()
+    verifier = AsyncMock(side_effect=failure)
+    monkeypatch.setattr(websocket_router, "verify_supabase_access_token", verifier)
+
+    def no_client():
+        pytest.fail("Rejected authentication initialized adventure services")
+
+    monkeypatch.setattr(websocket_router, "AdventureStateManager", no_client)
+    monkeypatch.setattr(websocket_router, "StateStorageService", no_client)
+    monkeypatch.setattr(websocket_router, "TelemetryService", no_client)
+    await websocket_router.story_websocket(
+        websocket, "forest", "maps", client_uuid="guest-client", difficulty=None,
+        token="supplied-token", resume_adventure_id=None,
+    )
+    assert websocket.close.await_args.kwargs["code"] == expected_code
+    assert websocket.json_messages == []
+    assert websocket.client.host not in websocket_router._ws_connections_per_ip
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("authenticated", [False, True])
+async def test_websocket_identity_keeps_authenticated_and_explicit_guest_paths_separate(
+    monkeypatch, authenticated
+):
+    user_id = uuid4()
+    verifier = AsyncMock(return_value=user_id)
+    storage = SimpleNamespace(get_active_adventure_id=AsyncMock(return_value=None))
+    monkeypatch.setattr(websocket_router, "verify_supabase_access_token", verifier)
+    monkeypatch.setattr(websocket_router, "AdventureStateManager", lambda: object())
+    monkeypatch.setattr(websocket_router, "StateStorageService", lambda: storage)
+    monkeypatch.setattr(websocket_router, "TelemetryService", object)
+    websocket = _DummyWebSocket()
+    await websocket_router.story_websocket(
+        websocket, "forest", "maps", client_uuid="guest-client", difficulty=None,
+        token="verified-token" if authenticated else None, resume_adventure_id=None,
+    )
+    if authenticated:
+        verifier.assert_awaited_once_with("verified-token")
+        storage.get_active_adventure_id.assert_awaited_once_with(
+            user_id=user_id, story_category="forest", lesson_topic="maps"
+        )
+    else:
+        verifier.assert_not_awaited()
+        storage.get_active_adventure_id.assert_awaited_once_with(
+            client_uuid="guest-client", story_category="forest", lesson_topic="maps"
+        )
+    assert websocket.json_messages[0]["type"] == "adventure_status"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("token", ["", "é", "\u200b"])
+async def test_malformed_websocket_token_is_rejected_before_external_clients(
+    monkeypatch, token
+):
+    websocket = _DummyWebSocket()
+    websocket.close = AsyncMock()
+
+    def no_client():
+        pytest.fail("Malformed authentication initialized adventure services")
+
+    monkeypatch.setattr(websocket_router, "AdventureStateManager", no_client)
+    monkeypatch.setattr(websocket_router, "StateStorageService", no_client)
+    monkeypatch.setattr(websocket_router, "TelemetryService", no_client)
+    await websocket_router.story_websocket(
+        websocket, "forest", "maps", client_uuid="guest-client", difficulty=None,
+        token=token, resume_adventure_id=None,
+    )
+    assert websocket.close.await_args.kwargs["code"] == 1008
+    assert websocket.json_messages == []

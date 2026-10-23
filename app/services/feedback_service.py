@@ -9,7 +9,7 @@ from typing import Optional
 from uuid import UUID
 
 from supabase import create_client, Client as SupabaseClient
-from supabase.lib.client_options import ClientOptions
+from supabase.lib.client_options import SyncClientOptions
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class FeedbackService:
             raise ValueError("Supabase URL or Service Key not configured.")
 
         try:
-            options = ClientOptions(
+            options = SyncClientOptions(
                 persist_session=False, auto_refresh_token=False
             )
             self.supabase: SupabaseClient = create_client(

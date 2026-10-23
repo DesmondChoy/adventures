@@ -139,12 +139,11 @@ summary experience.
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `SECRET_KEY` | Yes | Session middleware secret. The app refuses to start without it. |
+| `SECRET_KEY` | Yes | Signs app session cookies; required at startup and separate from Supabase Auth. |
 | `GOOGLE_API_KEY` | Yes | Gemini Flash Lite support tasks and image-generation workflows. |
-| `SUPABASE_URL` | Yes | Supabase project URL injected into the backend and templates. |
-| `SUPABASE_ANON_KEY` | Yes | Browser-side Supabase client for login and client flows. |
-| `SUPABASE_SERVICE_KEY` | Yes | Server-side Supabase access for adventures, telemetry, and feedback storage. |
-| `SUPABASE_JWT_SECRET` | Yes | JWT verification for authenticated summary, resume, and WebSocket flows. |
+| `SUPABASE_URL` | Yes | Supabase project URL for storage, browser clients, and Auth verification. |
+| `SUPABASE_ANON_KEY` | Yes | Publishable (`sb_publishable_...`) API key for browser login and backend Auth verification. Legacy `anon` keys remain supported during migration. |
+| `SUPABASE_SERVICE_KEY` | Yes | Server-only secret (`sb_secret_...`) API key for adventures, telemetry, and feedback storage. Legacy `service_role` keys remain supported during migration. |
 | `APP_ENVIRONMENT` | Recommended | Environment label for telemetry and logging. Set to `production`/`prod` to omit LLM bodies from rotating logs. |
 | `OPENAI_API_KEY` | Yes | GPT-5.6 Luna story and image-scene text generation. |
 | `ALLOWED_HOSTS` | Optional | Comma-separated host allowlist for `TrustedHostMiddleware`. |
@@ -158,6 +157,12 @@ summary experience.
 The app runtime loads local `.env` values in development. Keep `.env` and
 `.env.*` untracked and out of Docker build contexts; see
 `docs/security/deployment-model.md` for the deployment policy.
+
+HTTP and WebSocket token checks share `app/auth/supabase_auth.py`, which calls
+`/auth/v1/user` on the configured Supabase project and uses Auth's returned user
+UUID. The app does not read `SUPABASE_JWT_SECRET`. Follow the
+[credential and signing key migration order](docs/security/deployment-model.md#supabase-credential-and-signing-key-migration)
+before replacing or revoking existing keys.
 
 ## Common Commands
 
