@@ -149,3 +149,46 @@ test('reduced-motion topic display advances manually and fits on a narrow screen
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
   }
 });
+
+test('sample answer is keyboard accessible without starting an adventure', async ({ page }) => {
+  await installLandingAuth(page);
+  const sockets: string[] = [];
+  page.on('websocket', (socket) => sockets.push(socket.url()));
+  const response = await page.goto('/');
+  const initialHtml = await response!.text();
+  expect(initialHtml).toContain('Why is Mars called the Red Planet?');
+  expect(initialHtml).toContain('Iron minerals in the rocks and dust on Mars');
+  await expect(page.locator('.hero-description')).toContainText('ages 7–12');
+  await page.getByRole('link', { name: 'Read a sample question' }).click();
+  await expect(page).toHaveURL(/#sample$/);
+  const answer = page.locator('.sample-answer');
+  await expect(answer.locator('div')).toBeHidden();
+  await answer.locator('summary').focus();
+  await page.keyboard.press('Enter');
+  await expect(answer.locator('div')).toBeVisible();
+  await expect(answer.getByRole('link', { name: 'NASA’s Mars Facts' })).toHaveAttribute('href', 'https://science.nasa.gov/mars/facts/');
+  expect(await page.evaluate(() => (window as any).__landingAuthCalls)).toEqual([]);
+  expect(sockets).toEqual([]);
+  await page.getByRole('link', { name: 'Try a full adventure' }).click();
+  await expect(page.locator('#continue-guest')).toBeFocused();
+});
+
+test('sample remains readable and expandable without JavaScript on a narrow screen', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, reducedMotion: 'reduce', viewport: { width: 320, height: 844 } });
+  const page = await context.newPage();
+  try {
+    // This native HTML check needs no CDN scripts or fonts.
+    await page.route('https://**', (route) => route.abort());
+    await page.goto(baseURL!, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('link', { name: 'Read a sample question' })).toBeVisible();
+    await page.getByRole('link', { name: 'Read a sample question' }).click();
+    await expect(page.getByRole('heading', { name: 'Why is Mars called the Red Planet?' })).toBeVisible();
+    await expect(page.locator('.sample-choices li')).toHaveCount(3);
+    await page.locator('.sample-answer summary').click();
+    await expect(page.locator('.sample-answer')).toHaveAttribute('open', '');
+    await expect(page.getByRole('link', { name: 'NASA’s Mars Facts' })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
+  } finally {
+    await context.close();
+  }
+});

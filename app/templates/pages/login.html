@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Free AI storytelling for kids: pick a fantasy world and a topic, then play a ten-chapter illustrated adventure where science and history questions are woven into the plot. No account needed to try.">
+    <meta name="description" content="Free illustrated AI adventures for children ages 7–12. Choose a world and a topic, explore science and history questions, and try a sample before you play.">
     <meta name="theme-color" content="#102f3d">
     <meta name="google-site-verification" content="Sm-vVRzsKCo0Oie9tolTSjlMUzuDwKoYt_-fOyGmaWo" />
     <title>Learning Odyssey — Free AI Choose-Your-Adventure Stories for Kids</title>
@@ -26,7 +26,7 @@
       "applicationCategory": "EducationalApplication",
       "operatingSystem": "Web",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-      "description": "Free AI choose-your-adventure storytelling for kids that weaves science and history questions into illustrated ten-chapter stories.",
+      "description": "Free AI choose-your-adventure storytelling for children ages 7–12 that weaves science and history questions into illustrated ten-chapter stories.",
       "isAccessibleForFree": true
     }
     </script>
@@ -34,7 +34,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/resume-modal.css">
-    <link rel="stylesheet" href="/static/css/landing.css?v=20260910a">
+    <link rel="stylesheet" href="/static/css/landing.css?v=20260930a">
     <link rel="preload" as="image" href="/static/images/stories/clockwork_sky_city.jpg">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/static/js/landing.js?v=20260905b" defer></script>
@@ -78,14 +78,14 @@
             <section class="hero page-width" aria-labelledby="hero-heading">
                 <div class="hero-copy">
                     <h1 id="hero-heading">Choose a world.<br>Follow your curiosity.</h1>
-                    <p class="hero-description">Pick a world and a topic. Then discover new ideas through a free, illustrated ten-chapter adventure shaped by your choices.</p>
+                    <p class="hero-description">Free illustrated adventures for children ages 7–12. Choose a world and a topic, then shape a ten-chapter story with science and history questions along the way.</p>
                     <div class="entry-actions" id="begin">
                         <button id="continue-guest" class="action action-gold" type="button">Try an adventure <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                         <button id="login-google" class="action action-outline" type="button">Continue with Google</button>
                     </div>
                     <p class="entry-note">Free to explore. No account needed to try.</p>
                     <p id="guest-warning" class="guest-warning hidden" role="status">As a guest, your adventure progress is tied to this browser session. For persistent progress, please log in.</p>
-                    <a class="hero-discover" href="#how-it-works">Take a look inside <span aria-hidden="true">↓</span></a>
+                    <a class="hero-discover" href="#sample">Read a sample question <span aria-hidden="true">↓</span></a>
                 </div>
 
                 <div class="world-window" data-preview-group>
@@ -116,6 +116,39 @@
                 <span>Every adventure begins with curiosity.</span>
             </div>
         </div>
+
+        <section class="sample-section section-space page-width" id="sample" aria-labelledby="sample-heading" tabindex="-1">
+            <div class="section-heading">
+                <div><p class="section-intro">A story. A question. A discovery.</p><h2 id="sample-heading">Try a little adventure.</h2></div>
+                <p>A fixed example of how a question fits into a story. Read the passage, consider the choices, then open the explanation. Live adventures vary.</p>
+            </div>
+            <div class="sample-spread">
+                <article class="sample-passage" aria-labelledby="sample-story-heading">
+                    <p class="sample-setting">Clockwork Sky City meets astronomy</p>
+                    <h3 id="sample-story-heading">A signal from Mars</h3>
+                    <p>High above Clockwork Sky City, a brass telescope swings toward a reddish point of light. “Mars!” says your owl companion. A small drawer clicks open, revealing a star chart and a note: “Explain the planet’s color to unlock the next clue.” You lean closer to the telescope. What makes that distant world look red?</p>
+                </article>
+                <div class="sample-question" aria-labelledby="sample-question-heading">
+                    <h3 id="sample-question-heading">Why is Mars called the Red Planet?</h3>
+                    <ol class="sample-choices" type="A" aria-label="Possible answers">
+                        <li>Its surface is so hot that it glows red.</li>
+                        <li>Rusty iron minerals in its rocks and dust make it look reddish.</li>
+                        <li>A red ocean covers its surface.</li>
+                    </ol>
+                    <details class="sample-answer">
+                        <summary>Reveal the answer and why</summary>
+                        <div>
+                            <p><strong>Answer B: rusty iron minerals.</strong> Iron minerals in the rocks and dust on Mars have oxidized, or rusted. That gives much of the surface its reddish color.</p>
+                            <p class="sample-source">Science source: <a href="https://science.nasa.gov/mars/facts/">NASA’s Mars Facts</a>.</p>
+                        </div>
+                    </details>
+                </div>
+            </div>
+            <div class="sample-foot">
+                <p><strong>A note about AI:</strong> AI generates live stories and illustrations, which can include mistakes. Check facts with a trusted source and read together when helpful.</p>
+                <a class="action action-gold" href="#begin">Try a full adventure</a>
+            </div>
+        </section>
 
         <section class="worlds-section section-space page-width" id="worlds" aria-labelledby="worlds-heading">
             <div class="section-heading">
