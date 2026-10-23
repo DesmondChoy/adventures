@@ -34,8 +34,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/resume-modal.css">
-    <link rel="stylesheet" href="/static/css/landing.css?v=20260930a">
-    <link rel="preload" as="image" href="/static/images/stories/clockwork_sky_city.jpg">
+    <link rel="stylesheet" href="/static/css/landing.css?v=20261023a">
+    {% set portal_sizes = '(max-width: 540px) calc(100vw - 92px), 420px' %}
+    <link rel="preload" as="image" type="image/webp" href="/static/images/landing/clockwork_sky_city-848.webp" imagesrcset="/static/images/landing/clockwork_sky_city-480.webp 480w, /static/images/landing/clockwork_sky_city-848.webp 848w" imagesizes="{{ portal_sizes }}">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/static/js/landing.js?v=20260905b" defer></script>
 </head>
@@ -44,19 +45,19 @@
     {% set worlds = [
         {
             'id': 'sky', 'name': 'Clockwork Sky City', 'short': 'Sky city',
-            'image': 'clockwork_sky_city',
+            'image': 'clockwork_sky_city', 'width': 848, 'height': 1264,
             'alt': 'Golden clockwork towers and airships floating above the clouds',
             'description': 'Airships overhead. Gears underfoot. A city of inventions waiting to be explored.'
         },
         {
             'id': 'sea', 'name': 'Underwater Kingdom', 'short': 'Underwater',
-            'image': 'underwater_kingdom_of_sunken_ships',
+            'image': 'underwater_kingdom_of_sunken_ships', 'width': 848, 'height': 1264,
             'alt': 'Glowing jellyfish and sunken ships around a turquoise underwater palace',
             'description': 'Follow the jellyfish past sunken ships into a kingdom hidden beneath the waves.'
         },
         {
             'id': 'drawing', 'name': 'Inside Your Own Drawing', 'short': 'Drawing world',
-            'image': 'living_inside_your_own_drawing',
+            'image': 'living_inside_your_own_drawing', 'width': 896, 'height': 1280,
             'alt': 'Friendly pencils and erasers having a tiny tea party in a moonlit garden',
             'description': 'Pencils have personalities. Doodles come to life. Step into a world made of imagination.'
         }
@@ -95,7 +96,10 @@
                         <div class="portal-frame">
                             {% for world in worlds %}
                             <figure id="portal-{{ world.id }}" class="portal-scene" data-preview-panel {% if not loop.first %}hidden{% endif %}>
-                                <img src="/static/images/stories/{{ world.image }}.jpg" alt="{{ world.alt }}" width="848" height="1264" {% if loop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %} decoding="async">
+                                <picture>
+                                    <source type="image/webp" srcset="/static/images/landing/{{ world.image }}-480.webp 480w, /static/images/landing/{{ world.image }}-848.webp 848w" sizes="{{ portal_sizes }}">
+                                    <img src="/static/images/stories/{{ world.image }}.jpg" alt="{{ world.alt }}" width="{{ world.width }}" height="{{ world.height }}" {% if loop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %} decoding="async">
+                                </picture>
                                 <figcaption><span>A window into</span><strong>{{ world.name }}</strong></figcaption>
                             </figure>
                             {% endfor %}
@@ -159,7 +163,10 @@
                 {% for world in worlds %}
                 <article class="world-card">
                     <a class="world-art" href="#begin" aria-label="Start an adventure and choose your world: {{ world.name }}">
-                        <img src="/static/images/stories/{{ world.image }}.jpg" alt="{{ world.alt }}" width="848" height="1264" loading="lazy" decoding="async">
+                        <picture>
+                            <source type="image/webp" srcset="/static/images/landing/{{ world.image }}-480.webp 480w, /static/images/landing/{{ world.image }}-848.webp 848w" sizes="(max-width: 540px) calc(100vw - 48px), (max-width: 820px) calc((100vw - 88px) / 3), (max-width: 1100px) calc((100vw - 114px) / 3), (max-width: 1316px) calc((100vw - 164px) / 3), 384px">
+                            <img src="/static/images/stories/{{ world.image }}.jpg" alt="{{ world.alt }}" width="{{ world.width }}" height="{{ world.height }}" loading="lazy" decoding="async">
+                        </picture>
                         <span class="world-invitation">Your story could begin here <span aria-hidden="true">↗</span></span>
                     </a>
                     <h3>{{ world.name }}</h3>
@@ -227,17 +234,26 @@
                         <figure class="example-panel" id="example-world" data-preview-panel>
                             <figcaption><span>Choose your story world.</span><a href="/static/images/adventure-selection.png?v=20260901a" target="_blank" rel="noopener">View full example <span class="sr-only">in a new tab</span><span aria-hidden="true">↗</span></a></figcaption>
                             <div class="example-panel-body">
-                                <img src="/static/images/adventure-selection.png?v=20260901a" alt="The world selection screen showing Clockwork Sky City" width="720" height="456" loading="lazy" decoding="async">
+                                <picture>
+                                    <source type="image/webp" srcset="/static/images/landing/adventure-selection-480.webp 480w, /static/images/landing/adventure-selection-720.webp 720w" sizes="(max-width: 540px) calc(100vw - 88px), (max-width: 820px) 528px, (max-width: 1100px) 480px, 594px">
+                                    <img src="/static/images/adventure-selection.png?v=20260901a" alt="The world selection screen showing Clockwork Sky City" width="720" height="456" loading="lazy" decoding="async">
+                                </picture>
                                 <p class="example-note">Next, choose a topic to weave into your story.</p>
                             </div>
                         </figure>
                         <figure class="example-panel" id="example-story" data-preview-panel hidden>
                             <figcaption><span>A choice in chapter 3</span><a href="/static/images/monster-encounter.png?v=20260905c" target="_blank" rel="noopener">View full example <span class="sr-only">in a new tab</span><span aria-hidden="true">↗</span></a></figcaption>
-                            <img src="/static/images/monster-encounter.png?v=20260905c" alt="A vine-framed Clockwork Sky City chapter offering three paths: an airship, a workshop, or a locked archive" width="1065" height="1457" loading="lazy" decoding="async">
+                            <picture>
+                                <source type="image/webp" srcset="/static/images/landing/monster-encounter-480.webp 480w, /static/images/landing/monster-encounter-720.webp 720w, /static/images/landing/monster-encounter-1065.webp 1065w" sizes="(max-width: 540px) calc(100vw - 88px), (max-width: 820px) 528px, (max-width: 1100px) 480px, 594px">
+                                <img src="/static/images/monster-encounter.png?v=20260905c" alt="A vine-framed Clockwork Sky City chapter offering three paths: an airship, a workshop, or a locked archive" width="1065" height="1457" loading="lazy" decoding="async">
+                            </picture>
                         </figure>
                         <figure class="example-panel" id="example-lesson" data-preview-panel hidden>
                             <figcaption><span>A question in chapter 2</span><a href="/static/images/red-green-portal.png?v=20260905c" target="_blank" rel="noopener">View full example <span class="sr-only">in a new tab</span><span aria-hidden="true">↗</span></a></figcaption>
-                            <img src="/static/images/red-green-portal.png?v=20260905c" alt="A vine-framed Clockwork Sky City chapter with a glowing map and a question about Inca knotted strings" width="1065" height="1392" loading="lazy" decoding="async">
+                            <picture>
+                                <source type="image/webp" srcset="/static/images/landing/red-green-portal-480.webp 480w, /static/images/landing/red-green-portal-720.webp 720w, /static/images/landing/red-green-portal-1065.webp 1065w" sizes="(max-width: 540px) calc(100vw - 88px), (max-width: 820px) 528px, (max-width: 1100px) 480px, 594px">
+                                <img src="/static/images/red-green-portal.png?v=20260905c" alt="A vine-framed Clockwork Sky City chapter with a glowing map and a question about Inca knotted strings" width="1065" height="1392" loading="lazy" decoding="async">
+                            </picture>
                         </figure>
                     </div>
                 </div>

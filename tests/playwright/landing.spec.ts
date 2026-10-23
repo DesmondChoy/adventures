@@ -192,3 +192,30 @@ test('sample remains readable and expandable without JavaScript on a narrow scre
     await context.close();
   }
 });
+
+test('responsive previews load compressed images and retain full-size example links', async ({ page }) => {
+  await installLandingAuth(page);
+  const originalDownloads: string[] = [];
+  page.on('request', (request) => {
+    if (request.resourceType() === 'image' && /\/static\/images\/(stories\/|(?:adventure-selection|monster-encounter|red-green-portal)\.png)/.test(request.url())) {
+      originalDownloads.push(request.url());
+    }
+  });
+  await page.goto('/');
+  for (const name of ['Sky city', 'Underwater', 'Drawing world']) {
+    await page.getByRole('button', { name, exact: true }).click();
+    const image = page.locator('.portal-scene:not([hidden]) img');
+    await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true);
+    expect(await image.evaluate((element: HTMLImageElement) => element.currentSrc)).toMatch(/\/images\/landing\/.*-(480|848)\.webp$/);
+  }
+  for (const name of ['Pick a world and a topic', 'Shape the story', 'Discover as you go']) {
+    await page.getByRole('button', { name: new RegExp(name) }).click();
+    const panel = page.locator('.example-panel:not([hidden])');
+    const image = panel.locator('img');
+    await image.scrollIntoViewIfNeeded();
+    await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true);
+    expect(await image.evaluate((element: HTMLImageElement) => element.currentSrc)).toMatch(/\/images\/landing\/.*\.webp$/);
+    await expect(panel.getByRole('link', { name: /View full example/ })).toHaveAttribute('href', /\/static\/images\/.*\.png\?v=/);
+  }
+  expect(originalDownloads).toEqual([]);
+});

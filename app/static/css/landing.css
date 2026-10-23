@@ -69,6 +69,7 @@
 .portal-surround::before { content: ""; position: absolute; inset: 0 0 13px; border: 1px solid #91a7a066; border-radius: 240px 240px 8px 8px; pointer-events: none; }
 .portal-frame { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 230px 230px 5px 5px; border: 2px solid #c6a76b; background: #183e4b; box-shadow: 0 20px 55px #04182080; }
 .portal-scene { position: absolute; inset: 0; }
+.portal-scene picture, .world-art picture { display: block; width: 100%; height: 100%; }
 .portal-scene img { width: 100%; height: 100%; object-fit: cover; object-position: center 42%; }
 .portal-scene::after { content: ""; position: absolute; inset: 45% 0 0; background: linear-gradient(transparent, #061d2aeb); }
 .portal-scene figcaption { position: absolute; z-index: 1; bottom: 28px; left: 20px; right: 20px; text-align: center; }
