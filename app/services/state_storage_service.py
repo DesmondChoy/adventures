@@ -307,7 +307,7 @@ class StateStorageService:
             )
 
             # Check if data was found
-            if not response.data:
+            if response is None or not response.data:
                 logger.warning(f"State not found: {state_id}")
                 return None
 
@@ -344,7 +344,7 @@ class StateStorageService:
                 .maybe_single()
                 .execute()
             )
-            return response.data if response.data else None
+            return response.data if response is not None and response.data else None
         except Exception as e:
             logger.error(
                 f"get_adventure_record: Error retrieving adventure {adventure_id}: {str(e)}"
@@ -507,7 +507,7 @@ class StateStorageService:
                 .execute()
             )
 
-            if not response.data:
+            if response is None or not response.data:
                 return None
 
             adventure_data = response.data
@@ -702,7 +702,7 @@ class StateStorageService:
                 .execute()
             )
 
-            if not response.data:
+            if response is None or not response.data:
                 return None
 
             adventure_data = response.data
@@ -742,7 +742,7 @@ class StateStorageService:
                 .execute()
             )
 
-            if not response.data:
+            if response is None or not response.data:
                 return None
             return response.data
         except Exception as e:
