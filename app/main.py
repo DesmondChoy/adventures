@@ -122,7 +122,7 @@ async def sitemap_xml():
   <url>
     <loc>https://learning-odyssey.up.railway.app/select</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://learning-odyssey.up.railway.app/about</loc>
