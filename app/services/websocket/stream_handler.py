@@ -711,7 +711,33 @@ async def stream_chapter_with_live_generation(
     )
     
     content_to_stream = chapter_content.content
-    
+
+    # Start image generation BEFORE streaming so Gemini overlaps with text/choices.
+    # Starting after choices left an ~11–15s window where a fast click advanced
+    # minExpectedImageChapter and the late chapter_image_update was rejected.
+    # Skip for CONCLUSION — send_story_complete() handles that image path.
+    image_tasks = []
+    if chapter_type != ChapterType.CONCLUSION:
+        try:
+            from .image_generator import start_image_generation_tasks
+
+            image_tasks = await start_image_generation_tasks(
+                current_chapter_number,
+                chapter_type,
+                chapter_content,
+                state,
+            )
+            logger.info(
+                f"Started {len(image_tasks)} image generation tasks for chapter {current_chapter_number}"
+            )
+        except Exception as e:
+            logger.error(
+                f"Error starting image generation tasks: {str(e)}", exc_info=True
+            )
+            image_tasks = []
+    else:
+        logger.info(f"[PERFORMANCE] Skipping image generation for CONCLUSION chapter - will be handled by send_story_complete()")
+
     # Stream validated content to the client
     await stream_text_content(content_to_stream, websocket)
     
@@ -733,24 +759,11 @@ async def stream_chapter_with_live_generation(
             "choices": [{"text": choice.text, "id": str(choice.next_chapter)} for choice in chapter_content.choices]
         })
 
-    # Start image generation tasks for the new chapter
-    # Skip for CONCLUSION chapters - send_story_complete() handles image generation
-    # after sending the story_complete message (so Memory Lane appears immediately)
+    # Await image tasks that were started before streaming (non-CONCLUSION only)
     if chapter_type != ChapterType.CONCLUSION:
         try:
-            from .image_generator import start_image_generation_tasks, process_image_tasks
+            from .image_generator import process_image_tasks
 
-            image_tasks = await start_image_generation_tasks(
-                current_chapter_number,
-                chapter_type,
-                chapter_content,
-                state,
-            )
-            logger.info(
-                f"Started {len(image_tasks)} image generation tasks for chapter {current_chapter_number}"
-            )
-
-            # Process image tasks and send updates
             if image_tasks:
                 await process_image_tasks(image_tasks, current_chapter_number, websocket)
                 logger.info(f"[PERFORMANCE] Image generation completed for chapter {current_chapter_number}")
@@ -759,8 +772,6 @@ async def stream_chapter_with_live_generation(
             logger.error(
                 f"Error with image generation tasks: {str(e)}", exc_info=True
             )
-    else:
-        logger.info(f"[PERFORMANCE] Skipping image generation for CONCLUSION chapter - will be handled by send_story_complete()")
     
     logger.info(f"[PERFORMANCE] Post-streaming processing completed for chapter {current_chapter_number}")
     
