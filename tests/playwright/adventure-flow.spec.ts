@@ -190,7 +190,15 @@ test('completes the deterministic selection-to-Memory-Lane browser flow', async 
       const choices = page.locator('#choicesContainer button.choice-card');
       await expect(choices).toHaveCount(3);
       await choices.first().click();
-      await expect(page.locator('#chapterImageContainer')).toBeHidden();
+      // Soft-hold (ch ≥ 2) may arm the next chapter immediately and show a
+      // shimmer skeleton, so the container can stay visible. Require the prior
+      // illustration cleared — hidden slot OR skeleton with empty img src.
+      await expect(async () => {
+        await expect(page.locator('#chapterImage')).toHaveAttribute('src', '');
+        const containerHidden = await page.locator('#chapterImageContainer').isHidden();
+        const skeletonVisible = await page.locator('#chapterImageSkeleton').isVisible();
+        expect(containerHidden || skeletonVisible).toBe(true);
+      }).toPass({ timeout: 10_000 });
     }
   }
 

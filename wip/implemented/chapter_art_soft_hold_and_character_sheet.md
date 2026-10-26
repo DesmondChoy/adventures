@@ -85,6 +85,7 @@ None. Behavior is always on after deploy. Rollback = code revert + redeploy.
 
 ## Known leftovers (not blockers)
 
+- Playwright `adventure-flow` previously required `#chapterImageContainer` hidden after every choice click. Soft-hold may keep the slot visible with a skeleton; the test now accepts hidden **or** skeleton + empty `img` src (fixes nightly `webkit-mobile` flake on schedule run 40408430839).
 - Agency / prop drift can still happen; sheet does not freeze every late NPC.
 - Chapter 10 soft-hold may arm twice and release as `image_waiting_choices` (finale often has no choice buttons).
 - Resume still does not persist the last painted chapter JPEG (pre-existing).
