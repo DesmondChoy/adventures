@@ -7,6 +7,11 @@ from starlette.websockets import WebSocketDisconnect
 
 from app.models.story import AdventureState, ChapterContent, ChapterType
 from app.services.chapter_manager import ChapterManager
+from app.services.character_sheet import (
+    build_chapter_prompt_with_sheet,
+    ensure_character_sheet,
+    get_character_sheet,
+)
 from app.services.image_generation_service import ImageGenerationService
 
 logger = logging.getLogger("story_app")
@@ -437,15 +442,36 @@ async def generate_chapter_image(
                         f"Error extracting character visuals: {extraction_error}"
                     )
 
-            # Synthesize the image prompt
-            prompt = await image_service.synthesize_image_prompt(
-                image_scene,
-                protagonist_description,
-                agency_details,
-                story_visual_sensory_detail,
-                character_visuals,
-                context=llm_context,
-            )
+            # Prefer locked character-sheet reference for ch>=2; skip synthesis LLM.
+            reference_image = None
+            if current_chapter_number >= 2:
+                sheet = get_character_sheet(state)
+                if sheet is None:
+                    sheet = await ensure_character_sheet(
+                        state, image_service=image_service
+                    )
+                if sheet is not None:
+                    reference_image = sheet.to_reference_image()
+
+            if reference_image is not None:
+                prompt = build_chapter_prompt_with_sheet(
+                    image_scene_description=image_scene,
+                    story_visual_sensory_detail=story_visual_sensory_detail,
+                )
+                logger.info(
+                    "Using character_sheet reference for chapter %s (skipping synthesis)",
+                    current_chapter_number,
+                )
+            else:
+                # Text-only path: keep synthesis + AGENCY_ visuals as fallback
+                prompt = await image_service.synthesize_image_prompt(
+                    image_scene,
+                    protagonist_description,
+                    agency_details,
+                    story_visual_sensory_detail,
+                    character_visuals,
+                    context=llm_context,
+                )
 
             # Create the image generation task
             image_tasks.append(
@@ -453,7 +479,9 @@ async def generate_chapter_image(
                     "chapter",
                     asyncio.create_task(
                         image_service.generate_image_async(
-                            prompt, context=llm_context
+                            prompt,
+                            context=llm_context,
+                            reference_image=reference_image,
                         )
                     ),
                 )
@@ -482,14 +510,26 @@ async def generate_chapter_image(
             # Get character visuals if available
             character_visuals = getattr(state, "character_visuals", {})
 
-            prompt = await image_service.synthesize_image_prompt(
-                image_scene,
-                protagonist_description,
-                agency_details,
-                story_visual_sensory_detail,
-                character_visuals,
-                context=llm_context,
-            )
+            reference_image = None
+            if current_chapter_number >= 2:
+                sheet = get_character_sheet(state)
+                if sheet is not None:
+                    reference_image = sheet.to_reference_image()
+
+            if reference_image is not None:
+                prompt = build_chapter_prompt_with_sheet(
+                    image_scene_description=image_scene,
+                    story_visual_sensory_detail=story_visual_sensory_detail,
+                )
+            else:
+                prompt = await image_service.synthesize_image_prompt(
+                    image_scene,
+                    protagonist_description,
+                    agency_details,
+                    story_visual_sensory_detail,
+                    character_visuals,
+                    context=llm_context,
+                )
 
             # Create the image generation task
             image_tasks.append(
@@ -497,7 +537,9 @@ async def generate_chapter_image(
                     "chapter",
                     asyncio.create_task(
                         image_service.generate_image_async(
-                            prompt, context=llm_context
+                            prompt,
+                            context=llm_context,
+                            reference_image=reference_image,
                         )
                     ),
                 )
