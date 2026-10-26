@@ -2,7 +2,7 @@
 
 ## Status
 
-**IMPLEMENTED** — merged via PR [#31](https://github.com/DesmondChoy/adventures/pull/31) (`feat/chapter-art-sync-and-sheet`).
+**IMPLEMENTED** — merged via PR [#31](https://github.com/DesmondChoy/adventures/pull/31). Merge commit on `main`: `65ea1b8`.
 
 Measured locally 2026-10-26 (Asia/Singapore) on two full 10-chapter guest runs before merge:
 - Soft-hold: ch≥2 image releases in ~10–20ms when Gemini is ready; 0 timeouts on both full runs; timeout path proven once at 3501ms.
