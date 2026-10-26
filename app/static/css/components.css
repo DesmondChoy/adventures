@@ -155,6 +155,37 @@
     border-radius: 0.75rem;
 }
 
+/* Neutral placeholder while chapter art is generating (ch>=2 soft-hold) */
+.chapter-image-skeleton {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-height: 300px;
+    border-radius: 0.75rem;
+    background: linear-gradient(
+        90deg,
+        rgba(226, 232, 240, 0.55) 0%,
+        rgba(241, 245, 249, 0.95) 45%,
+        rgba(226, 232, 240, 0.55) 100%
+    );
+    background-size: 200% 100%;
+    animation: chapter-image-shimmer 1.4s ease-in-out infinite;
+}
+
+.chapter-image-skeleton.hidden {
+    display: none;
+}
+
+@keyframes chapter-image-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+
+@media (min-width: 768px) {
+    .chapter-image-skeleton {
+        max-height: 600px;
+    }
+}
+
 @media (min-width: 768px) {
     .chapter-image-container {
         max-height: 600px;
