@@ -23,12 +23,13 @@ import {
     advanceExpectedImageChapter,
     resetDisplayedImageChapter,
     hideChapterImage,
+    cancelChapterImageSoftHold,
     goToLessonTopicScreen,
     goBackToCategoryScreen,
     startAdventure,
     initializeLoaderRetryButton,
     updateAdventureContextRibbon
-} from './uiManager.js?v=20260816c';
+} from './uiManager.js?v=20261026a';
 
 // Global application state
 // Guard against re-initialization if module is re-imported
@@ -137,6 +138,7 @@ export function makeChoice(choiceId, choiceText) {
         const nextChapter = chapterNumber + 1;
         advanceExpectedImageChapter(nextChapter);
         resetDisplayedImageChapter(); // Allow next chapter's image to be shown
+        cancelChapterImageSoftHold();
         hideChapterImage();
 
         // Send state and choice data to server

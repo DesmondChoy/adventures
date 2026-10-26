@@ -8,8 +8,12 @@ import asyncio
 import logging
 import re
 import time
-from typing import Any, Dict, Optional
+from functools import partial
+from typing import Any, Dict, Optional, TYPE_CHECKING
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    from app.services.character_sheet import ReferenceImage
 
 logger = logging.getLogger("story_app")
 
@@ -53,12 +57,15 @@ class ImageGenerationService:
         prompt: str,
         retries: int = 5,
         context: Optional[Dict[str, Any]] = None,
+        reference_image: Optional["ReferenceImage"] = None,
     ):
         """Generate image asynchronously and return as base64 string.
 
         Args:
             prompt: Text description of the image to generate
             retries: Number of retry attempts if generation fails
+            context: Optional logging context (adventure_id, chapter_number, ...)
+            reference_image: Optional character-sheet JPEG for multimodal conditioning
 
         Returns:
             Base64 encoded string of the generated image, or None if generation fails
@@ -67,7 +74,14 @@ class ImageGenerationService:
             # Run in a thread pool to avoid blocking
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(
-                None, self._generate_image, prompt, retries, context
+                None,
+                partial(
+                    self._generate_image,
+                    prompt,
+                    retries,
+                    context,
+                    reference_image,
+                ),
             )
         except Exception as e:
             logger.error(f"Image generation failed: {str(e)}")
@@ -78,12 +92,15 @@ class ImageGenerationService:
         prompt: str,
         retries: int = 5,
         context: Optional[Dict[str, Any]] = None,
+        reference_image: Optional["ReferenceImage"] = None,
     ):
         """Internal method to call Gemini API.
 
         Args:
             prompt: Text description of the image to generate
             retries: Number of retry attempts if generation fails
+            context: Optional logging context
+            reference_image: Optional character-sheet JPEG for multimodal conditioning
 
         Returns:
             Base64 encoded string of the generated image, or None if generation fails
@@ -96,10 +113,24 @@ class ImageGenerationService:
         attempt = 0
         last_error = None
         log_context = _image_log_context(context)
+        has_reference = reference_image is not None and bool(
+            getattr(reference_image, "jpeg_bytes", None)
+        )
 
         while attempt <= retries:
             llm_call_id = str(uuid4())
             try:
+                if has_reference:
+                    contents = [
+                        prompt,
+                        types.Part.from_bytes(
+                            data=reference_image.jpeg_bytes,
+                            mime_type=reference_image.mime,
+                        ),
+                    ]
+                else:
+                    contents = prompt
+
                 logger.info(
                     "Gemini image request",
                     extra={
@@ -110,6 +141,10 @@ class ImageGenerationService:
                         "llm_prompt": prompt,
                         "llm_prompt_chars": len(prompt),
                         "llm_attempt": attempt + 1,
+                        "image_gen_has_reference": has_reference,
+                        "image_gen_reference_mime": (
+                            reference_image.mime if has_reference else None
+                        ),
                         **log_context,
                     },
                 )
@@ -117,7 +152,7 @@ class ImageGenerationService:
                 # Generate a square 1K image using Nano Banana 2.
                 response = self.client.models.generate_content(
                     model=self.model_name,
-                    contents=prompt,
+                    contents=contents,
                     config=types.GenerateContentConfig(
                         response_modalities=["IMAGE"],
                         image_config=types.ImageConfig(

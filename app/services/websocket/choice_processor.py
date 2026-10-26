@@ -1470,6 +1470,15 @@ async def process_story_response(
                 f"Added agency to character_visuals: {refined_name} - {visual_details}"
             )
 
+        # Lock a dedicated protagonist+agency portrait for ch>=2 multimodal refs.
+        # Fail soft: story continues text-only if Gemini sheet gen fails.
+        try:
+            from app.services.character_sheet import ensure_character_sheet
+
+            await ensure_character_sheet(state)
+        except Exception as sheet_exc:
+            logger.error(f"ensure_character_sheet failed after agency lock: {sheet_exc}")
+
         logger.debug(f"Stored agency choice from Chapter 1: {choice_text}")
         logger.debug(f"Enhanced choice text with visuals: {enhanced_choice_text}")
         logger.debug(f"Agency category: {agency_category}")

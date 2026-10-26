@@ -58,6 +58,200 @@ let minExpectedImageChapter = 1; // Minimum chapter number we'll accept images f
 let displayedImageChapter = 0; // Track which chapter's image is currently displayed (prevents regression)
 let feedbackCheckedThisSession = false; // Track if we've checked/shown feedback this session
 
+// Soft-hold: for ch>=2, buffer choices until chapter image arrives or timeout.
+// Timeout starts from choices receipt (not chapter_update arm) so it covers the
+// measured image lag after choices, not the long text-stream window.
+const SOFT_HOLD_TIMEOUT_MS = 3500;
+let softHold = {
+    active: false,
+    chapter: null,
+    armedAtMs: null,
+    choicesReceivedAtMs: null,
+    pendingChoices: null,
+    timeoutId: null,
+    imageArrived: false,
+};
+
+function logSoftHold(event, extra = {}) {
+    const parts = [`[SOFT_HOLD] ${event}`];
+    if (softHold.chapter != null) parts.push(`chapter=${softHold.chapter}`);
+    for (const [key, value] of Object.entries(extra)) {
+        if (value !== undefined) parts.push(`${key}=${value}`);
+    }
+    console.log(parts.join(' '));
+}
+
+function clearSoftHoldTimeout() {
+    if (softHold.timeoutId != null) {
+        clearTimeout(softHold.timeoutId);
+        softHold.timeoutId = null;
+    }
+}
+
+function resetSoftHoldState() {
+    clearSoftHoldTimeout();
+    softHold.active = false;
+    softHold.chapter = null;
+    softHold.armedAtMs = null;
+    softHold.choicesReceivedAtMs = null;
+    softHold.pendingChoices = null;
+    softHold.imageArrived = false;
+}
+
+export function showChapterImageSkeleton() {
+    const imageContainer = document.getElementById('chapterImageContainer');
+    if (!imageContainer) return;
+
+    const image = document.getElementById('chapterImage');
+    if (image) {
+        image.classList.remove('show', 'fade-in');
+        image.src = '';
+        image.alt = '';
+        image.classList.add('hidden');
+    }
+
+    let skeleton = document.getElementById('chapterImageSkeleton');
+    if (!skeleton) {
+        skeleton = document.createElement('div');
+        skeleton.id = 'chapterImageSkeleton';
+        skeleton.className = 'chapter-image-skeleton';
+        skeleton.setAttribute('aria-hidden', 'true');
+        imageContainer.insertBefore(skeleton, imageContainer.firstChild);
+    }
+    skeleton.classList.remove('hidden');
+    imageContainer.classList.remove('hidden');
+}
+
+export function clearChapterImageSkeleton() {
+    const skeleton = document.getElementById('chapterImageSkeleton');
+    if (skeleton) {
+        skeleton.classList.add('hidden');
+    }
+    const image = document.getElementById('chapterImage');
+    if (image) {
+        image.classList.remove('hidden');
+    }
+}
+
+export function beginChapterImageSoftHold(chapter) {
+    const chapterNumber = Number(chapter);
+    if (!Number.isInteger(chapterNumber) || chapterNumber < 2) {
+        return;
+    }
+
+    clearSoftHoldTimeout();
+    softHold.active = true;
+    softHold.chapter = chapterNumber;
+    softHold.armedAtMs = performance.now();
+    softHold.choicesReceivedAtMs = null;
+    softHold.pendingChoices = null;
+    softHold.imageArrived = false;
+    softHold.timeoutId = null;
+
+    showChapterImageSkeleton();
+    logSoftHold('armed', { timeout_ms: SOFT_HOLD_TIMEOUT_MS });
+}
+
+function armSoftHoldTimeout() {
+    clearSoftHoldTimeout();
+    softHold.timeoutId = setTimeout(() => {
+        softHold.timeoutId = null;
+        releaseChapterImageSoftHold({ reason: 'timeout' });
+    }, SOFT_HOLD_TIMEOUT_MS);
+}
+
+export function maybeDisplayChoices(choices, { chapter } = {}) {
+    const chapterNumber = Number(chapter);
+    const holding =
+        softHold.active &&
+        Number.isInteger(chapterNumber) &&
+        chapterNumber >= 2 &&
+        softHold.chapter === chapterNumber;
+
+    if (!holding) {
+        displayChoices(choices);
+        return;
+    }
+
+    if (softHold.imageArrived) {
+        logSoftHold('released', { reason: 'image_already_painted' });
+        resetSoftHoldState();
+        clearChapterImageSkeleton();
+        displayChoices(choices);
+        return;
+    }
+
+    softHold.pendingChoices = choices;
+    softHold.choicesReceivedAtMs = performance.now();
+    armSoftHoldTimeout();
+    logSoftHold('choices_buffered', {
+        n: Array.isArray(choices) ? choices.length : 0,
+    });
+}
+
+export function releaseChapterImageSoftHold({ reason } = {}) {
+    if (!softHold.active) {
+        return;
+    }
+
+    const pending = softHold.pendingChoices;
+    const choicesReceivedAtMs = softHold.choicesReceivedAtMs;
+    let choicesToImageMs = null;
+    if (reason === 'image' && choicesReceivedAtMs != null) {
+        choicesToImageMs = Math.round(performance.now() - choicesReceivedAtMs);
+    }
+
+    // Image can arrive before choices: mark arrived, keep hold until choices land.
+    if (reason === 'image' && pending == null) {
+        softHold.imageArrived = true;
+        clearSoftHoldTimeout();
+        clearChapterImageSkeleton();
+        logSoftHold('released', {
+            reason: 'image_waiting_choices',
+            choices_to_image_ms: null,
+        });
+        return;
+    }
+
+    clearSoftHoldTimeout();
+    softHold.active = false;
+    softHold.pendingChoices = null;
+    softHold.imageArrived = reason === 'image' ? true : softHold.imageArrived;
+
+    if (pending != null) {
+        displayChoices(pending);
+    }
+
+    if (reason === 'timeout') {
+        // Keep skeleton until the image paints (or next chapter cancels).
+        logSoftHold('released', {
+            reason: 'timeout',
+            soft_hold_timeout_fired: true,
+            choices_to_image_ms: null,
+        });
+    } else {
+        clearChapterImageSkeleton();
+        logSoftHold('released', {
+            reason: reason || 'image',
+            choices_to_image_ms: choicesToImageMs,
+        });
+    }
+
+    softHold.chapter = null;
+    softHold.armedAtMs = null;
+    softHold.choicesReceivedAtMs = null;
+}
+
+export function cancelChapterImageSoftHold() {
+    if (!softHold.active && softHold.pendingChoices == null && softHold.timeoutId == null) {
+        clearChapterImageSkeleton();
+        return;
+    }
+    logSoftHold('released', { reason: 'cancel' });
+    resetSoftHoldState();
+    clearChapterImageSkeleton();
+}
+
 // Utility: convert string to Title Case (handles spaces, underscores, hyphens)
 function toTitleCase(str) {
     return (str || '')
@@ -1200,9 +1394,12 @@ export function updateChapterImage(chapterNumber, imageData) {
     const imageContainer = document.getElementById('chapterImageContainer');
     const image = document.getElementById('chapterImage');
 
+    clearChapterImageSkeleton();
+
     // Set the image source
     image.src = `data:image/jpeg;base64,${imageData}`;
     image.alt = `Illustration for Chapter ${chapterNumber}`;
+    image.classList.remove('hidden');
 
     // Show the container
     imageContainer.classList.remove('hidden');
@@ -1458,7 +1655,10 @@ export async function handleMessage(event) {
             }
             appendStoryText(data.content);
         } else if (data.type === 'choices') {
-            displayChoices(data.choices);
+            const chapterForChoices = softHold.active
+                ? softHold.chapter
+                : getDisplayedChapterNumber();
+            maybeDisplayChoices(data.choices, { chapter: chapterForChoices });
         } else if (data.type === 'replace_content') {
             replaceStoryContent(data.content);
         } else if (data.type === 'story_complete') {
@@ -1480,6 +1680,9 @@ export async function handleMessage(event) {
             if (data.chapter_number >= minExpectedImageChapter) {
                 console.log(`[IMAGE DEBUG] Passing image for chapter ${data.chapter_number} to updateChapterImage`);
                 updateChapterImage(data.chapter_number, data.image_data);
+                if (softHold.active && softHold.chapter === Number(data.chapter_number)) {
+                    releaseChapterImageSoftHold({ reason: 'image' });
+                }
             } else {
                 console.log(`[IMAGE DEBUG] Ignoring stale image for chapter ${data.chapter_number} (min expected: ${minExpectedImageChapter})`);
             }
@@ -1586,14 +1789,21 @@ export async function handleMessage(event) {
                 if (currentLoaderStep < 2) {
                     setLoaderStep(2);
                 }
-                console.log('[IMAGE DEBUG] chapter_update received, hiding image container');
                 console.log('[FEEDBACK DEBUG] chapter_update current_chapter:', data.current_chapter, 'type:', typeof data.current_chapter);
-                const imageContainer = document.getElementById('chapterImageContainer');
-                if (imageContainer) {
-                    imageContainer.classList.add('hidden');
-                    console.log('[IMAGE DEBUG] Image container hidden');
+                const incomingChapter = Number(data.current_chapter);
+                if (Number.isInteger(incomingChapter) && incomingChapter >= 2) {
+                    console.log('[IMAGE DEBUG] chapter_update: arming soft-hold + skeleton');
+                    beginChapterImageSoftHold(incomingChapter);
                 } else {
-                    console.log('[IMAGE DEBUG] Image container not found!');
+                    console.log('[IMAGE DEBUG] chapter_update received, hiding image container');
+                    cancelChapterImageSoftHold();
+                    const imageContainer = document.getElementById('chapterImageContainer');
+                    if (imageContainer) {
+                        imageContainer.classList.add('hidden');
+                        console.log('[IMAGE DEBUG] Image container hidden');
+                    } else {
+                        console.log('[IMAGE DEBUG] Image container not found!');
+                    }
                 }
 
                 // Trigger feedback prompt when starting chapter 6 (after completing chapter 5)
@@ -1653,6 +1863,7 @@ export async function resetApplicationState() {
     document.getElementById('choicesContainer').innerHTML = '';
 
     // Hide and clear the chapter image container
+    cancelChapterImageSoftHold();
     const imageContainer = document.getElementById('chapterImageContainer');
     if (imageContainer) {
         imageContainer.classList.add('hidden');
@@ -1660,6 +1871,7 @@ export async function resetApplicationState() {
         if (img) {
             img.src = '';
             img.alt = '';
+            img.classList.remove('hidden');
         }
     }
 
@@ -1784,20 +1996,31 @@ export function resetDisplayedImageChapter() {
 // Helper to hide and reset chapter image
 export function hideChapterImage() {
     const imageContainer = document.getElementById('chapterImageContainer');
-    if (imageContainer) {
-        if (!imageContainer.classList.contains('hidden')) {
-            console.log('[UI FIX] Hiding visible image container');
-            imageContainer.classList.add('hidden');
-        }
+    if (!imageContainer) {
+        return;
+    }
 
-        // Fully reset the image to prevent flicker when new chapter loads
-        const img = imageContainer.querySelector('img');
-        if (img) {
-            img.classList.remove('show');
-            img.classList.remove('fade-in');  // Remove fade-in to reset opacity
-            img.src = '';  // Clear src to prevent old image flashing during transitions
-            img.alt = '';  // Clear alt text
-        }
+    // Soft-hold owns the slot for ch>=2; keep the skeleton visible.
+    if (softHold.active) {
+        showChapterImageSkeleton();
+        return;
+    }
+
+    if (!imageContainer.classList.contains('hidden')) {
+        console.log('[UI FIX] Hiding visible image container');
+        imageContainer.classList.add('hidden');
+    }
+
+    clearChapterImageSkeleton();
+
+    // Fully reset the image to prevent flicker when new chapter loads
+    const img = imageContainer.querySelector('img');
+    if (img) {
+        img.classList.remove('show');
+        img.classList.remove('fade-in');  // Remove fade-in to reset opacity
+        img.classList.remove('hidden');
+        img.src = '';  // Clear src to prevent old image flashing during transitions
+        img.alt = '';  // Clear alt text
     }
 }
 
