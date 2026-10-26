@@ -1094,8 +1094,11 @@ export function appendStoryText(text) {
 }
 
 export function replaceStoryContent(content) {
-    // Safeguard: Ensure previous chapter image is hidden when content is replaced
-    hideChapterImage();
+    // Only hide when no image for the current expected chapter is showing yet.
+    // Unconditional hide wiped a parallel chapter_image_update that landed before replace_content.
+    if (displayedImageChapter < minExpectedImageChapter) {
+        hideChapterImage();
+    }
 
     // Replace the entire stream buffer with the cleaned content
     streamBuffer = content;
