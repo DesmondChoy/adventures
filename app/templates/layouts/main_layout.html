@@ -151,13 +151,6 @@
     <div id="introText" class="text-center space-y-2 mb-8">
         <p class="text-xl gradient-text font-medium">Where no two stories are ever the same.</p>
         <p class="text-gray-600 max-w-2xl mx-auto">Fantasy worlds. Real knowledge. You choose both.</p>
-        <!-- Debug info - hidden but accessible via console for developers -->
-        <div id="debugInfo" class="debug-info" style="display: none;">
-            <p><strong>Debug Info:</strong></p>
-            <p>Total Categories: <span id="debugCategoryCount">{{ story_categories|length }}</span></p>
-            <p>Category IDs: <span id="debugCategoryIds">{{ story_categories.keys()|list }}</span></p>
-            <p>First Category: <span id="debugFirstCategory">{{ story_categories.values()|list|first if story_categories else 'None' }}</span></p>
-        </div>
     </div>
     
     {% block page_content %}{% endblock %}
