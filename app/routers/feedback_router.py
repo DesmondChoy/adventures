@@ -113,6 +113,7 @@ async def submit_feedback(
 @router.get("/check", response_model=FeedbackCheckResponse)
 async def check_feedback_status(
     client_uuid: Optional[str] = None,
+    chapter_number: Optional[int] = None,
     user_id: Optional[UUID] = Depends(get_current_user_id_optional),
     feedback_service: FeedbackService = Depends(get_feedback_service_dep),
 ):
@@ -120,13 +121,18 @@ async def check_feedback_status(
     Check if the current user has ever given feedback.
 
     Used to implement "once per user" logic for the feedback prompt.
+    Pass chapter_number to check one prompt only (e.g. 10 for end of story).
     Returns True if user has given feedback before, False otherwise.
     """
-    logger.debug(f"Checking feedback status: user_id={user_id}, client_uuid={client_uuid}")
+    logger.debug(
+        f"Checking feedback status: user_id={user_id}, client_uuid={client_uuid}, "
+        f"chapter_number={chapter_number}"
+    )
 
     has_feedback = await feedback_service.has_user_given_feedback(
         user_id=user_id,
         client_uuid=client_uuid,
+        chapter_number=chapter_number,
     )
 
     return FeedbackCheckResponse(has_given_feedback=has_feedback)

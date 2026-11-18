@@ -1,7 +1,13 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
-from app.routers import web, websocket_router, summary_router, feedback_router
+from app.routers import (
+    web,
+    websocket_router,
+    summary_router,
+    feedback_router,
+    client_telemetry_router,
+)
 from app.utils.logging_config import setup_logging
 from app.middleware import get_middleware_stack
 from app.services.state_storage_service import StateStorageService
@@ -148,6 +154,7 @@ app.include_router(web.router)
 app.include_router(websocket_router.router)
 app.include_router(summary_router.router, prefix="/adventure")
 app.include_router(feedback_router.router)
+app.include_router(client_telemetry_router.router)
 
 if __name__ == "__main__":
     import uvicorn

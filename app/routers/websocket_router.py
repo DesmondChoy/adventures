@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from collections import defaultdict
-from typing import Optional
+from typing import Dict, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
@@ -139,6 +139,23 @@ def get_generation_chapter_number(state) -> int:
         return 1
     return len(state.chapters) + 1  # Next chapter to generate
 
+
+ATTRIBUTION_MAX_LENGTH = 200
+
+
+def build_attribution(**values: Optional[str]) -> Dict[str, str]:
+    """Return first-touch UTM/referrer tags sent by the client, trimmed and capped.
+
+    Stored under ``state.metadata["attribution"]`` and in ``adventure_started``
+    event metadata so outreach channels can be compared without a schema change.
+    """
+    attribution: Dict[str, str] = {}
+    for key, value in values.items():
+        if isinstance(value, str) and value.strip():
+            attribution[key] = value.strip()[:ATTRIBUTION_MAX_LENGTH]
+    return attribution
+
+
 def get_safe_chapter_number(state) -> int:
     """Get current chapter number with validation"""
     if not state or not hasattr(state, 'chapters'):
@@ -168,6 +185,11 @@ async def story_websocket(
     resume_adventure_id: Optional[str] = Query(
         None
     ),  # New parameter for specific resumption
+    utm_source: Optional[str] = Query(None),
+    utm_medium: Optional[str] = Query(None),
+    utm_campaign: Optional[str] = Query(None),
+    utm_content: Optional[str] = Query(None),
+    referrer: Optional[str] = Query(None),
 ):
     # Rate limit: check concurrent WebSocket connections per IP
     client_ip = websocket.client.host if websocket.client else "unknown"
@@ -189,6 +211,14 @@ async def story_websocket(
         )
         logger.info(
             f"WebSocket connection established for story category: {story_category}, lesson topic: {lesson_topic}, client_uuid: {client_uuid}, difficulty: {difficulty}, resume_adventure_id: {resume_adventure_id}"
+        )
+
+        attribution = build_attribution(
+            utm_source=utm_source,
+            utm_medium=utm_medium,
+            utm_campaign=utm_campaign,
+            utm_content=utm_content,
+            referrer=referrer,
         )
 
         user_id = None
@@ -622,6 +652,8 @@ async def story_websocket(
                         )
                         if client_uuid and state.metadata is not None:
                             state.metadata["client_uuid"] = client_uuid
+                        if attribution and state.metadata is not None:
+                            state.metadata["attribution"] = attribution
                         logger.info(
                             "Initialized adventure state",
                             extra={
@@ -665,6 +697,7 @@ async def story_websocket(
                                         "lesson_topic": lesson_topic,
                                         "difficulty": difficulty,
                                         "client_uuid": client_uuid,
+                                        "attribution": attribution,
                                     },
                                     chapter_type=None,
                                     chapter_number=None,

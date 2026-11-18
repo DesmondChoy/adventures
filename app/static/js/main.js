@@ -29,7 +29,7 @@ import {
     startAdventure,
     initializeLoaderRetryButton,
     updateAdventureContextRibbon
-} from './uiManager.js?v=20261026a';
+} from './uiManager.js?v=20261118a';
 
 // Global application state
 // Guard against re-initialization if module is re-imported

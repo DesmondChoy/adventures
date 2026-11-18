@@ -56,7 +56,20 @@ export let selectedLessonTopic = '';
 let currentChapterChoices = []; // Store current chapter's choices for state preservation
 let minExpectedImageChapter = 1; // Minimum chapter number we'll accept images for (prevents stale images)
 let displayedImageChapter = 0; // Track which chapter's image is currently displayed (prevents regression)
-let feedbackCheckedThisSession = false; // Track if we've checked/shown feedback this session
+const feedbackCheckedThisSession = new Set(); // Feedback prompts (by chapter_number) already checked/shown this session
+let activeFeedbackChapter = 5; // Prompt currently shown: 5 = mid-story, 10 = end of story
+const END_OF_STORY_FEEDBACK_CHAPTER = 10;
+
+// Chapter-1 drop-off telemetry: milestones for a freshly created adventure until
+// the reader makes their first choice (or leaves the page first).
+const chapterOneTelemetry = {
+    adventureId: null,
+    startedAt: 0,
+    sent: new Set(),
+    lastMilestone: null,
+    done: true,
+    exitSent: false
+};
 
 // Soft-hold: for ch>=2, buffer choices until chapter image arrives or timeout.
 // Timeout starts from choices receipt (not chapter_update arm) so it covers the
@@ -1545,6 +1558,7 @@ export async function displayChoices(choices) {
             const selectedButton = e.target.closest('button');
             selectedButton.classList.add('selected');
 
+            markChapterOneMilestone('chapter1_choice_clicked');
             window.makeChoice(choice.id, choice.text);
         };
         
@@ -1655,6 +1669,7 @@ export async function handleMessage(event) {
             }
             appendStoryText(data.content);
         } else if (data.type === 'choices') {
+            markChapterOneMilestone('chapter1_choices_shown');
             const chapterForChoices = softHold.active
                 ? softHold.chapter
                 : getDisplayedChapterNumber();
@@ -1668,6 +1683,7 @@ export async function handleMessage(event) {
             } else {
                 displayStats(data.state);
             }
+            scheduleEndOfStoryFeedback();
         } else if (data.type === 'choice_image_update') {
             // Handle image updates for choices
             updateChoiceWithImage(data.choice_index, data.image_data);
@@ -1717,6 +1733,7 @@ export async function handleMessage(event) {
             }
 
             if (data.type === 'adventure_created') {
+                startChapterOneTelemetry(data.adventure_id);
                 // The server started a fresh adventure. Discard chapters from a
                 // previously completed local adventure before the first choice.
                 manageState('update', {
@@ -1809,7 +1826,7 @@ export async function handleMessage(event) {
                 // Trigger feedback prompt when starting chapter 6 (after completing chapter 5)
                 // This is non-blocking - chapter 6 continues loading in background
                 if (data.current_chapter === 6) {
-                    triggerFeedbackIfEligible();
+                    triggerFeedbackIfEligible(5);
                 }
             }
         } else {
@@ -1825,6 +1842,7 @@ export async function handleMessage(event) {
         } else {
             hideLoader();
         }
+        markChapterOneMilestone('chapter1_text_shown');
         appendStoryText(event.data);
     }
 }
@@ -2095,16 +2113,20 @@ function showConflictConfirmationModal(currentAdventure, newSelection) {
 
 /**
  * Check if user is eligible for feedback prompt and show modal if so.
- * Called when chapter 6 starts (after completing chapter 5).
- * Non-blocking - chapter 6 continues loading in background.
+ * Called with 5 when chapter 6 starts (after completing chapter 5), and with 10
+ * once the story is complete. Each prompt is shown at most once per user: the
+ * mid-story prompt is skipped after any earlier feedback, the end-of-story
+ * prompt only after earlier end-of-story feedback.
+ * Non-blocking - the story continues loading in background.
+ * @param {number} chapterNumber - 5 (mid-story) or 10 (end of story)
  */
-async function triggerFeedbackIfEligible() {
-    // Only check once per session
-    if (feedbackCheckedThisSession) {
+async function triggerFeedbackIfEligible(chapterNumber = 5) {
+    // Only check once per session per prompt
+    if (feedbackCheckedThisSession.has(chapterNumber)) {
         console.log('[FEEDBACK] Already checked this session, skipping');
         return;
     }
-    feedbackCheckedThisSession = true;
+    feedbackCheckedThisSession.add(chapterNumber);
 
     try {
         // Get user info for the API check
@@ -2113,10 +2135,15 @@ async function triggerFeedbackIfEligible() {
         const clientUUID = localStorage.getItem('learning_odyssey_user_uuid');
 
         // Build check URL with query params
-        let checkUrl = '/api/feedback/check';
+        const checkParams = new URLSearchParams();
         if (!isAuthenticated && clientUUID) {
-            checkUrl += `?client_uuid=${encodeURIComponent(clientUUID)}`;
+            checkParams.set('client_uuid', clientUUID);
         }
+        if (chapterNumber === END_OF_STORY_FEEDBACK_CHAPTER) {
+            checkParams.set('chapter_number', String(chapterNumber));
+        }
+        const checkQuery = checkParams.toString();
+        const checkUrl = '/api/feedback/check' + (checkQuery ? `?${checkQuery}` : '');
 
         // Prepare headers
         const headers = { 'Content-Type': 'application/json' };
@@ -2140,7 +2167,7 @@ async function triggerFeedbackIfEligible() {
         }
 
         console.log('[FEEDBACK] User eligible, showing modal');
-        showFeedbackModal(isAuthenticated);
+        showFeedbackModal(isAuthenticated, chapterNumber);
 
     } catch (error) {
         console.error('[FEEDBACK] Error checking eligibility:', error);
@@ -2149,14 +2176,44 @@ async function triggerFeedbackIfEligible() {
 }
 
 /**
+ * Show the feedback after the reader reaches the end-of-story buttons, so the
+ * modal does not cover the conclusion while it is still being read.
+ */
+function scheduleEndOfStoryFeedback() {
+    const target = document.querySelector('#choicesContainer .journey-complete-container');
+    const trigger = () => setTimeout(() => triggerFeedbackIfEligible(END_OF_STORY_FEEDBACK_CHAPTER), 1500);
+    if (!target || typeof IntersectionObserver !== 'function') {
+        trigger();
+        return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+            observer.disconnect();
+            trigger();
+        }
+    }, { threshold: 0.5 });
+    observer.observe(target);
+}
+
+/**
  * Show the feedback modal.
  * @param {boolean} isAuthenticated - Whether user is authenticated (hides contact field if true)
+ * @param {number} [chapterNumber] - Prompt being shown: 5 (mid-story) or 10 (end of story)
  */
-function showFeedbackModal(isAuthenticated) {
+function showFeedbackModal(isAuthenticated, chapterNumber = 5) {
     const modal = document.getElementById('feedbackModal');
     if (!modal) {
         console.error('[FEEDBACK] Modal element not found!');
         return;
+    }
+    activeFeedbackChapter = chapterNumber;
+
+    const header = document.querySelector('#feedbackInitial .feedback-header');
+    if (header) {
+        header.dataset.defaultText = header.dataset.defaultText || header.textContent;
+        header.textContent = chapterNumber === END_OF_STORY_FEEDBACK_CHAPTER
+            ? 'Did you enjoy this adventure?'
+            : header.dataset.defaultText;
     }
 
     // Get all state containers and buttons
@@ -2305,7 +2362,7 @@ async function submitFeedback(rating, feedbackText = '', contactInfo = '') {
             feedback_text: feedbackText || null,
             contact_info: contactInfo || null,
             client_uuid: !isAuthenticated ? clientUUID : null,
-            chapter_number: 5
+            chapter_number: activeFeedbackChapter
         };
 
         console.log('[FEEDBACK] Submitting:', { rating, hasText: !!feedbackText });
@@ -2327,6 +2384,94 @@ async function submitFeedback(rating, feedbackText = '', contactInfo = '') {
         // Don't show error to user - feedback is non-critical
     }
 }
+
+// --- Chapter 1 Drop-off Telemetry ---
+
+/**
+ * Start tracking chapter-1 milestones for a freshly created adventure.
+ * Resumed adventures never send adventure_created, so they are not tracked.
+ * @param {string} adventureId - ID from the adventure_created message
+ */
+function startChapterOneTelemetry(adventureId) {
+    if (!adventureId) return;
+    chapterOneTelemetry.adventureId = String(adventureId);
+    chapterOneTelemetry.startedAt = Date.now();
+    chapterOneTelemetry.sent = new Set();
+    chapterOneTelemetry.lastMilestone = 'adventure_created';
+    chapterOneTelemetry.done = false;
+    chapterOneTelemetry.exitSent = false;
+}
+
+/**
+ * Log a chapter-1 milestone once per adventure. Clicking the first choice ends tracking.
+ * @param {string} eventName - chapter1_text_shown | chapter1_choices_shown | chapter1_choice_clicked
+ */
+function markChapterOneMilestone(eventName) {
+    if (chapterOneTelemetry.done || chapterOneTelemetry.sent.has(eventName)) return;
+    chapterOneTelemetry.sent.add(eventName);
+    chapterOneTelemetry.lastMilestone = eventName;
+    sendClientTelemetry(eventName);
+    if (eventName === 'chapter1_choice_clicked') {
+        chapterOneTelemetry.done = true;
+    }
+}
+
+/**
+ * Record that the reader hid or left the page before making their first choice.
+ * Sent once per adventure, with sendBeacon so it survives the page unloading.
+ * Tracking continues, so a later chapter1_choice_clicked shows they came back.
+ * @param {string} trigger - 'pagehide' or 'hidden'
+ */
+function markChapterOneExit(trigger) {
+    if (chapterOneTelemetry.done || chapterOneTelemetry.exitSent) return;
+    chapterOneTelemetry.exitSent = true;
+    sendClientTelemetry('chapter1_exit', { trigger, last_milestone: chapterOneTelemetry.lastMilestone }, true);
+}
+
+/**
+ * POST a client-observed funnel event to /api/telemetry/client-event. Non-critical.
+ * @param {string} eventName - Allow-listed event name
+ * @param {Object} [extra] - Extra metadata
+ * @param {boolean} [useBeacon] - Use navigator.sendBeacon (for page exit)
+ */
+function sendClientTelemetry(eventName, extra = {}, useBeacon = false) {
+    try {
+        const authManager = window.appState?.authManager;
+        const isAuthenticated = authManager?.user && !authManager?.user?.is_anonymous;
+        const metadata = {
+            ms_since_start: Date.now() - chapterOneTelemetry.startedAt,
+            ...extra
+        };
+        if (!isAuthenticated) {
+            const clientUUID = localStorage.getItem('learning_odyssey_user_uuid');
+            if (clientUUID) metadata.client_uuid = clientUUID;
+        }
+        const body = JSON.stringify({
+            event_name: eventName,
+            adventure_id: chapterOneTelemetry.adventureId,
+            metadata
+        });
+
+        if (useBeacon && navigator.sendBeacon) {
+            navigator.sendBeacon('/api/telemetry/client-event', new Blob([body], { type: 'application/json' }));
+            return;
+        }
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (isAuthenticated && authManager?.accessToken) {
+            headers['Authorization'] = `Bearer ${authManager.accessToken}`;
+        }
+        fetch('/api/telemetry/client-event', { method: 'POST', headers, body, keepalive: true })
+            .catch(() => {});
+    } catch (error) {
+        console.warn('[TELEMETRY] Client event failed:', error);
+    }
+}
+
+window.addEventListener('pagehide', () => markChapterOneExit('pagehide'));
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') markChapterOneExit('hidden');
+});
 
 // Expose loader functions on window for cross-module access
 // This ensures dynamic imports can access these functions reliably

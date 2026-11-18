@@ -60,6 +60,11 @@ export class WebSocketManager {
             url += `&resume_adventure_id=${encodeURIComponent(this.adventureIdToResume)}`;
         }
 
+        // First-touch UTM/referrer tags (set by attribution.js) for new-adventure telemetry
+        if (typeof window.getAttributionQuery === 'function') {
+            url += window.getAttributionQuery();
+        }
+
         return url;
     }
     

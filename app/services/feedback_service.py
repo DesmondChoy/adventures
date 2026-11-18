@@ -109,6 +109,7 @@ class FeedbackService:
         self,
         user_id: Optional[UUID] = None,
         client_uuid: Optional[str] = None,
+        chapter_number: Optional[int] = None,
     ) -> bool:
         """
         Check if a user has ever given feedback (for "once per user" logic).
@@ -116,6 +117,9 @@ class FeedbackService:
         Args:
             user_id: UUID of authenticated user
             client_uuid: Client UUID for guest users
+            chapter_number: When set, only count feedback given at this prompt
+                (e.g. 10 for the end-of-story prompt), so each prompt is shown
+                once per user. When None, any feedback counts.
 
         Returns:
             True if user has given feedback before, False otherwise
@@ -134,6 +138,9 @@ class FeedbackService:
             else:
                 # For guest users, check by client_uuid
                 query = query.eq("client_uuid", client_uuid)
+
+            if chapter_number is not None:
+                query = query.eq("chapter_number", chapter_number)
 
             # We only need to check if any record exists
             query = query.limit(1)
