@@ -42,6 +42,7 @@ class _UpsertRecorder:
         self.record: dict[str, Any] | None = None
         self.on_conflict: str | None = None
         self.default_to_null: bool | None = None
+        self.selected_columns: str | None = None
 
     def upsert(
         self,
@@ -55,8 +56,12 @@ class _UpsertRecorder:
         self.default_to_null = default_to_null
         return self
 
+    def select(self, columns: str) -> "_UpsertRecorder":
+        self.selected_columns = columns
+        return self
+
     def execute(self) -> SimpleNamespace:
-        return SimpleNamespace(data=[self.record])
+        return SimpleNamespace(data=[{"id": self.record["id"]}])
 
 
 class _SupabaseRecorder:
@@ -120,6 +125,7 @@ async def test_preallocated_new_adventure_id_uses_upsert() -> None:
     assert state_id == "preallocated-id"
     assert query.on_conflict == "id"
     assert query.default_to_null is False
+    assert query.selected_columns == "id"
     assert query.record is not None
     assert query.record["id"] == "preallocated-id"
 

@@ -3,8 +3,19 @@ import os
 import yaml
 import logging
 from pathlib import Path
+from copy import deepcopy
+from functools import lru_cache
+from io import StringIO
 
 logger = logging.getLogger("story_app")
+
+
+@lru_cache(maxsize=32)
+def _parse_story_yaml(file_path: str, content: str) -> Any:
+    """Reuse successful parses; callers copy the cached graph before exposing it."""
+    with StringIO(content) as source:
+        source.name = file_path
+        return yaml.safe_load(source)
 
 
 class StoryLoader:
@@ -61,7 +72,22 @@ class StoryLoader:
                 logger.debug(f"Loading story from {file_path}")
 
                 with open(file_path, "r", encoding="utf-8") as f:
-                    story_data = yaml.safe_load(f)
+                    # Always read: exact text invalidates edits even when stat data
+                    # is unchanged. Copies preserve isolation between fresh loaders.
+                    try:
+                        content = f.read()
+                    except UnicodeError:
+                        # Preserve the original parser's incremental decoding and
+                        # error precedence for files containing invalid UTF-8.
+                        f.seek(0)
+                        story_data = yaml.safe_load(f)
+                    else:
+                        try:
+                            story_data = deepcopy(_parse_story_yaml(file_path, content))
+                        except RecursionError:
+                            # Flat YAML aliases can construct graphs too deep for
+                            # deepcopy. Reparse a fresh graph without caching it.
+                            story_data = _parse_story_yaml.__wrapped__(file_path, content)
 
                 # Add to the combined data
                 combined_data["story_categories"][story_id] = story_data

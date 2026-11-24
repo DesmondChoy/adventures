@@ -219,7 +219,7 @@ class StateStorageService:
                 if user_id_for_db is not None:
                     query = query.eq("user_id", user_id_for_db)
 
-                response = query.execute()
+                response = query.select("id").execute()
 
                 if not response.data or len(response.data) == 0:
                     logger.error(
@@ -255,12 +255,14 @@ class StateStorageService:
                             on_conflict="id",
                             default_to_null=False,
                         )
+                        .select("id")
                         .execute()
                     )
                 else:
                     response = (
                         self.supabase.table("adventures")
                         .insert(record)
+                        .select("id")
                         .execute()
                     )
 
