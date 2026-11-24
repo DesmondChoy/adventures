@@ -1616,47 +1616,6 @@ async def generate_chapter_summary_background(
         # Continue execution - don't let summary failures affect story flow
 
 
-async def generate_chapter_summary(
-    previous_chapter: ChapterData, state: AdventureState
-) -> None:
-    """Generate a summary for the previous chapter (synchronous version for compatibility)."""
-    try:
-        logger.info(f"Generating summary for chapter {previous_chapter.chapter_number}")
-
-        # Extract the choice text and context from the response
-        choice_text = ""
-        choice_context = ""
-
-        if isinstance(previous_chapter.response, StoryResponse):
-            choice_text = previous_chapter.response.choice_text
-            # No additional context needed for STORY chapters
-        elif isinstance(previous_chapter.response, LessonResponse):
-            choice_text = previous_chapter.response.chosen_answer
-            choice_context = (
-                " (Correct answer)"
-                if previous_chapter.response.is_correct
-                else " (Incorrect answer)"
-            )
-
-        summary_result = await chapter_manager.generate_chapter_summary(
-            previous_chapter.content,
-            choice_text,
-            choice_context,
-            context=_chapter_llm_context(state, previous_chapter),
-        )
-
-        # Extract title and summary from the result
-        title = summary_result.get("title", "Chapter Summary")
-        summary_text = summary_result.get("summary", "Summary not available")
-
-        await store_chapter_summary(previous_chapter, state, title, summary_text)
-    except Exception as e:
-        logger.error(f"Error generating chapter summary: {str(e)}")
-        # Don't fail the whole process if summary generation fails
-        if len(state.chapter_summaries) < previous_chapter.chapter_number:
-            state.chapter_summaries.append("Chapter summary not available")
-
-
 async def store_chapter_summary(
     chapter: ChapterData, state: AdventureState, title: str, summary_text: str
 ) -> None:

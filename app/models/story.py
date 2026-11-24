@@ -1,9 +1,8 @@
-from pydantic import BaseModel, Field, field_validator, ValidationInfo
-from typing import List, Dict, Any, Optional, Union, Literal, Callable
+from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator, ValidationInfo
+from typing import List, Dict, Any, Optional, Union, Callable
 from enum import Enum
 import re
 import asyncio
-from dataclasses import dataclass, field
 
 
 class ChapterType(str, Enum):
@@ -12,8 +11,17 @@ class ChapterType(str, Enum):
     LESSON = "lesson"
     STORY = "story"
     CONCLUSION = "conclusion"
-    REFLECT = "reflect"  # New chapter type for deeper understanding after LESSON
-    SUMMARY = "summary"  # New chapter type for adventure summary after CONCLUSION
+    REFLECT = "reflect"
+    SUMMARY = "summary"
+
+    @classmethod
+    def _missing_(cls, value: object) -> Optional["ChapterType"]:
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            for member in cls:
+                if member.value == normalized:
+                    return member
+        return None
 
 
 class StoryChoice(BaseModel):
@@ -38,17 +46,13 @@ class ChapterContentValidator(BaseModel):
     @field_validator("content")
     @classmethod
     def content_must_not_start_with_chapter(cls, v):
-        # Case-insensitive check for any variation of "chapter" at the beginning
-        # This handles markdown headings and various formats
         if re.match(r"^(?:#{1,6}\s+)?chapter\b", v, re.IGNORECASE):
-            # Automatically fix the content by removing the prefix
             fixed_content = re.sub(
                 r"^(?:#{1,6}\s+)?chapter(?:\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))?:?\s*",
                 "",
                 v,
                 flags=re.IGNORECASE,
             )
-            # Ensure the first letter is capitalized after removing the prefix
             if fixed_content:
                 fixed_content = fixed_content[0].upper() + fixed_content[1:]
             return fixed_content
@@ -74,11 +78,11 @@ class ChapterData(BaseModel):
     """A chapter with its content and the user's response."""
 
     chapter_number: int
-    content: str  # Keep this as string, as it represents the raw content
+    content: str
     chapter_type: ChapterType
     response: Optional[Union[StoryResponse, LessonResponse]] = None
-    chapter_content: ChapterContent  # Add the ChapterContent object
-    question: Optional[Dict[str, Any]] = None  # Store the question for lesson chapters
+    chapter_content: ChapterContent
+    question: Optional[Dict[str, Any]] = None
 
     @field_validator("chapter_number")
     @classmethod
@@ -114,14 +118,9 @@ class AdventureState(BaseModel):
     current_chapter_id: str
     chapters: List[ChapterData] = []
     story_length: int = Field(default=10)
-    planned_chapter_types: List[
-        ChapterType
-    ] = []  # Pre-determined sequence of chapter types
-    current_storytelling_phase: str = (
-        "Exposition"  # Current phase in the Journey Quest structure
-    )
+    planned_chapter_types: List[ChapterType] = []
+    current_storytelling_phase: str = "Exposition"
 
-    # Story elements selected at initialization and maintained throughout the adventure
     selected_narrative_elements: Dict[str, str] = Field(
         default_factory=dict,
         description="One randomly selected element from each narrative_elements category",
@@ -152,69 +151,60 @@ class AdventureState(BaseModel):
     )
     character_visuals: Dict[str, str] = Field(
         default_factory=dict,
-        description="Stores current visual descriptions for characters (protagonist if changed, and NPCs). Key: character name, Value: description."
+        description="Stores current visual descriptions for characters (protagonist if changed, and NPCs). Key: character name, Value: description.",
     )
 
-    # Chapter summaries for the SUMMARY chapter
     chapter_summaries: List[str] = Field(
         default_factory=list,
         description="Summaries of each chapter for display in the SUMMARY chapter",
     )
 
-    # Chapter titles for the SUMMARY chapter
     summary_chapter_titles: List[str] = Field(
         default_factory=list,
         description="Titles of each chapter for display in the SUMMARY chapter",
     )
 
-    # Lesson questions for the SUMMARY chapter
     lesson_questions: List[Dict[str, Any]] = Field(
         default_factory=list,
         description="Educational questions encountered during the adventure for display in the SUMMARY chapter",
     )
 
-    # Metadata for element consistency and plot development
     metadata: Dict[str, Any] = Field(
         default_factory=dict,
         description="Additional metadata for tracking element consistency and plot development",
     )
-    
-    # Running background tasks (summaries, visual extraction, etc.)
+
     pending_background_tasks: List[asyncio.Task] = Field(
         default_factory=list,
         description="Running asyncio.Tasks created by factories, awaited before summary reveal",
-        exclude=True,  # Don't serialize these tasks
-        repr=False
+        exclude=True,
+        repr=False,
     )
 
-    # Deferred task factories queued during chapter processing
     deferred_task_factories: List[Callable[[], Any]] = Field(
         default_factory=list,
         description="Factory functions queued during chapter processing, executed after streaming completes",
-        exclude=True,  # Don't serialize these callables
-        repr=False
+        exclude=True,
+        repr=False,
     )
-    
-    # We'll add locks as computed properties to avoid serialization issues
+
+    _summary_lock: asyncio.Lock = PrivateAttr(default_factory=asyncio.Lock)
+    _chapters_lock: asyncio.Lock = PrivateAttr(default_factory=asyncio.Lock)
+    _character_visuals_lock: asyncio.Lock = PrivateAttr(default_factory=asyncio.Lock)
+
     @property
     def summary_lock(self) -> asyncio.Lock:
-        """Get or create the summary lock for thread-safe summary generation."""
-        if not hasattr(self, '_summary_lock'):
-            self._summary_lock = asyncio.Lock()
+        """Get the summary lock for serialized summary generation."""
         return self._summary_lock
 
     @property
     def chapters_lock(self) -> asyncio.Lock:
-        """Get or create the chapters lock for thread-safe chapter mutations."""
-        if not hasattr(self, '_chapters_lock'):
-            self._chapters_lock = asyncio.Lock()
+        """Get the chapters lock for serialized chapter mutations."""
         return self._chapters_lock
 
     @property
     def character_visuals_lock(self) -> asyncio.Lock:
         """Serialize character-visual extraction and state replacement."""
-        if not hasattr(self, "_character_visuals_lock"):
-            self._character_visuals_lock = asyncio.Lock()
         return self._character_visuals_lock
 
     @field_validator("selected_narrative_elements")
@@ -249,29 +239,15 @@ class AdventureState(BaseModel):
         """Current chapter number (1-based indexing)"""
         return len(self.chapters) + 1
 
-    def _is_lesson_response(self, chapter: ChapterData) -> bool:
-        """Helper method to check if chapter has a valid lesson response."""
-        return (
-            chapter.chapter_type == ChapterType.LESSON
-            and chapter.response is not None
-            and isinstance(chapter.response, LessonResponse)
-        )
-
-    def _is_story_response(self, chapter: ChapterData) -> bool:
-        """Helper method to check if chapter has a valid story response."""
-        return (
-            chapter.chapter_type == ChapterType.STORY
-            and chapter.response is not None
-            and isinstance(chapter.response, StoryResponse)
-        )
-
     @property
     def correct_lesson_answers(self) -> int:
         """Number of correctly answered lesson questions"""
         return sum(
             1
             for chapter in self.chapters
-            if self._is_lesson_response(chapter) and chapter.response.is_correct  # type: ignore[union-attr]
+            if chapter.chapter_type == ChapterType.LESSON
+            and isinstance(chapter.response, LessonResponse)
+            and chapter.response.is_correct
         )
 
     @property
@@ -287,8 +263,9 @@ class AdventureState(BaseModel):
         return [
             chapter.response
             for chapter in self.chapters
-            if self._is_story_response(chapter)
-        ]  # type: ignore[misc]
+            if chapter.chapter_type == ChapterType.STORY
+            and isinstance(chapter.response, StoryResponse)
+        ]
 
     @property
     def lesson_responses(self) -> List[LessonResponse]:
@@ -296,8 +273,9 @@ class AdventureState(BaseModel):
         return [
             chapter.response
             for chapter in self.chapters
-            if self._is_lesson_response(chapter)
-        ]  # type: ignore[misc]
+            if chapter.chapter_type == ChapterType.LESSON
+            and isinstance(chapter.response, LessonResponse)
+        ]
 
     @property
     def all_previous_content(self) -> List[str]:
@@ -309,37 +287,28 @@ class AdventureState(BaseModel):
         """Content from the most recently completed chapter"""
         return self.chapters[-1].content if self.chapters else None
 
-    @field_validator("chapters")
-    @classmethod
-    def validate_chapters(cls, chapters: List[ChapterData], info: ValidationInfo) -> List[ChapterData]:
-        if not chapters:
-            return chapters
+    @model_validator(mode="after")
+    def validate_chapters(self) -> "AdventureState":
+        if not self.chapters:
+            return self
 
-        # Validate chapter sequence
-        chapter_numbers = [chapter.chapter_number for chapter in chapters]
-        expected_numbers = list(range(1, len(chapters) + 1))
+        chapter_numbers = [chapter.chapter_number for chapter in self.chapters]
+        expected_numbers = list(range(1, len(self.chapters) + 1))
 
         if chapter_numbers != expected_numbers:
             raise ValueError("Chapter numbers must be sequential starting from 1")
 
-        # Get the actual story_length for this instance (not the default)
-        story_length = getattr(info.data, 'story_length', None) if info.data else None
-        if story_length is None:
-            story_length = cls.model_fields["story_length"].default  # Fallback to default
+        max_allowed_chapters = self.story_length + 1
+        if len(self.chapters) > max_allowed_chapters:
+            raise ValueError(
+                f"Number of chapters cannot exceed story_length + 1 for SUMMARY (max: {max_allowed_chapters}, got: {len(self.chapters)})"
+            )
+        if (
+            len(self.chapters) == max_allowed_chapters
+            and self.chapters[-1].chapter_type != ChapterType.SUMMARY
+        ):
+            raise ValueError(
+                f"Chapter {len(self.chapters)} must be a SUMMARY chapter when exceeding story_length ({self.story_length})"
+            )
 
-        # Validate against story_length (allow one extra chapter for SUMMARY)
-        max_allowed_chapters = story_length + 1  # +1 for SUMMARY chapter
-        if len(chapters) > max_allowed_chapters:
-            # Check if the extra chapter is a SUMMARY chapter
-            if len(chapters) == story_length + 1:
-                last_chapter = chapters[-1]
-                if last_chapter.chapter_type != ChapterType.SUMMARY:
-                    raise ValueError(
-                        f"Chapter {len(chapters)} must be a SUMMARY chapter when exceeding story_length ({story_length})"
-                    )
-            else:
-                raise ValueError(
-                    f"Number of chapters cannot exceed story_length + 1 for SUMMARY (max: {max_allowed_chapters}, got: {len(chapters)})"
-                )
-
-        return chapters
+        return self

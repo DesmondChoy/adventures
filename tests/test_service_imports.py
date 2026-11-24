@@ -5,28 +5,42 @@ from pathlib import Path
 
 
 def test_application_modules_do_not_create_clients_during_import() -> None:
-    """Application imports must not require external-service credentials."""
+    """Importing any app service or router must not instantiate external clients."""
     project_root = Path(__file__).resolve().parents[1]
     import_script = """
+import importlib
+import pkgutil
 import dotenv
+import openai
+import supabase
 from google import genai
 
 
-def fail_if_client_is_created(*args, **kwargs):
-    raise AssertionError("Gemini client created during module import")
+def fail_if_client_is_created(name):
+    def _fail(*args, **kwargs):
+        raise AssertionError(f"{name} created during module import")
+    return _fail
 
 
 dotenv.load_dotenv = lambda *args, **kwargs: False
-genai.Client = fail_if_client_is_created
+genai.Client = fail_if_client_is_created("genai.Client")
+openai.AsyncOpenAI = fail_if_client_is_created("openai.AsyncOpenAI")
+openai.OpenAI = fail_if_client_is_created("openai.OpenAI")
+supabase.create_client = fail_if_client_is_created("supabase.create_client")
 
-import app.services.websocket.content_generator
-import app.services.websocket.summary_generator
+for pkg_name in ("app.models", "app.auth", "app.services", "app.routers"):
+    pkg = importlib.import_module(pkg_name)
+    for mod in pkgutil.walk_packages(pkg.__path__, prefix=f"{pkg_name}."):
+        importlib.import_module(mod.name)
+
 import tests.simulations.generate_chapter_summaries
 """
 
     clean_environment = os.environ.copy()
     for variable_name in (
         "GOOGLE_API_KEY",
+        "OPENAI_API_KEY",
+        "SUPABASE_ANON_KEY",
         "SUPABASE_KEY",
         "SUPABASE_SERVICE_KEY",
         "SUPABASE_URL",

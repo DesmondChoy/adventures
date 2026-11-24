@@ -1,7 +1,10 @@
-"""Unit tests for the current summary service contract."""
+"""Behavioral + SQLite-backed contract tests for SummaryService."""
 
+from __future__ import annotations
+
+from collections.abc import Iterator
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
 import pytest
@@ -22,6 +25,7 @@ from app.services.summary import (
     SummaryGenerationError,
     SummaryService,
 )
+from tests.helpers.sqlite_state_storage import SQLiteAdventureStorage
 
 
 def _chapter(
@@ -51,16 +55,17 @@ def _chapter(
 
 
 @pytest.fixture
-def mock_storage() -> MagicMock:
-    storage = MagicMock(spec=StateStorageService)
-    storage.get_state = AsyncMock()
-    storage.store_state = AsyncMock(return_value="test-state-id")
-    return storage
+def sqlite_storage() -> Iterator[SQLiteAdventureStorage]:
+    storage = SQLiteAdventureStorage()
+    try:
+        yield storage
+    finally:
+        storage.close()
 
 
 @pytest.fixture
-def summary_service(mock_storage: MagicMock) -> SummaryService:
-    return SummaryService(mock_storage)
+def summary_service(sqlite_storage: SQLiteAdventureStorage) -> SummaryService:
+    return SummaryService(sqlite_storage)  # type: ignore[arg-type]
 
 
 @pytest.fixture
@@ -74,6 +79,12 @@ def sample_state() -> AdventureState:
     return AdventureState(
         current_chapter_id="chapter-2",
         story_length=2,
+        planned_chapter_types=[ChapterType.STORY, ChapterType.CONCLUSION],
+        selected_narrative_elements={"settings": "Clockwork Sky City"},
+        selected_sensory_details={"visuals": "Brass", "sounds": "Wind", "smells": "Pine"},
+        selected_theme="Teamwork",
+        selected_moral_teaching="Help one another",
+        selected_plot_twist="A hidden compass appears",
         chapters=[
             _chapter(1, ChapterType.STORY),
             _chapter(2, ChapterType.CONCLUSION),
@@ -106,44 +117,42 @@ def test_adventure_summary_dto_converts_api_keys() -> None:
     }
 
 
-async def test_get_adventure_state_from_storage(
+@pytest.mark.asyncio
+async def test_store_reconstruct_and_format_round_trip_in_sqlite(
     summary_service: SummaryService,
-    mock_storage: MagicMock,
+    sqlite_storage: SQLiteAdventureStorage,
     sample_state: AdventureState,
 ) -> None:
-    mock_storage.get_state.return_value = {"stored": "state"}
-    state_manager = MagicMock()
-    state_manager.get_current_state.return_value = None
-    state_manager.reconstruct_state_from_storage = AsyncMock(return_value=sample_state)
-
-    with patch(
-        "app.services.summary.service.AdventureStateManager",
-        return_value=state_manager,
-    ):
-        result = await summary_service.get_adventure_state_from_id("test-state-id")
-
-    assert result is sample_state
-    mock_storage.get_state.assert_awaited_once_with("test-state-id")
-    state_manager.reconstruct_state_from_storage.assert_awaited_once_with(
-        {"stored": "state"}
+    user_id = UUID("76a9eb9e-6ab0-4a82-bd2b-18de95e79054")
+    state_id = await summary_service.store_adventure_state(
+        sample_state.model_dump(mode="json"),
+        user_id=user_id,
     )
 
+    reconstructed = await summary_service.get_adventure_state_from_id(state_id)
+    formatted = await summary_service.format_adventure_summary_data(reconstructed)
+    record = await sqlite_storage.get_adventure_record(state_id)
 
+    assert record is not None
+    assert record["user_id"] == str(user_id)
+    assert [item["summary"] for item in formatted["chapter_summaries"]] == [
+        "The journey begins.",
+        "The journey concludes.",
+    ]
+    assert formatted["educational_questions"][0]["user_answer"] == "Teamwork"
+    assert formatted["statistics"] == {
+        "chapters_completed": 2,
+        "questions_answered": 1,
+        "time_spent": "-- mins",
+        "correct_answers": 1,
+    }
+
+
+@pytest.mark.asyncio
 async def test_get_adventure_state_raises_when_missing(
     summary_service: SummaryService,
-    mock_storage: MagicMock,
 ) -> None:
-    mock_storage.get_state.return_value = None
-    state_manager = MagicMock()
-    state_manager.get_current_state.return_value = None
-
-    with (
-        patch(
-            "app.services.summary.service.AdventureStateManager",
-            return_value=state_manager,
-        ),
-        pytest.raises(StateNotFoundError),
-    ):
+    with pytest.raises(StateNotFoundError):
         await summary_service.get_adventure_state_from_id("missing-state")
 
 
@@ -161,54 +170,13 @@ def test_ensure_conclusion_marks_highest_numbered_chapter(
     assert result.chapters[-1].chapter_type == ChapterType.CONCLUSION
 
 
-async def test_format_adventure_summary_data(
-    summary_service: SummaryService,
-    sample_state: AdventureState,
-) -> None:
-    result = await summary_service.format_adventure_summary_data(sample_state)
-
-    assert [item["summary"] for item in result["chapter_summaries"]] == [
-        "The journey begins.",
-        "The journey concludes.",
-    ]
-    assert result["educational_questions"][0]["user_answer"] == "Teamwork"
-    assert result["statistics"] == {
-        "chapters_completed": 2,
-        "questions_answered": 1,
-        "time_spent": "-- mins",
-        "correct_answers": 1,
-    }
-
-
-async def test_store_adventure_state_uses_public_storage_contract(
-    summary_service: SummaryService,
-    mock_storage: MagicMock,
-) -> None:
-    user_id = UUID("76a9eb9e-6ab0-4a82-bd2b-18de95e79054")
-    state_data: dict[str, Any] = {"chapters": [], "metadata": None}
-
-    state_id = await summary_service.store_adventure_state(
-        state_data,
-        adventure_id="existing-id",
-        user_id=user_id,
+@pytest.mark.asyncio
+async def test_store_adventure_state_wraps_storage_errors() -> None:
+    failing_storage = MagicMock(spec=StateStorageService)
+    failing_storage.store_state = AsyncMock(
+        side_effect=RuntimeError("database unavailable")
     )
-
-    assert state_id == "test-state-id"
-    assert state_data["chapter_summaries"] == []
-    assert state_data["summary_chapter_titles"] == []
-    assert state_data["metadata"] == {"user_id": str(user_id)}
-    mock_storage.store_state.assert_awaited_once_with(
-        state_data,
-        adventure_id="existing-id",
-        user_id=user_id,
-    )
-
-
-async def test_store_adventure_state_wraps_storage_errors(
-    summary_service: SummaryService,
-    mock_storage: MagicMock,
-) -> None:
-    mock_storage.store_state.side_effect = RuntimeError("database unavailable")
+    service = SummaryService(failing_storage)
 
     with pytest.raises(SummaryGenerationError, match="database unavailable"):
-        await summary_service.store_adventure_state({"chapters": []})
+        await service.store_adventure_state({"chapters": []})

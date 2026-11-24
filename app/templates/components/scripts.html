@@ -1,17 +1,10 @@
-<!-- Configuration script to pass server-side data to JavaScript modules -->
 <script>
-    // Global configuration object for JavaScript modules
     window.appConfig = {
         totalCategories: parseInt("{{ story_categories|length }}"),
         totalLessonTopics: parseInt("{{ lesson_topics|length }}"),
-        defaultStoryLength: 10  // Default story length from model
+        defaultStoryLength: {{ default_story_length }}
     };
 </script>
 
-<!-- First-touch UTM/referrer capture; must run before main.js opens the story WebSocket -->
-<script src="{{ url_for('static', path='js/attribution.js') }}?v=20261118a"></script>
-
-<!-- Main application module - imports all other modules internally -->
-<!-- Note: Don't load modules directly here as it causes duplicate instances -->
-<!-- when main.js also imports them (different URL resolution = different modules) -->
-<script type="module" src="{{ url_for('static', path='js/main.js') }}?v=20261118a"></script>
+<script src="{{ static_url('js/attribution.js') }}"></script>
+<script type="module" src="{{ static_url('js/main.js') }}"></script>

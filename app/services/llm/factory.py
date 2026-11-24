@@ -6,6 +6,17 @@ from typing import ClassVar, Literal
 from .base import BaseLLMService
 from .providers import GeminiService, ModelConfig, OpenAIService
 
+LLMUseCase = Literal[
+    "story_generation",
+    "image_scene_generation",
+    "character_visual_processing",
+    "summary_generation",
+    "paragraph_formatting",
+    "chapter_summaries",
+    "fallback_summaries",
+    "image_prompt_synthesis",
+]
+
 
 @dataclass(frozen=True)
 class UseCaseConfig:
@@ -16,8 +27,7 @@ class UseCaseConfig:
 class LLMServiceFactory:
     """Create the configured provider for a known LLM use case."""
 
-    USE_CASE_CONFIG_MAP: ClassVar[dict[str, UseCaseConfig]] = {
-        # Narrative and related scene analysis use GPT-5.6 Luna.
+    USE_CASE_CONFIG_MAP: ClassVar[dict[LLMUseCase, UseCaseConfig]] = {
         "story_generation": UseCaseConfig(
             provider="openai",
             model=ModelConfig.STORY_GENERATION_MODEL,
@@ -26,7 +36,6 @@ class LLMServiceFactory:
             provider="openai",
             model=ModelConfig.IMAGE_SCENE_MODEL,
         ),
-        # Lightweight support work remains on Gemini Flash Lite.
         "character_visual_processing": UseCaseConfig(
             provider="gemini",
             model=ModelConfig.CHARACTER_VISUAL_MODEL,
@@ -54,14 +63,14 @@ class LLMServiceFactory:
     }
 
     @classmethod
-    def _config_for(cls, use_case: str) -> UseCaseConfig:
+    def _config_for(cls, use_case: LLMUseCase) -> UseCaseConfig:
         try:
             return cls.USE_CASE_CONFIG_MAP[use_case]
         except KeyError as exc:
             raise ValueError(f"Unknown LLM use case: {use_case}") from exc
 
     @classmethod
-    def create_for_use_case(cls, use_case: str) -> BaseLLMService:
+    def create_for_use_case(cls, use_case: LLMUseCase) -> BaseLLMService:
         config = cls._config_for(use_case)
         if config.provider == "openai":
             return OpenAIService(model=config.model)
@@ -73,9 +82,9 @@ class LLMServiceFactory:
         return GeminiService(model=ModelConfig.GEMINI_FLASH_LITE_MODEL)
 
     @classmethod
-    def get_model_for_use_case(cls, use_case: str) -> str:
+    def get_model_for_use_case(cls, use_case: LLMUseCase) -> str:
         return cls._config_for(use_case).model
 
     @classmethod
-    def is_flash_lite_use_case(cls, use_case: str) -> bool:
+    def is_flash_lite_use_case(cls, use_case: LLMUseCase) -> bool:
         return cls._config_for(use_case).model == ModelConfig.GEMINI_FLASH_LITE_MODEL

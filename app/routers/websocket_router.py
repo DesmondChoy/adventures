@@ -4,14 +4,14 @@ from collections import defaultdict
 from typing import Dict, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status
 
 from app.auth.supabase_auth import (
     AuthenticationUnavailable,
     InvalidAccessToken,
     verify_supabase_access_token,
 )
-from app.models.story import ChapterType
+from app.models.story import AdventureState, ChapterType
 from app.services.adventure_state_manager import AdventureStateManager
 from app.services.state_storage_service import StateStorageService
 from app.services.telemetry_service import TelemetryService
@@ -27,10 +27,7 @@ from app.services.websocket.stream_handler import (
 router = APIRouter()
 logger = logging.getLogger("story_app")
 
-# WebSocket keep-alive configuration
-PING_INTERVAL_SECONDS = 30  # Send ping every 30 seconds
-
-# WebSocket rate limiting: max concurrent connections per IP
+PING_INTERVAL_SECONDS = 30
 MAX_WS_CONNECTIONS_PER_IP = 3
 _ws_connections_per_ip: dict[str, int] = defaultdict(int)
 _ws_lock = asyncio.Lock()
@@ -39,10 +36,6 @@ _ws_lock = asyncio.Lock()
 def _validate_adventure_ownership(
     adventure_record: dict, current_user_id: Optional[UUID], adventure_id: str
 ) -> bool:
-    """Validate that the current user owns the adventure.
-
-    Returns True if the user can access the adventure, False otherwise.
-    """
     adventure_owner_id_str = adventure_record.get("user_id")
 
     if adventure_owner_id_str is None:
@@ -62,7 +55,6 @@ def _validate_adventure_ownership(
 
 
 def _get_choice_id(choice_data: object) -> Optional[str]:
-    """Normalize the supported WebSocket choice payload shapes."""
     if isinstance(choice_data, str):
         return choice_data
     if isinstance(choice_data, dict):
@@ -76,7 +68,6 @@ def _get_choice_id(choice_data: object) -> Optional[str]:
 
 
 def _client_state_matches_server(validated_state: object, current_state: object) -> bool:
-    """Return whether client chapters match the server-authoritative state."""
     if not isinstance(validated_state, dict):
         return False
     client_chapters = validated_state.get("chapters", [])
@@ -129,7 +120,7 @@ def get_display_chapter_number(state) -> int:
         return 1
     if not state.chapters:
         return 1
-    return len(state.chapters)  # Show completed chapters, not next to generate
+    return len(state.chapters)
 
 def get_generation_chapter_number(state) -> int:
     """Get next chapter number for content generation"""
@@ -137,7 +128,7 @@ def get_generation_chapter_number(state) -> int:
         return 1
     if not state.chapters:
         return 1
-    return len(state.chapters) + 1  # Next chapter to generate
+    return len(state.chapters) + 1
 
 
 ATTRIBUTION_MAX_LENGTH = 200
@@ -168,9 +159,7 @@ def get_safe_chapter_number(state) -> int:
 def get_safe_total_chapters(state) -> int:
     """Get total chapters with fallback"""
     if not state:
-        from app.models.story import AdventureState
         return AdventureState.model_fields["story_length"].default
-    from app.models.story import AdventureState
     return getattr(state, 'story_length', None) or AdventureState.model_fields["story_length"].default
 
 
@@ -182,16 +171,13 @@ async def story_websocket(
     client_uuid: Optional[str] = Query(None),
     difficulty: Optional[str] = Query(None),
     token: Optional[str] = Query(None),
-    resume_adventure_id: Optional[str] = Query(
-        None
-    ),  # New parameter for specific resumption
+    resume_adventure_id: Optional[str] = Query(None),
     utm_source: Optional[str] = Query(None),
     utm_medium: Optional[str] = Query(None),
     utm_campaign: Optional[str] = Query(None),
     utm_content: Optional[str] = Query(None),
     referrer: Optional[str] = Query(None),
 ):
-    # Rate limit: check concurrent WebSocket connections per IP
     client_ip = websocket.client.host if websocket.client else "unknown"
     async with _ws_lock:
         if _ws_connections_per_ip[client_ip] >= MAX_WS_CONNECTIONS_PER_IP:
@@ -200,7 +186,10 @@ async def story_websocket(
                 f"WebSocket rate limit exceeded for IP {client_ip}: "
                 f"{_ws_connections_per_ip[client_ip]} concurrent connections"
             )
-            await websocket.close(code=1008, reason="Too many concurrent connections")
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="Too many concurrent connections",
+            )
             return
         _ws_connections_per_ip[client_ip] += 1
 
@@ -227,23 +216,22 @@ async def story_websocket(
                 user_id = await verify_supabase_access_token(token)
             except InvalidAccessToken:
                 logger.info("WebSocket authentication was rejected")
-                await websocket.close(code=1008, reason="Invalid authentication")
+                await websocket.close(
+                    code=status.WS_1008_POLICY_VIOLATION,
+                    reason="Invalid authentication",
+                )
                 return
             except AuthenticationUnavailable:
                 logger.warning("WebSocket authentication is unavailable")
                 await websocket.close(
-                    code=1013, reason="Authentication service unavailable"
+                    code=status.WS_1013_TRY_AGAIN_LATER,
+                    reason="Authentication service unavailable",
                 )
                 return
 
         state_manager = AdventureStateManager()
         state_storage_service = StateStorageService()
-
-        # Lazy instantiation to avoid environment variable loading issues during import
-        def get_telemetry_service():
-            return TelemetryService()
-
-        telemetry_service = get_telemetry_service()
+        telemetry_service = TelemetryService()
 
         connection_data = {
             "adventure_id": None,
@@ -449,28 +437,22 @@ async def story_websocket(
                     f"No active adventure found for user_id {connection_data.get('user_id')} or client_uuid {client_uuid}. A new adventure will be created on first client message."
                 )
 
-        # Send status based on whether an adventure was loaded (either specific or active)
         if loaded_state_from_storage and connection_data["adventure_id"]:
             loaded_state_from_storage.metadata["adventure_id"] = connection_data[
                 "adventure_id"
             ]
-            # For resumed adventures, display the last completed chapter number (the one being re-displayed)
-            # not the next chapter to be generated
-            if loaded_state_from_storage.chapters:
-                display_chapter_number = len(loaded_state_from_storage.chapters)
-            else:
-                display_chapter_number = 1
+            display_chapter_number = get_display_chapter_number(
+                loaded_state_from_storage
+            )
             total_chapters = get_safe_total_chapters(loaded_state_from_storage)
 
             await websocket.send_json(
                 {
-                    "type": "adventure_loaded",  # Changed from adventure_status for clarity
-                    "status": "existing_loaded",  # More specific status
+                    "type": "adventure_loaded",
+                    "status": "existing_loaded",
                     "adventure_id": connection_data["adventure_id"],
                     "current_chapter": display_chapter_number,
                     "total_chapters": total_chapters,
-                    # Include story_category and lesson_topic for frontend state persistence
-                    # This ensures localStorage is populated on resume, enabling page refreshes
                     "story_category": story_category,
                     "lesson_topic": lesson_topic,
                 }
@@ -478,7 +460,7 @@ async def story_websocket(
             logger.info(
                 f"Loaded state has {len(loaded_state_from_storage.chapters)} completed chapters, displaying chapter {display_chapter_number} to user (next chapter to generate would be {loaded_state_from_storage.current_chapter_number})"
             )
-            # Resend last chapter content if needed (existing logic)
+
             if loaded_state_from_storage.chapters:
                 chapter_number_to_resume_display = (
                     loaded_state_from_storage.current_chapter_number - 1
@@ -546,13 +528,9 @@ async def story_websocket(
                 logger.warning(
                     "Loaded state has no chapters, cannot determine chapter to resume."
                 )
-        else:  # No adventure loaded, will be new
-            # Import to get default story length
-            from app.models.story import AdventureState
-            
-            # Reference the configurable story length parameter
+        else:
             default_story_length = AdventureState.model_fields["story_length"].default
-            
+
             await websocket.send_json({
                 "type": "adventure_status",
                 "status": "new",
@@ -560,7 +538,6 @@ async def story_websocket(
                 "total_chapters": default_story_length
             })
 
-        # Start WebSocket keep-alive ping task
         ping_stop_event = asyncio.Event()
         ping_task = asyncio.create_task(websocket_ping_task(websocket, ping_stop_event))
         logger.debug("Started WebSocket ping task for keep-alive")
@@ -572,7 +549,6 @@ async def story_websocket(
                 logger.info("WebSocket client disconnected during receive")
                 break
 
-            # Handle ping/pong for keep-alive
             if data.get("type") == "pong":
                 logger.debug("Received WebSocket pong")
                 continue
@@ -642,7 +618,6 @@ async def story_websocket(
                             f"State is None but adventure_id {connection_data['adventure_id']} exists. Re-initializing."
                         )
                         connection_data["adventure_id"] = None
-                    from app.models.story import AdventureState
                     total_chapters = AdventureState.model_fields[
                         "story_length"
                     ].default
@@ -679,6 +654,7 @@ async def story_websocket(
                                 lesson_topic=lesson_topic,
                             )
                             if adventure_id is None:
+                                state_manager.state = None
                                 continue
                             connection_data["adventure_id"] = adventure_id
                             state.metadata["adventure_id"] = adventure_id
@@ -719,11 +695,13 @@ async def story_websocket(
                             )
                         except Exception as e:
                             logger.error(f"Error storing initial state: {e}")
+                            state_manager.state = None
+                            continue
                     except ValueError as e:
                         error_message = f"Error initializing state: {e}"
                         logger.error(error_message)
                         await websocket.send_text(error_message)
-                        await websocket.close(code=1001)
+                        await websocket.close(code=status.WS_1001_GOING_AWAY)
                         return
                 else:
                     is_reveal_summary_choice = bool(
@@ -904,22 +882,18 @@ async def story_websocket(
                 break
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected")
-    except (
-        Exception
-    ) as e:  # Catch any other unexpected errors during setup or main loop
+    except Exception as e:
         logger.error(f"Unexpected error in WebSocket handler: {e}", exc_info=True)
         try:
-            await websocket.close(code=1011)  # Internal Server Error
+            await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
         except Exception:
-            pass  # Ignore errors during close if connection already broken
+            pass
     finally:
-        # Decrement WebSocket connection counter for this IP
         async with _ws_lock:
             _ws_connections_per_ip[client_ip] -= 1
             if _ws_connections_per_ip[client_ip] <= 0:
                 del _ws_connections_per_ip[client_ip]
 
-        # Clean up ping task when connection closes
         if 'ping_stop_event' in locals():
             ping_stop_event.set()
             logger.debug("Signaled ping task to stop")

@@ -3,13 +3,8 @@
  * Handles DOM manipulation, UI updates, and user interface functions
  */
 
-import { stateManager, manageState } from './stateManager.js?v=20260816c';
-import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260526a';
-import { withCurrentModuleVersion } from './moduleVersion.js';
-
-function withModuleVersion(modulePath) {
-    return withCurrentModuleVersion(import.meta.url, modulePath);
-}
+import { stateManager, manageState } from './stateManager.js';
+import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js';
 
 function sanitizeRenderedHtml(html) {
     if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
@@ -1164,7 +1159,7 @@ export async function startAdventure() {
 
     // Start the adventure
     showLoader();
-    const { initWebSocket } = await import(withModuleVersion('./main.js'));
+    const { initWebSocket } = await import('./main.js');
     initWebSocket();
 }
 

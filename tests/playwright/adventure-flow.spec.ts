@@ -155,6 +155,20 @@ test('completes the deterministic selection-to-Memory-Lane browser flow', async 
     { chapterImage: CHAPTER_IMAGE, summaryStateId: SUMMARY_STATE_ID },
   );
 
+  const moduleIntegrity = await page.evaluate(async () => {
+    const importMapScript = document.querySelector('script[type="importmap"]');
+    const dynamicStateModule = await import('/static/js/stateManager.js');
+    return {
+      hasImportMap: Boolean(importMapScript?.textContent),
+      sameStateManagerInstance:
+        dynamicStateModule.stateManager === window.appState?.stateManager,
+    };
+  });
+  expect(moduleIntegrity).toEqual({
+    hasImportMap: true,
+    sameStateManagerInstance: true,
+  });
+
   await selectCarouselCard(
     page,
     'storyCategoryScreen',

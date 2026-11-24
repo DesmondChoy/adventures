@@ -3,7 +3,7 @@ import logging
 from typing import Any
 from uuid import uuid4
 
-from fastapi import WebSocket
+from fastapi import WebSocket, WebSocketDisconnect
 
 from app.services.state_storage_service import StateStorageService
 
@@ -74,7 +74,7 @@ async def store_state_with_retry(
                     "retryable": True,
                 }
             )
-        except Exception as notification_error:  # noqa: BLE001 - socket may already be closed
+        except (WebSocketDisconnect, RuntimeError, ConnectionError) as notification_error:
             logger.debug(
                 "Could not notify client about state persistence failure",
                 extra={

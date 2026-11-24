@@ -241,32 +241,32 @@ async def ensure_all_summaries_exist(state: AdventureState) -> None:
                 },
             )
             
-            # Store in state (same format as regular summary generation)
-            chapter_index = chapter.chapter_number - 1  # Convert to 0-based index
-            
-            # Ensure the lists are large enough
-            while len(state.chapter_summaries) <= chapter_index:
-                state.chapter_summaries.append("")
-            while len(state.summary_chapter_titles) <= chapter_index:
-                state.summary_chapter_titles.append("")
-            
-            # Store the summary and title
-            state.chapter_summaries[chapter_index] = summary_result["summary"]
-            if "title" in summary_result:
-                state.summary_chapter_titles[chapter_index] = summary_result["title"]
-            
+            chapter_index = chapter.chapter_number - 1
+
+            async with state.summary_lock:
+                while len(state.chapter_summaries) <= chapter_index:
+                    state.chapter_summaries.append("")
+                while len(state.summary_chapter_titles) <= chapter_index:
+                    state.summary_chapter_titles.append("")
+
+                state.chapter_summaries[chapter_index] = summary_result["summary"]
+                if "title" in summary_result:
+                    state.summary_chapter_titles[chapter_index] = summary_result["title"]
+
             logger.info(f"Generated on-demand summary for chapter {chapter.chapter_number}")
-            
+
         except Exception as e:
             logger.error(f"Failed to generate summary for chapter {chapter.chapter_number}: {e}")
-            # Store a fallback summary
             chapter_index = chapter.chapter_number - 1
-            
-            # Ensure the list is large enough for fallback
-            while len(state.chapter_summaries) <= chapter_index:
-                state.chapter_summaries.append("")
-            
-            state.chapter_summaries[chapter_index] = f"Chapter {chapter.chapter_number} summary (generated on-demand)"
+
+            async with state.summary_lock:
+                while len(state.chapter_summaries) <= chapter_index:
+                    state.chapter_summaries.append("")
+
+                if not state.chapter_summaries[chapter_index]:
+                    state.chapter_summaries[chapter_index] = (
+                        f"Chapter {chapter.chapter_number} summary (generated on-demand)"
+                    )
 
 
 # Import stream_summary_content from stream_handler

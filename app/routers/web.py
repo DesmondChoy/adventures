@@ -14,9 +14,12 @@ from app.services.state_storage_service import StateStorageService
 from app.auth.dependencies import get_current_user_id_optional, get_current_user_id
 from app.models.story import AdventureState
 from app.services.llm.prompt_templates import LOADING_PHRASES
+from app.utils.static_assets import js_importmap_json, static_url
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals["static_url"] = static_url
+templates.env.globals["js_importmap"] = js_importmap_json
 logger = logging.getLogger("story_app")
 DEFAULT_STORY_LENGTH = int(AdventureState.model_fields["story_length"].default)
 
@@ -198,6 +201,7 @@ async def select_adventure(request: Request):
                 "lesson_topics": lesson_data["topic"].unique(),
                 "topic_subtopics": topic_subtopics,
                 "topic_descriptions": topic_descriptions,
+                "default_story_length": DEFAULT_STORY_LENGTH,
                 "supabase_url": supabase_url,
                 "supabase_anon_key": supabase_anon_key,
                 **context,

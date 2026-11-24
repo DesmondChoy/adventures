@@ -1,18 +1,12 @@
-/**
- * Main Application Module
- * Entry point for the client-side application, handles initialization and coordination
- */
-
-import { authManager } from './authManager.js?v=20260526a';
-import { AdventureStateManager } from './adventureStateManager.js?v=20260816c';
-import { WebSocketManager } from './webSocketManager.js?v=20260816c';
-import { stateManager, manageState } from './stateManager.js?v=20260816c';
-import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js?v=20260526a';
+import { authManager } from './authManager.js';
+import { AdventureStateManager } from './adventureStateManager.js';
+import { WebSocketManager } from './webSocketManager.js';
+import { stateManager, manageState } from './stateManager.js';
+import { Carousel, setupCarouselKeyboardNavigation } from './carousel-manager.js';
 import {
     showError,
     hideLoader,
     showLoader,
-    updateProgress,
     resetApplicationState,
     setSelectedCategory,
     setSelectedLessonTopic,
@@ -29,10 +23,10 @@ import {
     startAdventure,
     initializeLoaderRetryButton,
     updateAdventureContextRibbon
-} from './uiManager.js?v=20261118a';
+} from './uiManager.js';
 
-// Global application state
-// Guard against re-initialization if module is re-imported
+const SUMMARY_GENERATION_TIMEOUT_MS = 60_000;
+
 if (!window.appState || !window.appState.wsManager) {
     window.appState = {
         authManager: authManager,
@@ -42,8 +36,6 @@ if (!window.appState || !window.appState.wsManager) {
     };
 }
 
-// Global configuration (will be set from template data)
-// Don't overwrite if it already exists
 if (!window.appConfig) {
     window.appConfig = {
         totalCategories: 0,
@@ -51,14 +43,12 @@ if (!window.appConfig) {
     };
 }
 
-// Initialize WebSocket connection
 export function initWebSocket() {
     showLoader();
     if (!authManager) {
         console.error('initWebSocket: authManager missing');
     }
 
-    // Ensure wsManager exists (defensive)
     if (!window.appState.wsManager) {
         try {
             window.appState.wsManager = new WebSocketManager(authManager);
@@ -74,27 +64,17 @@ export function initWebSocket() {
     try {
         window.appState.storyWebSocket = new WebSocket(websocketUrl);
         window.appState.wsManager.connection = window.appState.storyWebSocket;
-        window.appState.wsManager.setupConnectionHandlers(); // This will set onopen, onclose, onerror, onmessage
+        window.appState.wsManager.setupConnectionHandlers();
     } catch (e) {
         console.error("CRITICAL ERROR instantiating WebSocket:", e);
-        hideLoader(); // Hide loader if WebSocket creation fails
-    }
-
-    // Initialize with a new state or restore existing
-    const savedState = stateManager.loadState();
-    if (savedState && !window.appState.wsManager.adventureIdToResume) {
-        // Don't call updateProgress here - let the backend's adventure_loaded message handle it
+        hideLoader();
     }
 }
 
-// Make a choice and send to server
 export function makeChoice(choiceId, choiceText) {
     if (window.appState.storyWebSocket && window.appState.storyWebSocket.readyState === WebSocket.OPEN) {
         showLoader();
-        // Clear the stream buffer when making a new choice
         clearStreamBuffer();
-
-        // Reset active paragraphs for the new chapter
         clearActiveParagraphs();
 
         const existingState = stateManager.loadState() || {};
@@ -107,41 +87,31 @@ export function makeChoice(choiceId, choiceText) {
             ? displayedChapter
             : currentChapters.length + 1;
 
-        // Create new chapter data with complete structure
-        // Preserve the current chapter's choices for state reconstruction on reconnect
         const preservedChoices = getCurrentChapterChoices();
         const newChapter = {
             chapter_number: chapterNumber,
             content: document.getElementById('storyContent').textContent,
-            // chapter_type will be set by the server based on adventure flow
             response: {
                 chosen_path: choiceId,
                 choice_text: choiceText
             },
             chapter_content: {
                 content: document.getElementById('storyContent').textContent,
-                choices: preservedChoices // Preserve choices for state reconstruction
+                choices: preservedChoices
             }
         };
 
         const updatedState = manageState('update', {
             current_chapter_id: choiceId,
-            // A resumed chapter may already have a placeholder entry. Replace it
-            // and discard any stale chapters from a different local adventure.
             chapters: [...currentChapters.slice(0, chapterNumber - 1), newChapter]
         });
 
-        // Don't call updateProgress here - let the backend handle chapter display updates
-
-        // CRITICAL: Advance image chapter and hide container BEFORE sending message
-        // This prevents race condition where server responds with stale image before these lines run
         const nextChapter = chapterNumber + 1;
         advanceExpectedImageChapter(nextChapter);
-        resetDisplayedImageChapter(); // Allow next chapter's image to be shown
+        resetDisplayedImageChapter();
         cancelChapterImageSoftHold();
         hideChapterImage();
 
-        // Send state and choice data to server
         window.appState.wsManager.sendMessage({
             state: updatedState,
             choice: {
@@ -151,25 +121,18 @@ export function makeChoice(choiceId, choiceText) {
             }
         });
 
-        // Clear UI for next chapter
         document.getElementById('storyContent').textContent = '';
         document.getElementById('choicesContainer').innerHTML = '';
-
-        // Clear stored choices for next chapter
         clearCurrentChapterChoices();
     }
 }
 
-// Adventure summary function
 export async function viewAdventureSummary() {
-    // Show loading indicator
     showLoader();
 
-    // Flag to track if we've already redirected
     let hasRedirected = false;
     let timeoutId = null;
 
-    // Check if WebSocket is available and in correct state
     if (!window.appState.storyWebSocket || window.appState.storyWebSocket.readyState !== WebSocket.OPEN) {
         console.error('WebSocket not available for summary generation');
         showError('Unable to generate summary. WebSocket connection is not available.');
@@ -177,7 +140,6 @@ export async function viewAdventureSummary() {
         return;
     }
 
-    // Get the current state
     const currentState = stateManager.loadState();
     if (!currentState) {
         showError('No adventure state found. Please complete an adventure first.');
@@ -185,16 +147,12 @@ export async function viewAdventureSummary() {
         return;
     }
 
-    // Store the original onmessage handler
     const originalOnMessage = window.appState.storyWebSocket.onmessage;
 
-    // Set up timeout for WebSocket response
     timeoutId = setTimeout(() => {
         console.error('WebSocket timeout: No summary_ready response received within 60 seconds');
         timeoutId = null;
 
-        // Restore original handler to avoid stacking nested temporary handlers.
-        // Late summary_ready events are still handled safely by uiManager.js.
         if (originalOnMessage) {
             window.appState.storyWebSocket.onmessage = originalOnMessage;
         }
@@ -202,9 +160,8 @@ export async function viewAdventureSummary() {
         if (!hasRedirected) {
             showError('Summary generation is taking longer than usual. Still trying...');
         }
-    }, 60000); // Summary creation may need to finish the final Flash Lite summary first
+    }, SUMMARY_GENERATION_TIMEOUT_MS);
 
-    // Override ONLY the onmessage handler temporarily
     window.appState.storyWebSocket.onmessage = function (event) {
         try {
             const data = JSON.parse(event.data);
@@ -212,7 +169,6 @@ export async function viewAdventureSummary() {
             if (data.type === 'summary_ready') {
                 console.log('Summary ready received, state_id:', data.state_id);
 
-                // Clear timeout and prevent duplicate actions
                 if (timeoutId) {
                     clearTimeout(timeoutId);
                     timeoutId = null;
@@ -221,33 +177,27 @@ export async function viewAdventureSummary() {
                 if (!hasRedirected) {
                     hasRedirected = true;
 
-                    // Restore original handler
                     if (originalOnMessage) {
                         window.appState.storyWebSocket.onmessage = originalOnMessage;
                     }
 
-                    // Use the state_id from the WebSocket response
                     const stateId = data.state_id;
                     if (stateId) {
                         localStorage.setItem('summary_state_id', stateId);
                     }
 
-                    // Store auth token for summary page (separate React app needs it for API calls)
                     if (authManager.accessToken) {
                         localStorage.setItem('summary_access_token', authManager.accessToken);
                     }
 
-                    // Navigate to the summary page with this state_id
                     window.location.href = `/adventure/summary?state_id=${stateId}`;
                 }
             } else if (data.type === 'error' || data.type === 'save_failed') {
-                // Stop summary timeout flow when backend sends an explicit failure.
                 if (timeoutId) {
                     clearTimeout(timeoutId);
                     timeoutId = null;
                 }
 
-                // Restore original handler before forwarding this error event.
                 if (originalOnMessage) {
                     window.appState.storyWebSocket.onmessage = originalOnMessage;
                     originalOnMessage(event);
@@ -258,22 +208,17 @@ export async function viewAdventureSummary() {
                     showError(message);
                     hideLoader();
                 }
-            } else {
-                // Pass other messages to the original handler
-                if (originalOnMessage) {
-                    originalOnMessage(event);
-                }
+            } else if (originalOnMessage) {
+                originalOnMessage(event);
             }
         } catch (e) {
             console.error('Error parsing WebSocket message:', e);
-            // If JSON parsing fails, pass to original handler
             if (originalOnMessage) {
                 originalOnMessage(event);
             }
         }
     };
 
-    // Send reveal_summary message via WebSocket
     try {
         window.appState.storyWebSocket.send(JSON.stringify({
             state: currentState,
@@ -283,7 +228,6 @@ export async function viewAdventureSummary() {
     } catch (error) {
         console.error('Error sending WebSocket message:', error);
 
-        // Clean up on send failure
         if (timeoutId) {
             clearTimeout(timeoutId);
             timeoutId = null;
@@ -297,7 +241,6 @@ export async function viewAdventureSummary() {
     }
 }
 
-// Utility: convert string to Title Case (handles spaces, underscores, hyphens)
 function toTitleCase(str) {
     return (str || '')
         .replace(/[_-]+/g, ' ')
@@ -307,10 +250,7 @@ function toTitleCase(str) {
         .join(' ');
 }
 
-// Initialize carousels
 function initializeCarousels() {
-    // Guard: prevent re-initialization if carousel already exists
-    // This prevents duplicate click handlers which cause select/deselect toggle bug
     if (window.categoryCarousel && typeof window.categoryCarousel.reposition === 'function') {
         return;
     }
@@ -327,7 +267,6 @@ function initializeCarousels() {
         return;
     }
 
-    // Create category carousel
     window.categoryCarousel = new Carousel({
         elementId: 'categoryCarousel',
         itemCount: window.appConfig.totalCategories,
@@ -341,7 +280,7 @@ function initializeCarousels() {
                     btn.disabled = false;
                     btn.classList.remove('cursor-not-allowed');
                     btn.textContent = `Continue with "${toTitleCase(categoryId)}"`;
-                    } else {
+                } else {
                     btn.disabled = true;
                     btn.classList.add('cursor-not-allowed');
                     btn.textContent = 'Continue';
@@ -350,11 +289,9 @@ function initializeCarousels() {
         }
     });
 
-    // Set up global keyboard navigation
     setupCarouselKeyboardNavigation([window.categoryCarousel]);
 }
 
-// Main initialization function
 async function initialize() {
     if (!window.supabase) {
         console.error("CRITICAL: Supabase client (window.supabase) not found on DOMContentLoaded.");
@@ -367,10 +304,7 @@ async function initialize() {
         return;
     }
 
-    // Initialize WebSocket manager
     window.appState.wsManager = new WebSocketManager(authManager);
-
-    // Initialize loader retry button
     initializeLoaderRetryButton();
 
     const authInitialized = await authManager.initialize();
@@ -381,8 +315,6 @@ async function initialize() {
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
         logoutButton.addEventListener('click', () => authManager.handleLogout());
-    } else {
-        // console.warn("Logout button not found on the page. Ensure it's added to the HTML."); // Kept as warn
     }
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -390,22 +322,18 @@ async function initialize() {
 
     if (adventureIdToResumeFromQuery) {
         window.appState.wsManager.adventureIdToResume = adventureIdToResumeFromQuery;
-        stateManager.clearState(); // Clear any local state to ensure fresh load from server
+        stateManager.clearState();
 
         showLoader();
-        // Setup UI for adventure in progress
         document.getElementById('storyCategoryScreen').classList.add('hidden');
         document.getElementById('lessonTopicScreen').classList.add('hidden');
         document.getElementById('introText').classList.add('hidden');
         document.getElementById('storyContainer').classList.remove('hidden');
-        // Note: selectedCategory and selectedLessonTopic will be set by server state
-        // and retrieved from sessionStorage in getWebSocketUrl
         initWebSocket();
     } else {
         const savedState = stateManager.loadState();
         if (savedState?.chapters?.length > 0 && savedState.storyCategory && savedState.lessonTopic) {
             showLoader();
-            // Don't call updateProgress here - let the backend's adventure_loaded message handle it
 
             document.getElementById('storyCategoryScreen').classList.add('hidden');
             document.getElementById('lessonTopicScreen').classList.add('hidden');
@@ -426,20 +354,15 @@ async function initialize() {
             manageState('reset');
             hideLoader();
 
-            // Initialize carousels since we have the imports
             if (document.getElementById('categoryCarousel') && window.appConfig.totalCategories > 0) {
                 initializeCarousels();
-            } else {
-                // console.warn("Category carousel element or totalCategories not found. Carousel UI may not function."); // Kept as warn
             }
         }
     }
 }
 
-// Event listeners
 document.addEventListener('DOMContentLoaded', initialize);
 
-// Add click handler to banner for reset
 document.addEventListener('DOMContentLoaded', () => {
     const bannerLink = document.querySelector('h1 a');
     if (bannerLink) {
@@ -450,21 +373,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Initialize carousels on page load (fallback)
 window.addEventListener('load', () => {
     if (window.appConfig.totalCategories > 0 && document.getElementById('categoryCarousel')) {
         initializeCarousels();
     }
 });
 
-// Clean up WebSocket when leaving the page
 window.addEventListener('beforeunload', function () {
     if (window.appState.storyWebSocket) {
         window.appState.storyWebSocket.close();
     }
 });
 
-// Expose functions to global scope for onclick handlers
 window.resetApplicationState = resetApplicationState;
 window.viewAdventureSummary = viewAdventureSummary;
 window.goToLessonTopicScreen = goToLessonTopicScreen;

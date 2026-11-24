@@ -27,26 +27,35 @@
 - If a skill causes a pause, approval request, or departure from the user's intent, link its exact `SKILL.md`, quote the instruction, and explain whether it is a requirement or your interpretation. First complete independent work already authorized.
 - Delegate independent, bounded work to available subagents when it saves time or improves review quality. Assign non-overlapping edits in the shared checkout, retain ownership of integration and verification, and handle small or tightly coupled tasks locally.
 
-## Project Invariants
+## Project Invariants & Enforcement Table
 
-- `AdventureState` is the source of truth for adventure flow and persistence.
-- Chapter sequencing policy belongs in `ChapterManager`; consumers must derive behavior from `state.story_length`, `planned_chapter_types`, and `ChapterType`.
-- Store chapter types as lowercase enum values at persistence boundaries.
-- Store agency under `state.metadata["agency"]`; preserve its continuity and track references through `AdventureStateManager.update_agency_references()`.
-- Do not repeat lesson questions within an adventure.
-- Narrative prose, characters, and plot details are AI-generated. Application logic and tests must assert structure and state transitions, not exact prose.
-- Persistent fields must round-trip through serialization and reconstruction; runtime-only tasks, callables, and locks remain excluded.
-- In the WebSocket flow, send `chapter_update` before chapter content and stream story chapters only after validating that they contain exactly three choices.
-- Preserve user isolation: authenticated adventure access is owned by `user_id`; do not fall back to `client_uuid` for authenticated users.
+Every invariant below is paired with its structural enforcement. When a rule is violated twice, raise it to architecture, types, lint, or a formal model instead of adding prose.
 
-## Frontend and Deployment
+| Invariant | Enforced By |
+| --- | --- |
+| `AdventureState` is the single source of truth; client payloads never overwrite server state. | Formal model `formal/AdventureLifecycle.tla` (`ServerStateAuthoritative`, replay `Bug3dfb9bdStaleClientOverwrite.cfg`), `app/routers/websocket_router.py`, `tests/test_websocket_flow.py`. |
+| Initial save failures reset in-memory state so retries persist; initial retries never create duplicate DB rows. | Formal model `formal/AdventureLifecycle.tla` (`NoUnsavedChapterProgress`, `SingleRecordPerAdventure`), `app/services/websocket/persistence.py`, `tests/test_repo_invariants.py`, `tests/test_websocket_persistence.py`. |
+| `reveal_summary` and `send_story_complete` require `CONCLUSION` as the final chapter; `summary_ready` waits for confirmed `is_complete=True` persistence. | Formal model `formal/AdventureLifecycle.tla` (`SummaryOnlyAfterConclusion`), runtime check in `app/services/websocket/core.py`, `tests/test_websocket_flow.py`. |
+| Background chapter-summary writes serialize under `state.summary_lock` and failed tasks never clobber valid summaries. | AST lint `[summary-list-lock-discipline]` in `tools/check_repo_invariants.py`, formal model `formal/AdventureLifecycle.tla` (`ValidSummaryNeverClobbered`), `_store_summary_safe`. |
+| Chapter sequencing policy belongs in `ChapterManager`; `AdventureState` enforces `len(chapters) <= story_length + 1` (with `+1` only for `SUMMARY`). | Pydantic `@model_validator` in `app/models/story.py`, `tests/data/test_chapter_manager.py`, `tests/test_repo_invariants.py`. |
+| Store chapter types as lowercase enum values at persistence boundaries and round-trip every persistent `AdventureState` field while excluding runtime tasks, callables, and locks. | `ChapterType` enum + `PrivateAttr` locks + `exclude=True` in `app/models/story.py`, automated field-coverage test in `tests/test_repo_invariants.py`. |
+| Route all LLM calls through `LLMServiceFactory.create_for_use_case(...)` with typed `LLMUseCase`; never instantiate external clients at module import time. | `LLMUseCase` Literal in `app/services/llm/factory.py`, removed legacy exports in `app/services/llm/__init__.py`, AST lints `[llm-provider-bypass]` and `[eager-external-client-import]` in `tools/check_repo_invariants.py`, clean-env import test `tests/test_service_imports.py`. |
+| Guard optional single-row Supabase lookups against `None` responses from `.maybe_single().execute()`. | AST lint `[supabase-maybe-single-null-guard]` in `tools/check_repo_invariants.py`, `tests/test_supabase_credentials.py`. |
+| Static assets and ES modules use content-hashed URLs and one import map so browsers never load duplicate module instances. | `app/utils/static_assets.py`, `<script type="importmap">` in `app/templates/base.html`, lints `[js-manual-version-query]`, `[template-manual-version-query]`, `[static-asset-exists]` in `tools/check_repo_invariants.py`, Playwright check in `tests/playwright/adventure-flow.spec.ts`. |
+| In the WebSocket flow, send `chapter_update` before chapter prose and stream story chapters only after validating three choices. | Pydantic `StoryChapterOutput` + `ChapterData` validator, behavioral protocol test `tests/test_stream_handler_previous_lessons.py`. |
+| Preserve user isolation: authenticated adventure access is owned by `user_id`; never fall back to `client_uuid` for authenticated users. | `app/auth/supabase_auth.py`, `app/routers/websocket_router.py`, `app/routers/summary_router.py`, `tests/test_supabase_auth.py`, `tests/test_websocket_flow.py`, `tests/test_conclusion_chapter_fix.py`. |
+| Keep `.env` and `.env.*` untracked and excluded from Docker build context. | `tools/check_deployment_security.sh` (CI workflow `.github/workflows/deployment-security-guardrails.yml`). |
+| Store agency under `state.metadata["agency"]`, do not repeat lesson questions, and assert structure/state rather than exact AI prose. | `tests/test_state_management_regressions.py`, `tests/data/test_lesson_loader.py` (judgment call for prompt/prose assertions). |
 
-- When changing served JavaScript or CSS, update the relevant `?v=` cache-busting references in templates and module imports.
+## Deployment
+
 - Production deploys only through GitHub to Railway auto-deploy. Never use `railway up` for production.
-- Keep `.env` and `.env.*` untracked and excluded from Docker build context.
 
 ## Validation
 
+- Repo invariants: `.venv/bin/python tools/check_repo_invariants.py`
+- Formal model (TLA+ / TLC): `bash tools/run_formal_verification.sh`
 - Python tests: `.venv/bin/python -m pytest -q`
 - Deployment guardrails: `bash tools/check_deployment_security.sh`
+- Deterministic browser tests: `npm run test:browser:ci`
 - Carousel visual changes: `npm run test:visual:carousel`

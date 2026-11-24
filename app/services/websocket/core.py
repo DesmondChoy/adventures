@@ -2,7 +2,7 @@ from typing import Dict, Any, Optional, Tuple, Union
 from fastapi import WebSocket
 import logging
 
-from app.models.story import ChapterContent, AdventureState
+from app.models.story import AdventureState, ChapterContent, ChapterType
 from app.services.adventure_state_manager import AdventureStateManager
 
 from .choice_processor import (
@@ -39,7 +39,6 @@ async def process_choice(
     if not state:
         return None, None, False, False
 
-    # Extract choice information and debug state
     logger.debug(f"Raw choice_data: {choice_data}")
     if isinstance(choice_data, dict):
         chosen_path = (
@@ -62,13 +61,11 @@ async def process_choice(
         choice_text = "Unknown choice"
         logger.debug("Choice data is not a dictionary")
 
-    # Check for special "reveal_summary" choice
     if chosen_path == "reveal_summary":
         return await handle_reveal_summary(
             state, state_manager, websocket, connection_data
         )
 
-    # Handle non-start choices
     if chosen_path != "start":
         return await process_non_start_choice(
             chosen_path,
@@ -81,7 +78,6 @@ async def process_choice(
             connection_data,
         )
 
-    # Handle start choice (initialize new story)
     return await process_start_choice(
         state, state_manager, story_category, lesson_topic, websocket, connection_data
     )
@@ -121,17 +117,29 @@ async def send_story_complete(
         )
         return
 
-    # Get the final chapter (which should be CONCLUSION type)
     final_chapter = state.chapters[-1]
+    if final_chapter.chapter_type != ChapterType.CONCLUSION:
+        logger.error(
+            "send_story_complete called before CONCLUSION chapter",
+            extra={
+                "chapter_number": final_chapter.chapter_number,
+                "chapter_type": final_chapter.chapter_type.value,
+            },
+        )
+        await websocket.send_json(
+            {
+                "type": "error",
+                "message": "Story completion data unavailable. Please refresh and try again.",
+            }
+        )
+        return
 
-    # Send chapter update for final chapter display (fix for chapter numbering timing issue)
     await websocket.send_json({
         "type": "chapter_update",
         "current_chapter": final_chapter.chapter_number,
         "total_chapters": state.story_length
     })
 
-    # Stream the content first (only if not already streamed)
     if not already_streamed:
         await stream_conclusion_content(final_chapter.content, websocket)
 
@@ -148,8 +156,6 @@ async def send_story_complete(
         is_resumption=is_resumption,
     )
 
-    # Send story_complete IMMEDIATELY - don't wait for image generation
-    # This ensures the Memory Lane button appears right away
     await websocket.send_json(
         {
             "type": "story_complete",
@@ -164,15 +170,13 @@ async def send_story_complete(
                         else 0
                     ),
                 },
-                "show_summary_button": True,  # Signal to show the summary button
-                # Include chapter_summaries in the response for simulation logging
+                "show_summary_button": True,
                 "chapter_summaries": state.chapter_summaries,
             },
         }
     )
     logger.info("Sent story_complete message - Memory Lane button now visible")
 
-    # Now start image generation (no longer blocks user experience)
     try:
         image_tasks = await start_image_generation_tasks(
             final_chapter.chapter_number,
@@ -189,4 +193,3 @@ async def send_story_complete(
             logger.info("Processed image tasks for CONCLUSION chapter")
     except Exception as e:
         logger.error(f"Error with image generation for CONCLUSION: {str(e)}")
-        # Non-fatal - user already has Memory Lane button
